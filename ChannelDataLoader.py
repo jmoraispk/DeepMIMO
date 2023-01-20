@@ -21,7 +21,7 @@ PARSE_FUNCS = ['parse_first', 'parse_first', 'parse_first', 'parse_third', 'pars
 
 class WIChannelLoader:
 
-    def __init__(self, directory, obj_locations):
+    def __init__(self, directory, obj_locations=None):
         self.channels = []
         self.obj_locations = obj_locations
         self.import_dir(directory)
@@ -62,12 +62,16 @@ class WIChannelLoader:
             # Location finding
             TX_ID = re.findall(r' Tx: (\d+) ', info[EXTS[4]]['TX_str'])[0]
             RX_ID = re.findall(r' Rx: (\d+) ', info[EXTS[4]]['RX_str'])[0]
-            for obj in self.obj_locations:
-                if obj['transceiver_id'] == TX_ID:
-                    TX_locs = obj['position']
-                if obj['transceiver_id'] == RX_ID:
-                    RX_locs = obj['position']
-                    
+            
+            TX_locs = [0]
+            RX_locs = [0]
+            if self.obj_locations:
+                for obj in self.obj_locations:
+                    if obj['transceiver_id'] == TX_ID:
+                        TX_locs = obj['position']
+                    if obj['transceiver_id'] == RX_ID:
+                        RX_locs = obj['position']
+                        
             channels.append(Channel(info['ID'],
                                     info[EXTS[4]]['TX_str'],
                                     info[EXTS[4]]['RX_str'],
