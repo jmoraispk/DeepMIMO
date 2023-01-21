@@ -11,9 +11,9 @@ import re
 import numpy as np
 import os
 from tqdm import tqdm
-import scipy.io
 from math import cos, sin, radians
 import re
+import hdf5storage
 
 EXTS = ['cir', 'doa', 'dod', 'paths', 'pl']
 PARSE_FUNCS = ['parse_first', 'parse_first', 'parse_first', 'parse_third', 'parse_second']
@@ -164,7 +164,7 @@ class WIChannelLoader:
             if num_paths > 0:
                 cnt += 1
                 for j in np.arange(num_paths):
-                    num_interactions = np.fromstring(lines[cnt], sep=' ', dtype=np.int)[1]
+                    num_interactions = np.fromstring(lines[cnt], sep=' ', dtype=int)[1]
 
                     cnt += 1
                     interactions = lines[cnt].strip(' \n').split('-')[:]
@@ -253,6 +253,10 @@ class WIChannelLoader:
                         
 
             scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i.mat' % (scene_idx, tx_id)), {'channels': save_ch})
+            
+            ## TODO: The data structure needs to be uniform to be able to efficiently saved
+            # 2: The data size is over 6x, I've stopped the save - not sure about the reason - may be the same as above
+            #hdf5storage.savemat(os.path.join(save_folder, 'scene_%i_TX%i_.mat' % (scene_idx, tx_id)), {'channels': save_ch})
 
 
 class Channel:
@@ -409,16 +413,3 @@ class Path:
 
                 self.Doppler_vel += np.asscalar(np.dot((self.arrival_vec + self.departure_vec), vel_acc[0] * vel_dir))
                 self.Doppler_acc += np.asscalar(np.dot((self.arrival_vec + self.departure_vec), vel_acc[1] * vel_dir))
-
-                # print('Adding Doppler to the path with')
-                # print(self.interact)
-                # print(self.interact_locs)
-
-# if __name__ == '__main__':
-#     directory = r'C:\Users\Umt\Desktop\p2m\I3_60'
-#     ch_cont = ChannelContainer()
-#     ch_cont.import_dir(directory)
-
-# file_table[file_table['']]
-
-# ch_cont.parse_doa(lines)
