@@ -13,7 +13,7 @@ import os
 from tqdm import tqdm
 from math import cos, sin, radians
 import re
-import hdf5storage
+import scipy.io
 
 EXTS = ['cir', 'doa', 'dod', 'paths', 'pl']
 PARSE_FUNCS = ['parse_first', 'parse_first', 'parse_first', 'parse_third', 'parse_second']
@@ -233,7 +233,7 @@ class WIChannelLoader:
                                         vel_dir=np.array([cos(radians(obj['angle'])), sin(radians(obj['angle'])), 0])
                                         )
 
-    def save_channels(self, save_folder, scene_idx, interacts=False):
+    def save_channels(self, save_folder, scene_idx=None, interacts=False):
         
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
@@ -251,8 +251,12 @@ class WIChannelLoader:
                 if TX_ids[i] == tx_id:
                     save_ch.append(ch_dicts[i])
                         
-
-            scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i.mat' % (scene_idx, tx_id)), {'channels': save_ch})
+                    
+            # Dynamic and static scenarios
+            if scene_idx:
+                scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i.mat' % (scene_idx, tx_id)), {'channels': save_ch})
+            else:
+                scipy.io.savemat(os.path.join(save_folder, 'TX%i.mat' % tx_id), {'channels': save_ch})
             
             ## TODO: The data structure needs to be uniform to be able to efficiently saved
             # 2: The data size is over 6x, I've stopped the save - not sure about the reason - may be the same as above
