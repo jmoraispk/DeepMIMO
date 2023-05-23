@@ -233,7 +233,7 @@ class WIChannelLoader:
                                         vel_dir=np.array([cos(radians(obj['angle'])), sin(radians(obj['angle'])), 0])
                                         )
 
-    def save_channels(self, save_folder, scene_idx=None, interacts=False):
+    def save_channels(self, save_folder, scene_idx=None, interacts=False, max_len=10000):
         
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
@@ -251,17 +251,17 @@ class WIChannelLoader:
                 if TX_ids[i] == tx_id:
                     save_ch.append(ch_dicts[i])
                         
-                    
-            # Dynamic and static scenarios
-            if scene_idx:
-                scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i.mat' % (scene_idx, tx_id)), {'channels': save_ch})
-            else:
-                scipy.io.savemat(os.path.join(save_folder, 'TX%i.mat' % tx_id), {'channels': save_ch})
-            
-            ## TODO: The data structure needs to be uniform to be able to efficiently saved
-            # 2: The data size is over 6x, I've stopped the save - not sure about the reason - may be the same as above
-            #hdf5storage.savemat(os.path.join(save_folder, 'scene_%i_TX%i_.mat' % (scene_idx, tx_id)), {'channels': save_ch})
 
+            save_cnt = 0  
+            num_ch = len(save_ch)                  
+            # Dynamic and static scenarios
+            while save_cnt<num_ch:
+                next_cnt = min(num_ch, save_cnt+max_len)
+                if scene_idx:
+                    scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i_%i-%i.mat' % (scene_idx, tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
+                else:
+                    scipy.io.savemat(os.path.join(save_folder, 'TX%i_%i-%i.mat' % (tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
+                save_cnt = next_cnt
 
 class Channel:
     def __init__(self, info_ID, TX_str, RX_str, TX_locs, RX_locs, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):

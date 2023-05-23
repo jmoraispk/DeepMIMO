@@ -11,7 +11,7 @@ import os
 
 #%% Parameters to be given for the scenario
 
-p2m_folder = r'C:\Users\udemirha\Desktop\Boston5G_3p5\Boston5G_3p5'
+p2m_folder = r'C:\Users\Umt\Desktop\Boston5G_3p5_small\Boston5G_3p5'
 output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
 
 #%% Load p2m files
