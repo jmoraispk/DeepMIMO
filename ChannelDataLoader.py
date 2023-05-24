@@ -263,9 +263,16 @@ class WIChannelLoader:
                     scipy.io.savemat(os.path.join(save_folder, 'TX%i_%i-%i.mat' % (tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
                 save_cnt = next_cnt
 
+
+pos_dict = {}
+
 class Channel:
     def __init__(self, info_ID, TX_str, RX_str, TX_locs, RX_locs, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
-
+        
+        if TX_str not in pos_dict:
+            if len(self.num_paths)>0:
+                pos_dict[TX_str] = info_ext_3[0][1][0]
+        
         self.TX_ID = info_ID['TX_ID']
         self.RX_ID = info_ID['RX_ID']
         self.TX_ID_s = info_ID['TX_CNT']
