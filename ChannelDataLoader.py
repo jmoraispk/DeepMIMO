@@ -269,10 +269,6 @@ pos_dict = {}
 class Channel:
     def __init__(self, info_ID, TX_str, RX_str, TX_locs, RX_locs, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
         
-        if TX_str not in pos_dict:
-            if len(self.num_paths)>0:
-                pos_dict[TX_str] = info_ext_3[0][1][0]
-        
         self.TX_ID = info_ID['TX_ID']
         self.RX_ID = info_ID['RX_ID']
         self.TX_ID_s = info_ID['TX_CNT']
@@ -289,6 +285,13 @@ class Channel:
         self.RX_str = RX_str
 
         self.num_paths = len(info_ext_0)
+        
+        # Retrieve TX position
+        if TX_str not in pos_dict:
+            if self.num_paths>0:
+                pos_dict[TX_str] = info_ext_3[0][1][0]
+        
+        
         self.paths = []
         for i in range(self.num_paths):
             self.paths.append(Path(phase=info_ext_0[i][1],
