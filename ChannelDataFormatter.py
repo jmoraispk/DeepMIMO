@@ -13,9 +13,9 @@ import numpy as np
 from tqdm import tqdm
 
 class DeepMIMODataFormatter:
-    def __init__(self, intermediate_folder, save_folder, TX_order=None, RX_order=None):
+    def __init__(self, intermediate_folder, save_folder, max_channels=100000, TX_order=None, RX_order=None):
         self.intermediate_folder = intermediate_folder
-        
+        self.max_channels = max_channels
         self.save_folder = save_folder
         if not os.path.exists(self.save_folder):
             os.mkdir(self.save_folder)
@@ -67,8 +67,13 @@ class DeepMIMODataFormatter:
             bs_ue_info = np.concatenate(bs_ue_info)
             
             scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels': bs_bs_channels, 'rx_locs': bs_bs_info})
-            scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_UE.mat'%(tx_cnt+1)), {'channels': bs_ue_channels, 'rx_locs': bs_ue_info})
-
+            
+            cur_count = 0
+            num_ues = len(bs_ue_channels)
+            while cur_count<num_ues:
+                next_count = min(cur_count + self.max_channels, num_ues)
+                scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_UE_%i-%i.mat'%(tx_cnt+1, cur_count, next_count)), {'channels': bs_ue_channels[cur_count:next_count], 'rx_locs': bs_ue_info[cur_count:next_count]})
+                cur_count = next_count
                 
                 
     def import_folder(self):

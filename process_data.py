@@ -11,7 +11,7 @@ from scenario_utils import ScenarioParameters
 import os
 
 #%% Parameters to be given for the scenario
-p2m_folder = r'C:\Users\udemirha\Desktop\data\O1_28'
+p2m_folder = r'C:\Users\Umt\Desktop\Boston5G_3p5_small\Boston5G_3p5'
 intermediate_folder = os.path.join(os.path.dirname(p2m_folder), 'intermediate_files')
 output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
 
@@ -19,7 +19,7 @@ output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
 channel_data = WIChannelConverter(p2m_folder, intermediate_folder)
 
 #%%
-DeepMIMODataFormatter(intermediate_folder, output_folder)
+DeepMIMODataFormatter(intermediate_folder, output_folder, max_channels=100000)
 
 
  
