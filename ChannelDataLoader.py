@@ -19,11 +19,17 @@ EXTS = ['cir', 'doa', 'dod', 'paths', 'pl']
 PARSE_FUNCS = ['parse_first', 'parse_first', 'parse_first', 'parse_third', 'parse_second']
 
 
-class WIChannelLoader:
+class WIChannelConverter:
 
-    def __init__(self, directory, obj_locations=None):
+    def __init__(self, directory, save_folder, interacts=False):
         self.channels = []
-        self.obj_locations = obj_locations
+        
+        self.interacts = interacts
+        
+        self.save_folder = save_folder
+        if not os.path.exists(self.save_folder):
+            os.mkdir(self.save_folder)
+            
         self.import_dir(directory)
 
     def import_dir(self, directory):
@@ -31,59 +37,45 @@ class WIChannelLoader:
         self.import_files(file_table)
 
     def import_files(self, file_table):
-        triplet_cols = ['TX_ID', 'RX_ID', 'TX_CNT']
+        triplet_cols = ['TX_ID', 'TX_CNT', 'RX_ID']
         unique_table = file_table[triplet_cols].drop_duplicates()
+        
         for i in tqdm(range(len(unique_table))):
-            cur_triplet = unique_table.iloc[i]
-            match = (file_table[triplet_cols] == cur_triplet).sum(axis=1) == len(triplet_cols)
+            rx_tx_pair = unique_table.iloc[i]
+            
+            # Find the files matching to the TX-RX pair
+            match = (file_table[triplet_cols] == rx_tx_pair).sum(axis=1) == len(triplet_cols)
             read_table = file_table[match].reset_index(drop=True)
-            # Read all the files of same triplet and collect information
-            triplet_info = {'ID': cur_triplet}
-            for j in tqdm(range(len(read_table)), leave=False):
-                info = self.import_file(filename=read_table['Dir'][j], extension=read_table['Extension'][j])
-                triplet_info = {**triplet_info, read_table['Extension'][j]: info}
+            
+            # Read all the files of the TX-RX pair and collect information
+            files = {'ID': rx_tx_pair}
+            for j in range(len(read_table)):
+                file_data = self.import_file(filename=read_table['Dir'][j], extension=read_table['Extension'][j])
+                files = {**files, read_table['Extension'][j]: file_data}
 
-            self.channels += self.create_ch_from_info(triplet_info)
+            self.channels = self.create_ch_from_files(files)
+            self.save_channels('TX%i-%i_RX%i.mat'%tuple(rx_tx_pair))
 
-        pass
-        # for each file:
-        #     # based on the extension
-        #     import_file_ext_1()...
-
-    def create_ch_from_info(self, info):
+    def create_ch_from_files(self, file_data):
 
         # Create Channels from Information
-        num_rx = len(info[EXTS[0]])
+        num_rx = len(file_data[EXTS[0]])
         channels = []
         for i in range(num_rx):
-            
-            # TODO: Is receiver location RX_locs[num_rx] 
-            #       if so pass from here instead of path loss file
             # Location finding
-            TX_ID = re.findall(r' Tx: (\d+) ', info[EXTS[4]]['TX_str'])[0]
-            RX_ID = re.findall(r' Rx: (\d+) ', info[EXTS[4]]['RX_str'])[0]
-            
-            TX_locs = [0]
-            RX_locs = [0]
-            if self.obj_locations:
-                for obj in self.obj_locations:
-                    if obj['transceiver_id'] == TX_ID:
-                        TX_locs = obj['position']
-                    if obj['transceiver_id'] == RX_ID:
-                        RX_locs = obj['position']
-                        
-            channels.append(Channel(info['ID'],
-                                    info[EXTS[4]]['TX_str'],
-                                    info[EXTS[4]]['RX_str'],
-                                    TX_locs,
-                                    RX_locs,
+            TX_ID = re.findall(r' Tx: (\d+) ', file_data[EXTS[4]]['TX_str'])[0]
+            RX_ID = re.findall(r' Rx: (\d+) ', file_data[EXTS[4]]['RX_str'])[0]
+                                    
+            channels.append(Channel(file_data['ID'],
+                                    file_data[EXTS[4]]['TX_str'],
+                                    file_data[EXTS[4]]['RX_str'],
                                     int(TX_ID),
                                     int(RX_ID),
-                                    info[EXTS[0]][i],
-                                    info[EXTS[1]][i],
-                                    info[EXTS[2]][i],
-                                    info[EXTS[3]][i],
-                                    info[EXTS[4]]['PL_data'][i]))
+                                    file_data[EXTS[0]][i],
+                                    file_data[EXTS[1]][i],
+                                    file_data[EXTS[2]][i],
+                                    file_data[EXTS[3]][i],
+                                    file_data[EXTS[4]]['PL_data'][i]))
 
         return channels
 
@@ -134,9 +126,11 @@ class WIChannelLoader:
         cnt = header_len
         info = np.fromstring(''.join(lines[cnt:]), sep=' ', dtype=np.single).reshape((-1, num_cols))
 
-        info = {'PL_data': info,
+        info = {
+                'PL_data': info,
                 'TX_str': TX_str,
-                'RX_str': RX_str}
+                'RX_str': RX_str
+                }
 
         return info
 
@@ -225,56 +219,75 @@ class WIChannelLoader:
             channel.calc_Doppler(bound_min, bound_max, vel_acc, vel_dir)
 
     def add_Doppler(self, objects):
+        self.Doppler = True
+        
         for obj in objects:
             # TODO: Slope is not supported - flat earth theory holds
-            self.add_Doppler_single_obj(bound_min=obj['bounds'][0],
+            self.add_Doppler_single_obj(
+                                        bound_min=obj['bounds'][0],
                                         bound_max=obj['bounds'][1],
                                         vel_acc=[obj['speed'], obj['acceleration']],
                                         vel_dir=np.array([cos(radians(obj['angle'])), sin(radians(obj['angle'])), 0])
                                         )
 
-    def save_channels(self, save_folder, scene_idx=None, interacts=False, max_len=10000):
-        
-        if not os.path.exists(save_folder):
-            os.mkdir(save_folder)
-        
+    def save_channels(self, filename):
+
         TX_ids = []
         ch_dicts = []
+        loc_dicts = []
         for ch in self.channels:
-            ch_dict = ch.ch_dict(interacts=interacts)
+            ch_dict, second_mat = ch.ch_dict(interacts=self.interacts)
             ch_dicts.append(ch_dict)
-            TX_ids.append(ch_dict['TX_id_w'])
+            loc_dicts.append(second_mat)
             
-        for tx_id in set(TX_ids):
-            save_ch = []
-            for i in range(len(TX_ids)):
-                if TX_ids[i] == tx_id:
-                    save_ch.append(ch_dicts[i])
+        scipy.io.savemat(os.path.join(self.save_folder, filename), {'channels': np.array(ch_dicts).T, 'rx_locs': np.array(loc_dicts)})
+
+    # def save_channels(self, save_folder, scene_idx=None, interacts=False, max_len=10000):
+        
+    #     if not os.path.exists(save_folder):
+    #         os.mkdir(save_folder)
+        
+    #     TX_ids = []
+    #     ch_dicts = []
+    #     for ch in self.channels:
+    #         ch_dict = ch.ch_dict(interacts=interacts)
+    #         ch_dicts.append(ch_dict)
+    #         TX_ids.append(ch_dict['TX_id_w'])
+            
+    #     for tx_id in set(TX_ids):
+    #         save_ch = []
+    #         for i in range(len(TX_ids)):
+    #             if TX_ids[i] == tx_id:
+    #                 save_ch.append(ch_dicts[i])
                         
 
-            save_cnt = 0  
-            num_ch = len(save_ch)                  
-            # Dynamic and static scenarios
-            while save_cnt<num_ch:
-                next_cnt = min(num_ch, save_cnt+max_len)
-                if scene_idx:
-                    scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i_%i-%i.mat' % (scene_idx, tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
-                else:
-                    scipy.io.savemat(os.path.join(save_folder, 'TX%i_%i-%i.mat' % (tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
-                save_cnt = next_cnt
+    #         save_cnt = 0  
+    #         num_ch = len(save_ch)                  
+    #         # Dynamic and static scenarios
+    #         while save_cnt<num_ch:
+    #             next_cnt = min(num_ch, save_cnt+max_len)
+    #             if scene_idx:
+    #                 scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i_%i-%i.mat' % (scene_idx, tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
+    #             else:
+    #                 scipy.io.savemat(os.path.join(save_folder, 'TX%i_%i-%i.mat' % (tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
+    #             save_cnt = next_cnt
 
 
 pos_dict = {}
 
 class Channel:
+<<<<<<< Updated upstream
     def __init__(self, info_ID, TX_str, RX_str, TX_locs, RX_locs, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
+=======
+    def __init__(self, info_ID, TX_str, RX_str, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
+        self.Doppler = False
+>>>>>>> Stashed changes
         
         self.TX_ID = info_ID['TX_ID']
         self.RX_ID = info_ID['RX_ID']
         self.TX_ID_s = info_ID['TX_CNT']
         self.RX_ID_s = info_ext_4[0]
         self.RX_loc = info_ext_4[1:4]
-        self.TX_loc = TX_locs
         self.TX_id_w = TX_id
         self.RX_id_w = RX_id
 
@@ -307,6 +320,7 @@ class Channel:
         self.LOS = self.identify_LOS()
 
     def calc_Doppler(self, bound_min, bound_max, vel_acc, vel_dir):
+        self.Doppler = True
         for path in self.paths:
             path.calc_Doppler(bound_min, bound_max, vel_acc, vel_dir)
 
@@ -333,14 +347,17 @@ class Channel:
                      'DoA_theta': [],
                      'DoD_phi': [],
                      'DoD_theta': [],
-                     'Doppler_vel': [],
-                     'Doppler_acc': [],
                      'LOS': []
                      }
-        if interacts:
-            interacts_dict = {'type': [],
-                              'loc': []
-                              }
+        # if interacts:
+        #     interacts_dict = {'type': [],
+        #                       'loc': []
+        #                       }
+        
+        if self.Doppler:
+            path_dict['Doppler_vel'] = []
+            path_dict['Doppler_acc'] = []
+        
         for path in self.paths:
             path_dict['phase'].append(path.phase)
             path_dict['ToA'].append(path.ToA)
@@ -349,39 +366,33 @@ class Channel:
             path_dict['DoA_theta'].append(path.doa_theta)
             path_dict['DoD_phi'].append(path.dod_phi)
             path_dict['DoD_theta'].append(path.dod_theta)
-            path_dict['Doppler_vel'].append(path.Doppler_vel)
-            path_dict['Doppler_acc'].append(path.Doppler_acc)
             path_dict['LOS'].append(path.LOS)
-            if interacts:
-                interacts_dict['type'].append(path.interact)
-                interacts_dict['loc'].append(path.interact_locs)
+            if self.Doppler:
+                path_dict['Doppler_vel'].append(path.Doppler_vel)
+                path_dict['Doppler_acc'].append(path.Doppler_acc)
+            
+            # if interacts:
+            #     interacts_dict['type'].append(path.interact)
+            #     interacts_dict['loc'].append(path.interact_locs)
+
+        
+        store_array = np.zeros((len(path_dict), self.num_paths))
+        for i, key in enumerate(path_dict):
+            store_array[i, :] = path_dict[key]
 
         for key in path_dict:
             path_dict[key] = np.array(path_dict[key])
 
-        if interacts:
-            path_dict['interactions'] = {**interacts_dict}
-            np.array(path_dict['interactions']['type'], dtype=object)
-            np.array(path_dict['interactions']['loc'])
-
-        ch_dict = {'paths': path_dict,
-                   'LOS_status': self.LOS,
-                   'rx_loc': self.RX_loc,
-                   'tx_loc': self.TX_loc,
-                   'dist': self.dist,
-                   'PL': self.PL,
-                   'TX_ID': self.TX_ID,
-                   'RX_ID': self.RX_ID,
-                   'TX_ID_s': self.TX_ID_s,
-                   'RX_ID_s': self.RX_ID_s,
-                   'TX_str': self.TX_str,
-                   'RX_str': self.RX_str,
-                   'TX_id_w': self.TX_id_w,
-                   'RX_id_w': self.RX_id_w
-                   }
-
-        return ch_dict
-
+        # if interacts:
+        #     path_dict['interactions'] = {**interacts_dict}
+        #     np.array(path_dict['interactions']['type'], dtype=object)
+        #     np.array(path_dict['interactions']['loc'])
+        
+        second_mat = list(self.RX_loc) + [self.dist] + [self.PL]
+        return {'p': store_array}, second_mat 
+        # Most efficient with only single character dict due to non-uniform array size
+        # Multiple characters, e.g., 'paths' add extra size
+        # Similarly, adding second variable also adds, instead join them as a single array
 
 class Path:
     def __init__(self, phase, ToA, power, doa_phi, doa_theta, dod_phi, dod_theta, interact, interact_locs):
