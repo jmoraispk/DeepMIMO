@@ -276,12 +276,8 @@ class WIChannelConverter:
 pos_dict = {}
 
 class Channel:
-<<<<<<< Updated upstream
-    def __init__(self, info_ID, TX_str, RX_str, TX_locs, RX_locs, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
-=======
     def __init__(self, info_ID, TX_str, RX_str, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
         self.Doppler = False
->>>>>>> Stashed changes
         
         self.TX_ID = info_ID['TX_ID']
         self.RX_ID = info_ID['RX_ID']

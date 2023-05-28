@@ -11,17 +11,12 @@ from scenario_utils import ScenarioParameters
 import os
 
 #%% Parameters to be given for the scenario
-<<<<<<< Updated upstream
-
-p2m_folder = r'C:\Users\demir\OneDrive\Desktop\Boston5G_3p5_small\Boston5G_3p5'
-=======
-p2m_folder = r'C:\Users\Umt\Desktop\Boston5G_3p5_small\Boston5G_3p5'
+p2m_folder = r'C:\Users\udemirha\Desktop\data\O1_28'
 intermediate_folder = os.path.join(os.path.dirname(p2m_folder), 'intermediate_files')
->>>>>>> Stashed changes
 output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
 
 #%% Convert P2M files to mat format
-# channel_data = WIChannelConverter(p2m_folder, intermediate_folder)
+channel_data = WIChannelConverter(p2m_folder, intermediate_folder)
 
 #%%
 DeepMIMODataFormatter(intermediate_folder, output_folder)
