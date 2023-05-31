@@ -19,17 +19,22 @@ output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
 channel_data = WIChannelConverter(p2m_folder, intermediate_folder)
 
 #%%
-DeepMIMODataFormatter(intermediate_folder, output_folder, max_channels=100000)
+DeepMIMODataFormatter(intermediate_folder, output_folder, max_channels=10000)
 
+#%%
+import numpy as np
+import scipy.io
 
- 
-# #%% Scenario parameters
-# sp = ScenarioParameters()
-# sp.add_BS(TX_ID=13, TX_subID=1, FOV_az=0, FOV_el=0)
-# sp.add_BS(TX_ID=14, TX_subID=1, FOV_az=0, FOV_el=0)
-
-# sp.set_transmission(carrier_freq=60e9, tx_power=0)
-# sp.set_user_grids(user_grids=[[1, 551, 121], 
-#                               [552, 1159, 86]]) # Start row - end row - num users
-# sp.save(output_folder)
-
+output_folder = r'C:\Users\Umt\Desktop\Boston5G_3p5_small\Boston5G_3p5_v1'
+data_dict = {
+              'version': 2,
+              'carrier_freq': 3.4e9,
+              'transmit_power': 0.0, #dB from the scenario
+              'user_grids': np.array([[1, 151, 111], # Start row - end row - num users
+                                      [152, 302, 111]], 
+                                     dtype=float),
+              'num_BS': 2,
+              #'BS_grids': np.array([[i+1, i+1, 1] for i in range(self.num_BS)]).astype(float)
+             }
+    
+scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
