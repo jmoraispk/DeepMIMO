@@ -13,7 +13,7 @@ import numpy as np
 from tqdm import tqdm
 
 class DeepMIMODataFormatter:
-    def __init__(self, intermediate_folder, save_folder, max_channels=100000, TX_order=None, RX_order=None):
+    def __init__(self, intermediate_folder, save_folder, max_channels=100000, TX_order=None, RX_order=None, TX_polar=None, RX_polar=None):
         self.intermediate_folder = intermediate_folder
         self.max_channels = max_channels
         self.save_folder = save_folder
@@ -24,47 +24,35 @@ class DeepMIMODataFormatter:
         
         self.TX_order = TX_order
         self.RX_order = RX_order
+        self.TX_polar = TX_polar
+        self.RX_polar = RX_polar
         self.sort_TX_RX()
-        self.save_data()
+        if self.TX_polar:
+            self.save_data_polar()
+        else:
+            self.save_data()
         
     def sort_TX_RX(self):
-        if self.TX_order and self.RX_order:
+        if self.TX_order and self.RX_order and not self.TX_polar and not self.RX_polar:
             assert len(self.TX_order)==len(self.TX_list), 'Number of provided TX IDs must match the available files from the scenario generation!'
             assert len(self.RX_order)==len(self.RX_list), 'Number of provided RX IDs must match the available files from the scenario generation!'
             assert set(self.TX_order) == set(self.TX_list), 'Provided TX IDs must match the available TXs from the scenario generation!'
             assert set(self.RX_order) == set(self.RX_list), 'Provided RX IDs must match the available RXs from the scenario generation!'
+        elif self.TX_order and self.RX_order and self.TX_polar and self.RX_polar:
+            assert len(self.TX_order) + len(self.TX_polar) == len(self.TX_list), 'Number of provided TX IDs must match the available files from the scenario generation!'
+            assert len(self.RX_order) + len(self.RX_polar) == len(self.RX_list), 'Number of provided RX IDs must match the available files from the scenario generation!'
+            assert set(self.TX_order + self.TX_polar) == set(self.TX_list), 'Provided TX IDs must match the available TXs from the scenario generation!'
+            assert set(self.RX_order + self.RX_polar) == set(self.RX_list), 'Provided RX IDs must match the available RXs from the scenario generation!'
         else:
             self.TX_order = self.TX_list
             self.RX_order = self.RX_list
         
     def save_data(self):
         for tx_cnt, t in enumerate(tqdm(self.TX_order)):
-            # BS-BS channel generation
+            
             tx_files = self.df[self.df['TX'] == t]
-            bs_bs_channels = []
-            bs_bs_info = []
-            for r in self.TX_order:
-                file = tx_files[tx_files['RX'] == r]
-                assert len(file) == 1, 'All TXs must be a transceiver and must have a receive file'
-                file_path = os.path.join(self.intermediate_folder, file.iloc[0, 0])
-                data = scipy.io.loadmat(file_path)
-                bs_bs_channels.append(data['channels'][0])
-                bs_bs_info.append(data['rx_locs'])
-            bs_bs_channels = np.concatenate(bs_bs_channels)
-            bs_bs_info = np.concatenate(bs_bs_info)
-            
-            
-            bs_ue_channels = []
-            bs_ue_info = []
-            for r in self.RX_order:
-                file = tx_files[tx_files['RX'] == r]
-                assert len(file) == 1, 'All RXs must must have a single receive file'
-                file_path = os.path.join(self.intermediate_folder, file.iloc[0, 0])
-                data = scipy.io.loadmat(file_path)
-                bs_ue_channels.append(data['channels'][0])
-                bs_ue_info.append(data['rx_locs'])
-            bs_ue_channels = np.concatenate(bs_ue_channels)
-            bs_ue_info = np.concatenate(bs_ue_info)
+            bs_bs_channels, bs_bs_info = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
+            bs_ue_channels, bs_ue_info = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
             
             scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels': bs_bs_channels, 'rx_locs': bs_bs_info})
             
@@ -74,8 +62,61 @@ class DeepMIMODataFormatter:
                 next_count = min(cur_count + self.max_channels, num_ues)
                 scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_UE_%i-%i.mat'%(tx_cnt+1, cur_count, next_count)), {'channels': bs_ue_channels[cur_count:next_count], 'rx_locs': bs_ue_info[cur_count:next_count]})
                 cur_count = next_count
+             
+    def collect_data(self, df_tx_files, rx_index, intermediate_folder):
+        bs_ue_channels = []
+        bs_ue_info = []
+        for r in rx_index:
+            file = df_tx_files[df_tx_files['RX'] == r]
+            assert len(file) == 1, 'All RXs must must have a single receive file'
+            file_path = os.path.join(intermediate_folder, file.iloc[0, 0])
+            data = scipy.io.loadmat(file_path)
+            bs_ue_channels.append(data['channels'][0])
+            bs_ue_info.append(data['rx_locs'])
+        bs_ue_channels = np.concatenate(bs_ue_channels)
+        bs_ue_info = np.concatenate(bs_ue_info)
+        return bs_ue_channels, bs_ue_info
+             
+    def save_data_polar(self):
+        for tx_cnt, t in enumerate(tqdm(self.TX_order)):
+            # BS-BS channel generation
+            tx_files = self.df[self.df['TX'] == t]
+
+            bs_bs_channels_VV, bs_bs_info = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
+            bs_bs_channels_VH, _ = self.collect_data(tx_files, self.TX_polar, self.intermediate_folder)
+            
+            bs_ue_channels_VV, bs_ue_info = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
+            bs_ue_channels_VH, _ = self.collect_data(tx_files, self.RX_polar, self.intermediate_folder)
+            
+            tx_files = self.df[self.df['TX'] == self.TX_polar[tx_cnt]]
+            bs_bs_channels_HV, _ = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
+            bs_bs_channels_HH, _ = self.collect_data(tx_files, self.TX_polar, self.intermediate_folder)
+            
+            bs_ue_channels_HV, _ = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
+            bs_ue_channels_HH, _ = self.collect_data(tx_files, self.RX_polar, self.intermediate_folder)
+            
+            scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels_VV': bs_bs_channels_VV, 
+                                                                                        'channels_VH': bs_bs_channels_VH,
+                                                                                        'channels_HV': bs_bs_channels_HV,
+                                                                                        'channels_HH': bs_bs_channels_HH,
+                                                                                        'rx_locs': bs_bs_info})
+            
+            cur_count = 0
+            num_ues = len(bs_ue_channels_VV)
+            while cur_count<num_ues:
+                next_count = min(cur_count + self.max_channels, num_ues)
+                scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_UE_%i-%i.mat'%(tx_cnt+1, cur_count, next_count)), 
+                                     {'channels_VV': bs_ue_channels_VV[cur_count:next_count], 
+                                      'channels_VH': bs_ue_channels_VH[cur_count:next_count],
+                                      'channels_HV': bs_ue_channels_HV[cur_count:next_count],
+                                      'channels_HH': bs_ue_channels_HH[cur_count:next_count], 
+                                      'rx_locs': bs_ue_info[cur_count:next_count]
+                                      }
+                                 )
+                cur_count = next_count
                 
                 
+    
     def import_folder(self):
         file_pattern = r'TX(\d+)-(\d+)_RX(\d+)\.mat'
         

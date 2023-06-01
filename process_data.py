@@ -16,16 +16,17 @@ intermediate_folder = os.path.join(os.path.dirname(p2m_folder), 'intermediate_fi
 output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
 
 #%% Convert P2M files to mat format
-channel_data = WIChannelConverter(p2m_folder, intermediate_folder)
+#channel_data = WIChannelConverter(p2m_folder, intermediate_folder)
 
 #%%
-DeepMIMODataFormatter(intermediate_folder, output_folder, max_channels=10000)
+DeepMIMODataFormatter(intermediate_folder, output_folder, max_channels=10000,
+                      TX_order=[3], RX_order=[5, 58], TX_polar=[59], RX_polar=[61, 63])
 
 #%%
 import numpy as np
 import scipy.io
 
-output_folder = r'C:\Users\Umt\Desktop\Boston5G_3p5_small\Boston5G_3p5_v1'
+output_folder = r'C:\Users\Umt\Desktop\Boston5G_3p5_small\Boston5G_3p5_v2'
 data_dict = {
               'version': 2,
               'carrier_freq': 3.4e9,
@@ -33,7 +34,9 @@ data_dict = {
               'user_grids': np.array([[1, 151, 111], # Start row - end row - num users
                                       [152, 302, 111]], 
                                      dtype=float),
-              'num_BS': 2,
+              'num_BS': 1,
+              'dual_polar_available': 1,
+              'doppler_available': 0
               #'BS_grids': np.array([[i+1, i+1, 1] for i in range(self.num_BS)]).astype(float)
              }
     
