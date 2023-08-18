@@ -35,5 +35,5 @@ Additonally, the repository contains compute_ray_tracing.ipynb, which is the .ip
 
 ## Python Environment with Sionna
 
-For the time being, refer to the install instructions from Sionna: https://nvlabs.github.io/sionna/installation.html
+For the time being, refer to the [install instructions from Sionna](https://nvlabs.github.io/sionna/installation.html)
 
