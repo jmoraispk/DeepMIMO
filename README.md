@@ -31,7 +31,7 @@ Additonally, the repository contains compute_ray_tracing.ipynb, which is the .ip
 - Go into the Scripting Tab of Blender
 - Run in the console:
     - `import pip`
-    - `pip.main(['install', 'pandas', -´'])`
+    - `pip.main(['install', 'pandas', '-user'])`
 
 ## Python Environment with Sionna
 
