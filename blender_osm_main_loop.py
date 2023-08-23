@@ -111,8 +111,8 @@ for i in range(pos_df.index.stop):
     bpy.ops.mesh.primitive_plane_add(size=1)
 
     # 3.2- Resize plane to fit area fetched (bit bigger than fetched area)
-    x_size = compute_distance([min_lat, min_lon], [min_lat, max_lon]) * 1.1
-    y_size = compute_distance([min_lat, min_lon], [max_lat, min_lon]) * 1.1
+    x_size = compute_distance([min_lat, min_lon], [min_lat, max_lon]) * 1.2
+    y_size = compute_distance([min_lat, min_lon], [max_lat, min_lon]) * 1.2
     
     print(f'Creating plane of size [{x_size}, {y_size}')
     plane = get_obj_by_name("Plane")
