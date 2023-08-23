@@ -1,43 +1,97 @@
-import bpy
-import pandas as pd
 import os
+import bpy
+import time
+import numpy as np
+import pandas as pd
+from datetime import datetime as dt
+from geopy.distance import geodesic
 
-deepmimo1000_root = "/home/joao/Documents/DeepMIMO1000-master/osm_test"
-csv_path = deepmimo1000_root + '/scenario_pos.csv'
-scenario_pos = pd.read_csv(csv_path)
-num_scenarios = scenario_pos.shape[0]
-num_scenarios = 1
-save_dae = False
+WALL_MATERIAL = 'itu_marble' # 'itu_marble', 'itu_plasterboard', 'itu_brick'
+ROOF_MATERIAL = 'itu_metal'
+FLOOR_MATERIAL = 'itu_concrete'
+OTHERS_MATERIAL = 'itu_wood' # all the other materials (should be very unlikely!)
+DEFAULT_MATERIALS = [WALL_MATERIAL, ROOF_MATERIAL, FLOOR_MATERIAL, OTHERS_MATERIAL]
 
-for i in range(num_scenarios):
-    project_root = deepmimo1000_root + "/scenarios/run_%d/" % i
-    name = "DeepMIMO1000"
+# List walls/roofs materials in order of priority/popularity in OSM
+KNOWN_WALL_OSM_MATERIALS = ['wall']
+KNOWN_ROOF_OSM_MATERIALS = ['roof']
 
-    if not os.path.exists(project_root):
-        os.makedirs(project_root)
 
-    minlat = scenario_pos.iloc[i]['minlat']
-    minlon = scenario_pos.iloc[i]['minlon']
-    maxlat = scenario_pos.iloc[i]['maxlat']
-    maxlon = scenario_pos.iloc[i]['maxlon']
+def compute_distance(coord1, coord2):
+    " Returns distance between coordinates in meters."
+    return  geodesic(coord1, coord2).meters
 
-    # empty the blender scenario
-    colls = bpy.data.collections
-    for i in colls:
-        colls.remove(colls[i.name], do_unlink=True)
-    objs = bpy.data.objects
-    for i in objs:
-        objs.remove(objs[i.name], do_unlink=True)
+# Blender utils
+def get_objs_with_material(mat):
+    objs_with_mat = []
+    for obj in bpy.data.objects:
+        for slot in obj.material_slots:
+            if slot.material == mat:
+                objs_with_mat += [obj]
+                break
+    return objs_with_mat
 
-    # download and import osm data to blender 
-    bpy.context.preferences.addons["blosm"].preferences.dataDir = project_root
+def get_obj_by_name(name):
+    for obj in bpy.data.objects:
+        if obj.name == name:
+            return obj
+    return None
+
+def get_slot_of_material(obj, mat):
+    for slot_idx, slot in enumerate(obj.material_slots):
+        if slot.material == mat:
+            return slot_idx
+    return -1
+
+def clear_blender():
+    block_lists = [ bpy.data.collections,
+                    bpy.data.objects, 
+                    bpy.data.meshes,
+                    bpy.data.materials, 
+                    bpy.data.textures, 
+                    bpy.data.images,
+                    bpy.data.curves, 
+                    bpy.data.cameras
+                    ]
+    for block_list in block_lists:
+        for block in block_list:
+            block_list.remove(block, do_unlink=True)
+
+time_str = dt.now().strftime("%m-%d-%Y_%HH%MM%SS")
+
+proj_root = '/home/joao/Documents/GitHub/SionnaProjects/AutoRayTracing/'
+osm_folder = proj_root + f'all_runs/run_{time_str}/'
+csv_path = proj_root + 'params.csv'
+
+pos_df = pd.read_csv(csv_path)
+
+# Save a small file with the path of the folder containing all the maps
+with open(proj_root + 'scenes_folder.txt', 'w') as fp:
+    fp.write(osm_folder + '\n')
+
+for i in range(pos_df.index.stop):
+    scen_folder = osm_folder + f"/scen_{i}/"
+
+    os.makedirs(scen_folder, exist_ok=True)
+    
+    min_lat = pos_df['min_lat'][i]
+    max_lat = pos_df['max_lat'][i]
+    min_lon = pos_df['min_lon'][i]
+    max_lon = pos_df['max_lon'][i]
+    
+    # 0- Clean Blender
+    clear_blender()
+    
+    
+    # 1- Configure OSM map fetching
+    bpy.context.preferences.addons["blosm"].preferences.dataDir = scen_folder
     
     bpy.context.scene.blosm.mode = '3Dsimple'
 
-    bpy.context.scene.blosm.minLon = minlon
-    bpy.context.scene.blosm.maxLon = maxlon
-    bpy.context.scene.blosm.minLat = minlat
-    bpy.context.scene.blosm.maxLat = maxlat
+    bpy.context.scene.blosm.minLat = min_lat
+    bpy.context.scene.blosm.maxLat = max_lat
+    bpy.context.scene.blosm.minLon = min_lon
+    bpy.context.scene.blosm.maxLon = max_lon
 
     bpy.context.scene.blosm.buildings = True
     bpy.context.scene.blosm.water = False
@@ -48,87 +102,77 @@ for i in range(num_scenarios):
     bpy.context.scene.blosm.singleObject = False
     bpy.context.scene.blosm.ignoreGeoreferencing = True
 
+
+    # 2- Fetch map
     bpy.ops.blosm.import_data()
     
-    # bpy.context.space_data.overlay.show_relationship_lines = False
-    
-    # change size and scale based on coordinates
-    bpy.ops.mesh.primitive_plane_add(size=400, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+    # 3- Ground Plane
+    # 3.1- Create ground plane 
+    bpy.ops.mesh.primitive_plane_add(size=1)
 
+    # 3.2- Resize plane to fit area fetched (bit bigger than fetched area)
+    x_size = compute_distance([min_lat, min_lon], [min_lat, max_lon]) * 1.1
+    y_size = compute_distance([min_lat, min_lon], [max_lat, min_lon]) * 1.1
     
-    bpy.data.materials["itu_concrete"].node_tree.nodes["Diffuse BSDF"].inputs[0].default_value = (0.159729, 0.258736, 0.8, 1)
+    print(f'Creating plane of size [{x_size}, {y_size}')
+    plane = get_obj_by_name("Plane")
+    plane.scale = (x_size, y_size, 1)
+    
+    # 3.3- Create FLOOR_MATERIAL and assign to ground plane
+    floor_material = bpy.data.materials.new(name=FLOOR_MATERIAL)
+    plane.data.materials.append(floor_material)
 
-    
-    
-    
-    
-    
-    
-    bpy.context.object.active_material.name = "itu_concrete"
 
+    # 4- Walls and Roofs
+    # 4.1- Create default materials for walls, roofs and others
+    wall_material = bpy.data.materials.new(name=WALL_MATERIAL)
+    roof_material = bpy.data.materials.new(name=ROOF_MATERIAL)
+    others_material = bpy.data.materials.new(name=OTHERS_MATERIAL)
     
-    
-    # save osm origin
-    origin_lat = bpy.data.scenes["Scene"]["lat"]
-    origin_lon = bpy.data.scenes["Scene"]["lon"]
+    # 4.2- Set colors
+    roof_material.diffuse_color   = (0.29, 0.25, 0.21, 1) # dark grey
+    wall_material.diffuse_color   = (0.75, 0.40, 0.16, 1) # beije
+    others_material.diffuse_color = (0.17, 0.09, 0.02, 1) # brown
 
-    with open(project_root+'osm_gps_origin.txt', 'w') as file:
-        file.write(f"{origin_lat}\n{origin_lon}\n")
+    # 4.3- Find all objects with each material
+    wall_assigned = False
+    roof_assigned = False
+    others_assigned = False
+    
+    for mat in bpy.data.materials:
+        if mat.name in DEFAULT_MATERIALS:
+            continue
         
-    # remove material texture images as they are not compatibale with WI
-    for img in bpy.data.images:
-        bpy.data.images.remove(img)
+        print(f'Material name: {mat.name}')
         
-    # convert all objects to mesh
-    bpy.ops.object.select_all(action='DESELECT')
-    bpy.context.view_layer.objects.active = bpy.data.objects[0]
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.object.convert(target='MESH', keep_original=False)
-
-    # extract and save buildings
-    bpy.ops.object.select_all(action="DESELECT")
-    for o in objs:
-        if "building" in o.name:
-            o.select_set(True)
-    print(
-        "Number of selected object groups (Building): %d"
-        % (len(bpy.context.selected_objects))
-    )
-    bpy.ops.export_mesh.ply(
-        filepath=project_root + name + "_building.ply",
-        use_ascii=True,
-        use_selection=True,
-        use_normals=False,
-        use_uv_coords=False,
-        use_colors=False,
-    )
-    if save_dae:
-        bpy.ops.wm.collada_export(
-            filepath=project_root + name + "_building.dae",
-            selected=True,
-        )
-
-    # extract and save roads
-    bpy.ops.object.select_all(action='INVERT')
-
-    print(
-        "Number of selected object groups (Road): %d"
-        % (len(bpy.context.selected_objects))
-    )
-    bpy.ops.export_mesh.ply(
-        filepath=project_root + name + "_road.ply",
-        use_ascii=True,
-        use_selection=True,
-        use_normals=False,
-        use_uv_coords=False,
-        use_colors=False,
-    )
-    if save_dae:
-        bpy.ops.wm.collada_export(
-            filepath=project_root + name + "_road.dae",
-            selected=True,
-        )
-
-    
-
-
+        objs = get_objs_with_material(mat)
+        
+        # 4.4- Determine what the material is used for (walls/roofs/unknown)
+        if mat.name in KNOWN_WALL_OSM_MATERIALS:
+            replace_mat = wall_material #WALL_MATERIAL ##############3
+        
+        elif mat.name in KNOWN_ROOF_OSM_MATERIALS:
+            replace_mat = roof_material
+        
+        else:
+            replace_mat = others_material
+            print(f'Unknown material found! Material name: {mat.name}')
+            for obj in objs:
+                print(f'Material name: {mat.name} | Obj {obj.name}')
+            with open(osm_folder + 'unknown_materials.txt', 'a') as fp:
+                fp.write(mat.name+'\n')
+            
+        # 4.5- Replace with the corresponding pre-defined material
+        for obj in objs:
+            idx_of_mat = get_slot_of_material(obj, mat)
+            obj.data.materials[idx_of_mat] = replace_mat
+        
+        # 4.6- Delete material (to have only pre-def. materials in the scene)
+        bpy.data.materials.remove(mat)
+        
+    # 6- Save scene as Mitsbua (XML)
+    bpy.ops.export_scene.mitsuba(
+        filepath=scen_folder + "scene.xml",
+        export_ids=True,
+        axis_forward='Y',
+        axis_up='Z')

@@ -21,29 +21,14 @@ chunk size will be enforced strictly.
 
 """
 
-import utm
 import numpy as np
 import pandas as pd
-
-def xy_from_latlong(lat_long):
-    """ Assumes lat and long along row. Returns same row vec/matrix on 
-    cartesian coords."""
-    # if there's just one coordinate
-    if len(lat_long.shape) == 1:
-        lat_long = np.reshape(lat_long, (1, lat_long.shape[0]))
-    
-    # utm.from_latlon() returns: (EASTING, NORTHING, ZONE_NUMBER, ZONE_LETTER)
-    x, y, *_ = utm.from_latlon(lat_long[:,0], lat_long[:,1])
-    return np.stack((x,y), axis=1)
-
+from geopy.distance import geodesic
 
 def compute_distance(coord1, coord2):
     " Returns distance in meters, more precisely than the other methods."
-    coord1_cartesian = xy_from_latlong(coord1)
-    coord2_cartesian = xy_from_latlong(coord2)
     
-    # np.linalg.norm is equivalent to: sqrt(diff[0]**2 + diff[1]**2)
-    return np.linalg.norm(coord2_cartesian - coord1_cartesian)
+    return geodesic(coord1, coord2).meters
 
 
 def dist_to_angle(origin_coord, dist, lat_or_lon='lat'):
