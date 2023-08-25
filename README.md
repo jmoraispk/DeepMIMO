@@ -45,6 +45,4 @@ If installing on Ubuntu, ask João for the latest install steps.
 
 Other packages necessary: tqdm, geopy, scipy
 
-# Execution
-
-Refer to the video: ...
+# Execution: Watch the [step-by-step video](https://www.youtube.com/watch?v=usxQ6gtEekY)
