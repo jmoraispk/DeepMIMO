@@ -1,2 +1,2 @@
-min_lat,min_lon,max_lat,max_lon,bs_lat,bs_lon,bs_alt,n_reflections,scattering,diffraction,x_step,y_step,z_step
-48.86143,2.34095,48.86415,2.34632,,,,5,0,1,2,2,0
+min_lat,min_lon,max_lat,max_lon,bs_lat,bs_lon,bs_alt,freq (ghz),n_reflections,scattering,diffraction,x_step,y_step,z_step
+48.86143,2.34095,48.86415,2.34632,,,,3.5,5,0,1,6,6,0

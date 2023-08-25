@@ -1,23 +1,26 @@
 # AutoRayTracing
 
-Provides 2 scripts for automating Ray Tracing simulations: 
+Provides 3 scripts for automating Ray Tracing simulations: 
 
-- scene_creation.py: is supposed to be executed inside Blender
-    1. reads coordinates from coords.csv
-    2. fetches maps from OSM those coordinates
-    3. imports the buildings into Blender
+- param_generator: turns the raw_params.csv into params.csv to facilitate large-scale simulations
+    1. reads the map bounding boxes (4 coordinates: min/max lon/lat) from raw_params
+    2. generates bboxes of smaller cells of size 500 x 500 meters (default)
+    3. saves them to params.csv
+- scene_creation: creates scenes for ray tracing (to be executed inside Blender)
+    1. reads coordinates from params.csv
+    2. fetches maps from OSM using those coordinates
+    3. imports (only!) the buildings into Blender
     4. adds ground plane in accordance with coordinate range
     5. configures building materials
     6. exports scene in mitsuba format (.xml)
-- compute_ray_tracing.py: needs to be executed in an environment with Sionna
-    1. loads the scene
+    7. writes scenes folder to scene_folder.txt
+- ray_tracing_base: computes the ray tracing on the generated scenes (to be executed in an environment with Sionna)
+    1. reads scene_folder.txt and params.csv
+    2. loads a scene
     2. distributes users uniformely across the scene
     3. places the transmitter in a building close to the center of the scene
     4. compute ray tracing simulations with the configured parameters
     5. saves the results (paths)
-
-
-Additonally, the repository contains compute_ray_tracing.ipynb, which is the .ipynb version of the .py script. It has visualizations and enables easier development, testing and debugging. The .py above is generated from this file.
 
 # Requirements
 
@@ -31,9 +34,17 @@ Additonally, the repository contains compute_ray_tracing.ipynb, which is the .ip
 - Go into the Scripting Tab of Blender
 - Run in the console:
     - `import pip`
-    - `pip.main(['install', 'pandas', '-user'])`
+    - `pip.main(['install', 'pandas', '--user'])`
+    - `pip.main(['install', 'geopy', '--user'])`
 
 ## Python Environment with Sionna
 
 For the time being, refer to the [install instructions from Sionna](https://nvlabs.github.io/sionna/installation.html)
 
+If installing on Ubuntu, ask João for the latest install steps.
+
+Other packages necessary: tqdm, geopy, scipy
+
+# Execution
+
+Refer to the video: ...

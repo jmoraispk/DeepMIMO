@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[13]:
+# In[1]:
 
 
 #!/usr/bin/env python3
@@ -27,8 +27,6 @@ if gpus:
 tf.get_logger().setLevel('ERROR')
 tf.random.set_seed(1) # Set global random seed for reproducibility
 
-
-# Imports
 get_ipython().run_line_magic('matplotlib', 'inline')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,29 +43,18 @@ from scipy.io import loadmat, savemat
 import pandas as pd
 
 with open('scenes_folder.txt', 'r') as fp:
-    scene_folder = fp.read()
+    root_folder = fp.read()[:-1] # no newline
 
-print(scene_folder)
-
-
-# In[11]:
+print(root_folder)
 
 
-#p = scene_folder + 'scen_0/scene.xml'
-#p2 = sionna.rt.scene.simple_street_canyon
-#p3 = sionna.rt.scene.etoile
-#p4 = sionna.rt.scene.munich
-#scene = load_scene(p)
-#scene.preview()
-
-
-# In[17]:
+# In[2]:
 
 
 tf.config.list_physical_devices()
 
 
-# In[3]:
+# In[37]:
 
 
 # Classes
@@ -78,8 +65,8 @@ class Shape:
         self.id = shape.id()
         self.shape = shape
         params = mi.traverse(shape)
-        self.faces = dr.unravel(mi.Point3f, params['faces'])
-        self.vertices = dr.unravel(mi.Point3f, params['vertex_positions'])
+        self.faces = dr.unravel(mi.Point3f, params['faces']).numpy()
+        self.vertices = dr.unravel(mi.Point3f, params['vertex_positions']).numpy()
         self.bbox = shape.bbox()
         
     def get_vertices(self):
@@ -103,6 +90,9 @@ class Shape:
     def get_bbox_corners(self):
         return self.bbox.min, self.bbox.max
 
+    def get_height(self):
+        return self.bbox.max[2] - self.bbox.min[2]
+        
     def get_center(self):
         return self.bbox.center
 
@@ -225,16 +215,17 @@ def create_base_scene(scene_path, center_frequency):
     return scene
 
 
-# In[7]:
+# In[38]:
 
 
 # Read parameters from CSV
-df = pd.read_csv('gen_params.csv' if os.path.exists('gen_params.csv') else 'raw_params.csv')
+df = pd.read_csv('params.csv')
 
 # Compute simulations for each row
 n_rows = df.index.stop
 
 for row_idx in range(n_rows):
+    carrier_freq = df['freq (ghz)'][row_idx] * 1e9
     n_reflections = df['n_reflections'][row_idx]
     
     if not np.isnan(df['bs_lat'][row_idx]):
@@ -257,24 +248,29 @@ for row_idx in range(n_rows):
           f'[x_step, y_step, z_step] = [{x_step}, {y_step}, {z_step}]\n')
 
     # 0- Create/Fetch scene and get buldings in the scene
-    # scene_name = sionna.rt.scene.simple_street_canyon
-    scene_name = scene_folder + f'scen_{row_idx}/scene.xml'
-    scene = create_base_scene(scene_name, center_frequency=3.5e9)
-    buildings = [Shape(building) for building in get_buildings_from_scene(scene)]
+    #scene_name = sionna.rt.scene.simple_street_canyon
+    scene_folder = root_folder + f'scen_{row_idx}/'
+    scene_name = scene_folder + 'scene.xml'
+    scene = create_base_scene(scene_name, center_frequency=carrier_freq)
+    buildings = [Shape(building) for building in get_buildings_from_scene(scene)][:-1] 
+    # (unkown last building in bottom left corner...)
 
     # 1- Compute TX position
     print('Computing BS position')
     
     # 1.1- Find the building closest to the center of the scene ([0,0,0])
     distances = [building.get_distance([0,0,0]) for building in buildings]
-    closest_building_idx = np.argmin(distances)
-    closest_building = buildings[closest_building_idx]
+    heights = [building.get_height() for building in buildings]
+    building_score = [heights[b]**2/distances[b] for b in range(len(buildings))]
+    best_building_idx = np.argmax(building_score)
+    closest_building = buildings[best_building_idx]
 
-    # 1.2- Find closest ROOF vertice to the origin
-    roof_vertices = closest_building.get_bbox_top_vertices()
-    vertice_distances = [np.linalg.norm(vert) for vert in roof_vertices]
+    # 1.2- Find closest vertice to the origin (at height)
+    best_building_vertices = closest_building.get_vertices()
+    # use a high point at the origin to force the selection of a roof vertice
+    vertice_distances = [np.linalg.norm(vert - [0,0,1e5]) for vert in best_building_vertices]
     closest_vertice_idx = np.argmin(vertice_distances)
-    closest_vertice = roof_vertices[closest_vertice_idx]
+    closest_vertice = best_building_vertices[closest_vertice_idx]
     
     # 1.3- Put transmitter 2 metters above that vertice
     tx_pos = closest_vertice + [0,0,2] if not tx_pos else tx_pos
@@ -290,57 +286,69 @@ for row_idx in range(n_rows):
     # 2.1- Get limits of the floor
     floor_shape = Shape(get_floor_from_scene(scene))
     min_corner, max_corner = floor_shape.get_bbox_corners()
+    c = 1.2 # constant of floor overscaling to account for edge effects
 
     # 2.2- Distribute users uniformely 1.5m above the floor
-    rxs = gen_user_grid(box_corners=[min_corner, max_corner],
+    rxs = gen_user_grid(box_corners=[min_corner/c, max_corner/c],
                         steps=[x_step,y_step,z_step],
                         no_zones=buildings,
                         box_offsets=[0,0,1.5])
 
     # 2.3- Add (ONLY SOME OF THE) receivers to the scene
     n_rx = len(rxs)
-    n_rx_in_scene = n_rx if not scattering else 1
+    n_rx_in_scene = 20 #n_rx if not scattering else 1
+    print(f'Adding users to the scene ({n_rx_in_scene} at a time)')
     for rx_idx in range(n_rx_in_scene):
         scene.add(Receiver(name=f"rx_{rx_idx}",
-                           position=rx_pos[rx_idx],
+                           position=rxs[rx_idx],
                            orientation=[0,0,0]))
 
     # 3- Compute paths
-    
     # 3.1- Enable scattering in the radio materials
     if scattering:
         for rm in scene.radio_materials.values():
             rm.scattering_coefficient = 1/np.sqrt(3) # [0,1]
             rm.scattering_pattern = DirectivePattern(alpha_r=10)
-    
+            
+
     # 3.2- Compute the paths for each set of receiver positions
     path_list = []
-    for x in tqdm(range(n_path_iter), desc='Path computation'):
-        if x != 0 and n_rx_in_scene != n_rx:
+    n_rx_remaining = n_rx
+    for x in tqdm(range(int(n_rx / n_rx_in_scene)+1), desc='Path computation'):
+        if n_rx_remaining > 0:
+            n_rx_remaining -= n_rx_in_scene
+        else:
+            break
+        if x != 0:
+            # modify current RXs in scene
             for rx_idx in range(n_rx_in_scene):
-                scene.receivers['rx_0'].position = rx_pos[rx_idx + n_rx_in_scene*x)]
+                if rx_idx + n_rx_in_scene*x < n_rx:
+                    scene.receivers[f'rx_{rx_idx}'].position = rxs[rx_idx + n_rx_in_scene*x]
+                else:
+                    # remove the last receivers in the scene
+                    scene.remove(f'rx_{rx_idx}')
             
         paths = scene.compute_paths(max_depth=n_reflections,
                                     num_samples=1e6,
                                     scattering=scattering,
                                     diffraction=diffraction)
         path_list.append(paths)
-        
     
     # 4- Save paths
+    print('Building path matrices')
     n_rx = len(rxs)
     path_matrices = []
-    for paths in path_list:
-        pass
-        if True:
-            print(f'a = {paths.a.shape}')             # [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths, num_time_steps]
-            print(f'tau = {paths.tau.shape}')         # [batch_size, num_rx, num_tx, max_num_paths]
-            print(f'phi_r = {paths.phi_r.shape}')     # [batch_size, num_rx, num_tx, max_num_paths],
-            print(f'phi_t = {paths.phi_t.shape}')     # [batch_size, num_rx, num_tx, max_num_paths],
-            print(f'theta_r = {paths.theta_r.shape}') # [batch_size, num_rx, num_tx, max_num_paths],
-            print(f'theta_t = {paths.theta_t.shape}') # [batch_size, num_rx, num_tx, max_num_paths],
-            print(f'type = {paths.types.shape}')      # [batch_size, max_num_paths]
-        
+    for idx, paths in enumerate(path_list):
+        if False:
+            print(f'paths idx = {idx}')
+            # [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths, num_time_steps]
+            print(f'a = {paths.a.shape}')
+            # print(f'tau = {paths.tau.shape}')         # [batch_size, num_rx, num_tx, max_num_paths]
+            # print(f'phi_r = {paths.phi_r.shape}')     # [batch_size, num_rx, num_tx, max_num_paths],
+            # print(f'phi_t = {paths.phi_t.shape}')     # [batch_size, num_rx, num_tx, max_num_paths],
+            # print(f'theta_r = {paths.theta_r.shape}') # [batch_size, num_rx, num_tx, max_num_paths],
+            # print(f'theta_t = {paths.theta_t.shape}') # [batch_size, num_rx, num_tx, max_num_paths],
+            # print(f'type = {paths.types.shape}')      # [batch_size, max_num_paths]
         
         phase = np.angle(paths.a.numpy(), deg=True)
         ToA   = paths.tau.numpy()
@@ -351,39 +359,102 @@ for row_idx in range(n_rows):
         DoD_theta = paths.theta_t.numpy() * 180 / np.pi
     
         # Generate 8 by X matrices, X = number of paths
+        empty_paths_warning = False
         for i in range(paths.a.shape[1]):
-        
             # determine which paths exist (non-existing paths have negative delays)
             non_zero_paths = np.where(paths.tau.numpy()[0,i,0,:] > 0)[0]
-            
-            path_matrix = np.zeros((8, len(non_zero_paths)))
 
-            # determine which paths are  LoS
-            los = np.zeros_like(non_zero_paths)
-            los[0] = 1 if (0 in non_zero_paths and paths.types.numpy()[0,0] == 0) else 0
-            
-            path_matrix = np.vstack((
-                phase[0, i, 0, 0, 0, non_zero_paths, 0],
-                ToA[0, i, 0, non_zero_paths],
-                power[0, i, 0, 0, 0, non_zero_paths, 0],
-                DoA_phi[0, i, 0, non_zero_paths],
-                DoA_theta[0, i, 0, non_zero_paths],
-                DoD_phi[0, i, 0, non_zero_paths],
-                DoD_theta[0, i, 0, non_zero_paths],
-                los))
+            if np.size(non_zero_paths) == 0:
+                if not empty_paths_warning:
+                    print('Found empty paths: number of reflections may not be enough')
+                    empty_paths_warning = True
+                path_matrix = np.zeros((8, len(non_zero_paths)))
+                path_matrix[1,:] = -1 # negative delays!
+            else:
+                path_matrix = np.zeros((8, len(non_zero_paths)))
+    
+                # determine which paths are  LoS
+                los = np.zeros_like(non_zero_paths)
+                los[0] = 1 if (0 in non_zero_paths and paths.types.numpy()[0,0] == 0) else 0
+                
+                path_matrix = np.vstack((
+                    phase[0, i, 0, 0, 0, non_zero_paths, 0],
+                    ToA[0, i, 0, non_zero_paths],
+                    power[0, i, 0, 0, 0, non_zero_paths, 0],
+                    DoA_phi[0, i, 0, non_zero_paths],
+                    DoA_theta[0, i, 0, non_zero_paths],
+                    DoD_phi[0, i, 0, non_zero_paths],
+                    DoD_theta[0, i, 0, non_zero_paths],
+                    los))
+                
+                # sort paths based on received power
+                path_matrix = path_matrix[:, np.flip(path_matrix[2,:].argsort())] 
+                
             path_matrices.append(path_matrix)
         
-    # Make dict for DeepMIMO
-    dict = {f'user_{i}': {'position': rxs[i],
-                          'path_params': path_matrices[i]}
-            for i in range(n_rx)}
+    # 5- Save data for DeepMIMO 
+    # 5.1- Create BS file
+    dict_bs = {
+        'channels': [{'p': []}],
+        'rx_locs': [tx_pos[0], tx_pos[1], tx_pos[2], 0, 0],
+    }
+    # 5.2- Create users file
+    rx_locs = np.zeros((n_rx, 5))
+    rx_locs[:, :3] = rxs
+    ues_channels = [{'p': path_matrices[i]} for i in range(n_rx)]
+    dict_ues = {
+        'channels': ues_channels,
+        'rx_locs': rx_locs,
+    }
+
+    # CHECK why the -INF and why the (8,0) matrices!!!!!
+                
+    # 5.3- Create parameters file
+    params_file = {
+        'carrier_freq': carrier_freq,
+        'doppler_available': 0,
+        'dual_polar_available': 0,
+        'num_BS': 1,
+        'transmit_power': 0.0,
+        'user_grids': [1.0, 1.0, n_rx],
+        'version': 2,
+    }
     
-    # Save dict as Matlab matrix
-    savemat('name.mat', dict)
+    # 5.4- Save data
+    mat_folder = scene_folder + 'DeepMIMO_folder/'
+    os.makedirs(mat_folder, exist_ok=True)
+    savemat(mat_folder +  'BS1_BS.mat', dict_bs)
+    savemat(mat_folder + f'BS1_UE_0-{n_rx}.mat', dict_ues)
+    savemat(mat_folder + f'params.mat', params_file)
+
+    # NOTE: warning is normal
+    # RuntimeWarning: divide by zero encountered in log10power = 20 * np.log10(np.absolute(paths.a.numpy()))
+    # This happens because some positions don't have any paths to them
 
 
-# In[86]:
+# In[39]:
 
 
-#scene.preview()
+scene.preview()
+
+
+# In[ ]:
+
+
+m_test = loadmat(mat_folder + f'BS1_UE0-{n_rx}.mat')
+
+# Check for -inf powers
+n_users = len(m_test['channels'][0])
+count_infs = 0
+for i in range(n_users):
+    count_infs = np.sum(len(np.where(np.isinf(m_test['channels'][0][i][0][0][0]))[0]))
+    
+print(f'count_infs = {count_infs}')
+
+# Check for empty matrices (users with no paths)
+emtpy_matrices = 0
+for i in range(n_users):
+    if m_test['channels'][0][i][0][0][0].shape[1] == 0:
+        emtpy_matrices += 1
+print(f'empty_matrices = {emtpy_matrices}')
 
