@@ -34,8 +34,8 @@ class DeepMIMODataFormatter:
         
     def sort_TX_RX(self):
         if self.TX_order and self.RX_order and not self.TX_polar and not self.RX_polar:
-            assert len(self.TX_order)==len(self.TX_list), 'Number of provided TX IDs must match the available files from the scenario generation!'
-            assert len(self.RX_order)==len(self.RX_list), 'Number of provided RX IDs must match the available files from the scenario generation!'
+            assert len(self.TX_order) == len(self.TX_list), 'Number of provided TX IDs must match the available files from the scenario generation!'
+            assert len(self.RX_order) == len(self.RX_list), 'Number of provided RX IDs must match the available files from the scenario generation!'
             assert set(self.TX_order) == set(self.TX_list), 'Provided TX IDs must match the available TXs from the scenario generation!'
             assert set(self.RX_order) == set(self.RX_list), 'Provided RX IDs must match the available RXs from the scenario generation!'
         elif self.TX_order and self.RX_order and self.TX_polar and self.RX_polar:
@@ -73,8 +73,12 @@ class DeepMIMODataFormatter:
             data = scipy.io.loadmat(file_path)
             bs_ue_channels.append(data['channels'][0])
             bs_ue_info.append(data['rx_locs'])
-        bs_ue_channels = np.concatenate(bs_ue_channels)
-        bs_ue_info = np.concatenate(bs_ue_info)
+        if bs_ue_channels:
+            bs_ue_channels = np.concatenate(bs_ue_channels)
+            bs_ue_info = np.concatenate(bs_ue_info)
+        else:
+            bs_ue_channels = np.array(bs_ue_channels)
+            bs_ue_info = np.array(bs_ue_info)
         return bs_ue_channels, bs_ue_info
              
     def save_data_polar(self):

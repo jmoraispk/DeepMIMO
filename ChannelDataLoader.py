@@ -21,10 +21,12 @@ PARSE_FUNCS = ['parse_first', 'parse_first', 'parse_first', 'parse_third', 'pars
 
 class WIChannelConverter:
 
-    def __init__(self, directory, save_folder, interacts=False):
+    def __init__(self, directory, save_folder, moving_objects=None, interacts=False):
         self.channels = []
-        
         self.interacts = interacts
+        
+        if moving_objects is not None:
+            self.moving_objects = moving_objects
         
         self.save_folder = save_folder
         if not os.path.exists(self.save_folder):
@@ -54,6 +56,8 @@ class WIChannelConverter:
                 files = {**files, read_table['Extension'][j]: file_data}
 
             self.channels = self.create_ch_from_files(files)
+            if self.moving_objects is not None:
+                self.add_Doppler(self.moving_objects)
             self.save_channels('TX%i-%i_RX%i.mat'%tuple(rx_tx_pair))
 
     def create_ch_from_files(self, file_data):
@@ -385,7 +389,7 @@ class Channel:
         #     np.array(path_dict['interactions']['loc'])
         
         second_mat = list(self.RX_loc) + [self.dist] + [self.PL]
-        return {'p': store_array}, second_mat 
+        return {'p': store_array}, second_mat
         # Most efficient with only single character dict due to non-uniform array size
         # Multiple characters, e.g., 'paths' add extra size
         # Similarly, adding second variable also adds, instead join them as a single array
@@ -408,7 +412,7 @@ class Path:
     def identify_LOS(self):
         LOS_status = 1
         for i in range(len(self.interact)):
-            if self.interact[i] in ['R', 'D', 'DS', 'T']:
+            if self.interact[i] in ['R', 'D',  'DS', 'T', 'F', 'X']:
                 LOS_status = 0
                 break
             elif self.interact[i] in ['Fx', 'Rx', 'Tx']:
