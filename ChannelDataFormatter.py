@@ -51,15 +51,16 @@ class DeepMIMODataFormatter:
     def save_data(self):
         for tx_cnt, t in enumerate(tqdm(self.TX_order)):
             
-            tx_files = self.df[self.df['TX'] == t]
-            bs_bs_channels, bs_bs_info = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
-            bs_ue_channels, bs_ue_info = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
-            
             # Load tx locations and append it to each file
             tx_loc = self.tx_locs['%s-1'%t].squeeze()
+            tx_files = self.df[self.df['TX'] == t]
+
+            bs_idx_files = [item for item in self.TX_order if item in tx_files["RX"].values]
+            if bs_idx_files:
+                bs_bs_channels, bs_bs_info = self.collect_data(tx_files, bs_idx_files, self.intermediate_folder)
+                scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels': bs_bs_channels, 'rx_locs': bs_bs_info, 'tx_loc': tx_loc})
             
-            scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels': bs_bs_channels, 'rx_locs': bs_bs_info, 'tx_loc': tx_loc})
-            
+            bs_ue_channels, bs_ue_info = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
             cur_count = 0
             num_ues = len(bs_ue_channels)
             while cur_count<num_ues:
@@ -87,32 +88,36 @@ class DeepMIMODataFormatter:
              
     def save_data_polar(self):
         for tx_cnt, t in enumerate(tqdm(self.TX_order)):
+            
+            tx_loc = self.tx_locs['%s-1'%t].squeeze()
+
             # BS-BS channel generation
             tx_files = self.df[self.df['TX'] == t]
+            tx_files_polar = self.df[self.df['TX'] == self.TX_polar[tx_cnt]]
 
-            bs_bs_channels_VV, bs_bs_info = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
-            bs_bs_channels_VH, _ = self.collect_data(tx_files, self.TX_polar, self.intermediate_folder)
+            bs_idx_files = [item for item in zip(self.TX_order, self.TX_polar) if item in tx_files["RX"].values]
+            if bs_idx_files:
+
+                bs_bs_channels_VV, bs_bs_info = self.collect_data(tx_files, bs_idx_files[0], self.intermediate_folder)
+                bs_bs_channels_VH, _ = self.collect_data(tx_files, bs_idx_files[1], self.intermediate_folder)
+
+                bs_bs_channels_HV, _ = self.collect_data(tx_files_polar, bs_idx_files[0], self.intermediate_folder)
+                bs_bs_channels_HH, _ = self.collect_data(tx_files_polar, bs_idx_files[1], self.intermediate_folder)
             
+                scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels_VV': bs_bs_channels_VV, 
+                                                                                            'channels_VH': bs_bs_channels_VH,
+                                                                                            'channels_HV': bs_bs_channels_HV,
+                                                                                            'channels_HH': bs_bs_channels_HH,
+                                                                                            'rx_locs': bs_bs_info,
+                                                                                            'tx_loc': tx_loc
+                                                                                            }
+                                )
+                
             bs_ue_channels_VV, bs_ue_info = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
             bs_ue_channels_VH, _ = self.collect_data(tx_files, self.RX_polar, self.intermediate_folder)
             
-            tx_files = self.df[self.df['TX'] == self.TX_polar[tx_cnt]]
-            bs_bs_channels_HV, _ = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
-            bs_bs_channels_HH, _ = self.collect_data(tx_files, self.TX_polar, self.intermediate_folder)
-            
-            bs_ue_channels_HV, _ = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
-            bs_ue_channels_HH, _ = self.collect_data(tx_files, self.RX_polar, self.intermediate_folder)
-            
-            tx_loc = self.tx_locs['%s-1'%t].squeeze()
-            
-            scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels_VV': bs_bs_channels_VV, 
-                                                                                        'channels_VH': bs_bs_channels_VH,
-                                                                                        'channels_HV': bs_bs_channels_HV,
-                                                                                        'channels_HH': bs_bs_channels_HH,
-                                                                                        'rx_locs': bs_bs_info,
-                                                                                        'tx_loc': tx_loc
-                                                                                        }
-                             )
+            bs_ue_channels_HV, _ = self.collect_data(tx_files_polar, self.RX_order, self.intermediate_folder)
+            bs_ue_channels_HH, _ = self.collect_data(tx_files_polar, self.RX_polar, self.intermediate_folder)
             
             cur_count = 0
             num_ues = len(bs_ue_channels_VV)
