@@ -25,8 +25,7 @@ class WIChannelConverter:
         self.channels = []
         self.interacts = interacts
         
-        if moving_objects is not None:
-            self.moving_objects = moving_objects
+        self.moving_objects = moving_objects
         
         self.save_folder = save_folder
         if not os.path.exists(self.save_folder):
@@ -42,6 +41,11 @@ class WIChannelConverter:
         triplet_cols = ['TX_ID', 'TX_CNT', 'RX_ID']
         unique_table = file_table[triplet_cols].drop_duplicates()
         
+        # To collect the TX locs
+        unique_tx = unique_table[['TX_ID', 'TX_CNT']].drop_duplicates()
+        unique_tx = unique_tx['TX_ID'].astype(str) + '-' + unique_tx['TX_CNT'].astype(str)
+        tx_locs = {unique_tx.iloc[i]:None for i in range(len(unique_tx))}
+        
         for i in tqdm(range(len(unique_table))):
             rx_tx_pair = unique_table.iloc[i]
             
@@ -55,12 +59,17 @@ class WIChannelConverter:
                 file_data = self.import_file(filename=read_table['Dir'][j], extension=read_table['Extension'][j])
                 files = {**files, read_table['Extension'][j]: file_data}
 
-            self.channels = self.create_ch_from_files(files)
+            self.channels = self.create_ch_from_files(files, tx_locs)
             if self.moving_objects is not None:
                 self.add_Doppler(self.moving_objects)
             self.save_channels('TX%i-%i_RX%i.mat'%tuple(rx_tx_pair))
+            
+        for key in tx_locs.keys():
+            if tx_locs[key] is None:
+                print('Warning: The transmitter %s has no paths with any receiver! (or debug the code)')
+        scipy.io.savemat(os.path.join(self.save_folder, 'TX_locs.mat'), tx_locs)
 
-    def create_ch_from_files(self, file_data):
+    def create_ch_from_files(self, file_data, tx_locs):
 
         # Create Channels from Information
         num_rx = len(file_data[EXTS[0]])
@@ -79,7 +88,8 @@ class WIChannelConverter:
                                     file_data[EXTS[1]][i],
                                     file_data[EXTS[2]][i],
                                     file_data[EXTS[3]][i],
-                                    file_data[EXTS[4]]['PL_data'][i]))
+                                    file_data[EXTS[4]]['PL_data'][i],
+                                    tx_locs))
 
         return channels
 
@@ -277,10 +287,8 @@ class WIChannelConverter:
     #             save_cnt = next_cnt
 
 
-pos_dict = {}
-
 class Channel:
-    def __init__(self, info_ID, TX_str, RX_str, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4):
+    def __init__(self, info_ID, TX_str, RX_str, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4, tx_locs):
         self.Doppler = False
         
         self.TX_ID = info_ID['TX_ID']
@@ -290,7 +298,8 @@ class Channel:
         self.RX_loc = info_ext_4[1:4]
         self.TX_id_w = TX_id
         self.RX_id_w = RX_id
-
+        
+        self.tx_loc_key = str(self.TX_ID) + '-' + str(self.TX_ID_s)
 
         self.dist = info_ext_4[4]
         self.PL = info_ext_4[5]
@@ -299,24 +308,23 @@ class Channel:
 
         self.num_paths = len(info_ext_0)
         
-        # Retrieve TX position
-        if TX_str not in pos_dict:
-            if self.num_paths>0:
-                pos_dict[TX_str] = info_ext_3[0][1][0]
-        
-        
         self.paths = []
+        seek_tx_loc = tx_locs[self.tx_loc_key] is None
         for i in range(self.num_paths):
             self.paths.append(Path(phase=info_ext_0[i][1],
-                                   ToA=info_ext_0[i][2],
-                                   power=info_ext_0[i][3],
-                                   doa_phi=info_ext_1[i][1],
-                                   doa_theta=info_ext_1[i][2],
-                                   dod_phi=info_ext_2[i][1],
-                                   dod_theta=info_ext_2[i][2],
-                                   interact=info_ext_3[i][0],
-                                   interact_locs=info_ext_3[i][1]
-                                   ))
+                                ToA=info_ext_0[i][2],
+                                power=info_ext_0[i][3],
+                                doa_phi=info_ext_1[i][1],
+                                doa_theta=info_ext_1[i][2],
+                                dod_phi=info_ext_2[i][1],
+                                dod_theta=info_ext_2[i][2],
+                                interact=info_ext_3[i][0],
+                                interact_locs=info_ext_3[i][1]))
+            if seek_tx_loc:
+                if info_ext_3[i][0][0] == 'Tx':
+                    tx_locs[self.tx_loc_key] = info_ext_3[i][1][0]
+                    seek_tx_loc = False
+                    
         self.LOS = self.identify_LOS()
 
     def calc_Doppler(self, bound_min, bound_max, vel_acc, vel_dir):

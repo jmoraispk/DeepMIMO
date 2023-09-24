@@ -21,6 +21,7 @@ class DeepMIMODataFormatter:
             os.mkdir(self.save_folder)
             
         self.import_folder()
+        self.tx_locs = scipy.io.loadmat(os.path.join(self.intermediate_folder, 'TX_locs.mat'))
         
         self.TX_order = TX_order
         self.RX_order = RX_order
@@ -54,13 +55,16 @@ class DeepMIMODataFormatter:
             bs_bs_channels, bs_bs_info = self.collect_data(tx_files, self.TX_order, self.intermediate_folder)
             bs_ue_channels, bs_ue_info = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
             
-            scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels': bs_bs_channels, 'rx_locs': bs_bs_info})
+            # Load tx locations and append it to each file
+            tx_loc = self.tx_locs['%s-1'%t].squeeze()
+            
+            scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels': bs_bs_channels, 'rx_locs': bs_bs_info, 'tx_loc': tx_loc})
             
             cur_count = 0
             num_ues = len(bs_ue_channels)
             while cur_count<num_ues:
                 next_count = min(cur_count + self.max_channels, num_ues)
-                scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_UE_%i-%i.mat'%(tx_cnt+1, cur_count, next_count)), {'channels': bs_ue_channels[cur_count:next_count], 'rx_locs': bs_ue_info[cur_count:next_count]})
+                scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_UE_%i-%i.mat'%(tx_cnt+1, cur_count, next_count)), {'channels': bs_ue_channels[cur_count:next_count], 'rx_locs': bs_ue_info[cur_count:next_count], 'tx_loc': tx_loc})
                 cur_count = next_count
              
     def collect_data(self, df_tx_files, rx_index, intermediate_folder):
@@ -99,11 +103,16 @@ class DeepMIMODataFormatter:
             bs_ue_channels_HV, _ = self.collect_data(tx_files, self.RX_order, self.intermediate_folder)
             bs_ue_channels_HH, _ = self.collect_data(tx_files, self.RX_polar, self.intermediate_folder)
             
+            tx_loc = self.tx_locs['%s-1'%t].squeeze()
+            
             scipy.io.savemat(os.path.join(self.save_folder, 'BS%i_BS.mat'%(tx_cnt+1)), {'channels_VV': bs_bs_channels_VV, 
                                                                                         'channels_VH': bs_bs_channels_VH,
                                                                                         'channels_HV': bs_bs_channels_HV,
                                                                                         'channels_HH': bs_bs_channels_HH,
-                                                                                        'rx_locs': bs_bs_info})
+                                                                                        'rx_locs': bs_bs_info,
+                                                                                        'tx_loc': tx_loc
+                                                                                        }
+                             )
             
             cur_count = 0
             num_ues = len(bs_ue_channels_VV)
@@ -114,7 +123,8 @@ class DeepMIMODataFormatter:
                                       'channels_VH': bs_ue_channels_VH[cur_count:next_count],
                                       'channels_HV': bs_ue_channels_HV[cur_count:next_count],
                                       'channels_HH': bs_ue_channels_HH[cur_count:next_count], 
-                                      'rx_locs': bs_ue_info[cur_count:next_count]
+                                      'rx_locs': bs_ue_info[cur_count:next_count],
+                                      'tx_loc': tx_loc
                                       }
                                  )
                 cur_count = next_count
