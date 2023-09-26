@@ -384,7 +384,7 @@ class Channel:
             #     interacts_dict['loc'].append(path.interact_locs)
 
         
-        store_array = np.zeros((len(path_dict), self.num_paths))
+        store_array = np.zeros((len(path_dict), self.num_paths), dtype=np.single)
         for i, key in enumerate(path_dict):
             store_array[i, :] = path_dict[key]
 
