@@ -1,7 +1,7 @@
 import os
 
-def create_scenario(path_to_scenario):
-    print('here2!')
+def create_scenario(path_to_rt_folder):
+    print('here3!')
     
     # Example logic to determine generator type based on files found
     files_in_dir = os.listdir('.')
