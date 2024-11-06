@@ -18,7 +18,7 @@ deepmimo/
 
 
 
-# License and Citation
+# Citation
 
 If you use this software, please cite it as:
 
