@@ -12,10 +12,10 @@ import os
 import copy
 import numpy as np
 
-import DeepMIMOv3.consts as c
-from DeepMIMOv3.construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
-from DeepMIMOv3.utils import safe_print
-from DeepMIMOv3.params import default_params
+from . import consts as c
+from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
+from .utils import safe_print
+from .params import default_params
 
 def generate_data(ext_params):
     

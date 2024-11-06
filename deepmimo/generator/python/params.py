@@ -9,7 +9,7 @@ Date: 12/10/2021
 """
 
 import numpy as np
-import DeepMIMOv3.consts as c
+from . import consts as c
 
 def default_params():
     params = {c.PARAMSET_DATASET_FOLDER: './Raytracing_scenarios',

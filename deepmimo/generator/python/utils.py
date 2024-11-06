@@ -9,9 +9,9 @@ Date: 12/10/2021
 """
 
 import time
-import DeepMIMOv3.consts as c
-from DeepMIMOv3.construct_deepmimo import ant_indices, array_response
 import numpy as np
+from . import consts as c
+from .construct_deepmimo import ant_indices, array_response
 
 ################################# Internal ####################################
 

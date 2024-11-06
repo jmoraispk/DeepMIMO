@@ -1,13 +1,19 @@
 import os
 
 def create_scenario(path_to_scenario):
+    print('here2!')
+    
     # Example logic to determine generator type based on files found
-    if 'aodt' in os.listdir(path_to_scenario):
+    files_in_dir = os.listdir('.')
+    if 'aodt' in files_in_dir:
         print("Using AODT generator")
-        # You can add more complex logic here, e.g., importing submodules
-    elif 'sionna_rt' in os.listdir(path_to_scenario):
+        # ...
+    elif '.path' in files_in_dir:
         print("Using Sionna_RT generator")
-    elif 'wireless_insite' in os.listdir(path_to_scenario):
+        # ...
+    elif '.p2m' in files_in_dir:
         print("Using Wireless Insite generator")
+        # ...
     else:
-        print("Unknown scenario type")
+        print("Unknown raytracer type")
+        # ...
