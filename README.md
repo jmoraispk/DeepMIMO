@@ -18,7 +18,18 @@ deepmimo/
 
 
 
-# Cite
+# License and Citation
 
-This code package is related to the following [article](https://arxiv.org/abs/1902.06435): 
->Ahmed Alkhateeb, “[DeepMIMO: A Generic Deep Learning Dataset for Millimeter Wave and Massive MIMO Applications](https://arxiv.org/pdf/1902.06435.pdf),” in Proc. of Information Theory and Applications Workshop (ITA), San Diego, CA, Feb. 2019.
+If you use this software, please cite it as:
+
+```bibtex
+@misc{alkhateeb2019deepmimo,
+      title={DeepMIMO: A Generic Deep Learning Dataset for Millimeter Wave and Massive MIMO Applications}, 
+      author={Ahmed Alkhateeb},
+      year={2019},
+      eprint={1902.06435},
+      archivePrefix={arXiv},
+      primaryClass={cs.IT},
+      url={https://arxiv.org/abs/1902.06435}, 
+}
+```
