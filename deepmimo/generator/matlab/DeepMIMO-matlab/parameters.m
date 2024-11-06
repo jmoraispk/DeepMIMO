@@ -2,6 +2,7 @@
 % A detailed description of the parameters is available on DeepMIMO.net
 
 %Ray-tracing scenario
+% params.dataset_folder = './raytracing_scenarios';
 params.scenario = 'O1_60';          % The adopted ray tracing scenario [check the available scenarios at https://deepmimo.net/scenarios/]
 
 %Dynamic Scenario Scenes [only for dynamic (multiple-scene) scenarios]
