@@ -1,3 +1,18 @@
+# Converters
+# p2m
+# aodt
+# srt
+
+# Generators
+# python
+# matlab
+
+
+
+
+
+# Gitignore Defaults
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
