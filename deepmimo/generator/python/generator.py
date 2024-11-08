@@ -15,14 +15,24 @@ import numpy as np
 from . import consts as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
 from .utils import safe_print
-from .params import default_params
+from .params import Parameters
 
 def generate_data(ext_params):
     
     np.random.seed(1001)
     
-    params = validate_params(copy.deepcopy(ext_params))
+    ext_params = ext_params.get_params_dict()
     
+    # ans = input()
+    # if not ('n' in ans.lower()):
+    #     download_scenario_handler(scen)
+
+    try:
+        params = validate_params(copy.deepcopy(ext_params))
+    except FileNotFoundError:
+        print('Scenario not found. Would you like to download it? (Y/n)')
+        return
+            
     # If dynamic scenario
     if is_dynamic_scenario(params):
         scene_list = params[c.PARAMSET_DYNAMIC_SCENES]
@@ -99,7 +109,7 @@ def generate_scene_data(params):
 # TODO: Move validation into another script
 def validate_params(params):
 
-    additional_keys = compare_two_dicts(params, default_params())
+    additional_keys = compare_two_dicts(params, Parameters().get_params_dict())
     if len(additional_keys):
         print('The following parameters seem unnecessary:')
         print(additional_keys)

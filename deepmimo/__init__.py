@@ -1,6 +1,6 @@
 
 from .generator.python.generator import generate_data as generate
-from .generator.python.params import default_params
+from .generator.python.params import Parameters
 
 from .converter.converter import create_scenario
 
