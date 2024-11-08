@@ -109,9 +109,9 @@ def validate_params(params):
     params['data_version'] = check_data_version(params)
     params[c.PARAMSET_SCENARIO_PARAMS_PATH] = get_scenario_params_path(params)
     if params['data_version'] == 'v2':
-        from DeepMIMOv3.raytracing_v2 import load_scenario_params, read_raytracing
+        from .raytracing_v2 import load_scenario_params, read_raytracing
     elif params['data_version'] == 'v3':
-        from DeepMIMOv3.raytracing_v3 import load_scenario_params, read_raytracing
+        from .raytracing_v3 import load_scenario_params, read_raytracing
     params['raytracing_fn'] = read_raytracing
     params[c.PARAMSET_SCENARIO_PARAMS] = load_scenario_params(params[c.PARAMSET_SCENARIO_PARAMS_PATH])
     
@@ -223,8 +223,7 @@ def find_users_from_rows(params):
     return user_ids
 
 def is_dynamic_scenario(params):
-    dynamic = 'dyn' in params[c.PARAMSET_SCENARIO]
-    return dynamic
+    return 'dyn' in params[c.PARAMSET_SCENARIO]
 
 def check_data_version(params):
     v3_params_path = os.path.join(os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 

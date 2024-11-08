@@ -8,6 +8,9 @@ Authors: Umut Demirhan, Ahmed Alkhateeb
 Date: 12/10/2021
 """
 
+SCENARIOS_FOLDER = 'deepmimo_scenarios'
+
+# Dict names
 DICT_UE_IDX = 'user'
 DICT_BS_IDX = 'basestation'
 

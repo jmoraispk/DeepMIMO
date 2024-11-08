@@ -11,9 +11,12 @@ Date: 12/10/2021
 import numpy as np
 from . import consts as c
 
-def default_params():
-    params = {c.PARAMSET_DATASET_FOLDER: './Raytracing_scenarios',
-              c.PARAMSET_SCENARIO:'O1_60',
+# JTODO: make this into class
+
+def default_params(scen_name=None):
+    
+    params = {c.PARAMSET_DATASET_FOLDER: c.SCENARIOS_FOLDER,
+              c.PARAMSET_SCENARIO: scen_name if scen_name else'O1_60' ,
               
               # Dynamic scenario scene selection
               c.PARAMSET_DYNAMIC_SCENES: np.array([1]),

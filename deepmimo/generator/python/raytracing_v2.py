@@ -11,8 +11,8 @@ Date: 12/10/2021
 import os
 import numpy as np
 from tqdm import tqdm
-import DeepMIMOv3.consts as c
-from DeepMIMOv3.utils import safe_print, PathVerifier, dbm2pow
+from . import consts as c
+from .utils import PathVerifier, dbm2pow
 import scipy.io
 
 def read_raytracing(bs_id, params, user=True):
