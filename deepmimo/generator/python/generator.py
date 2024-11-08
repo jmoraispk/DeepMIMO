@@ -16,7 +16,7 @@ from . import consts as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
 from .utils import safe_print
 from .params import Parameters
-from .downloader import download_scenario_handler
+from .downloader import download_scenario_handler, extract_scenario
 
 def generate_data(params_obj=None):
     
@@ -31,8 +31,9 @@ def generate_data(params_obj=None):
         print('Scenario not found. Would you like to download it? (Y/n)')
         ans = input()
         if not ('n' in ans.lower()):
-            download_scenario_handler(params_obj.get_name())
-
+            zip_path = download_scenario_handler(params_obj.get_name())
+            scen_path = extract_scenario(zip_path)
+        
     try:
         params = validate_params(copy.deepcopy(ext_params))
     except FileNotFoundError:

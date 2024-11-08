@@ -105,7 +105,7 @@ def extract_scenario(path_to_zip):
         zip_ref.extractall(os.path.dirname(path_to_zip))
 
 def download_scenario_handler(name):
-
+    zip_path = ''
     attempt = 0
     while attempt < 3:
         attempt += 1
@@ -115,5 +115,4 @@ def download_scenario_handler(name):
         except ConnectionError:
             print(f'Attempt {attempt}/3 failed..')
     
-    scen_path = extract_scenario(zip_path)
-    return scen_path
+    return zip_path
