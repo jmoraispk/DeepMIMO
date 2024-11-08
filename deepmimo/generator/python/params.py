@@ -8,6 +8,7 @@ Authors: Umut Demirhan, Ahmed Alkhateeb
 Date: 12/10/2021
 """
 
+import os 
 import numpy as np
 from . import consts as c
 
@@ -55,7 +56,7 @@ class Parameters():
             
             c.PARAMSET_DOPPLER_EN: 0,
             c.PARAMSET_POLAR_EN: 0,
-            c.PARAMSET_BS2BS: 1,
+            c.PARAMSET_BS2BS: 0,
             
             c.PARAMSET_FDTD: 1 , 
             # OFDM if 1 
@@ -77,6 +78,16 @@ class Parameters():
                 c.PARAMSET_OFDM_LPF: 0
                 }
             }
+        
     def get_params_dict(self):
         return self.params
+    
+    def get_name(self):
+        return self.params[c.PARAMSET_SCENARIO]
+    
+    def get_folder(self):
+        return os.path.abspath(self.params[c.PARAMSET_DATASET_FOLDER])
+    
+    def get_path(self):
+        return os.path.join(self.get_folder(), self.params[c.PARAMSET_SCENARIO])
     
