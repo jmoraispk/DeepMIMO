@@ -1,14 +1,14 @@
 import setuptools
 
 VERSION = '0.2.8' 
-DESCRIPTION = 'DeepMIMOv3'
-LONG_DESCRIPTION = 'DeepMIMOv3 dataset generator library'
+DESCRIPTION = 'DeepMIMO'
+LONG_DESCRIPTION = 'DeepMIMO dataset generator library'
 
 # Setting up
 setuptools.setup(
-        name="DeepMIMOv3", 
+        name="DeepMIMO", 
         version=VERSION,
-        author="Umut Demirhan, Ahmed Alkhateeb",
+        author="Umut Demirhan, Ahmed Alkhateeb, João Morais",
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         license_files = ('LICENSE.txt', ),
