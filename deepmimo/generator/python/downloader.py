@@ -116,3 +116,7 @@ def download_scenario_handler(name):
             print(f'Attempt {attempt}/3 failed..')
     
     return zip_path
+
+def test_all_scen_download():
+    for scen in NAME_TO_LINK.keys():
+        download_scenario_handler(scen)

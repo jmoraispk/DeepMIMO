@@ -8,16 +8,13 @@ import deepmimo as dm
 
 #%%
 
-dm.create_scenario('asu_campus2')
+path_to_p2m_folder = r'C:\Users\jmora\Documents\GitHub\DeepMIMO\P2Ms\ASU_campus_just_p2m\study_area_asu5'
+
+dm.create_scenario(path_to_p2m_folder)
 
 #%%
 params = dm.Parameters('city_2_chicago')#asu_campus')
 
 dataset = dm.generate(params)
 
-#%%
-from deepmimo.generator.python.downloader import download_scenario_handler, NAME_TO_LINK
-
-for scen in NAME_TO_LINK.keys():
-    download_scenario_handler(scen)
     
