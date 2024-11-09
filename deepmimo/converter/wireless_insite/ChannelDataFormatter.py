@@ -13,7 +13,8 @@ import numpy as np
 from tqdm import tqdm
 
 class DeepMIMODataFormatter:
-    def __init__(self, intermediate_folder, save_folder, max_channels=100000, TX_order=None, RX_order=None, TX_polar=None, RX_polar=None):
+    def __init__(self, intermediate_folder, save_folder, max_channels=100000, 
+                 TX_order=None, RX_order=None, TX_polar=None, RX_polar=None):
         self.intermediate_folder = intermediate_folder
         self.max_channels = max_channels
         self.save_folder = save_folder
@@ -34,16 +35,16 @@ class DeepMIMODataFormatter:
             self.save_data()
         
     def sort_TX_RX(self):
+
+        tx_id_err_s = 'Provided TX IDs must match the available TXs from the scenario generation!'
+        rx_id_err_s = tx_id_err_s.replace('TX', 'RX')
+    
         if self.TX_order and self.RX_order and not self.TX_polar and not self.RX_polar:
-            assert len(self.TX_order) == len(self.TX_list), 'Number of provided TX IDs must match the available files from the scenario generation!'
-            assert len(self.RX_order) == len(self.RX_list), 'Number of provided RX IDs must match the available files from the scenario generation!'
-            assert set(self.TX_order) == set(self.TX_list), 'Provided TX IDs must match the available TXs from the scenario generation!'
-            assert set(self.RX_order) == set(self.RX_list), 'Provided RX IDs must match the available RXs from the scenario generation!'
+            assert set(self.TX_order) == set(self.TX_list), tx_id_err_s
+            assert set(self.RX_order) == set(self.RX_list), rx_id_err_s
         elif self.TX_order and self.RX_order and self.TX_polar and self.RX_polar:
-            assert len(self.TX_order) + len(self.TX_polar) == len(self.TX_list), 'Number of provided TX IDs must match the available files from the scenario generation!'
-            assert len(self.RX_order) + len(self.RX_polar) == len(self.RX_list), 'Number of provided RX IDs must match the available files from the scenario generation!'
-            assert set(self.TX_order + self.TX_polar) == set(self.TX_list), 'Provided TX IDs must match the available TXs from the scenario generation!'
-            assert set(self.RX_order + self.RX_polar) == set(self.RX_list), 'Provided RX IDs must match the available RXs from the scenario generation!'
+            assert set(self.TX_order + self.TX_polar) == set(self.TX_list), tx_id_err_s
+            assert set(self.RX_order + self.RX_polar) == set(self.RX_list), rx_id_err_s
         else:
             self.TX_order = self.TX_list
             self.RX_order = self.RX_list
