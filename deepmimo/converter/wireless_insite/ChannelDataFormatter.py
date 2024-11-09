@@ -16,7 +16,7 @@ class DeepMIMODataFormatter:
     def __init__(self, intermediate_folder, save_folder, max_channels=100000, 
                  TX_order=None, RX_order=None, TX_polar=None, RX_polar=None):
         self.intermediate_folder = intermediate_folder
-        self.max_channels = max_channels
+        self.max_channels = max_channels if max_channels else 1e12
         self.save_folder = save_folder
         if not os.path.exists(self.save_folder):
             os.mkdir(self.save_folder)
