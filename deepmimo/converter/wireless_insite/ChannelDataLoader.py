@@ -254,7 +254,8 @@ class WIChannelConverter:
             ch_dicts.append(ch_dict)
             loc_dicts.append(second_mat)
             
-        scipy.io.savemat(os.path.join(self.save_folder, filename), {'channels': np.array(ch_dicts).T, 'rx_locs': np.array(loc_dicts)})
+        scipy.io.savemat(os.path.join(self.save_folder, filename), 
+                         {'channels': np.array(ch_dicts).T, 'rx_locs': np.array(loc_dicts)})
 
     # def save_channels(self, save_folder, scene_idx=None, interacts=False, max_len=10000):
         
@@ -288,7 +289,8 @@ class WIChannelConverter:
 
 
 class Channel:
-    def __init__(self, info_ID, TX_str, RX_str, TX_id, RX_id, info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4, tx_locs):
+    def __init__(self, info_ID, TX_str, RX_str, TX_id, RX_id, 
+                 info_ext_0, info_ext_1, info_ext_2, info_ext_3, info_ext_4, tx_locs):
         self.Doppler = False
         
         self.TX_ID = info_ID['TX_ID']
