@@ -16,7 +16,7 @@ from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
 from .scenario_utils import ScenarioParameters
 
-from typing import List
+from typing import List, Dict
 
 class InsiteMaterial():
     def __init__(self):
@@ -52,102 +52,54 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                         tx_ids: List[int] = None, rx_ids: List[int] = None,
                         verbose: bool = True):
 
-    vprint = PrintIfVerbose(verbose) # prints if verbose 
-
-    # Parameters to be given for the scenario
+    # Setup output folder
     insite_sim_folder = os.path.dirname(p2m_folder)
-    intermediate_folder = os.path.join(insite_sim_folder, 'intermediate_files')
-    output_folder = os.path.join(insite_sim_folder, 'mat_files')
-    
-    os.makedirs(intermediate_folder, exist_ok=True)
+    output_folder = os.path.join(insite_sim_folder, 'mat_files') # SCEN_NAME!
     os.makedirs(output_folder, exist_ok=True)
 
-    # Check necessary files:
-    files_in_sim_folder = os.listdir(insite_sim_folder)
-    for ext in ['.setup', '.txrx']:
-        files_found_with_ext = cu.ext_in_list(ext, files_in_sim_folder)
-        vprint(f'Files {ext} = {files_found_with_ext}')
-        if len(files_found_with_ext) == 0:
-            raise Exception(f'{ext} not found in {p2m_folder}')
-        elif len(files_found_with_ext) > 1:
-            raise Exception(f'Several {ext} found in {p2m_folder}')
+    # DELETE??
+    intermediate_folder = os.path.join(insite_sim_folder, 'intermediate_files')
+    os.makedirs(intermediate_folder, exist_ok=True)
+
+    # Check if necessary files exist
+    verify_sim_folder(insite_sim_folder, verbose)
     
-    if copy_source:
-        vprint('Copying raytracing source files to zip')
-        zip_temp_folder = os.path.join(insite_sim_folder, 'raytracing_source')
-        os.makedirs(zip_temp_folder)
-        for ext in ['.setup', '.txrx', '.ter', '.city']:
-            # copy all files with extensions to temp folder
-            for file in cu.ext_in_list(ext, files_in_sim_folder):
-                curr_file_path = os.path.join(insite_sim_folder, file)
-                new_file_path  = os.path.join(zip_temp_folder, file)
-                
-                vprint(f'Copying {curr_file_path} -> {new_file_path}')
-                shutil.copy(curr_file_path, new_file_path)
-            
-            vprint(f'Done copying {ext} files')
-        
-        vprint('Zipping')
-        cu.zip_folder(zip_temp_folder)
-        
-        vprint(f'Deleting temp folder {os.path.basename(zip_temp_folder)}')
-        shutil.rmtree(zip_temp_folder)
-        
-        vprint('Done')
+    # Copy ray tracing source files
+    if copy_source: copy_rt_source_files(insite_sim_folder, verbose)
     
-    return
-    # Setup (.setup)
-    # tx power
-    # dual pol (antennas)
+    files_in_sim_folder = [os.path.join(insite_sim_folder, file) 
+                           for file in os.listdir(insite_sim_folder)]
 
-    # TXRX (.txrx)
-    # txrx <grid>
-    # side1 410.00000
-    # side2 320.00000
-    # spacing 1.00000
+    # Read setup (.setup)
+    setup_file = cu.ext_in_list('.setup', files_in_sim_folder)[0]
+    setup_dict = read_setup(setup_file, verbose)
+
+    # Read TXRX (.txrx)
+    txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
+    avail_tx_idxs, avail_rx_idxs, txrx_dict = read_txrx(txrx_file, verbose)
     
-    # power 0.00000
+    tx_ids = tx_ids if tx_ids else avail_tx_idxs
+    rx_ids = rx_ids if rx_ids else avail_rx_idxs
 
-    # Terrain (.ter, .city):
-    # read .ter and .city to extract the name of the objects, the materials, and their properties.
+    # Read Terrain and Buildings Materials (.ter, .city):
+    city_files = cu.ext_in_list('.city', files_in_sim_folder)
+    ter_files = cu.ext_in_list('.ter', files_in_sim_folder)
+    city_materials = read_city(city_files, verbose)
+    ter_materials = read_ter(ter_files, verbose)
+    # For more info, inspect the raytracing source available in {website}. 
+    # (or offer option to dload RT source)
 
-    # materials used in buildings: ...
-    # materials used in terrains: ...
-    # For more info, inspect the raytracing source available in {website}. (or offer option to dload RT source)
-
-    if tx_ids is None:
-        # read all tx idxs...
-        pass
-    if rx_ids is None:
-        # read ...
-        pass
-
-    # NOTE: this already exists in Scenario Parameters!
-    data_dict = {
-                'version': 2,
-                'carrier_freq': 28e9, ############# REAAAAD
-                'transmit_power': 0.0, #dB from the scenario ############# REAAAAD
-                # Start row - end row - num users - Num users must be larger than the maximum number of dynamic receivers
-                'user_grids': np.array([[1, 411, 321]], dtype=float), ############# REAAAAD
-                'num_BS': len(dm.TX_order), ############# REAAAAD
-                'dual_polar_available': 0, ############# REAAAAD
-                'doppler_available': 0
-                #'BS_grids': np.array([[i+1, i+1, 1] for i in range(self.num_BS)]).astype(float)
-
-                # n_paths, n_reflections, type of difusion, ...
-
-                }
-        
-    scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
-
+    export_params_dict(output_folder, setup_dict, txrx_dict, 
+                       city_materials, ter_materials)
 
     # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
 
     # Convert P2M files to mat format
     # WIChannelConverter(p2m_folder, intermediate_folder)
 
-    dm = DeepMIMODataFormatter(intermediate_folder, output_folder, TX_order=[1], RX_order=[4])
-                                                                 # TODO: read this automatically from P2M
+    dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
+                               TX_order=[1], RX_order=[4])
+                               # TODO: read this automatically from P2M
 
     return output_folder
 
@@ -166,3 +118,93 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         'max_reflections', 
 
     ]
+
+def verify_sim_folder(sim_folder, verbose):
+    
+    files_in_sim_folder = os.listdir(sim_folder)
+    for ext in ['.setup', '.txrx']:
+        files_found_with_ext = cu.ext_in_list(ext, files_in_sim_folder)
+        if verbose:
+            print(f'Files {ext} = {files_found_with_ext}')
+        if len(files_found_with_ext) == 0:
+            raise Exception(f'{ext} not found in {sim_folder}')
+        elif len(files_found_with_ext) > 1:
+            raise Exception(f'Several {ext} found in {sim_folder}')
+
+def copy_rt_source_files(sim_folder: str, verbose: bool = True):
+    
+    vprint = PrintIfVerbose(verbose) # prints if verbose 
+    rt_source_folder = 'raytracing_source'
+    files_in_sim_folder = os.listdir(sim_folder)
+    vprint('Copying raytracing source files to "rt_source_folder"')
+    zip_temp_folder = os.path.join(sim_folder, rt_source_folder)
+    os.makedirs(zip_temp_folder)
+    for ext in ['.setup', '.txrx', '.ter', '.city']:
+        # copy all files with extensions to temp folder
+        for file in cu.ext_in_list(ext, files_in_sim_folder):
+            curr_file_path = os.path.join(sim_folder, file)
+            new_file_path  = os.path.join(zip_temp_folder, file)
+            
+            vprint(f'Copying {file}')
+            shutil.copy(curr_file_path, new_file_path)
+    
+    vprint('Zipping')
+    cu.zip_folder(zip_temp_folder)
+    
+    vprint(f'Deleting temp folder {os.path.basename(zip_temp_folder)}')
+    shutil.rmtree(zip_temp_folder)
+    
+    vprint('Done')
+
+def read_setup(file: str, verbose: bool):
+    print(f'Reading setup file: {os.path.basename(file)}')
+    
+    setup_dict = {
+        'tx_power': 0,
+        'dual_pol': 0
+    }
+    return setup_dict
+
+def read_txrx(file: str, verbose: bool):
+    print(f'Reading txrx file: {os.path.basename(file)}')
+    
+    txrx_dict = {}
+
+    # txrx <grid>
+    # side1 410.00000
+    # side2 320.00000
+    # spacing 1.00000
+    
+    # power 0.00000
+
+    return [], [], txrx_dict
+
+def read_city(files: List[str], verbose: bool):
+    return read_components_file(files, verbose)
+
+def read_ter(files: List[str], verbose: bool):
+    return read_components_file(files, verbose)
+
+def read_components_file(files: List[str], verbose: bool):
+    print(f'Reading materials files: {[os.path.basename(f) for f in files]}')
+    material_list = [InsiteMaterial() for i in range(1)]
+    return material_list
+
+def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict, 
+                       city_mat_dict: Dict, ter_mat_dict: Dict):
+    data_dict = {
+                'version': 2,
+                'carrier_freq': 28e9, ############# REAAAAD
+                'transmit_power': 0.0, #dB from the scenario ############# REAAAAD
+                # Start row - end row - num users - Num users must be larger than the maximum number of dynamic receivers
+                'user_grids': np.array([[1, 411, 321]], dtype=float), ############# REAAAAD
+                'num_BS': 1, #len(dm.TX_order), ############# REAAAAD
+                'dual_polar_available': 0, ############# REAAAAD
+                'doppler_available': 0
+                #'BS_grids': np.array([[i+1, i+1, 1] for i in range(self.num_BS)]).astype(float)
+
+                # n_paths, n_reflections, type of difusion, ...
+
+                }
+        
+    scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
