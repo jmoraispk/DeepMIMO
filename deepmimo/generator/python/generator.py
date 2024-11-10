@@ -26,7 +26,7 @@ def generate_data(params_obj=None):
     np.random.seed(1001)
     
     ext_params = params_obj.get_params_dict()
-    
+
     if not os.path.exists(params_obj.get_path()):
         print('Scenario not found. Would you like to download it? (Y/n)')
         ans = input()

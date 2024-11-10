@@ -14,7 +14,6 @@ from ...general_utilities import PrintIfVerbose
 
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
-from .scenario_utils import ScenarioParameters
 
 from typing import List, Dict
 
@@ -44,8 +43,6 @@ class InsiteMaterial():
         self.permittivity = 0        # ..
         self.roughness = 0           # .. affects ...
         self.thickness = 0           # [m]
-
-    
 
 
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
@@ -98,10 +95,11 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # WIChannelConverter(p2m_folder, intermediate_folder)
 
     dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
-                               TX_order=[1], RX_order=[4])
-                               # TODO: read this automatically from P2M
-
-    return output_folder
+                               TX_order=tx_ids, RX_order=rx_ids)
+    #                            # TODO: read this automatically from P2M
+    name = os.path.basename(insite_sim_folder)
+    shutil.move(output_folder, 'deepmimo_scenarios/{name}')
+    return name
 
     # JTODO 1: copy raytracing source to zip
     # JTODO 2: read parameters to DeepMIMO metadata (accessible via print) -> these will also be used in the website
@@ -116,7 +114,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         'diffuse_diffractions',
         'diffuse_transmissions',
         'max_reflections', 
-
     ]
 
 def verify_sim_folder(sim_folder, verbose):
@@ -125,7 +122,7 @@ def verify_sim_folder(sim_folder, verbose):
     for ext in ['.setup', '.txrx']:
         files_found_with_ext = cu.ext_in_list(ext, files_in_sim_folder)
         if verbose:
-            print(f'Files {ext} = {files_found_with_ext}')
+            print(f'Found {files_found_with_ext}')
         if len(files_found_with_ext) == 0:
             raise Exception(f'{ext} not found in {sim_folder}')
         elif len(files_found_with_ext) > 1:

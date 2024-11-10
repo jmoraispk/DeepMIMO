@@ -25,4 +25,6 @@ def create_scenario(path_to_rt_folder, **conversion_params):
         print("Unknown raytracer type")
         return
     
-    rt_converter(path_to_rt_folder, **conversion_params)
+    scenario = rt_converter(path_to_rt_folder, **conversion_params)
+
+    return scenario

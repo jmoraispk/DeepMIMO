@@ -12,8 +12,6 @@ import os
 import numpy as np
 from . import consts as c
 
-# JTODO: make this into class
-
 class Parameters():
     def __init__(self, scen_name=None):
         self.params = {
