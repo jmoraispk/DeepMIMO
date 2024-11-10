@@ -53,7 +53,6 @@ class ScenarioParameters:
     def save(self, mat_folder, version=2):
         self.num_BS = len(self.TX_order)
         
-        
         data_dict = {'TX_ID_map': 
                       np.array([self.TX_order, 
                                self.TX_ID, 

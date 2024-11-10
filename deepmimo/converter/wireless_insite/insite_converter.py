@@ -5,10 +5,12 @@ Created on Thu Jan 19 17:55:17 2023
 @author: demir
 """
 import os
+import shutil
 import numpy as np
 import scipy.io
 
 from .. import converter_utils as cu
+from ...general_utilities import PrintIfVerbose
 
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
@@ -16,7 +18,7 @@ from .scenario_utils import ScenarioParameters
 
 from typing import List
 
-class Material(): # TODO: move to parameters
+class InsiteMaterial():
     def __init__(self):
         """
         Diffuse model implemented from [1] + extended with cross-polarization scattering terms
@@ -47,25 +49,53 @@ class Material(): # TODO: move to parameters
 
 
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
-                        tx_ids: List[int] = None, rx_ids: List[int] = None):
+                        tx_ids: List[int] = None, rx_ids: List[int] = None,
+                        verbose: bool = True):
+
+    vprint = PrintIfVerbose(verbose) # prints if verbose 
 
     # Parameters to be given for the scenario
-    intermediate_folder = os.path.join(os.path.dirname(p2m_folder), 'intermediate_files')
-    output_folder = os.path.join(os.path.dirname(p2m_folder), 'mat_files')
+    insite_sim_folder = os.path.dirname(p2m_folder)
+    intermediate_folder = os.path.join(insite_sim_folder, 'intermediate_files')
+    output_folder = os.path.join(insite_sim_folder, 'mat_files')
     
     os.makedirs(intermediate_folder, exist_ok=True)
     os.makedirs(output_folder, exist_ok=True)
 
-    # Check that the necessary files exist:
-    files_in_folder = os.listdir(p2m_folder)
+    # Check necessary files:
+    files_in_sim_folder = os.listdir(insite_sim_folder)
     for ext in ['.setup', '.txrx']:
-        if not cu.ext_in_list(ext, files_in_folder):
+        files_found_with_ext = cu.ext_in_list(ext, files_in_sim_folder)
+        vprint(f'Files {ext} = {files_found_with_ext}')
+        if len(files_found_with_ext) == 0:
             raise Exception(f'{ext} not found in {p2m_folder}')
-        
+        elif len(files_found_with_ext) > 1:
+            raise Exception(f'Several {ext} found in {p2m_folder}')
+    
     if copy_source:
-        ['.setup', '.txrx', '.ter', '.city']
-        pass
-
+        vprint('Copying raytracing source files to zip')
+        zip_temp_folder = os.path.join(insite_sim_folder, 'raytracing_source')
+        os.makedirs(zip_temp_folder)
+        for ext in ['.setup', '.txrx', '.ter', '.city']:
+            # copy all files with extensions to temp folder
+            for file in cu.ext_in_list(ext, files_in_sim_folder):
+                curr_file_path = os.path.join(insite_sim_folder, file)
+                new_file_path  = os.path.join(zip_temp_folder, file)
+                
+                vprint(f'Copying {curr_file_path} -> {new_file_path}')
+                shutil.copy(curr_file_path, new_file_path)
+            
+            vprint(f'Done copying {ext} files')
+        
+        vprint('Zipping')
+        cu.zip_folder(zip_temp_folder)
+        
+        vprint(f'Deleting temp folder {os.path.basename(zip_temp_folder)}')
+        shutil.rmtree(zip_temp_folder)
+        
+        vprint('Done')
+    
+    return
     # Setup (.setup)
     # tx power
     # dual pol (antennas)
@@ -85,11 +115,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # materials used in terrains: ...
     # For more info, inspect the raytracing source available in {website}. (or offer option to dload RT source)
 
-    # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
-
-    # Convert P2M files to mat format
-    # WIChannelConverter(p2m_folder, intermediate_folder)
-
     if tx_ids is None:
         # read all tx idxs...
         pass
@@ -97,9 +122,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         # read ...
         pass
 
-    dm = DeepMIMODataFormatter(intermediate_folder, output_folder, TX_order=[1], RX_order=[4])
-                                                                 # TODO: read this automatically from P2M
-
+    # NOTE: this already exists in Scenario Parameters!
     data_dict = {
                 'version': 2,
                 'carrier_freq': 28e9, ############# REAAAAD
@@ -116,6 +139,15 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 }
         
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
+
+
+    # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
+
+    # Convert P2M files to mat format
+    # WIChannelConverter(p2m_folder, intermediate_folder)
+
+    dm = DeepMIMODataFormatter(intermediate_folder, output_folder, TX_order=[1], RX_order=[4])
+                                                                 # TODO: read this automatically from P2M
 
     return output_folder
 

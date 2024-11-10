@@ -1,13 +1,13 @@
 import os
 
-import converter_utils as cu
+from . import converter_utils as cu
 
 from .aodt.aodt_converter import aodt_rt_converter
 from .sionna_rt.sionna_converter import sionna_rt_converter
 from .wireless_insite.insite_converter import insite_rt_converter
 
 
-def create_scenario(path_to_rt_folder):
+def create_scenario(path_to_rt_folder, **conversion_params):
     print('Determining converter...')
     
     # Example logic to determine generator type based on files found
@@ -25,4 +25,4 @@ def create_scenario(path_to_rt_folder):
         print("Unknown raytracer type")
         return
     
-    rt_converter(path_to_rt_folder)
+    rt_converter(path_to_rt_folder, **conversion_params)
