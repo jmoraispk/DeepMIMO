@@ -135,8 +135,6 @@ class DeepMIMODataFormatter:
                                  )
                 cur_count = next_count
                 
-                
-    
     def import_folder(self):
         file_pattern = r'TX(\d+)-(\d+)_RX(\d+)\.mat'
         
