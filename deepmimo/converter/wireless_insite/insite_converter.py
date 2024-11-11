@@ -46,12 +46,19 @@ class InsiteMaterial():
         self.thickness = 0           # [m]
 
 
-def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
+def insite_rt_converter(rt_folder: str, copy_source: bool = False,
                         tx_ids: List[int] = None, rx_ids: List[int] = None,
-                        verbose: bool = True):
+                        verbose: bool = True, p2m_folder: str = None):
 
     # Setup output folder
-    insite_sim_folder = os.path.dirname(p2m_folder)
+    if p2m_folder:
+        insite_sim_folder = os.path.dirname(p2m_folder)
+    else:
+        insite_sim_folder = rt_folder
+        # if p2m folder is not provided, choose the last folder available
+        p2m_folder = [name for name in os.listdir(insite_sim_folder)
+                      if os.path.isdir(os.path.join(insite_sim_folder, name))][-1]
+
     output_folder = os.path.join(insite_sim_folder, 'mat_files') # SCEN_NAME!
     os.makedirs(output_folder, exist_ok=True)
 
@@ -70,8 +77,8 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
 
     # Read setup (.setup)
     setup_file = cu.ext_in_list('.setup', files_in_sim_folder)[0]
-    setup_dict = read_setup(setup_file, verbose)
-
+    setup_dict = read_setup(setup_file, verbose, p2m_folder)
+    return 
     # Read TXRX (.txrx)
     txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
     avail_tx_idxs, avail_rx_idxs, txrx_dict = read_txrx(txrx_file, verbose)
@@ -115,7 +122,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     #   Generate per user index, not row
 
 
-def verify_sim_folder(sim_folder, verbose):
+def verify_sim_folder(sim_folder: str, verbose: bool):
     
     files_in_sim_folder = os.listdir(sim_folder)
     for ext in ['.setup', '.txrx']:
@@ -152,26 +159,68 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True):
     
     vprint('Done')
 
-def read_setup(file: str, verbose: bool):
-    print(f'Reading setup file: {os.path.basename(file)}')
+def read_setup(file: str, verbose: bool, p2m_folder):
+    if verbose:
+        print(f'Reading setup file: {os.path.basename(file)}')
     
-    setup_dict = {
-        'tx_power': 0,
-        'dual_pol': 0,
+    # Read the study area that matches the p2m folder name
+    study_area_name = os.path.basename(p2m_folder)
+    
+    setup_dict = { # make sure the keys exist in .setup study areas
+        'diffuse_scattering': 0, # ony one not in .setup -> has specific mapping
         'diffuse_reflections': 0,
         'diffuse_diffractions': 0,
         'diffuse_transmissions': 0,
+        'final_interaction_only': 0,
+
         'max_reflections': 0,
-    }
+        'max_transmissions': 0,
+        'max_wedge_diffractions': 1,
+        'foliage_attenuation_vert': 1, # 0/1 = OFF/ON attenuation
+        'foliage_attenuation_hor': 1,  # 0/1 = OFF/ON attenuation
+    } # Tip: make them follow the same order as .setup for max performance
+
+    inside_study_area = False
+    line = ''
+    with open(file, 'r') as fp:
+        while True:
+            last_line = line # needed because "enabled" refers to the previous line
+            line = fp.readline()
+            if line == '': # end of file
+                raise Exception(f'Reached end of file - ensure {p2m_folder} matches'
+                                f' study area name in {file}')
+            
+            if line != f'begin_<studyarea> {study_area_name}\n' and not inside_study_area:
+                continue
+            
+            inside_study_area = True
+            if line == 'end_<studyarea>\n': break
+
+            line_split = line.split(' ')
+            key = line_split[0]
+            val = line_split[-1][:-1]
+            if key == 'enabled':
+                if last_line == 'begin_<diffuse_scattering> \n':
+                    if val == 'yes':
+                        setup_dict['diffuse_scattering'] = 1
+
+            if key in setup_dict.keys():
+                if not setup_dict['diffuse_scattering']:
+                    if key in ['diffuse_reflections', 'diffuse_reflections',
+                               'diffuse_diffractions', 'diffuse_transmissions',
+                               'final_interaction_only']:
+                        continue # ignore certain keys if DS is off
+                if len(val) > 1:
+                    val = 1 if val == 'yes' else 0
+                else:
+                    val = int(val)
+                
+                setup_dict[key] = val
     
-    for key in setup_dict.keys():
-        read_key(key, file)
+    if verbose:
+        print(f'Read the following dict: {setup_dict}')
 
     return setup_dict
-
-def read_key(''):
-    pass
-
 
 def read_txrx(file: str, verbose: bool):
     print(f'Reading txrx file: {os.path.basename(file)}')
