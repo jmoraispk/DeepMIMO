@@ -5,6 +5,7 @@ Created on Thu Jan 19 17:55:17 2023
 @author: demir
 """
 import os
+from pprint import pprint
 import shutil
 import numpy as np
 import scipy.io
@@ -18,33 +19,53 @@ from .ChannelDataFormatter import DeepMIMODataFormatter
 
 from typing import List, Dict
 
+
 class InsiteMaterial():
-    def __init__(self):
+    def __init__(self, mat_dict):
         """
         Diffuse model implemented from [1] + extended with cross-polarization scattering terms
         
         Diffuse scattering models explained in [2], slides 29-31. 
         
+        At present, all MATERIALS in Wireless InSite are nonmagnetic, 
+        and the permeability for all materials is that of free space 
+        (µ0 = 4π x 10e-7 H/m) [3]. 
+
         Sources:
             [1] A Diffuse Scattering Model for Urban Propagation Prediction - Vittorio Degli-Esposti 2001
                 https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=933491
             [2] https://x.webdo.cc/userfiles/Qiwell/files/Remcom_Wireless%20InSite_5G_final.pdf
+            [3] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
 
         """
-        self.name = ''
-        self.type = 0
-        self.diffuse_scat_model = '' # 'labertian', 'directive', 'directive_w_backscatter'
-        self.scat_fact = 0           # 0-1, fraction of incident fields that are scattered
-        self.cross_pol_frac = 0      # 0-1, fraction of the scattered field that is cross pol
-        self.directive_alpha = 0     # 1-10, defines how broad forward beam is
-        self.directive_beta = 0      # 1-10, defines how broad backscatter beam is
-        self.directive_lambda = 0    # 0-1, fraction of the scattered power in forward direction (vs back)
-        
-        self.conductivity = 0        # ..
-        self.permittivity = 0        # ..
-        self.roughness = 0           # .. affects ...
-        self.thickness = 0           # [m]
+        self.mat_dict = dict( # matches the names in Material section of the feature file
+            name = '',
+            diffuse_scattering_model = '',    # 'labertian', 'directive', 'directive_w_backscatter'
+            fields_diffusively_scattered = 0, # 0-1, fraction of incident fields that are scattered
+            cross_polarized_power = 0,        # 0-1, fraction of the scattered field that is cross pol
+            directive_alpha = 0,     # 1-10, defines how broad forward beam is
+            directive_beta = 0,      # 1-10, defines how broad backscatter beam is
+            directive_lambda = 0,    # 0-1, fraction of the scattered power in forward direction (vs back)
+            
+            conductivity = 0,        # ..
+            permittivity = 0,        # ..
+            roughness = 0,           # .. affects ...
+            thickness = 0,           # [m]
+            )
 
+        self._load_from_dict(mat_dict)
+    
+    def _load_from_dict(self, val_dict):
+        # Copy values from dictionary that match the attributes of the class
+        for key in val_dict.keys(): # first 29 are internal attributes
+            if key in self.mat_dict.keys():
+                self.mat_dict[key] = val_dict[key]
+    
+    def __repr__(self):
+        return self.mat_dict.__repr__()
+    
+    def get_dict(self):
+        return self.mat_dict
 
 def insite_rt_converter(rt_folder: str, copy_source: bool = False,
                         tx_ids: List[int] = None, rx_ids: List[int] = None,
@@ -78,24 +99,19 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     # Read setup (.setup)
     setup_file = cu.ext_in_list('.setup', files_in_sim_folder)[0]
     setup_dict = read_setup(setup_file, verbose, p2m_folder)
-    return 
+
     # Read TXRX (.txrx)
-    txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
-    avail_tx_idxs, avail_rx_idxs, txrx_dict = read_txrx(txrx_file, verbose)
+    # txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
+    # avail_tx_idxs, avail_rx_idxs, txrx_dict = read_txrx(txrx_file, verbose)
     
-    tx_ids = tx_ids if tx_ids else avail_tx_idxs
-    rx_ids = rx_ids if rx_ids else avail_rx_idxs
+    # tx_ids = tx_ids if tx_ids else avail_tx_idxs
+    # rx_ids = rx_ids if rx_ids else avail_rx_idxs
 
-    # Read Terrain and Buildings Materials (.ter, .city):
-    city_files = cu.ext_in_list('.city', files_in_sim_folder)
-    ter_files = cu.ext_in_list('.ter', files_in_sim_folder)
-    city_materials = read_city(city_files, verbose)
-    ter_materials = read_ter(ter_files, verbose)
-    # For more info, inspect the raytracing source available in {website}. 
-    # (or offer option to dload RT source)
+    # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg):
+    materials_dict = read_materials(files_in_sim_folder, verbose)
+    return 
 
-    export_params_dict(output_folder, setup_dict, txrx_dict, 
-                       city_materials, ter_materials)
+    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
 
     # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
 
@@ -120,7 +136,6 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     #   Save in matrices (faster)
     #   DoA DoD -> AoA AoD
     #   Generate per user index, not row
-
 
 def verify_sim_folder(sim_folder: str, verbose: bool):
     
@@ -178,6 +193,9 @@ def read_setup(file: str, verbose: bool, p2m_folder):
         'max_wedge_diffractions': 1,
         'foliage_attenuation_vert': 1, # 0/1 = OFF/ON attenuation
         'foliage_attenuation_hor': 1,  # 0/1 = OFF/ON attenuation
+
+        'CarrierFrequency': 0, # [hz]
+        'bandwidth': 0,        # [Hz]
     } # Tip: make them follow the same order as .setup for max performance
 
     inside_study_area = False
@@ -216,9 +234,20 @@ def read_setup(file: str, verbose: bool, p2m_folder):
                     val = int(val)
                 
                 setup_dict[key] = val
-    
+        
+        # Continue and fill also the subcarrier and bandwidth
+        while True:
+            line = fp.readline()
+            if line == 'end_<Waveform>\n': # picks the first waveform
+                break
+            line_split = line.split(' ')
+            key, val = line_split[0], line_split[-1][:-1]
+            if key in ['CarrierFrequency', 'bandwidth']:
+                setup_dict[key] = float(val)
+
     if verbose:
-        print(f'Read the following dict: {setup_dict}')
+        print(f'RT info extracted from setup:')
+        pprint(setup_dict)
 
     return setup_dict
 
@@ -236,16 +265,99 @@ def read_txrx(file: str, verbose: bool):
 
     return [], [], txrx_dict
 
-def read_city(files: List[str], verbose: bool):
-    return read_components_file(files, verbose)
+def read_feature_files(files: List[str], verbose: bool):
+    if verbose:
+        print(f'Reading materials in {[os.path.basename(f) for f in files]}')
+    
+    # Extract materials for each file
+    material_list = []
+    for file in files:
+        material_list += read_feat_file(file, verbose)
 
-def read_ter(files: List[str], verbose: bool):
-    return read_components_file(files, verbose)
+    # Filter the list of materials so they are unique
+    unique_mat_list = make_mat_list_unique(material_list)
+    
+    return unique_mat_list
 
-def read_components_file(files: List[str], verbose: bool):
-    print(f'Reading materials files: {[os.path.basename(f) for f in files]}')
-    material_list = [InsiteMaterial() for i in range(1)]
-    return material_list
+def read_feat_file(file: str, verbose: bool):
+    
+    mat_list = []
+    inside_material = False
+    with open(file, 'r') as fp:
+        while True:
+            line = fp.readline()
+            if line == 'begin_<structure_group> \n': # end of materials
+                break
+            
+            if not line.startswith('begin_<Material>'):
+                if not inside_material:
+                    continue
+            else:
+                inside_material = True
+                curr_mat_dict = {}
+                curr_mat_dict['name'] = ' '.join(line.split(' ')[1:])[:-1]
+                continue
+
+            if line == 'end_<Material>\n': 
+                inside_material = False
+                mat_list += [InsiteMaterial(curr_mat_dict)]
+                continue
+
+            line_split = line.split(' ')
+            if len(line_split) != 2: continue
+
+            key, val = line_split 
+            val = val[:-1] # remove '\n'
+            
+            if val: curr_mat_dict[key] = convert_val_to_materials_dict(val)
+
+    return mat_list
+
+def make_mat_list_unique(mat_list):
+    
+    n_mats = len(mat_list)
+    idxs_to_discard = []
+    for i1 in range(n_mats):
+        for i2 in range(n_mats):
+            if i1 == i2:
+                continue
+            if mat_list[i1].get_dict() == mat_list[i2].get_dict():
+                idxs_to_discard.append(i2)
+
+    for idx in sorted(np.unique(idxs_to_discard), reverse=True):
+        del mat_list[idx]
+    
+    return mat_list
+
+def convert_val_to_materials_dict(value):
+    try:
+        value = float(value) if '.' in value else int(value)
+    except ValueError:
+        # Keep as string if it can't be converted to int/float
+        pass
+    return value
+
+def read_materials(files_in_sim_folder, verbose):
+
+    city_files = cu.ext_in_list('.city', files_in_sim_folder)
+    ter_files  = cu.ext_in_list('.ter', files_in_sim_folder)
+    veg_files  = cu.ext_in_list('.veg', files_in_sim_folder)
+    fpl_files  = cu.ext_in_list('.flp', files_in_sim_folder)
+    obj_files  = cu.ext_in_list('.obj', files_in_sim_folder)
+    
+    city_materials = read_feature_files(city_files, verbose)
+    ter_materials = read_feature_files(ter_files, verbose)
+    veg_materials = read_feature_files(veg_files, verbose)
+    floor_plan_materials = read_feature_files(fpl_files, verbose)
+    obj_materials = read_feature_files(obj_files, verbose)
+
+    materials_dict = {'city': city_materials, 
+                      'terrain': ter_materials,
+                      'vegetation': veg_materials,
+                      'other': floor_plan_materials + obj_materials}
+    if verbose:
+        pprint(materials_dict)
+    return materials_dict
 
 def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict, 
                        city_mat_dict: Dict, ter_mat_dict: Dict):
