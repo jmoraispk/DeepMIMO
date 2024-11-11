@@ -10,7 +10,7 @@ Date: 12/10/2021
 
 import time
 import numpy as np
-from . import consts as c
+from ... import consts as c
 from .construct_deepmimo import ant_indices, array_response
 
 ################################# Internal ####################################

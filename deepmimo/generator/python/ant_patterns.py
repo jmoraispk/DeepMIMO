@@ -8,7 +8,7 @@ Authors: Umut Demirhan, Ahmed Alkhateeb
 Date: 3/16/2022
 """
 
-from . import consts as c
+from ... import consts as c
 import numpy as np
 
 class AntennaPattern():

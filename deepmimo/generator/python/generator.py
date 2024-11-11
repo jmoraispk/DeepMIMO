@@ -12,7 +12,7 @@ import os
 import copy
 import numpy as np
 
-from . import consts as c
+from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
 from .utils import safe_print
 from .params import Parameters

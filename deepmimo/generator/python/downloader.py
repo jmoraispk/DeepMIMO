@@ -3,7 +3,7 @@ import requests
 from tqdm import tqdm
 import zipfile 
 
-from . import consts as c
+from ... import consts as c
 
 # Headers to mimic a browser request
 HEADERS = {

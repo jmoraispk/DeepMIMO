@@ -84,9 +84,9 @@ class DeepMIMOSionnaAdapter:
     
     # Convert the possible input types to numpy (integer - range - list)
     def _idx_to_numpy(self, idx):
-        if isinstance(idx, int): # If the input is an integer - a single ID - convert it to 2D numpy array
+        if isinstance(idx, int): 
             idx = np.array([[idx]])
-        elif isinstance(idx, list) or isinstance(idx, range): # If the input is a list or range - convert it to a numpy array
+        elif isinstance(idx, list) or isinstance(idx, range): 
             idx = np.array(idx)
         elif isinstance(idx, np.ndarray):
             pass
@@ -94,7 +94,8 @@ class DeepMIMOSionnaAdapter:
             raise TypeError('The index input type must be an integer, list, or numpy array!') 
         return idx
     
-    # Check the size of the given input and convert it to a 2D matrix of proper shape (num_tx x num_samples) or (num_rx x num_samples)
+    # Check the size of the given input and convert it to a 2D matrix of proper shape 
+    # (num_tx x num_samples) or (num_rx x num_samples)
     def _numpy_size_check(self, idx):
         if len(idx.shape) == 1:
             idx = idx.reshape((-1, 1))
@@ -122,6 +123,7 @@ class DeepMIMOSionnaAdapter:
                         i_ue = self.ue_idx[i][i_ch] # UE channel sample i - channel RX i_ch
                         i_bs = self.bs_idx[j][j_ch] # BS channel sample i - channel TX j_ch
                         a[i_ch, :, j_ch, :, :, 0] = self.dataset[i_bs]['user']['channel'][i_ue]
-                        tau[i_ch, j_ch, :self.dataset[i_bs]['user']['paths'][i_ue]['num_paths']] = self.dataset[i_bs]['user']['paths'][i_ue]['ToA'] 
+                        tau[i_ch, j_ch, :self.dataset[i_bs]['user']['paths'][i_ue]['num_paths']] = \
+                            self.dataset[i_bs]['user']['paths'][i_ue]['ToA'] 
                 
                 yield (a, tau) # yield this sample

@@ -11,7 +11,7 @@ Date: 12/10/2021
 import numpy as np
 from tqdm import tqdm
 from .ant_patterns import AntennaPattern
-from . import consts as c
+from ... import consts as c
 
 # Generates common parameters first. The output is a numpy matrix.
 def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):

@@ -11,6 +11,7 @@ import scipy.io
 
 from .. import converter_utils as cu
 from ...general_utilities import PrintIfVerbose
+from ... import consts as c
 
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
@@ -92,29 +93,27 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
 
     # Convert P2M files to mat format
-    # WIChannelConverter(p2m_folder, intermediate_folder)
+    WIChannelConverter(p2m_folder, intermediate_folder)
 
     dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
                                TX_order=tx_ids, RX_order=rx_ids)
-    #                            # TODO: read this automatically from P2M
-    name = os.path.basename(insite_sim_folder)
-    shutil.move(output_folder, 'deepmimo_scenarios/{name}')
-    return name
+    #                          # TODO: read this automatically from P2M
+    scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=False)
+    return scen_name
 
-    # JTODO 1: copy raytracing source to zip
-    # JTODO 2: read parameters to DeepMIMO metadata (accessible via print) -> these will also be used in the website
-    # JTODO 3: some parameters are used for actual generation, like the size of user grids, etc.. 
-    # JTODO 4: convert all users, but add option to generate only users with channels
-    # JTODO 5: DoA DoD -> AoA AoD
+    # JTODO 2: write parameters to DeepMIMO metadata (accessible via print and website)
 
-    # TODO: eliminate the intermediate files -> ****** no need ******
+    # JTODO: Generation:
+    #   - add option to generate only users with channels
+    #   - add read parameters for auto generation
 
-    keys = [
-        'diffuse_reflections', 
-        'diffuse_diffractions',
-        'diffuse_transmissions',
-        'max_reflections', 
-    ]
+    # TODO: REFACTOR (2 days!)
+    #   Eliminate the intermediate files -> ****** no need ******
+    #   REUSE only parsers for CIR, PATHS and DoD/A
+    #   Save in matrices (faster)
+    #   DoA DoD -> AoA AoD
+    #   Generate per user index, not row
+
 
 def verify_sim_folder(sim_folder, verbose):
     
@@ -158,9 +157,21 @@ def read_setup(file: str, verbose: bool):
     
     setup_dict = {
         'tx_power': 0,
-        'dual_pol': 0
+        'dual_pol': 0,
+        'diffuse_reflections': 0,
+        'diffuse_diffractions': 0,
+        'diffuse_transmissions': 0,
+        'max_reflections': 0,
     }
+    
+    for key in setup_dict.keys():
+        read_key(key, file)
+
     return setup_dict
+
+def read_key(''):
+    pass
+
 
 def read_txrx(file: str, verbose: bool):
     print(f'Reading txrx file: {os.path.basename(file)}')
@@ -205,3 +216,19 @@ def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict,
                 }
         
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
+
+def export_scenario(sim_folder, output_folder, overwrite=False):
+    name = os.path.basename(sim_folder)
+    scen_path = c.SCENARIOS_FOLDER + f'/{name}'
+    if os.path.exists(scen_path) and not overwrite:
+        
+        print('Scenario with name "{name}" already exists in {c.SCENARIOS_FOLDER}. Delete? (Y/n)')
+        ans = input()
+        if ('n' in ans.lower()):
+            return
+        else:
+            shutil.rmtree(scen_path)
+    
+    shutil.move(output_folder, scen_path)
+
+    return name

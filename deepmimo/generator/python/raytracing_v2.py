@@ -11,7 +11,7 @@ Date: 12/10/2021
 import os
 import numpy as np
 from tqdm import tqdm
-from . import consts as c
+from ... import consts as c
 from .utils import PathVerifier, dbm2pow
 import scipy.io
 

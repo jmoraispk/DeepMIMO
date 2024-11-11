@@ -10,7 +10,7 @@ Date: 12/10/2021
 
 import os 
 import numpy as np
-from . import consts as c
+from ... import consts as c
 
 class Parameters():
     def __init__(self, scen_name=None):
