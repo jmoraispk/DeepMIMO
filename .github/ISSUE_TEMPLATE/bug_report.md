@@ -7,8 +7,6 @@ assignees: ''
 
 ---
 
-NOTE: for feature requests, please use ![DeepMIMO Discussions on GitHub](https://github.com/jmoraispk/DeepMIMO/discussions).
-
 **Describe the bug**
 A clear and concise description of what the bug is.
 
