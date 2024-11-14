@@ -256,7 +256,19 @@ def read_txrx(file: str, verbose: bool):
     
     txrx_dict = {}
 
-    # txrx <grid>
+    # How many transmitters (and who they are - uniform index)
+    # How many receivers (and who they are - uniform index)
+
+    # For both: 
+    # latitude
+    # longitude
+    # location
+    # is_transmitter
+    # is_receiver
+
+    # begin_<points> BS
+
+    # begin_<grid> ue_grid
     # side1 410.00000
     # side2 320.00000
     # spacing 1.00000

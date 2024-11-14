@@ -1,8 +1,8 @@
 #%%
 
 # The directives below are for ipykernel to auto reload updated modules
-%reload_ext autoreload
-%autoreload 2
+# %reload_ext autoreload
+# %autoreload 2
 
 import deepmimo as dm
 
@@ -18,9 +18,19 @@ scen_name = dm.create_scenario(path_to_p2m_folder,
 # TODO: map p2m dict to universal dict to write to params (almost the same)
 
 #%%
-
+scen_name = 'simple_street_canyon'
 params = dm.Parameters(scen_name)#asu_campus')
 
 dataset = dm.generate(params)
 
-#%%
+#%% 
+
+from txrx_parser import tokens, parse_document
+from pathlib import Path
+
+# tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_test.txrx"))
+# tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_test.setup"))
+# tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_floor.ter"))
+tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_buildings.city"))
+
+document = parse_document(tks)
