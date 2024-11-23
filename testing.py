@@ -23,14 +23,18 @@ params = dm.Parameters(scen_name)#asu_campus')
 
 dataset = dm.generate(params)
 
-#%% 
+#%%
 
-from txrx_parser import tokens, parse_document
-from pathlib import Path
+from deepmimo.converter.wireless_insite.parser import tokenize_file, parse_document
 
-# tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_test.txrx"))
-# tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_test.setup"))
-# tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_floor.ter"))
-tks = tokens(Path("P2Ms/simple_street_canyon/simple_street_canyon_buildings.city"))
+# tks = tokens("P2Ms/simple_street_canyon/simple_street_canyon_test.txrx")
+# tks = tokens("P2Ms/simple_street_canyon/simple_street_canyon_test.setup")
+tks = tokenize_file("P2Ms/simple_street_canyon/simple_street_canyon_floor.ter")
+#tks = tokenize_file("P2Ms/simple_street_canyon/simple_street_canyon_buildings.city")
 
 document = parse_document(tks)
+
+
+# JTODO: Generation:
+#   - add option to generate only users with channels
+#   - add read parameters for auto generation
