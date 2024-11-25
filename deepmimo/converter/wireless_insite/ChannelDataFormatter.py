@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat May 27 18:37:10 2023
-
-@author: Umt
-"""
 
 import os
 import re

@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 19 17:55:17 2023
 
-@author: demir
-"""
 import os
 from pprint import pprint
 import shutil
@@ -111,26 +106,25 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     materials_dict = read_materials(files_in_sim_folder, verbose)
     return 
 
-    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
+    # export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
 
-    # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
 
-    # Convert P2M files to mat format
-    WIChannelConverter(p2m_folder, intermediate_folder)
 
-    dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
-                               TX_order=tx_ids, RX_order=rx_ids)
-    #                          # TODO: read this automatically from P2M
-    scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=False)
-    return scen_name
+
+    # # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
+
+    # # Convert P2M files to mat format
+    # WIChannelConverter(p2m_folder, intermediate_folder)
+
+    # dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
+    #                            TX_order=tx_ids, RX_order=rx_ids)
+    # #                          # TODO: read this automatically from P2M
+    # scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=False)
+    # return scen_name
 
     # JTODO 2: write parameters to DeepMIMO metadata (accessible via print and website)
 
-    # JTODO: Generation:
-    #   - add option to generate only users with channels
-    #   - add read parameters for auto generation
-
-    # TODO: REFACTOR (2 days!)
+    # TODO: REFACTOR
     #   Eliminate the intermediate files -> ****** no need ******
     #   REUSE only parsers for CIR, PATHS and DoD/A
     #   Save in matrices (faster)
@@ -246,7 +240,7 @@ def read_setup(file: str, verbose: bool, p2m_folder):
                 setup_dict[key] = float(val)
 
     if verbose:
-        print(f'RT info extracted from setup:')
+        print(f'RT info extracted from setup: {os.path.basename(file)}')
         pprint(setup_dict)
 
     return setup_dict
