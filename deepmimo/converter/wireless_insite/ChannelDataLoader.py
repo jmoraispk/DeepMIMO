@@ -50,7 +50,8 @@ class WIChannelConverter:
             # Read all the files of the TX-RX pair and collect information
             files = {'ID': rx_tx_pair}
             for j in range(len(read_table)):
-                file_data = self.import_file(filename=read_table['Dir'][j], extension=read_table['Extension'][j])
+                file_data = self.import_file(filename=read_table['Dir'][j], 
+                                             extension=read_table['Extension'][j])
                 files = {**files, read_table['Extension'][j]: file_data}
 
             self.channels = self.create_ch_from_files(files, tx_locs)
@@ -119,8 +120,8 @@ class WIChannelConverter:
 
             cnt += 1
             # Paths lines
-            path_info = np.fromstring(''.join(lines[cnt:cnt + num_paths]), sep=' ', dtype=np.single).reshape(
-                (num_paths, num_cols))  # frombuffer() check
+            path_info = np.fromstring(''.join(lines[cnt:cnt + num_paths]), sep=' ', 
+                                      dtype=np.single).reshape((num_paths, num_cols))
             info.append(path_info)
             cnt += num_paths
 
@@ -132,7 +133,8 @@ class WIChannelConverter:
         RX_str = lines[1][3:-3]
 
         cnt = header_len
-        info = np.fromstring(''.join(lines[cnt:]), sep=' ', dtype=np.single).reshape((-1, num_cols))
+        info = np.fromstring(''.join(lines[cnt:]), sep=' ', 
+                             dtype=np.single).reshape((-1, num_cols))
 
         info = {
                 'PL_data': info,
@@ -159,7 +161,8 @@ class WIChannelConverter:
 
             # Summary
             cnt += 1
-            # ch_sum = np.fromstring(lines[cnt], sep=' ', dtype=np.single) # We don't need channel info
+            # ch_sum = np.fromstring(lines[cnt], sep=' ', dtype=np.single) 
+            # We don't need channel info
 
             # Paths
             path_info = []
@@ -216,13 +219,16 @@ class WIChannelConverter:
                 raise NotImplementedError
             file_rx_count = int(rx_str[0])
 
-            table_data.append([file_type, file_tx_id, file_tx_count, file_rx_count, file_scen, file_dir])
+            table_data.append([file_type, file_tx_id, file_tx_count, 
+                               file_rx_count, file_scen, file_dir])
 
-        df = pd.DataFrame(table_data, columns=['Extension', 'TX_CNT', 'TX_ID', 'RX_ID', 'Scenario', 'Dir'])
+        df = pd.DataFrame(table_data, columns=['Extension', 'TX_CNT', 'TX_ID', 
+                                               'RX_ID', 'Scenario', 'Dir'])
 
         return df
 
-    def add_Doppler_single_obj(self, bound_min, bound_max, vel_acc=[1, 0], vel_dir=np.array([1, 1, 1])):
+    def add_Doppler_single_obj(self, bound_min, bound_max, vel_acc=[1, 0], 
+                               vel_dir=np.array([1, 1, 1])):
         for channel in self.channels:
             channel.calc_Doppler(bound_min, bound_max, vel_acc, vel_dir)
 
@@ -230,13 +236,11 @@ class WIChannelConverter:
         self.Doppler = True
         
         for obj in objects:
-            # TODO: Slope is not supported - flat earth theory holds
-            self.add_Doppler_single_obj(
-                                        bound_min=obj['bounds'][0],
+            self.add_Doppler_single_obj(bound_min=obj['bounds'][0],
                                         bound_max=obj['bounds'][1],
                                         vel_acc=[obj['speed'], obj['acceleration']],
-                                        vel_dir=np.array([cos(radians(obj['angle'])), sin(radians(obj['angle'])), 0])
-                                        )
+                                        vel_dir=np.array([cos(radians(obj['angle'])), 
+                                                          sin(radians(obj['angle'])), 0]))
 
     def save_channels(self, filename):
 
@@ -249,7 +253,8 @@ class WIChannelConverter:
             loc_dicts.append(second_mat)
             
         scipy.io.savemat(os.path.join(self.save_folder, filename), 
-                         {'channels': np.array(ch_dicts).T, 'rx_locs': np.array(loc_dicts)})
+                         {'channels': np.array(ch_dicts).T, 
+                          'rx_locs': np.array(loc_dicts)})
 
     # def save_channels(self, save_folder, scene_idx=None, interacts=False, max_len=10000):
         
@@ -276,9 +281,13 @@ class WIChannelConverter:
     #         while save_cnt<num_ch:
     #             next_cnt = min(num_ch, save_cnt+max_len)
     #             if scene_idx:
-    #                 scipy.io.savemat(os.path.join(save_folder, 'scene_%i_TX%i_%i-%i.mat' % (scene_idx, tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
+    #                 file = os.path.join(save_folder, 'scene_%i_TX%i_%i-%i.mat' % 
+    #                                     (scene_idx, tx_id, save_cnt, next_cnt))
+    #                 scipy.io.savemat(file, {'channels': save_ch[save_cnt:next_cnt]})
     #             else:
-    #                 scipy.io.savemat(os.path.join(save_folder, 'TX%i_%i-%i.mat' % (tx_id, save_cnt, next_cnt)), {'channels': save_ch[save_cnt:next_cnt]})
+    #                 file = os.path.join(save_folder, 'TX%i_%i-%i.mat' %
+    #                                     (tx_id, save_cnt, next_cnt))
+    #                 scipy.io.savemat(file, {'channels': save_ch[save_cnt:next_cnt]})
     #             save_cnt = next_cnt
 
 
@@ -394,10 +403,6 @@ class Channel:
         
         second_mat = list(self.RX_loc) + [self.dist] + [self.PL]
         return {'p': store_array}, second_mat
-        # Most efficient with only single character dict due to non-uniform array size
-        # Multiple characters, e.g., 'paths' add extra size
-        # Similarly, adding second variable also adds, instead join them as a single array
-
 class Path:
     def __init__(self, phase, ToA, power, doa_phi, doa_theta, dod_phi, dod_theta, interact, interact_locs):
         self.phase = phase
