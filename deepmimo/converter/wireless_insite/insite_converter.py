@@ -74,6 +74,7 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
         # if p2m folder is not provided, choose the last folder available
         p2m_folder = [name for name in os.listdir(insite_sim_folder)
                       if os.path.isdir(os.path.join(insite_sim_folder, name))][-1]
+        p2m_folder = os.path.join(insite_sim_folder, p2m_folder)
 
     output_folder = os.path.join(insite_sim_folder, 'mat_files') # SCEN_NAME!
     os.makedirs(output_folder, exist_ok=True)
@@ -104,7 +105,7 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
 
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg):
     materials_dict = read_materials(files_in_sim_folder, verbose)
-    return 
+    # return 
 
     # export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
 
@@ -114,13 +115,13 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     # # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
 
     # # Convert P2M files to mat format
-    # WIChannelConverter(p2m_folder, intermediate_folder)
+    WIChannelConverter(p2m_folder, intermediate_folder)
 
-    # dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
-    #                            TX_order=tx_ids, RX_order=rx_ids)
+    dm = DeepMIMODataFormatter(intermediate_folder, output_folder, 
+                               TX_order=tx_ids, RX_order=rx_ids)
     # #                          # TODO: read this automatically from P2M
-    # scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=False)
-    # return scen_name
+    scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=False)
+    return scen_name
 
     # JTODO 2: write parameters to DeepMIMO metadata (accessible via print and website)
 
@@ -389,7 +390,7 @@ def export_scenario(sim_folder, output_folder, overwrite=False):
     scen_path = c.SCENARIOS_FOLDER + f'/{name}'
     if os.path.exists(scen_path) and not overwrite:
         
-        print('Scenario with name "{name}" already exists in {c.SCENARIOS_FOLDER}. Delete? (Y/n)')
+        print(f'Scenario with name "{name}" already exists in {c.SCENARIOS_FOLDER}. Delete? (Y/n)')
         ans = input()
         if ('n' in ans.lower()):
             return
