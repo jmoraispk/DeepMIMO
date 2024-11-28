@@ -25,7 +25,11 @@ def tokenize_file(path):
     """Breaks a TXRX file into whitespace-separated tokens."""
 
     with open(path, "r") as f:
-        print(f'Reading file with {f.readline().lower()}')
+        first_line = f.readline()
+        if first_line.startswith('Format type:keyword version:'):
+            print(f'Reading file with {first_line.lower()}')
+        else:
+            yield first_line
         for line in f:
             yield from line.split()
             yield NL_TOKEN
@@ -116,7 +120,8 @@ def parse_document(tokens):
 
         node_name, node = parse_node(tokens)
         node.kind = node_name
-        node_name = node.name
+        potential_name = '_'.join(tok.split(' ')[1:])[:-1]
+        node_name = potential_name if potential_name else node.name
         if node_name in document:
             raise RuntimeError(f"Node with duplicate name {node_name} found.")
         document[node_name] = node
