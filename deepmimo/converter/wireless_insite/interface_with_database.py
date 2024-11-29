@@ -34,5 +34,57 @@ for table in tables:
     for column in schema:
         print(column)
 
+
+# Query to get all XYZ positions of the receivers
+cursor.execute('SELECT x, y, z FROM rx')  # Replace 'receivers' with your actual table name
+
+# Fetch all results
+xyz_positions = cursor.fetchall()
+
+# Print the results
+print("XYZ Positions of Receivers:")
+for position in xyz_positions:
+    print(f"X: {position[0]}, Y: {position[1]}, Z: {position[2]}")
+
+
+cursor.execute('SELECT rx_id FROM rx')
+rx_ids = cursor.fetchall()
+
 # Close the connection
 connection.close()
+
+#%%
+import matplotlib.pyplot as plt
+xyz = np.array(xyz_positions)
+
+rx_ids = np.array(rx_ids)
+
+plt.figure(dpi=200, )
+plt.scatter(xyz[:,0], xyz[:,1], s=2)
+plt.ylim((-70,70))
+plt.xlim((-100, 100))
+plt.show()
+
+
+#%%
+fig = plt.figure(dpi=200) 
+ax = fig.add_subplot(projection='3d')
+n = 80
+k = 8
+ax.scatter(xs=xyz[:n:k,0], ys=xyz[:n:k,1], zs=rx_ids[:n:k], s=1)
+ax.set_ylim((-70,70))
+ax.set_xlim((-100, 100))
+plt.show()
+
+#%%
+
+plt.plot(rx_ids)
+
+#%%
+
+"""
+There are two problems in the database:
+    - The indices are not continuous
+    - Seems to have more positions than the ones we actually simulates..
+    (5799 vs 5551 = 61*91)
+"""
