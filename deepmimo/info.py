@@ -12,8 +12,10 @@ def info(s):
         pass
     help_messages = {
         c.CHS_PARAM_NAME: '...',
-        c.AOA_PARAM_NAME: '...',
-        c.AOD_PARAM_NAME: '...',
+        c.AOA_AZ_PARAM_NAME: '...',
+        c.AOA_EL_PARAM_NAME: '...',
+        c.AOD_AZ_PARAM_NAME: '...',
+        c.AOD_EL_PARAM_NAME: '...',
         c.TOA_PARAM_NAME: '...',
         c.PWR_PARAM_NAME: '...',
         c.PHASE_PARAM_NAME: '...',

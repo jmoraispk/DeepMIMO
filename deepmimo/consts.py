@@ -1,5 +1,26 @@
+import numpy as np
 
-SCENARIOS_FOLDER = 'deepmimo_scenarios'
+FP_TYPE = np.float32 # floating point precision for saving values
+
+
+# DEEPMIMOv4 consts
+CHS_PARAM_NAME = 'chs'
+AOA_AZ_PARAM_NAME = 'aoa_az'
+AOA_EL_PARAM_NAME = 'aoa_el'
+AOA_AZ_PARAM_NAME = 'aod_az'
+AOD_EL_PARAM_NAME = 'aod_el'
+TOA_PARAM_NAME = 'toa'
+PWR_PARAM_NAME = 'power'
+PHASE_PARAM_NAME = 'phase'
+RX_LOC_PARAM_NAME = 'rx_loc'
+TX_LOC_PARAM_NAME = 'tx_loc'
+INTERACTIONS_PARAM_NAME = 'inter'
+INTERACTIONS_LOC_PARAM_NAME = 'inter_loc'
+
+
+# JTODO: separate in generation and parameter constants?
+
+SCENARIOS_FOLDER = 'deepmimo_scenarios2'
 
 # Dict names
 DICT_UE_IDX = 'user'
@@ -13,9 +34,6 @@ PARAMSET_DYNAMIC_SCENES = 'dynamic_scenario_scenes'
 PARAMSET_NUM_PATHS = 'num_paths'
 PARAMSET_ACTIVE_BS = 'active_BS'
 PARAMSET_USER_ROWS = 'user_rows'
-# PARAMSET_USER_ROW_FIRST = 'user_row_first'
-# PARAMSET_USER_ROW_LAST = 'user_row_last'
-# PARAMSET_USER_ROW_SUBSAMP = 'row_subsampling'
 PARAMSET_USER_SUBSAMP = 'user_subsampling'
 
 PARAMSET_POLAR_EN = 'enable_dual_polar'
@@ -26,7 +44,6 @@ PARAMSET_FDTD = 'OFDM_channels' # TD/OFDM
 
 PARAMSET_OFDM = 'OFDM'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'
-# PARAMSET_OFDM_SC_LIM = 'subcarriers_limit'
 PARAMSET_OFDM_SC_SAMP = 'selected_subcarriers'
 PARAMSET_OFDM_BW = 'bandwidth'
 PARAMSET_OFDM_BW_MULT = 1e9 # Bandwidth input is GHz, multiply by this
@@ -44,7 +61,6 @@ PARAMSET_ANT_FOV = 'FoV'
 # INNER VARIABLES
 PARAMSET_ACTIVE_UE = 'active_UE'
 PARAMSET_SCENARIO_FIL = 'scenario_files'
-#PARAMSET_ACTIVE_USERS = 'active_user_idx'
 PARAMSET_ANT_BS_DIFF = 'BS2BS_isnumpy' # Based on this paramater, the BS-BS channels won't be converted from a list of matrices to a single matrix
 
 # SCENARIO PARAMS
@@ -57,6 +73,7 @@ PARAMSET_SCENARIO_PARAMS_POLAR_EN = 'dual_polar_available'
 PARAMSET_SCENARIO_PARAMS_DOPPLER_EN = 'doppler_available'
 
 PARAMSET_SCENARIO_PARAMS_PATH = 'scenario_params_path'
+
 # OUTPUT VARIABLES
 OUT_CHANNEL = 'channel'
 OUT_PATH = 'paths'

@@ -7,7 +7,7 @@ This folder contains the files that specify how each DeepMIMO version organizes 
     1. [‘rx_loc’] is N x 3
     2. [‘tx_loc’] is 1 x 3
     2. [‘chs’] is N x N_ant_pairs. N_ant_pairs is an index that refers to tx (h,v,p) ↔ rx (h,v,p)
-    3. [‘aoa’] | [‘aod’] | [‘toa’] | [‘phase’] | [‘power’] are N x MAX_PATHS
+    3. [‘aoa_az’] | [‘aod_az’] | [‘aoa_el’] | [‘aod_el’] | [‘toa’] | [‘phase’] | [‘power’] are N x MAX_PATHS
     4. [‘inter’] is N x MAX_PATHS
         1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
     5. [‘inter_loc’] is N x MAX_PATHS x 3
@@ -19,6 +19,13 @@ This folder contains the files that specify how each DeepMIMO version organizes 
         3. 1 matrix of N x 3 (rx_loc.mat)
         4. 1 matrix of M x 3 (tx_loc.mat)
         5. 1 params.mat
+
+Design principle:
+- we don't include any information that can be easily derived. 
+E.g. number of interactions per path = dataset[scene][tx]['inter'] // 10 + 1
+E.g. count nans: number of paths = dataset[scene][tx]['toa']
+
+We have these in helper functions.
 
 Storage: 
 scene_X_tx_y.mat
