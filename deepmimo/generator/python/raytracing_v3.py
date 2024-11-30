@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DeepMIMOv3 Python Implementation
-
-Description: Read scenario files
-
-Authors: Umut Demirhan, Ahmed Alkhateeb
-Date: 12/10/2021
-"""
-
 import os
 import numpy as np
 from tqdm import tqdm

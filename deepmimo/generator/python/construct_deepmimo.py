@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DeepMIMOv2 Python Implementation
-
-Description: MIMO channel generator
-
-Authors: Umut Demirhan, Ahmed Alkhateeb
-Date: 12/10/2021
-"""
-
 import numpy as np
 from tqdm import tqdm
 from .ant_patterns import AntennaPattern

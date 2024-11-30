@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DeepMIMOv2 Python Implementation
-
-Description: Parameters file
-
-Authors: Umut Demirhan, Ahmed Alkhateeb
-Date: 12/10/2021
-"""
-
 import os 
 import numpy as np
 from ... import consts as c

@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DeepMIMOv3 Python Implementation
-
-Description: Main generator script
-
-Authors: Umut Demirhan, Ahmed Alkhateeb
-Date: 12/10/2021
-"""
-
 import os
 import copy
 import numpy as np

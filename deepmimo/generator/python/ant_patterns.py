@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DeepMIMOv2 Python Implementation
-
-Description: Antenna Radiation Patterns
-
-Authors: Umut Demirhan, Ahmed Alkhateeb
-Date: 3/16/2022
-"""
-
 from ... import consts as c
 import numpy as np
 

@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DeepMIMOv3 Python Implementation
-
-Description: Utilities
-
-Authors: Umut Demirhan, Ahmed Alkhateeb
-Date: 12/10/2021
-"""
-
 import time
 import numpy as np
 from ... import consts as c

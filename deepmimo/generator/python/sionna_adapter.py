@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jul 16 10:53:50 2022
-
-@author: Umut Demirhan, Ahmed Alkhateeb
-"""
 import numpy as np
 
 # The DeepMIMO dataset adapter for Sionna
