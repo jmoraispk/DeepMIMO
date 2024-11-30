@@ -241,62 +241,44 @@ class OFDM_PathGenerator:
         self.params = params
         self.OFDM_params = params[c.PARAMSET_OFDM]
         
-        if self.OFDM_params[c.PARAMSET_OFDM_LPF] == 0: # No Pulse Shaping
-            self.generate = getattr(self, 'no_LPF')
-        else: # Pulse Shaping
-            self.generate = getattr(self, 'with_LPF')
-            
-                
         self.subcarriers = subcarriers
         self.total_subcarriers = self.OFDM_params[c.PARAMSET_OFDM_SC_NUM]
         
         self.delay_d = np.arange(self.OFDM_params['subcarriers'])
         self.delay_to_OFDM = np.exp(-1j*2*np.pi/self.total_subcarriers*np.outer(self.delay_d, self.subcarriers))
-        
-    def no_LPF(self, raydata, Ts):
-        power = (raydata[c.OUT_PATH_RX_POW]).reshape(-1, 1)
-        delay_n = (raydata[c.OUT_PATH_TOA]/Ts).reshape(-1, 1)
-        phase = raydata[c.OUT_PATH_PHASE].reshape(-1,1)
-        
-        paths_over_FFT = (delay_n >= self.OFDM_params['subcarriers'])
-        power[paths_over_FFT] = 0
-        delay_n[paths_over_FFT] = self.OFDM_params['subcarriers']
-        
-        path_const = np.sqrt(power/self.total_subcarriers) * np.exp(1j*(np.deg2rad(phase) - (2*np.pi/self.total_subcarriers)*np.outer(delay_n, self.subcarriers) ))
-        
-        if self.params[c.PARAMSET_DOPPLER_EN] and self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN]:
-            doppler_vel = raydata[c.OUT_PATH_DOP_VEL].reshape(-1, 1)
-            doppler_acc = raydata[c.OUT_PATH_DOP_ACC].reshape(-1, 1)
-            carr_freq = self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_CF]
-            
-            delay = (raydata[c.OUT_PATH_TOA]).reshape(-1, 1)
-            Doppler_phase = np.exp(-1j*2*np.pi*carr_freq*(doppler_vel*delay/c.LIGHTSPEED + doppler_acc*(delay**2)/(2*c.LIGHTSPEED)))
-            path_const *= Doppler_phase
-        
-        return path_const
     
-    def with_LPF(self, raydata, Ts):
-        power = (raydata[c.OUT_PATH_RX_POW]).reshape(-1, 1)
-        delay_n = (raydata[c.OUT_PATH_TOA]/Ts).reshape(-1, 1)
-        phase = raydata[c.OUT_PATH_PHASE].reshape(-1,1)
-        
-        # Ignore the paths over CP
+    def generate(self, raydata, Ts):
+        use_LPF = self.OFDM_params[c.PARAMSET_OFDM_LPF]
+        power = raydata[c.OUT_PATH_RX_POW].reshape(-1, 1)
+        delay_n = (raydata[c.OUT_PATH_TOA] / Ts).reshape(-1, 1)
+        phase = raydata[c.OUT_PATH_PHASE].reshape(-1, 1)
+    
+        # Ignore paths over CP
         paths_over_FFT = (delay_n >= self.OFDM_params['subcarriers'])
         power[paths_over_FFT] = 0
         delay_n[paths_over_FFT] = self.OFDM_params['subcarriers']
-        
-        # Pulse - LPF convolution and channel generation
-        pulse = np.sinc(self.delay_d-delay_n)
-        pulse = pulse * np.sqrt(power/self.total_subcarriers) * np.exp(1j*np.deg2rad(phase)) # Power scaling
-        
+    
+        if use_LPF:
+            # Pulse - LPF convolution
+            pulse = np.sinc(self.delay_d - delay_n)
+            path_const = pulse * np.sqrt(power / self.total_subcarriers) * np.exp(1j * np.deg2rad(phase))
+        else:
+            # Path construction without LPF
+            path_const = np.sqrt(power / self.total_subcarriers) * np.exp(
+                1j * (np.deg2rad(phase) - (2 * np.pi / self.total_subcarriers) * np.outer(delay_n, self.subcarriers)))
+    
+        # Apply Doppler effect if enabled
         if self.params[c.PARAMSET_DOPPLER_EN] and self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN]:
             doppler_vel = raydata[c.OUT_PATH_DOP_VEL].reshape(-1, 1)
             doppler_acc = raydata[c.OUT_PATH_DOP_ACC].reshape(-1, 1)
             carr_freq = self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_CF]
+    
+            delay = Ts * self.delay_d.T if use_LPF else raydata[c.OUT_PATH_TOA].reshape(-1, 1)
             
-            delay = Ts * self.delay_d.T
-            Doppler_phase = np.exp(-1j*2*np.pi*carr_freq*(doppler_vel*delay/c.LIGHTSPEED + doppler_acc*(delay**2)/(2*c.LIGHTSPEED)))
-            pulse *= Doppler_phase
-        
-        return pulse
+            doppler_phase = np.exp(-1j * 2 * np.pi * carr_freq * 
+                                   (doppler_vel * delay / c.LIGHTSPEED +
+                                    doppler_acc * (delay ** 2) / (2 * c.LIGHTSPEED)))
+            path_const *= doppler_phase
+
+        return path_const
     
