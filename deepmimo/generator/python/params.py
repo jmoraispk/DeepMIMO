@@ -11,6 +11,7 @@ Date: 12/10/2021
 import os 
 import numpy as np
 from ... import consts as c
+from pprint import pformat # returns pprint string
 
 class Parameters():
     def __init__(self, scen_name=None):
@@ -88,4 +89,7 @@ class Parameters():
     
     def get_path(self):
         return os.path.join(self.get_folder(), self.params[c.PARAMSET_SCENARIO])
+    
+    def __repr__(self):
+        return pformat(self.get_params_dict())
     
