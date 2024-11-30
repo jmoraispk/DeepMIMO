@@ -116,40 +116,52 @@ from deepmimo.converter.wireless_insite.parser import tokenize_file, parse_docum
 from dataclasses import dataclass, asdict
 
 @dataclass
-class InsiteTxRx():
+class InsiteTxRxSet():
     """
     TX or RX
     """
     # These field names match the names in Material section of the feature file
     name: str = ''
-    kind: str = '' # type
+    kind: str = '' # type = 'points' or 'grid'
     p_id: int = 0
     is_tx: bool = False
     is_rx: bool = False
     loc_lat: float = 0.0
     loc_lon: float = 0.0
-    loc_xy: np.ndarray = None # N_points x 3
+    loc_xy: np.ndarray | None = None # N_points x 3
+    side_x: float  = 0.0 # [m]
+    side_y: float  = 0.0 # [m]
+    spacing: float = 0.0 # [m]
     
+    # Indices of individual TXs and RXs
+    tx_id_start: int | None = None
+    rx_id_start: int | None = None
+    tx_id_end: int | None = None
+    rx_id_end: int | None = None
     
 file = "P2Ms/simple_street_canyon/simple_street_canyon_test.txrx"
 tks = tokenize_file(file)
 document = parse_document(tks)
 
+n_tx = 0
+n_rx = 0
 txrx_objs = []
 for key in document.keys():
     txrx = document[key]
-    txrx_obj = InsiteTxRx()
+    txrx_obj = InsiteTxRxSet()
     txrx_obj.name = key
     txrx_obj.kind = txrx.kind
     txrx_obj.p_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
                      else txrx.values['project_id'])
     txrx_obj.loc_lat = txrx.values['location'].values['reference'].values['latitude']
     txrx_obj.loc_lon = txrx.values['location'].values['reference'].values['longitude']
+    txrx_obj.coord_ref = txrx.values['location'].values['reference'].labels[1] # 'terrain'?
+    # If ref = terrain, then z
     
     if txrx_obj.kind == 'points':
-        txrx_obj.loc_xy = np.array(txrx.values['location'].data[0])
+        txrx_obj.loc_xy = np.array(txrx.values['location'].data[0]).reshape((1,3))
     if txrx_obj.kind == 'grid':
-        corner = txrx.values['location'].data[0]
+        corner = txrx.values['location'].data[0] # lower left
         txrx_obj.side_x = txrx.values['location'].values['side1']
         txrx_obj.side_y = txrx.values['location'].values['side2']
         txrx_obj.spacing = txrx.values['location'].values['spacing']
@@ -158,27 +170,54 @@ for key in document.keys():
         xs = corner[0] + np.arange(0, txrx_obj.side_x + 1e-9, txrx_obj.spacing)
         ys = corner[1] + np.arange(0, txrx_obj.side_y + 1e-9, txrx_obj.spacing)
         points = np.array([[x,y, corner[2]] for y in ys for x in xs], dtype=np.float32)
+        txrx_obj.loc_xy = points
     
     txrx_obj.is_tx = txrx.values['is_transmitter']
     txrx_obj.is_rx = txrx.values['is_receiver']
-    # if txrx_obj.is_tx:
-        # txrx_obj.tx_array = txrx.values['transmitter']
-    # if txrx_obj.is_rx:
-        # txrx_obj.rx_array = txrx.values['receiver']
+    
+    # Update indices of individual tx/rx points
+    num_txrx = len(txrx_obj.loc_xy)#.shape[0]
+    if txrx_obj.is_tx:
+        txrx_obj.tx_id_start = n_tx
+        txrx_obj.tx_id_end = n_tx + num_txrx - 1
+        n_tx += num_txrx
+    if txrx_obj.is_rx:
+        txrx_obj.rx_id_start = n_rx
+        txrx_obj.rx_id_end = n_rx + num_txrx - 1
+        n_rx += num_txrx
+        
     txrx_objs.append(txrx_obj)
     
-# Logic
+    
+#%%
+# Generate full grid of individual RXs and TXs
+tx_pos = np.zeros((n_tx, 3), dtype=np.float32) * np.nan
+rx_pos = np.zeros((n_rx, 3), dtype=np.float32) * np.nan
 
-# Iterate over objects to generate full grid of receivers and txs
+for txrx_obj in txrx_objs:
+    if txrx_obj.is_tx:
+        idxs = np.arange(txrx_obj.tx_id_start, txrx_obj.tx_id_end+1)
+        tx_pos[idxs] = txrx_obj.loc_xy
+    if txrx_obj.is_rx:
+        idxs = np.arange(txrx_obj.rx_id_start, txrx_obj.rx_id_end+1)
+        rx_pos[idxs] = txrx_obj.loc_xy
 
+# Note: TxRx SETS != individual Tx/Rx points.
+#       Sets are <points> or <grid>. 
+#           - <points> contains a single point (currently - LIMITATION)
+#           - <grid> typically contains more than a single point
+#       The indices of the sets are only useful for reading data into the right arrays
+#       The indices of the individual points will be used for data storage and generation
 
 #%% READ Materials
 
 # file = "P2Ms/simple_street_canyon/simple_street_canyon_floor.ter"
-file = "P2Ms/simple_street_canyon/simple_street_canyon_buildings.city"
+file = './P2Ms/ASU_campus_just_p2m/asu_plane.ter'
+# file = "P2Ms/simple_street_canyon/simple_street_canyon_buildings.city"
 tks = tokenize_file(file)
 document = parse_document(tks)
 
+import os
 from dataclasses import dataclass, asdict
 
 @dataclass
@@ -213,32 +252,40 @@ class InsiteMaterial():
     roughness: int = 0           # >=0, roughness
     thickness: int = 0           # >=0, thickness [m]
     
-# Go to the zone that matches the P2M folder
-p2m_folder = os.path.basename(os.path.dirname(file))
-name, ext = os.path.splitext(file)
-suffix = os.path.basename(name).split(p2m_folder)[-1]
-
-prim = p2m_folder + suffix
-if prim not in document.keys():
-    raise Exception("Couldn't find '{prim}' in {os.path.basename(p2m_folder)}")
-    
 direct_fields = ['diffuse_scattering_model', 'fields_diffusively_scattered', 
                  'cross_polarized_power', 'directive_alpha', 'directive_beta',
                  'directive_lambda']
 dielectric_fields = ['conductivity', 'permittivity', 'roughness', 'thickness']
 
-materials = document[prim].values['Material']
-materials = [materials] if type(materials) != list else materials
 mat_objs = []
-for mat in materials:
-    material_obj = InsiteMaterial()
-    material_obj.name = mat.name
-    for field in direct_fields:
-        setattr(material_obj, field, mat.values[field])
-    
-    for field in dielectric_fields:
-        setattr(material_obj, field, mat.values['DielectricLayer'].values[field])
-    
-    mat_objs += [material_obj]
+for prim in document.keys():
+    materials = document[prim].values['Material']
+    materials = [materials] if type(materials) != list else materials
+    for mat in materials:
+        material_obj = InsiteMaterial()
+        material_obj.name = mat.name
+        for field in direct_fields:
+            setattr(material_obj, field, mat.values[field])
+        
+        for field in dielectric_fields:
+            setattr(material_obj, field, mat.values['DielectricLayer'].values[field])
+        
+        mat_objs += [material_obj]
+
+
+# If .ter exists, measure the terrain height
+terrain_height = document['asu_plane'].values['structure_group'].values['structure']\
+    .values['sub_structure'].values['face'].data[0][2]
+
+# Current approach:
+# - Read and generate positions from the txrx files
+# - Adjust them based on the floor height (read from the materials file)
+# - Override them based on the ones read from the paths file (all users with paths)
+# Note: this won't work for uneven terrains without diffuse scattering, but 
+#       that is an unrealistic case since it would cause major problems anyway
+
+
+
+
 
 
