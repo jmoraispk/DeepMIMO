@@ -130,7 +130,7 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
 
     # Read TXRX (.txrx)
     txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
-    avail_tx_idxs, avail_rx_idxs, tx_loc, rx_loc, txrx_dict = read_txrx(txrx_file, verbose)
+    avail_tx_ids, avail_rx_ids, tx_loc, rx_loc, txrx_dict = read_txrx(txrx_file, verbose)
     
     # Sum terrain height to TX/RX points (necessary hidden Wireless Insite mechanic...)
     try:
@@ -156,8 +156,14 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     #       The indices of the individual points will be used for data storage and generation
     # TODO2: Make <points> work for any number of points (requires prototyping and validation)
 
-    tx_ids = tx_ids if tx_ids else avail_tx_idxs
-    rx_ids = rx_ids if rx_ids else avail_rx_idxs
+    tx_ids = tx_ids if tx_ids else avail_tx_ids
+    rx_ids = rx_ids if rx_ids else avail_rx_ids
+    
+    # NOTE: currently, a tx id is kept separate. 
+    # For the sake of working with the current implementation, we filter the rx's:
+    rx_ids = [rx_id for rx_id in rx_ids if rx_id not in tx_ids]
+
+
     
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
