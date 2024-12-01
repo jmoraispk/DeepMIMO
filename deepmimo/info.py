@@ -19,10 +19,10 @@ def info(s):
         c.TOA_PARAM_NAME: '...',
         c.PWR_PARAM_NAME: '...',
         c.PHASE_PARAM_NAME: '...',
-        c.RX_LOC_PARAM_NAME: '...',
-        c.TX_LOC_PARAM_NAME: '...',
+        c.RX_POS_PARAM_NAME: '...',
+        c.TX_POS_PARAM_NAME: '...',
         c.INTERACTIONS_PARAM_NAME: '...', 
-        c.INTERACTIONS_LOC_PARAM_NAME: '...',
+        c.INTERACTIONS_POS_PARAM_NAME: '...',
         'materials': '...'
         }
             

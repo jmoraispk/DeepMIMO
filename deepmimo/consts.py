@@ -12,10 +12,10 @@ AOD_EL_PARAM_NAME = 'aod_el'
 TOA_PARAM_NAME = 'toa'
 PWR_PARAM_NAME = 'power'
 PHASE_PARAM_NAME = 'phase'
-RX_LOC_PARAM_NAME = 'rx_loc'
-TX_LOC_PARAM_NAME = 'tx_loc'
+RX_POS_PARAM_NAME = 'rx_pos'
+TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
-INTERACTIONS_LOC_PARAM_NAME = 'inter_loc'
+INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 
 
 # JTODO: separate in generation and parameter constants?
