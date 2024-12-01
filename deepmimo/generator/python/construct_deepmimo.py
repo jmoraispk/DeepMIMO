@@ -257,18 +257,17 @@ class OFDM_PathGenerator:
         paths_over_FFT = (delay_n >= self.OFDM_params['subcarriers'])
         power[paths_over_FFT] = 0
         delay_n[paths_over_FFT] = self.OFDM_params['subcarriers']
-    
-        if use_LPF:
-            # Pulse - LPF convolution
-            pulse = np.sinc(self.delay_d - delay_n)
-            path_const = pulse * np.sqrt(power / self.total_subcarriers) * np.exp(1j * np.deg2rad(phase))
-        else:
-            # Path construction without LPF
-            path_const = np.sqrt(power / self.total_subcarriers) * np.exp(
-                1j * (np.deg2rad(phase) - (2 * np.pi / self.total_subcarriers) * np.outer(delay_n, self.subcarriers)))
+        
+        path_const = np.sqrt(power / self.total_subcarriers) * np.exp(1j * np.deg2rad(phase))
+        if use_LPF: # LPF convolution
+            path_const *= np.sinc(self.delay_d - delay_n)
+        else: # Path construction without LPF
+            path_const *= np.exp(-1j * (2 * np.pi / self.total_subcarriers) * np.outer(delay_n, self.subcarriers))
     
         # Apply Doppler effect if enabled
-        if self.params[c.PARAMSET_DOPPLER_EN] and self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN]:
+        doppler_available = self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN]
+        doppler_selected_for_gen = self.params[c.PARAMSET_DOPPLER_EN]
+        if doppler_selected_for_gen and doppler_available:
             doppler_vel = raydata[c.OUT_PATH_DOP_VEL].reshape(-1, 1)
             doppler_acc = raydata[c.OUT_PATH_DOP_ACC].reshape(-1, 1)
             carr_freq = self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_CF]
