@@ -5,6 +5,8 @@ TODOS:
     - uneven terrain position reading
     - <points> sets with many points in each set
     - support multi-antennas (this includes polarization)
+    - (optional) dictionary mapping between Wireless Insite and DeepMIMO names
+    
 """
 
 
@@ -215,12 +217,12 @@ def verify_sim_folder(sim_folder: str, verbose: bool):
 def copy_rt_source_files(sim_folder: str, verbose: bool = True):
     
     vprint = PrintIfVerbose(verbose) # prints if verbose 
-    rt_source_folder = 'raytracing_source'
+    rt_source_folder = os.path.basename(sim_folder) + '_raytracing_source'
     files_in_sim_folder = os.listdir(sim_folder)
     print('Copying raytracing source files to "rt_source_folder"')
     zip_temp_folder = os.path.join(sim_folder, rt_source_folder)
     os.makedirs(zip_temp_folder)
-    for ext in ['.setup', '.txrx', '.ter', '.city']:
+    for ext in ['.setup', '.txrx', '.ter', '.city', '.kmz']:
         # copy all files with extensions to temp folder
         for file in cu.ext_in_list(ext, files_in_sim_folder):
             curr_file_path = os.path.join(sim_folder, file)
