@@ -27,7 +27,8 @@ def tokenize_file(path):
     with open(path, "r") as f:
         first_line = f.readline()
         if first_line.startswith('Format type:keyword version:'):
-            print(f'Reading file with {first_line.lower()}')
+            # print(f'Ignoring first line: {first_line.lower()}')
+            continue
         else:
             yield first_line
         for line in f:
