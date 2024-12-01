@@ -18,7 +18,7 @@ scen_name = dm.create_scenario(path_to_p2m_folder,
 import deepmimo as dm
 scen_name = 'simple_street_canyon'
 params = dm.Parameters(scen_name)#asu_campus')
-params.get_params_dict()['user_rows'] = [1,2]
+params.get_params_dict()['user_rows'] = np.arange(91)
 dataset = dm.generate(params)
 
 #%% READ Setup

@@ -1,5 +1,10 @@
 """
 Converts Wireless Insite raytracing files into DeepMIMO scenarios ready to upload.
+
+TODOS:
+    - uneven terrain position reading
+    - <points> sets with many points in each set
+    - support multi-antennas (this includes polarization)
 """
 
 
@@ -22,7 +27,6 @@ from dataclasses import dataclass, asdict
 
 from .setup_parser import tokenize_file, parse_document # for .setup, .txrx, .city, .ter, .veg
 from .paths_parser import paths_parser # for paths.p2m
-
 
 MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES 
@@ -85,6 +89,10 @@ class InsiteTxRxSet():
     rx_id_start: int | None = None
     tx_id_end: int | None = None
     rx_id_end: int | None = None
+    
+    # Antenna elements of tx / rx
+    tx_num_ant: int = 1
+    rx_num_ant: int = 1
     
 
 def insite_rt_converter(rt_folder: str, copy_source: bool = False,
@@ -152,7 +160,7 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
-    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
+    export_params_dict(output_folder, tx_ids, setup_dict, txrx_dict, materials_dict)
     
     ############ REPLACE #############
     # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
@@ -322,11 +330,14 @@ def read_txrx(txrx_file, verbose: bool):
         txrx_obj.kind = txrx.kind
         txrx_obj.p_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
                          else txrx.values['project_id'])
+        
+        # Locations
         txrx_obj.loc_lat = txrx.values['location'].values['reference'].values['latitude']
         txrx_obj.loc_lon = txrx.values['location'].values['reference'].values['longitude']
         txrx_obj.coord_ref = txrx.values['location'].values['reference'].labels[1] # 'terrain'?
-        # If ref = terrain, then z
+        # If ref = 'terrain', then z coordinate will change with terrain height
         
+        # Generate exact coordinates of each specific tx/rx inside the set
         if txrx_obj.kind == 'points':
             txrx_obj.loc_xy = np.array(txrx.values['location'].data[0]).reshape((1,3))
         if txrx_obj.kind == 'grid':
@@ -341,13 +352,21 @@ def read_txrx(txrx_file, verbose: bool):
             points = np.array([[x,y, corner[2]] for y in ys for x in xs], dtype=np.float32)
             txrx_obj.loc_xy = points
         
+        # Is TX or RX?
         txrx_obj.is_tx = txrx.values['is_transmitter']
-        if txrx_obj.is_tx:
-            txrx_obj.tx_power = txrx.values['transmitter'].values['power']
         txrx_obj.is_rx = txrx.values['is_receiver']
         
+        # Antennas and Power
+        if txrx_obj.is_tx:
+            tx_vals = txrx.values['transmitter']
+            txrx_obj.tx_power = tx_vals.values['power']
+            txrx_obj.tx_num_ant = tx_vals['pattern'].values['antenna']
+        if txrx_obj.is_rx:
+            rx_vals = txrx.values['receiver']
+            txrx_obj.rx_num_ant = tx_vals['pattern'].values['antenna']
+        
         # Update indices of individual tx/rx points
-        num_txrx = len(txrx_obj.loc_xy)#.shape[0]
+        num_txrx = len(txrx_obj.loc_xy)
         if txrx_obj.is_tx:
             txrx_obj.tx_id_start = n_tx
             txrx_obj.tx_id_end = n_tx + num_txrx - 1
@@ -468,18 +487,35 @@ def read_materials(files_in_sim_folder, verbose):
     return materials_dict
 
 
-def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict, 
-                       mat_dict: Dict):
+def export_params_dict(output_folder: str, tx_ids: List,
+                       setup_dict: Dict, txrx_dict: Dict, mat_dict: Dict):
+    
+    # Get user_grid size (not general!)
+    for _, tx_rx in txrx_dict.items():
+        if tx_rx['kind'] == 'grid':
+            n_x = tx_rx['side_x'] // tx_rx['spacing'] + 1
+            n_y = tx_rx['side_y'] // tx_rx['spacing'] + 1
+        if tx_rx['is_tx']:
+            tx_pwr = tx_rx['tx_power']
+    
+    try:
+        n_rows, n_usr_per_row = n_x, n_y # e.g. (for asu, = 411, 321)
+    except NameError: 
+        raise Exception('No grid found!')
+    
     data_dict = {
-                'version': c.VERSION,
-                # Start row - end row - num users - 
-                # Num users must be larger than the maximum number of dynamic receivers
-                'user_grids': np.array([[1, 411, 321]], dtype=float), ################### REAAAAD
-                'num_BS': 1, #len(dm.TX_order), ########################## REAAAAD
-                # number of antennas (add to txrx field)
-                'dual_polar_available': 0,
-                'doppler_available': 0
+                c.LOAD_FILE_SP_VERSION: c.VERSION,
+                c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, n_rows, n_usr_per_row]], dtype=float),
+                c.LOAD_FILE_SP_NUM_BS: len(tx_ids),
+                c.LOAD_FILE_SP_TX_POW: tx_pwr,
+                c.LOAD_FILE_SP_NUM_RX_ANT: 1,
+                c.LOAD_FILE_SP_NUM_TX_ANT: 1,
+                c.LOAD_FILE_SP_POLAR: 0,
+                c.LOAD_FILE_SP_DOPPLER: 0
                 }
+    
+    # TODO3: Make a matching between each dict (from WirelessInsite and others...)
+    #        to DeepMIMO names and dicts (). Otherwise, things will overlap across dicts?
     
     merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
     pprint(merged_dict)
@@ -497,7 +533,9 @@ def export_scenario(sim_folder, output_folder, overwrite: bool | None = None):
             overwrite = False if 'n' in ans.lower() else True
         if overwrite:
             shutil.rmtree(scen_path)
-    else:
-        shutil.move(output_folder, scen_path)
+        else:
+            return None
+        
+    shutil.move(output_folder, scen_path)
 
     return name
