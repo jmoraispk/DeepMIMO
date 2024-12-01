@@ -1,39 +1,41 @@
 #%%
-
-# The directives below are for ipykernel to auto reload updated modules
+# The directives below are for ipykernel to auto reload updated modules (e.g. in vscode)
 # %reload_ext autoreload
 # %autoreload 2
 
-import deepmimo as dm
-
 #%%
 
+import deepmimo as dm
 # path_to_p2m_folder = r'.\P2Ms\ASU_campus_just_p2m\study_area_asu5'
 # path_to_p2m_folder = r'.\P2Ms\simple_street_canyon\study_rays=0.25_res=2m_3ghz'
 path_to_p2m_folder = r'.\P2Ms\simple_street_canyon'
 
 scen_name = dm.create_scenario(path_to_p2m_folder,
-                               copy_source=False, tx_ids=[1], rx_ids=[2])
-
-# TODO: map p2m dict to universal dict to write to params (almost the same)
+                               copy_source=False, tx_ids=[1], rx_ids=[2],
+                               overwrite=True)
 
 #%%
+import deepmimo as dm
 scen_name = 'simple_street_canyon'
 params = dm.Parameters(scen_name)#asu_campus')
-
+params.get_params_dict()['user_rows'] = [1,2]
 dataset = dm.generate(params)
 
 #%% READ Setup
 
 # TODO: 
-# 1) Put all of this inside insite_converter
+# 1) Put all of this inside insite_converter [DONE]
+# 2) Switch to reading the new way
 # 2) Save params.mat
 # 3) Generate a <info> field with all sorts of information
 
 # 4) Generate scenario and channels for validation
 # 5) Redo Insite Converter to use the new format (and don't store empty users?)
 
+from scipy.io import loadmat
 
+mat = loadmat('./deepmimo_scenarios2/simple_street_canyon/params.mat')
+mat.keys()
 
 
 
