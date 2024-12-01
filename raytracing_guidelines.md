@@ -14,7 +14,7 @@ In Wireless Insite:
 - Define as many <points> and <grids> as needed. 
 - When defining a set of <points>, define a single location per set. 
 - Ensure the txrx elements in your workspace have growing ids ("1,2,3.." and not "1 3 2")
-
+- Keep the default VSWR of 1 (perfect antenna matching).
 
 
 Left to test:
