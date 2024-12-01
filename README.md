@@ -1,7 +1,7 @@
 # DeepMIMOv4
 DeepMIMO Toolchain: Bridging RayTracers and Simulators (Matlab &amp; Python)
 
-**[Goal]** Enabling large scale AI benchmarking in wireless ray tracing datasets.
+**[Goal]** Enabling large-scale AI benchmarking using site-specific wireless raytracing datasets.
 
 **[How]** Converting the outputs of the best raytracers in wireless to a distributable format that is readable by the best 5G simulation toolboxes. 
 
