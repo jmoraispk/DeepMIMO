@@ -113,6 +113,8 @@ LOAD_FILE_SP_NUM_BS = 'num_BS'
 LOAD_FILE_SP_USER_GRIDS = 'user_grids'
 LOAD_FILE_SP_DOPPLER = 'doppler_available'
 LOAD_FILE_SP_POLAR = 'dual_polar_available'
+LOAD_FILE_SP_NUM_TX_ANT = 'num_tx_ant' 
+LOAD_FILE_SP_NUM_RX_ANT = 'num_rx_ant' 
 
 # Constants
 LIGHTSPEED = 299792458
