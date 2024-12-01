@@ -1,5 +1,5 @@
 
-import .consts as c
+from . import consts as c
 def info(s):
     if type(s) != str:
         help(s)
