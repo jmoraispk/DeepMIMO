@@ -586,20 +586,17 @@ def read_materials(files_in_sim_folder, verbose):
 def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict, 
                        mat_dict: Dict):
     data_dict = {
-                'version': 2,
+                'version': c.VERSION,
                 'carrier_freq': 28e9, ############# REAAAAD
                 'transmit_power': 0.0, #dB from the scenario ############# REAAAAD
                 # Start row - end row - num users - Num users must be larger than the maximum number of dynamic receivers
                 'user_grids': np.array([[1, 411, 321]], dtype=float), ############# REAAAAD
                 'num_BS': 1, #len(dm.TX_order), ############# REAAAAD
-                'dual_polar_available': 0, ############# REAAAAD
+                'dual_polar_available': 0,
                 'doppler_available': 0
-                #'BS_grids': np.array([[i+1, i+1, 1] for i in range(self.num_BS)]).astype(float)
-
-                # n_paths, n_reflections, type of difusion, ...
-
                 }
-        
+    
+    merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
 
 def export_scenario(sim_folder, output_folder, overwrite=False):

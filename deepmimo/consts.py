@@ -1,5 +1,5 @@
 import numpy as np
-
+VERSION = 4
 FP_TYPE = np.float32 # floating point precision for saving values
 
 
