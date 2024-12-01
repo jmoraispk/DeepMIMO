@@ -12,7 +12,7 @@ LINE_START = 22 # Skip info lines and n_rxs line.
 MAX_PATHS = 25
 MAX_INTER_PER_PATH = 10
 
-INTERACTIONS_MAP = {'R': 1, 'D': 2, 'DS': 3, 'T': 4}
+INTERACTIONS_MAP = {'R': 1, 'D': 2, 'DS': 3, 'T': 4, 'F': 5, 'X': 6}
 
 def paths_parser(file):
     
