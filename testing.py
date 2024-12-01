@@ -23,14 +23,20 @@ dataset = dm.generate(params)
 
 #%% READ Setup
 
-# TODO: 
+# Conversion: 
 # 1) Put all of this inside insite_converter [DONE]
-# 2) Switch to reading the new way
-# 2) Save params.mat
-# 3) Generate a <info> field with all sorts of information
+# 2) Switch to reading the new way [DONE]
+# 3) Save params.mat [DONE]
+# 4) Make params.mat more flexible (don't hardcode stuff and read from dicts)
+# 5) Add n_antennas to txrx_set (n_tx_ant and n_rx_ant)
 
-# 4) Generate scenario and channels for validation
-# 5) Redo Insite Converter to use the new format (and don't store empty users?)
+# Generation:
+# 6) Generate a <info> field with all sorts of information
+# 7) Generate scenario automatically for ASU and street canyon
+# 8) Save channels for validation
+# 9) Time conversion and Generation speeds to compare with new formats
+
+# 10) Redo Insite Converter to use the new format (and don't store empty users?)
 
 from scipy.io import loadmat
 

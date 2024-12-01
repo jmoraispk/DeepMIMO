@@ -177,6 +177,7 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=overwrite)
     return scen_name
 
+
 def read_config_file(file):
     return parse_document(tokenize_file(file))
 
@@ -201,6 +202,7 @@ def verify_sim_folder(sim_folder: str, verbose: bool):
             raise Exception(f'{ext} not found in {sim_folder}')
         elif len(files_found_with_ext) > 1:
             raise Exception(f'Several {ext} found in {sim_folder}')
+
 
 def copy_rt_source_files(sim_folder: str, verbose: bool = True):
     
@@ -369,6 +371,7 @@ def read_txrx(txrx_file, verbose: bool):
 
     return tx_ids, rx_ids, tx_pos, rx_pos, txrx_dict
     
+
 def gen_rx_tx_grid(n_tx, n_rx, txrx_objs):
     # Generate full grid of individual RXs and TXs
     tx_pos = np.zeros((n_tx, 3), dtype=np.float32) * np.nan
@@ -440,13 +443,6 @@ def make_mat_list_unique(mat_list):
     
     return mat_list
 
-def convert_val_to_materials_dict(value):
-    try:
-        value = float(value) if '.' in value else int(value)
-    except ValueError:
-        # Keep as string if it can't be converted to int/float
-        pass
-    return value
 
 def read_materials(files_in_sim_folder, verbose):
 
@@ -471,13 +467,16 @@ def read_materials(files_in_sim_folder, verbose):
         pprint(materials_dict)
     return materials_dict
 
+
 def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict, 
                        mat_dict: Dict):
     data_dict = {
                 'version': c.VERSION,
-                # Start row - end row - num users - Num users must be larger than the maximum number of dynamic receivers
-                'user_grids': np.array([[1, 411, 321]], dtype=float), ############# REAAAAD
-                'num_BS': 1, #len(dm.TX_order), ############# REAAAAD
+                # Start row - end row - num users - 
+                # Num users must be larger than the maximum number of dynamic receivers
+                'user_grids': np.array([[1, 411, 321]], dtype=float), ################### REAAAAD
+                'num_BS': 1, #len(dm.TX_order), ########################## REAAAAD
+                # number of antennas (add to txrx field)
                 'dual_polar_available': 0,
                 'doppler_available': 0
                 }
@@ -485,6 +484,7 @@ def export_params_dict(output_folder: str, setup_dict: Dict, txrx_dict: Dict,
     merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
     pprint(merged_dict)
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
+
 
 def export_scenario(sim_folder, output_folder, overwrite: bool | None = None):
     name = os.path.basename(sim_folder)
