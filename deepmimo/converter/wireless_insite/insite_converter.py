@@ -30,6 +30,8 @@ from dataclasses import dataclass, asdict
 from .setup_parser import tokenize_file, parse_document # for .setup, .txrx, .city, .ter, .veg
 from .paths_parser import paths_parser # for paths.p2m
 
+from .city_vis import city_vis
+
 MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES 
 
@@ -100,7 +102,8 @@ class InsiteTxRxSet():
 def insite_rt_converter(rt_folder: str, copy_source: bool = False,
                         tx_ids: List[int] = None, rx_ids: List[int] = None,
                         verbose: bool = True, p2m_folder: str = None,
-                        overwrite: bool | None = None):
+                        overwrite: bool | None = None, 
+                        vis_buildings: bool = False):
 
     # Setup output folder
     if p2m_folder:
@@ -191,6 +194,12 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     #####################################
     
     scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=overwrite)
+    
+    if vis_buildings:
+        city_files = cu.ext_in_list('.city', files_in_sim_folder)
+        if city_files:
+            city_vis(city_files[0])
+        
     return scen_name
 
 
