@@ -19,7 +19,7 @@ class Parameters():
             c.PARAMSET_ACTIVE_BS: np.array([1]), # To be implemented
             
             # Selected user rows
-            c.PARAMSET_USER_ROWS: np.array([1]),
+            c.PARAMSET_USER_ROWS: None, 
             
             # Subsampling
             # c.PARAMSET_USER_ROW_SUBSAMP: 1,

@@ -10,16 +10,25 @@ import deepmimo as dm
 # path_to_p2m_folder = r'.\P2Ms\simple_street_canyon\study_rays=0.25_res=2m_3ghz'
 path_to_p2m_folder = r'.\P2Ms\simple_street_canyon'
 
+scen_name = dm.create_scenario(path_to_p2m_folder)
+
 scen_name = dm.create_scenario(path_to_p2m_folder,
-                               copy_source=False, tx_ids=[1], rx_ids=[2],
+                               copy_source=True, 
+                               tx_ids=[1], rx_ids=[2],
                                overwrite=True)
 
 #%%
 import deepmimo as dm
 scen_name = 'simple_street_canyon'
 params = dm.Parameters(scen_name)#asu_campus')
-params.get_params_dict()['user_rows'] = np.arange(91)
+# params.get_params_dict()['user_rows'] = np.arange(91)
 dataset = dm.generate(params)
+
+#%% Dream
+
+import deepmimo as dm
+scen_name = dm.create_scenario(r'.\P2Ms\simple_street_canyon')
+dataset = dm.generate(scen_name)
 
 #%% READ Setup
 
@@ -27,11 +36,13 @@ dataset = dm.generate(params)
 # 1) Put all of this inside insite_converter [DONE]
 # 2) Switch to reading the new way [DONE]
 # 3) Save params.mat [DONE]
-# 4) Make params.mat more flexible (don't hardcode stuff and read from dicts)
-# 5) Add n_antennas to txrx_set (n_tx_ant and n_rx_ant)
+# 4) Make params.mat more flexible (don't hardcode stuff and read from dicts) [DONE]
+# 5) Add n_antennas to txrx_set (n_tx_ant and n_rx_ant) [DONE]
 
 # Generation:
 # 6) Generate a <info> field with all sorts of information
+dataset[tx]['info']
+# maybe also dm.info('chs') | dm.info('aoa_az') | ..
 # 7) Generate scenario automatically for ASU and street canyon
 # 8) Save channels for validation
 # 9) Time conversion and Generation speeds to compare with new formats

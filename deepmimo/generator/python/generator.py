@@ -216,6 +216,8 @@ def find_users_from_rows(params):
     
     grids = params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_USER_GRIDS]
     rows = params[c.PARAMSET_USER_ROWS]
+    if rows is None: # If the user did not define number of rows, generate all rows
+        rows = np.arange(grids[0,1])
     max_grid = grids[:, 1].max()-1
     min_grid = grids[:, 0].min()-1
     if np.any(rows > max_grid):
