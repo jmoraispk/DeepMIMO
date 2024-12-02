@@ -11,6 +11,9 @@ deepmimo_scenarios*
 
 P2Ms/*
 
+# For building visualizations
+building_*
+
 
 # Gitignore Defaults
 
