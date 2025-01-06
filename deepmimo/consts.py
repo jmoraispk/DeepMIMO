@@ -1,5 +1,6 @@
 import numpy as np
 VERSION = 4
+WIRELESS_INSITE_RAYTRACER = 'Remcom Wireless Insite'
 FP_TYPE = np.float32 # floating point precision for saving values
 
 
@@ -106,6 +107,7 @@ LOAD_FILE_TX_LOC = 'TX_Loc_array_full'
 
 # SCENARIO PARAMS FILE VARIABLE NAMES - load_scenario_params()
 LOAD_FILE_SP_VERSION = 'version'
+LOAD_FILE_SP_RAYTRACER = 'raytracer'
 LOAD_FILE_SP_EXT = '.params.mat'
 LOAD_FILE_SP_CF = 'frequency'
 LOAD_FILE_SP_TX_POW = 'transmit_power'

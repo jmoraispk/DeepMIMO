@@ -522,6 +522,7 @@ def export_params_dict(output_folder: str, tx_ids: List,
     
     data_dict = {
                 c.LOAD_FILE_SP_VERSION: c.VERSION,
+                c.LOAD_FILE_SP_RAYTRACER_NAME: c.WIRELESS_INSITE_RAYTRACER,
                 c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, n_rows, n_usr_per_row]], dtype=float),
                 c.LOAD_FILE_SP_NUM_BS: len(tx_ids),
                 c.LOAD_FILE_SP_TX_POW: tx_pwr,
