@@ -20,18 +20,22 @@ This folder contains the files that specify how each DeepMIMO version organizes 
         4. 1 matrix of M x 3 (tx_loc.mat)
         5. 1 params.mat
 
-Design principle:
-- we don't include any information that can be easily derived. 
+Design principles:
+- The dataset does not include information that can be easily derived. 
 E.g. number of interactions per path = dataset[scene][tx]['inter'] // 10 + 1
 E.g. count nans: number of paths = dataset[scene][tx]['toa']
+- Each dataset keeps constant a number of things: 
+    - all TXs have the same number of antennas
+    - all RXs have the same number of antennas
+    - 
 
 We have these in helper functions.
 
-Storage: 
-scene_X_tx_y.mat
-rx_loc.mat
-tx_loc.mat
-params.mat
+Files in stored: 
+- scene_X_tx_Y.mat
+- rx_loc.mat
+- tx_loc.mat
+- params.mat
 
 NOTE: an array that is 100k x 20 occupies ~7 MB of memory. 
 
