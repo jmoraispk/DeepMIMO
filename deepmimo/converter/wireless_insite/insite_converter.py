@@ -2,11 +2,17 @@
 Converts Wireless Insite raytracing files into DeepMIMO scenarios ready to upload.
 
 TODOS:
-    - uneven terrain position reading
-    - <points> sets with many points in each set
-    - support multi-antennas (this includes polarization)
+    - support multi-antennas (includes polarization)
     - (optional) dictionary mapping between Wireless Insite and DeepMIMO names
-    
+
+Requirements:
+    - keep the transmit power at its default (0 dBm)
+    - for dual polarization, end the name of the antenna as '_pol', so the 
+      converter knows alternated antennas should be considered for different 
+      polarizations. Otherwise, a single polarization is used
+    - Request the folowing outputs: path loss (.pl file) and paths (.path file)
+    (the .pl.p2m is only needed to get the positions of points without paths)
+    - across a tx/rx set, the same antenna is used
 """
 
 
@@ -82,9 +88,9 @@ class InsiteTxRxSet():
     loc_lat: float = 0.0
     loc_lon: float = 0.0
     loc_xy: np.ndarray | None = None # N_points x 3
-    side_x: float  = 0.0 # [m]
-    side_y: float  = 0.0 # [m]
-    spacing: float = 0.0 # [m]
+    side_x: float  = 0.0 # [m] (only used when kind = 'grid')
+    side_y: float  = 0.0 # [m] (only used when kind = 'grid')
+    spacing: float = 0.0 # [m] (only used when kind = 'grid') 
     
     tx_power: float = 0.0 # [dBm]
     
@@ -98,31 +104,46 @@ class InsiteTxRxSet():
     tx_num_ant: int = 1
     rx_num_ant: int = 1
     
+def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
+    # P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
+    
+    insite_sim_folder = os.path.dirname(p2m_folder)
 
-def insite_rt_converter(rt_folder: str, copy_source: bool = False,
-                        tx_ids: List[int] = None, rx_ids: List[int] = None,
-                        verbose: bool = True, p2m_folder: str = None,
-                        overwrite: bool | None = None, 
-                        vis_buildings: bool = False):
-
-    # Setup output folder
-    if p2m_folder:
-        insite_sim_folder = os.path.dirname(p2m_folder)
-    else:
-        insite_sim_folder = rt_folder
-        # if p2m folder is not provided, choose the last folder available
-        p2m_folder = [name for name in os.listdir(insite_sim_folder)
-                      if os.path.isdir(os.path.join(insite_sim_folder, name))][-1]
-        p2m_folder = os.path.join(insite_sim_folder, p2m_folder)
-
+    intermediate_folder = os.path.join(insite_sim_folder, 'intermediate_files')
     output_folder = os.path.join(insite_sim_folder, 'mat_files') # SCEN_NAME!
+    
+    os.makedirs(intermediate_folder, exist_ok=True)
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Convert P2M files to mat format
+    WIChannelConverter(p2m_folder, intermediate_folder)
+
+    DeepMIMODataFormatter(intermediate_folder, output_folder, 
+                          TX_order=tx_ids, RX_order=rx_ids)
+    return output_folder
+
+
+def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
+                        tx_ids: List[int] = None, rx_ids: List[int] = None,
+                        verbose: bool = True, overwrite: bool | None = None, 
+                        vis_buildings: bool = False, old: bool = True):
+    if old: # v3
+        scen_name = insite_rt_converter_v3(p2m_folder,tx_ids, rx_ids)
+        return scen_name
+    
+    # Setup output folder
+    insite_sim_folder = os.path.dirname(p2m_folder)
+    p2m_basename = os.path.basename(p2m_folder)
+    
+    output_folder = os.path.join(insite_sim_folder, p2m_basename + '_deepmimo')
     os.makedirs(output_folder, exist_ok=True)
 
     # Check if necessary files exist
     verify_sim_folder(insite_sim_folder, verbose)
     
     # Copy ray tracing source files
-    if copy_source: copy_rt_source_files(insite_sim_folder, verbose)
+    if copy_source:
+        copy_rt_source_files(insite_sim_folder, verbose)
     
     files_in_sim_folder = [os.path.join(insite_sim_folder, file) 
                            for file in os.listdir(insite_sim_folder)]
@@ -145,55 +166,29 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     tx_loc[:,2] += terrain_height
     rx_loc[:,2] += terrain_height
     
-    # TODO1: A more robust way of setting positions is to read them from files 
-    #        like the pathloss file. This is only necessary for non-uniform
-    #        terrains. Here we generate them as Wireless Insite does, but we 
-    #        cannot get the exact terrain height under the position, only for 
-    #        the reference location. Therefore, this works for flat terrains
-    
-    # Note: TxRx SETS != individual Tx/Rx points.
-    #       Sets are <points> or <grid>. 
-    #           - <points> contains a single point (currently - LIMITATION)
-    #           - <grid> typically contains more than a single point
-    #       The indices of the sets are only useful for reading data into the right arrays
-    #       The indices of the individual points will be used for data storage and generation
-    # TODO2: Make <points> work for any number of points (requires prototyping and validation)
-
     tx_ids = tx_ids if tx_ids else avail_tx_ids
     rx_ids = rx_ids if rx_ids else avail_rx_ids
-    
-    # NOTE: currently, a tx id is kept separate. 
-    # For the sake of working with the current implementation, we filter the rx's:
-    rx_ids = [rx_id for rx_id in rx_ids if rx_id not in tx_ids]
 
-
-    
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
     export_params_dict(output_folder, tx_ids, setup_dict, txrx_dict, materials_dict)
     
-    ############ REPLACE #############
-    # P2Ms (.cir, .doa, .dod, .paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
-    # DELETE intermediate files
-    intermediate_folder = os.path.join(insite_sim_folder, 'intermediate_files')
-    os.makedirs(intermediate_folder, exist_ok=True)
-
-    # Convert P2M files to mat format
-    WIChannelConverter(p2m_folder, intermediate_folder)
-
-    DeepMIMODataFormatter(intermediate_folder, output_folder, 
-                          TX_order=tx_ids, RX_order=rx_ids)
-    ##################################
-    
     ############ NEW FORMAT #############
     # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
     # paths_parser(...)
     
-    # Adjust rx power to be a pathloss (using txpower of respective array)
+    # Pathloss P2M parser (for positions)
+    # 1- generate file names based on active txrx sets
+    # 2- extract info from files
+    # 3- populate txrx sets
+    
     #####################################
     
-    scen_name = export_scenario(insite_sim_folder, output_folder, overwrite=overwrite)
+    scen_name = export_scenario(output_folder, overwrite=overwrite)
+    
+    print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
+    cu.zip_folder(output_folder) # ready for upload
     
     if vis_buildings:
         city_files = cu.ext_in_list('.city', files_in_sim_folder)
@@ -234,7 +229,7 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True):
     vprint = PrintIfVerbose(verbose) # prints if verbose 
     rt_source_folder = os.path.basename(sim_folder) + '_raytracing_source'
     files_in_sim_folder = os.listdir(sim_folder)
-    print('Copying raytracing source files to "rt_source_folder"')
+    print(f'Copying raytracing source files to {rt_source_folder}')
     zip_temp_folder = os.path.join(sim_folder, rt_source_folder)
     os.makedirs(zip_temp_folder)
     for ext in ['.setup', '.txrx', '.ter', '.city', '.kmz']:
@@ -243,7 +238,7 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True):
             curr_file_path = os.path.join(sim_folder, file)
             new_file_path  = os.path.join(zip_temp_folder, file)
             
-            vprint(f'Copying {file}')
+            # vprint(f'Adding {file}')
             shutil.copy(curr_file_path, new_file_path)
     
     vprint('Zipping')
@@ -380,7 +375,7 @@ def read_txrx(txrx_file, verbose: bool):
             txrx_obj.tx_num_ant = tx_vals['pattern'].values['antenna']
         if txrx_obj.is_rx:
             rx_vals = txrx.values['receiver']
-            txrx_obj.rx_num_ant = tx_vals['pattern'].values['antenna']
+            txrx_obj.rx_num_ant = rx_vals['pattern'].values['antenna']
         
         # Update indices of individual tx/rx points
         num_txrx = len(txrx_obj.loc_xy)
@@ -522,7 +517,8 @@ def export_params_dict(output_folder: str, tx_ids: List,
     
     data_dict = {
                 c.LOAD_FILE_SP_VERSION: c.VERSION,
-                c.LOAD_FILE_SP_RAYTRACER_NAME: c.WIRELESS_INSITE_RAYTRACER,
+                c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
+                c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
                 c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, n_rows, n_usr_per_row]], dtype=float),
                 c.LOAD_FILE_SP_NUM_BS: len(tx_ids),
                 c.LOAD_FILE_SP_TX_POW: tx_pwr,
@@ -532,16 +528,13 @@ def export_params_dict(output_folder: str, tx_ids: List,
                 c.LOAD_FILE_SP_DOPPLER: 0
                 }
     
-    # TODO3: Make a matching between each dict (from WirelessInsite and others...)
-    #        to DeepMIMO names and dicts (). Otherwise, things will overlap across dicts?
-    
     merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
     pprint(merged_dict)
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
 
 
-def export_scenario(sim_folder, output_folder, overwrite: bool | None = None):
-    name = os.path.basename(sim_folder)
+def export_scenario(sim_folder, overwrite: bool | None = None):
+    name = os.path.basename(sim_folder).replace('_deepmimo', '')
     scen_path = c.SCENARIOS_FOLDER + f'/{name}'
     if os.path.exists(scen_path):
         if overwrite is None:
@@ -553,7 +546,8 @@ def export_scenario(sim_folder, output_folder, overwrite: bool | None = None):
             shutil.rmtree(scen_path)
         else:
             return None
-        
-    shutil.move(output_folder, scen_path)
+    
+    
+    shutil.copytree(sim_folder, scen_path)
 
     return name
