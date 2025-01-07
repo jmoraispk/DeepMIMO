@@ -1,6 +1,9 @@
 import numpy as np
 VERSION = 4
-WIRELESS_INSITE_RAYTRACER = 'Remcom Wireless Insite'
+RAYTRACER_NAME_WIRELESS_INSITE = 'Remcom Wireless Insite'
+RAYTRACER_VERSION_WIRELESS_INSITE = 3.3
+RAYTRACER_NAME_SIONNA = 'Sionna Ray Tracing'           # not supported yet
+RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'  # not supported yet
 FP_TYPE = np.float32 # floating point precision for saving values
 
 
@@ -18,8 +21,9 @@ TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 
+# JTODO: make a list of available names for each variable
 
-# JTODO: separate in generation and parameter constants?
+############# JTODO: separate constants before and after v4 ##################
 
 SCENARIOS_FOLDER = 'deepmimo_scenarios2'
 
@@ -62,7 +66,10 @@ PARAMSET_ANT_FOV = 'FoV'
 # INNER VARIABLES
 PARAMSET_ACTIVE_UE = 'active_UE'
 PARAMSET_SCENARIO_FIL = 'scenario_files'
-PARAMSET_ANT_BS_DIFF = 'BS2BS_isnumpy' # Based on this paramater, the BS-BS channels won't be converted from a list of matrices to a single matrix
+PARAMSET_ANT_BS_DIFF = 'BS2BS_isnumpy'
+# Based on this paramater, the BS-BS channels won't be converted from a 
+# list of matrices to a single matrix
+
 
 # SCENARIO PARAMS
 PARAMSET_SCENARIO_PARAMS = 'scenario_params'
@@ -108,6 +115,7 @@ LOAD_FILE_TX_LOC = 'TX_Loc_array_full'
 # SCENARIO PARAMS FILE VARIABLE NAMES - load_scenario_params()
 LOAD_FILE_SP_VERSION = 'version'
 LOAD_FILE_SP_RAYTRACER = 'raytracer'
+LOAD_FILE_SP_RAYTRACER_VERSION = 'raytracer_version'
 LOAD_FILE_SP_EXT = '.params.mat'
 LOAD_FILE_SP_CF = 'frequency'
 LOAD_FILE_SP_TX_POW = 'transmit_power'
