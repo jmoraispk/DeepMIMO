@@ -16,7 +16,9 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
                                copy_source=True, 
                                tx_ids=[1], rx_ids=[2],
                                overwrite=True, 
-                               old=False)
+                               old=True)
+
+# NOTE: the old version requires copying the params file
 
 #%%
 import deepmimo as dm

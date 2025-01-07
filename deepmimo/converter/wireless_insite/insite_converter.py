@@ -120,6 +120,20 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
 
     DeepMIMODataFormatter(intermediate_folder, output_folder, 
                           TX_order=tx_ids, RX_order=rx_ids)
+    
+    # WARNING: static params dict -> requires copy from the new version
+    data_dict = {
+                c.LOAD_FILE_SP_VERSION: c.VERSION,
+                c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, 91, 61]], dtype=float),
+                c.LOAD_FILE_SP_NUM_BS: 1,
+                c.LOAD_FILE_SP_TX_POW: 0,
+                c.LOAD_FILE_SP_NUM_RX_ANT: 1,
+                c.LOAD_FILE_SP_NUM_TX_ANT: 1,
+                c.LOAD_FILE_SP_POLAR: 0,
+                c.LOAD_FILE_SP_DOPPLER: 0
+                }
+    
+    scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
     return output_folder
 
 
@@ -155,16 +169,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # Read TXRX (.txrx)
     txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
     avail_tx_ids, avail_rx_ids, tx_loc, rx_loc, txrx_dict = read_txrx(txrx_file, verbose)
-    
-    # Sum terrain height to TX/RX points (necessary hidden Wireless Insite mechanic...)
-    try:
-        terrain_file = cu.ext_in_list('.ter', files_in_sim_folder)[0]
-        terrain_height = measure_terrain_height(terrain_file)
-    except:
-        terrain_height = 0
-    print(f'terrain_height = {terrain_height }')
-    tx_loc[:,2] += terrain_height
-    rx_loc[:,2] += terrain_height
     
     tx_ids = tx_ids if tx_ids else avail_tx_ids
     rx_ids = rx_ids if rx_ids else avail_rx_ids
@@ -346,23 +350,7 @@ def read_txrx(txrx_file, verbose: bool):
         # Locations
         txrx_obj.loc_lat = txrx.values['location'].values['reference'].values['latitude']
         txrx_obj.loc_lon = txrx.values['location'].values['reference'].values['longitude']
-        txrx_obj.coord_ref = txrx.values['location'].values['reference'].labels[1] # 'terrain'?
-        # If ref = 'terrain', then z coordinate will change with terrain height
-        
-        # Generate exact coordinates of each specific tx/rx inside the set
-        if txrx_obj.kind == 'points':
-            txrx_obj.loc_xy = np.array(txrx.values['location'].data[0]).reshape((1,3))
-        if txrx_obj.kind == 'grid':
-            corner = txrx.values['location'].data[0] # lower left
-            txrx_obj.side_x = txrx.values['location'].values['side1']
-            txrx_obj.side_y = txrx.values['location'].values['side2']
-            txrx_obj.spacing = txrx.values['location'].values['spacing']
-            
-            # Generate grid points : [-90, -60, 1.5], [-88, -60, 1.5], ...
-            xs = corner[0] + np.arange(0, txrx_obj.side_x + 1e-9, txrx_obj.spacing)
-            ys = corner[1] + np.arange(0, txrx_obj.side_y + 1e-9, txrx_obj.spacing)
-            points = np.array([[x,y, corner[2]] for y in ys for x in xs], dtype=np.float32)
-            txrx_obj.loc_xy = points
+        txrx_obj.coord_ref = txrx.values['location'].values['reference'].labels[1]
         
         # Is TX or RX?
         txrx_obj.is_tx = txrx.values['is_transmitter']
@@ -377,7 +365,7 @@ def read_txrx(txrx_file, verbose: bool):
             rx_vals = txrx.values['receiver']
             txrx_obj.rx_num_ant = rx_vals['pattern'].values['antenna']
         
-        # Update indices of individual tx/rx points
+        # Update indices of individual tx/rx points # (REMOVE)
         num_txrx = len(txrx_obj.loc_xy)
         if txrx_obj.is_tx:
             txrx_obj.tx_id_start = n_tx
