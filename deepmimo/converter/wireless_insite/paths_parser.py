@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Nov 27 20:01:15 2024
-
-@author: jmora
+paths_parser(.) collects all the information inside the paths.p2m file. 
 """
 
 import numpy as np
