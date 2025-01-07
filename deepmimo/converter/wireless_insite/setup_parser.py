@@ -1,4 +1,8 @@
-"""Parses a TXRX file into a Python object that can be easily queried.
+"""
+Parses a TXRX file into a Python object that can be easily queried.
+
+The processed file looks like a list of nodes, and nodes are dictionaries with 
+certain fields. Print the document to see all the elements.
 
 The pseudo-grammar for a TXRX file looks like this:
 
@@ -28,7 +32,7 @@ def tokenize_file(path):
         first_line = f.readline()
         if first_line.startswith('Format type:keyword version:'):
             # print(f'Ignoring first line: {first_line.lower()}')
-            continue
+            pass
         else:
             yield first_line
         for line in f:
