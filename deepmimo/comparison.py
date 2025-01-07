@@ -35,20 +35,30 @@ dm.create_scenario('')
 
 # Diff
 # - speed: ... vs ...
+# - less necessary files: 
+#   - .cir, .doa, .dod, .pl, .paths[.t001_{tx_id}.r{rx_id}.p2m], 
+#   vs
+#    - .pl and .paths (and only .paths if we didn't want positions without paths)
 # - fair speed (with channel gen): ... vs ...
 # - simpler API: access dataset[''][''] vs dataset[tx]['rx_loc']
 # - gen features
 #   - generates all TX-RX sets by default
-#   - generates per user idx
+#   - generates only selected users (not rows)
 #   - generates users with xyz subsampling
+#   - downloads scenarios automatically by name (no need for manual download)
 #   - can generate only active users (that have paths)
-#   - decouple pl, dist, and channel generation (allows adding many more funcs)
+#   - decouple pl, dist, and channel generation
 #     (via smart object that says when something needs computation)
+#       - compute_pl()
+#       - compute_pg()
+#       - compute_dist()
+#       - compute_channels()
 #       - get_min_usr_spacing()
 #       - ...
-#   - multiple antenna (extended API from dual polarization)
+#   - multiple antenna (extended API from dual polarization - cue dual pol from name)
 # - info features
-#   - ...
+#   - help about any function or parameter (including website ref)
+#   - scenario information
 #   - buildings
 # - plot features
 #   - buildings
