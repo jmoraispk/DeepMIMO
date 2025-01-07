@@ -18,7 +18,7 @@ def create_scenario(path_to_rt_folder, **conversion_params):
     elif cu.ext_in_list('.path', files_in_dir):
         print("Using Sionna_RT generator")
         rt_converter = sionna_rt_converter
-    elif cu.ext_in_list('.setup', files_in_dir):
+    elif cu.ext_in_list('.p2m', files_in_dir):
         print("Using Wireless Insite generator")
         rt_converter = insite_rt_converter
     else:
