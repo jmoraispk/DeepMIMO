@@ -1,0 +1,55 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jan  7 11:16:57 2025
+
+@author: joao
+
+Comparing DeepMIMOv3 with DeepMIMO(v4)
+"""
+
+import DeepMIMOv3 as dm_v3
+import deepmimo as dm
+
+#%% Creating a scenario (v3)
+
+# Generators not available in dm_v3
+# Need to go into personal repository and run the generator function
+# We have loaded those function into dm
+
+# V3
+dm.old_conv.v3('')
+
+# V4
+dm.create_scenario('')
+
+# Diff
+# - space
+# - no intermediate files
+# - speed
+
+#%% Generating a scenario (v4)
+
+# V3
+
+# V4
+
+# Diff
+# - speed: ... vs ...
+# - fair speed (with channel gen): ... vs ...
+# - simpler API: access dataset[''][''] vs dataset[tx]['rx_loc']
+# - gen features
+#   - generates all TX-RX sets by default
+#   - generates per user idx
+#   - generates users with xyz subsampling
+#   - can generate only active users (that have paths)
+#   - decouple pl, dist, and channel generation (allows adding many more funcs)
+#     (via smart object that says when something needs computation)
+#       - get_min_usr_spacing()
+#       - ...
+#   - multiple antenna (extended API from dual polarization)
+# - info features
+#   - ...
+#   - buildings
+# - plot features
+#   - buildings
+#
