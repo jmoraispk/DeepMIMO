@@ -26,6 +26,9 @@ dm.create_scenario('')
 # - space
 # - no intermediate files
 # - speed
+# - ready to upload to DeepMIMO database
+# - other:
+#   - outputs to deepmimo_scenarios
 
 #%% Generating a scenario (v4)
 
