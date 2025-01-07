@@ -13,6 +13,7 @@ deepmimo_scenarios*
 # Development:
 #   For wireless insite outputs
 P2Ms/*
+*.p2m
 #   For building visualizations
 building_*
 
