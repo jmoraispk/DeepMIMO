@@ -91,7 +91,7 @@ class InsiteTxRxSet():
     is_rx: bool = False
     
     num_points: int = 0    # all points
-    active_idxs: tuple = ()  # list of indices of points with at least one path
+    inactive_idxs: tuple = ()  # list of indices of points with at least one path
     
     # Antenna elements of tx / rx
     tx_num_ant: int = 1
@@ -174,11 +174,8 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
-    export_params_dict(output_folder, len(tx_set_ids), setup_dict, 
-                       txrx_dict, materials_dict)
-    
-    ############ NEW FORMAT #############
     # Save Position Matrices and Populate Number of Points in Each TxRxSet 
+    # NOTE: only necessary for the inactive positions. Active pos exists in .paths
     for tx_set_id in tx_set_ids:
         for rx_set_id in rx_set_ids:
             # <Project name>.pl.t<tx number> <tx set number>.r<rx set number>.p2m
@@ -199,17 +196,26 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 # 3- populate number of points in txrx sets
                 txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] = xyz.shape[0]
                 
-                # CHECK if we need to set here the active or inactive positions
-                active_idxs = np.where(path_loss != -250)[0]
-                txrx_dict[f'txrx_set_{rx_set_id}']['active_idxs'] = active_idxs
+                # Save the indices of the active positions (can be done in .paths too)
+                inactive_idxs = np.where(path_loss == -250)[0]
+                txrx_dict[f'txrx_set_{rx_set_id}']['inactive_idxs'] = inactive_idxs
     
     
-    # Save All Path information
-    # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
-    # paths_parser(...)
+                # Save All Path information
+                # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
+                paths_p2m_file = pl_p2m_file.replace('.pl.', '.paths.')
+                data = paths_parser(paths_p2m_file)
+                
+                for key in data.keys():
+                    # save dict
+                    mat_file = output_folder + f'/{key}_{str_id}.mat'
+                    scipy.io.savemat(mat_file, {c.VNAME: data[key]})
+                
+    # Export params.mat
+    export_params_dict(output_folder, len(tx_set_ids), setup_dict, 
+                       txrx_dict, materials_dict)
     
-    #####################################
-    
+    # Move scenario to deepmimo scenarios folder
     scen_name = export_scenario(output_folder, overwrite=overwrite)
     
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
@@ -223,7 +229,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     return scen_name
 
 def get_txrx_str_id(tx_set_id: int, tx_id: int, rx_set_id: int):
-    return f'txset_{tx_set_id:03}_tx_{tx_id:03}_rxset_{rx_set_id:03}'
+    return f'txset{tx_set_id:03}_tx{tx_id:03}_rxset{rx_set_id:03}'
 
 def read_pl_p2m_file(filename: str):
     """
@@ -541,11 +547,11 @@ def export_params_dict(output_folder: str, n_bs: int, setup_dict: Dict = {},
 
 
 def export_scenario(sim_folder, overwrite: bool | None = None):
-    name = os.path.basename(sim_folder).replace('_deepmimo', '')
-    scen_path = c.SCENARIOS_FOLDER + f'/{name}'
+    scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
+    scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
     if os.path.exists(scen_path):
         if overwrite is None:
-            print(f'Scenario with name "{name}" already exists in '
+            print(f'Scenario with name "{scen_name}" already exists in '
                   f'{c.SCENARIOS_FOLDER}. Delete? (Y/n)')
             ans = input()
             overwrite = False if 'n' in ans.lower() else True
@@ -557,4 +563,4 @@ def export_scenario(sim_folder, overwrite: bool | None = None):
     
     shutil.copytree(sim_folder, scen_path)
 
-    return name
+    return scen_name
