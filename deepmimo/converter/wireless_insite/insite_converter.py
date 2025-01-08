@@ -4,6 +4,11 @@ Converts Wireless Insite raytracing files into DeepMIMO scenarios ready to uploa
 TODOS:
     - support multi-antennas (includes polarization)
     - (optional) dictionary mapping between Wireless Insite and DeepMIMO names
+    - (optional) expand support multiple tx_ids per tx_set
+      (requires reading number of ids from .txrx and use them to index files right)
+    - (optional) if we decide to drop the inactive positions, the changes are simple:
+      1- remove "active_points<..>.mat"
+      2- remove inactive positions from position array
 
 Requirements:
     - keep the transmit power at its default (0 dBm)
@@ -17,6 +22,7 @@ Requirements:
 
 
 import os
+import re
 from pprint import pprint # for debugging
 import shutil
 import numpy as np
@@ -79,30 +85,19 @@ class InsiteTxRxSet():
     """
     TX/RX set class
     """
-    # These field names match the names in Material section of the feature file
     name: str = ''
-    kind: str = '' # type = 'points' or 'grid'
     p_id: int = 0
     is_tx: bool = False
     is_rx: bool = False
-    loc_lat: float = 0.0
-    loc_lon: float = 0.0
-    loc_xy: np.ndarray | None = None # N_points x 3
-    side_x: float  = 0.0 # [m] (only used when kind = 'grid')
-    side_y: float  = 0.0 # [m] (only used when kind = 'grid')
-    spacing: float = 0.0 # [m] (only used when kind = 'grid') 
     
-    tx_power: float = 0.0 # [dBm]
-    
-    # Indices of individual TXs and RXs
-    tx_id_start: int | None = None
-    rx_id_start: int | None = None
-    tx_id_end: int | None = None
-    rx_id_end: int | None = None
+    num_points: int = 0    # all points
+    active_idxs: tuple = ()  # list of indices of points with at least one path
     
     # Antenna elements of tx / rx
     tx_num_ant: int = 1
     rx_num_ant: int = 1
+    
+    dual_pol: bool = False # if '_dual-pol' in name
     
 def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
     # P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
@@ -138,11 +133,11 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
 
 
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
-                        tx_ids: List[int] = None, rx_ids: List[int] = None,
+                        tx_set_ids: List[int] = None, rx_set_ids: List[int] = None,
                         verbose: bool = True, overwrite: bool | None = None, 
-                        vis_buildings: bool = False, old: bool = True):
+                        vis_buildings: bool = False, old: bool = False):
     if old: # v3
-        scen_name = insite_rt_converter_v3(p2m_folder,tx_ids, rx_ids)
+        scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids)
         return scen_name
     
     # Setup output folder
@@ -168,24 +163,50 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
 
     # Read TXRX (.txrx)
     txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
-    avail_tx_ids, avail_rx_ids, tx_loc, rx_loc, txrx_dict = read_txrx(txrx_file, verbose)
+    avail_tx_set_ids, avail_rx_set_ids, txrx_dict = read_txrx(txrx_file, verbose)
     
-    tx_ids = tx_ids if tx_ids else avail_tx_ids
-    rx_ids = rx_ids if rx_ids else avail_rx_ids
+    tx_set_ids = tx_set_ids if tx_set_ids else avail_tx_set_ids
+    rx_set_ids = rx_set_ids if rx_set_ids else avail_rx_set_ids
+
+    # NOTE: these TX/RX SET IDs will be reset to 1,2, after conversion! etc...
+    # After generation, the ids will be unwrapped into the respective tx and rx ids
 
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
-    export_params_dict(output_folder, tx_ids, setup_dict, txrx_dict, materials_dict)
+    export_params_dict(output_folder, len(tx_set_ids), setup_dict, 
+                       txrx_dict, materials_dict)
     
     ############ NEW FORMAT #############
+    # Save Position Matrices and Populate Number of Points in Each TxRxSet 
+    for tx_set_id in tx_set_ids:
+        for rx_set_id in rx_set_ids:
+            # <Project name>.pl.t<tx number> <tx set number>.r<rx set number>.p2m
+            proj_name = os.path.basename(insite_sim_folder)
+            for tx_id in [1]: # We assume each TX/RX SET only has one BS    
+                # 1- generate file names based on active txrx sets    
+                base_filename = f'{proj_name}.pl.t{tx_id:03}_{tx_set_id:02}.r{rx_set_id:03}.p2m'
+                pl_p2m_file = os.path.join(p2m_folder, base_filename)
+                
+                # Pathloss P2M parser
+                xyz, _, path_loss = read_pl_p2m_file(pl_p2m_file)
+                
+                # 2- extract positions from pathloss.p2m
+                str_id = get_txrx_str_id(tx_set_id, tx_id, rx_set_id)
+                pos_file = output_folder + f'/{c.POS_MAT_NAME}_{str_id}.mat'
+                scipy.io.savemat(pos_file, {c.VNAME: xyz})
+                
+                # 3- populate number of points in txrx sets
+                txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] = xyz.shape[0]
+                
+                # CHECK if we need to set here the active or inactive positions
+                active_idxs = np.where(path_loss != -250)[0]
+                txrx_dict[f'txrx_set_{rx_set_id}']['active_idxs'] = active_idxs
+    
+    
+    # Save All Path information
     # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
     # paths_parser(...)
-    
-    # Pathloss P2M parser (for positions)
-    # 1- generate file names based on active txrx sets
-    # 2- extract info from files
-    # 3- populate txrx sets
     
     #####################################
     
@@ -200,6 +221,44 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
             city_vis(city_files[0])
         
     return scen_name
+
+def get_txrx_str_id(tx_set_id: int, tx_id: int, rx_set_id: int):
+    return f'txset_{tx_set_id:03}_tx_{tx_id:03}_rxset_{rx_set_id:03}'
+
+def read_pl_p2m_file(filename: str):
+    """
+    Returns xyz, distance, pl from p2m file.
+    """
+    assert filename.endswith('.p2m') # should be a .p2m file
+    assert '.pl.' in filename        # should be the pathloss p2m
+
+    # Initialize empty lists for matrices
+    xyz_list = []
+    dist_list = []
+    path_loss_list = []
+
+    # Define (regex) patterns to match numbers (optionally signed floats)
+    re_data = r"-?\d+\.?\d*"
+    
+    # If we want to preallocate matrices, count lines
+    # num_lines = sum(1 for _ in open(filename, 'rb'))
+    
+    with open(filename, 'r') as fp:
+        lines = fp.readlines()
+    
+    for line in lines:
+        if line[0] != '#':
+            data = re.findall(re_data, line)
+            xyz_list.append([float(data[1]), float(data[2]), float(data[3])]) # XYZ (m)
+            dist_list.append([float(data[4])])       # distance (m)
+            path_loss_list.append([float(data[5])])  # path loss (dB)
+
+    # Convert lists to numpy arrays
+    xyz_matrix = np.array(xyz_list, dtype=np.float32)
+    dist_matrix = np.array(dist_list, dtype=np.float32)
+    path_loss_matrix = np.array(path_loss_list, dtype=np.float32)
+
+    return xyz_matrix, dist_matrix, path_loss_matrix
 
 
 def read_config_file(file):
@@ -343,7 +402,6 @@ def read_txrx(txrx_file, verbose: bool):
         txrx = document[key]
         txrx_obj = InsiteTxRxSet()
         txrx_obj.name = key
-        txrx_obj.kind = txrx.kind
         txrx_obj.p_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
                          else txrx.values['project_id'])
         
@@ -358,52 +416,27 @@ def read_txrx(txrx_file, verbose: bool):
         
         # Antennas and Power
         if txrx_obj.is_tx:
+            tx_ids += [txrx_obj.p_id]
             tx_vals = txrx.values['transmitter']
-            txrx_obj.tx_power = tx_vals.values['power']
+            assert tx_vals.values['power'] == 0.0, 'Tx power should be 0 dBm!'
             txrx_obj.tx_num_ant = tx_vals['pattern'].values['antenna']
         if txrx_obj.is_rx:
+            rx_ids += [txrx_obj.p_id]
             rx_vals = txrx.values['receiver']
             txrx_obj.rx_num_ant = rx_vals['pattern'].values['antenna']
         
-        # Update indices of individual tx/rx points # (REMOVE)
-        num_txrx = len(txrx_obj.loc_xy)
-        if txrx_obj.is_tx:
-            txrx_obj.tx_id_start = n_tx
-            txrx_obj.tx_id_end = n_tx + num_txrx - 1
-            n_tx += num_txrx
-            tx_ids += [txrx_obj.p_id]
-        if txrx_obj.is_rx:
-            txrx_obj.rx_id_start = n_rx
-            txrx_obj.rx_id_end = n_rx + num_txrx - 1
-            n_rx += num_txrx
-            rx_ids += [txrx_obj.p_id]
-            
+        # The number of tx/rx points inside set is updated when reading the p2m
         txrx_objs.append(txrx_obj)
     
-    tx_pos, rx_pos = gen_rx_tx_grid(n_tx, n_rx, txrx_objs)
     txrx_dict = {}
     for obj in txrx_objs:
         # Remove 'None' from dict (to be saved as .mat)
         obj_dict = {key: val for key, val in asdict(obj).items() if val is not None}
+        
         # Index separate txrx-sets based on p_id
         txrx_dict = {**txrx_dict, **{f'txrx_set_{obj.p_id}': obj_dict}}
 
-    return tx_ids, rx_ids, tx_pos, rx_pos, txrx_dict
-    
-
-def gen_rx_tx_grid(n_tx, n_rx, txrx_objs):
-    # Generate full grid of individual RXs and TXs
-    tx_pos = np.zeros((n_tx, 3), dtype=np.float32) * np.nan
-    rx_pos = np.zeros((n_rx, 3), dtype=np.float32) * np.nan
-    
-    for txrx_obj in txrx_objs:
-        if txrx_obj.is_tx:
-            idxs = np.arange(txrx_obj.tx_id_start, txrx_obj.tx_id_end+1)
-            tx_pos[idxs] = txrx_obj.loc_xy
-        if txrx_obj.is_rx:
-            idxs = np.arange(txrx_obj.rx_id_start, txrx_obj.rx_id_end+1)
-            rx_pos[idxs] = txrx_obj.loc_xy
-    return tx_pos, rx_pos
+    return tx_ids, rx_ids, txrx_dict
 
 
 def read_material_files(files: List[str], verbose: bool):
@@ -487,29 +520,15 @@ def read_materials(files_in_sim_folder, verbose):
     return materials_dict
 
 
-def export_params_dict(output_folder: str, tx_ids: List,
-                       setup_dict: Dict, txrx_dict: Dict, mat_dict: Dict):
-    
-    # Get user_grid size (not general!)
-    for _, tx_rx in txrx_dict.items():
-        if tx_rx['kind'] == 'grid':
-            n_x = tx_rx['side_x'] // tx_rx['spacing'] + 1
-            n_y = tx_rx['side_y'] // tx_rx['spacing'] + 1
-        if tx_rx['is_tx']:
-            tx_pwr = tx_rx['tx_power']
-    
-    try:
-        n_rows, n_usr_per_row = n_x, n_y # e.g. (for asu, = 411, 321)
-    except NameError: 
-        raise Exception('No grid found!')
+def export_params_dict(output_folder: str, n_bs: int, setup_dict: Dict = {},
+                       txrx_dict: Dict = {}, mat_dict: Dict = {}):
     
     data_dict = {
                 c.LOAD_FILE_SP_VERSION: c.VERSION,
                 c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
                 c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
-                c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, n_rows, n_usr_per_row]], dtype=float),
-                c.LOAD_FILE_SP_NUM_BS: len(tx_ids),
-                c.LOAD_FILE_SP_TX_POW: tx_pwr,
+                c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, 91, 61]], dtype=float),
+                c.LOAD_FILE_SP_NUM_BS: n_bs,
                 c.LOAD_FILE_SP_NUM_RX_ANT: 1,
                 c.LOAD_FILE_SP_NUM_TX_ANT: 1,
                 c.LOAD_FILE_SP_POLAR: 0,
