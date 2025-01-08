@@ -29,6 +29,8 @@ dm.create_scenario('')
 # - ready to upload to DeepMIMO database
 # - other:
 #   - outputs to deepmimo_scenarios
+#   - saves interactions and interactions types (R, D, S, T, F/X)
+#   - no dynamic scenes
 
 #%% Generating a scenario (v4)
 
