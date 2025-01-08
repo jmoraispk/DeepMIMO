@@ -11,7 +11,7 @@ FP_TYPE = np.float32 # floating point precision for saving values
 CHS_PARAM_NAME = 'chs'
 AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
-AOA_AZ_PARAM_NAME = 'aod_az'
+AOD_AZ_PARAM_NAME = 'aod_az'
 AOD_EL_PARAM_NAME = 'aod_el'
 TOA_PARAM_NAME = 'toa'
 PWR_PARAM_NAME = 'power'
@@ -19,7 +19,14 @@ PHASE_PARAM_NAME = 'phase'
 RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
-INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
+INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
+
+
+# DeepMIMOv4 (saved) matrix names
+VNAME = 'data' # all variable names inside single variable matrices
+POS_MAT_NAME = 'pos'
+
+
 
 # JTODO: make a list of available names for each variable
 
@@ -118,7 +125,7 @@ LOAD_FILE_SP_RAYTRACER = 'raytracer'
 LOAD_FILE_SP_RAYTRACER_VERSION = 'raytracer_version'
 LOAD_FILE_SP_EXT = '.params.mat'
 LOAD_FILE_SP_CF = 'frequency'
-LOAD_FILE_SP_TX_POW = 'transmit_power'
+LOAD_FILE_SP_TX_POW = 'transmit_power' # delete!
 LOAD_FILE_SP_NUM_BS = 'num_BS'
 LOAD_FILE_SP_USER_GRIDS = 'user_grids'
 LOAD_FILE_SP_DOPPLER = 'doppler_available'
