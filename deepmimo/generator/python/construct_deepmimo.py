@@ -92,7 +92,7 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
         else: # TD channel
             channel[i, :, :, :raydata[i][c.OUT_PATH_NUM]] = \
                 (array_response_RX[:, None, :] * array_response_TX[None, :, :] *
-                 (np.sqrt(power) * np.exp(1j*np.deg2rad(raydata[i][c.OUT_PATH_PHASE])))[None, None, :]
+                 (np.sqrt(power) * np.exp(1j*np.deg2rad(raydata[i][c.OUT_PATH_PHASE])))[None, None, :])
 
     return channel, LoS_status
 
