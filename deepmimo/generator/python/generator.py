@@ -71,28 +71,22 @@ def generate_scene_data(params):
             params['raytracing_fn'](bs_indx, params, user=True)
 
 def generate_channels(dataset, params):
+    num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
     for i in range(num_active_bs):
-        if params['scenario_params']['dual_polar_available'] and params['enable_dual_polar']:
-            for polar_str in ['VV', 'VH', 'HH', 'HV']:
-                (dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_CHANNEL],
-                 dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_LOS]) = \
-                    generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_PATH], 
-                                          params, 
-                                          params[c.PARAMSET_ANT_BS][i], 
-                                          params[c.PARAMSET_ANT_UE])
-        else:
-            (dataset[i][c.DICT_UE_IDX][c.OUT_CHANNEL], 
-             dataset[i][c.DICT_UE_IDX][c.OUT_LOS]) = \
-                generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][c.OUT_PATH], 
-                                      params, 
-                                      params[c.PARAMSET_ANT_BS][i], 
-                                      params[c.PARAMSET_ANT_UE])
+        (dataset[i][c.DICT_UE_IDX][c.OUT_CHANNEL], 
+            dataset[i][c.DICT_UE_IDX][c.OUT_LOS]) = \
+            generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][c.OUT_PATH], 
+                                    params, 
+                                    params[c.PARAMSET_ANT_BS][i], 
+                                    params[c.PARAMSET_ANT_UE])
                 
     return dataset
 
 # TODO: Move validation into another script
 def validate_params(params):
 
+    # Notify the user if something was not set correctly
+    # JTODO: better have a object...
     additional_keys = compare_two_dicts(params, Parameters().get_params_dict())
     if len(additional_keys):
         print('The following parameters seem unnecessary:')
@@ -102,16 +96,9 @@ def validate_params(params):
     
     params['data_version'] = check_data_version(params)
     params[c.PARAMSET_SCENARIO_PARAMS_PATH] = get_scenario_params_path(params)
-    if params['data_version'] == 'v2':
-        from .raytracing_v2 import load_scenario_params, read_raytracing
-    elif params['data_version'] == 'v3':
-        from .raytracing_v3 import load_scenario_params, read_raytracing
-    params['raytracing_fn'] = read_raytracing
-    params[c.PARAMSET_SCENARIO_PARAMS] = load_scenario_params(params[c.PARAMSET_SCENARIO_PARAMS_PATH])
-    
+
     # Active user IDs and related parameter
     assert params[c.PARAMSET_USER_SUBSAMP] > 0 and params[c.PARAMSET_USER_SUBSAMP] <= 1, 'The subsampling parameter \'%s\' needs to be in (0, 1]'%c.PARAMSET_USER_SUBSAMP
-    params[c.PARAMSET_ACTIVE_UE] = find_users_from_rows(params)
     
     # BS antenna format
     params[c.PARAMSET_ANT_BS_DIFF] = True
@@ -171,55 +158,6 @@ def validate_params(params):
                                              
     return params
 
-
-# Generate the set of users to be activated
-def find_users_from_rows(params):
-
-    def rand_perm_per(vector, percentage):
-        if percentage == 1: return vector
-        num_of_subsampled = round(len(vector)*percentage)
-        if num_of_subsampled < 1: num_of_subsampled = 1 
-        subsampled = np.arange(len(vector))
-        np.random.shuffle(subsampled)
-        subsampled = vector[subsampled[:num_of_subsampled]]
-        subsampled = np.sort(subsampled)
-        return subsampled
-    
-    def get_user_ids(row, grids):
-        row = row + 1
-        row_prev_ids = np.sum((row > grids[:, 1])*(grids[:, 1] - grids[:, 0] + 1)*grids[:, 2])
-        row_cur_ind = (grids[:, 1] >= row) * (row >= grids[:, 0])
-        row_cur_start = row - grids[row_cur_ind, 0][0]
-        users_in_row = grids[:, 2][row_cur_ind][0]
-
-        # column-oriented grid
-        if grids.shape[1] == 4 and grids[row_cur_ind, 3][0]: 
-            users_in_col = (grids[:, 1]-grids[:, 0]+1)[row_cur_ind][0]
-            user_ids = row_prev_ids + row_cur_start + np.arange(0, users_in_col*users_in_row, users_in_col)
-        # row-oriented grid
-        else: 
-            row_curr_ids = row_cur_start * users_in_row
-            user_ids = row_prev_ids + row_curr_ids + np.arange(users_in_row)
-            
-        return user_ids
-    
-    grids = params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_USER_GRIDS]
-    rows = params[c.PARAMSET_USER_ROWS]
-    if rows is None: # If the user did not define number of rows, generate all rows
-        rows = np.arange(grids[0,1])
-    max_grid = grids[:, 1].max()-1
-    min_grid = grids[:, 0].min()-1
-    if np.any(rows > max_grid):
-        raise ValueError('The rows are not selected properly. '
-                         f'The available rows in this scenario are in [{min_grid}, {max_grid}]')
-    
-    user_ids = np.array([], dtype=int)
-    for row in rows:
-        user_ids_row = get_user_ids(row, grids)
-        user_ids_row = rand_perm_per(user_ids_row, params[c.PARAMSET_USER_SUBSAMP])
-        user_ids = np.concatenate((user_ids, user_ids_row))
-    
-    return user_ids
 
 def is_dynamic_scenario(params):
     return 'dyn' in params[c.PARAMSET_SCENARIO]
