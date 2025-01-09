@@ -76,7 +76,7 @@ def load_variables(path_params, path_verifier, params):
     user_data[c.OUT_PATH_NUM] = min(num_max_paths, path_params.shape[1])
     user_data[c.OUT_PATH_PHASE] = path_params[0, :num_max_paths]
     user_data[c.OUT_PATH_TOA] = path_params[1, :num_max_paths]
-    user_data[c.OUT_PATH_RX_POW] = dbm2pow(path_params[2, :num_max_paths] + 30 - params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_TX_POW])
+    user_data[c.OUT_PATH_RX_POW] = dbm2pow(path_params[2, :num_max_paths] + 30)
     user_data[c.OUT_PATH_DOA_PHI] = path_params[3, :num_max_paths]
     user_data[c.OUT_PATH_DOA_THETA] = path_params[4, :num_max_paths]
     user_data[c.OUT_PATH_DOD_PHI] = path_params[5, :num_max_paths]
@@ -100,7 +100,6 @@ def load_scenario_params(scenario_params_path):
     data = scipy.io.loadmat(scenario_params_path)
     scenario_params = {
                         c.PARAMSET_SCENARIO_PARAMS_CF: data[c.LOAD_FILE_SP_CF].astype(float).item(),
-                        c.PARAMSET_SCENARIO_PARAMS_TX_POW: data[c.LOAD_FILE_SP_TX_POW].astype(float).item(),
                         c.PARAMSET_SCENARIO_PARAMS_NUM_BS: data[c.LOAD_FILE_SP_NUM_BS].astype(int).item(),
                         c.PARAMSET_SCENARIO_PARAMS_USER_GRIDS: data[c.LOAD_FILE_SP_USER_GRIDS].astype(int),
                         c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN: data[c.LOAD_FILE_SP_DOPPLER].astype(int).item(),
@@ -127,14 +126,11 @@ def load_ray_data(generation_idx, bs_id, params, user=True):
                 file_data = scipy.io.loadmat(file)
                 for user in generation_idx[users_in_file]: # May remove this for loop with array indexing
                     if params['scenario_params']['dual_polar_available']:
+                        ray_data.append(file_data['channels_VV'][0][user-file_start][0][0])
                         if params['enable_dual_polar']:
-                            ray_data.append(file_data['channels_VV'][0][user-file_start][0][0])
                             ray_data.append(file_data['channels_VH'][0][user-file_start][0][0])
                             ray_data.append(file_data['channels_HH'][0][user-file_start][0][0])
                             ray_data.append(file_data['channels_HV'][0][user-file_start][0][0])
-                        else:
-                            ray_data.append(file_data['channels_VV'][0][user-file_start][0][0])
-                            
                     else:
                         ray_data.append(file_data['channels'][0][user-file_start][0][0])
                     rx_locs.append(file_data['rx_locs'][user-file_start])
@@ -143,13 +139,11 @@ def load_ray_data(generation_idx, bs_id, params, user=True):
         file_data = scipy.io.loadmat(file)
         for bs_idx in generation_idx:
             if params['scenario_params']['dual_polar_available']:
+                ray_data.append(file_data['channels_VV'][0][bs_idx][0][0])
                 if params['enable_dual_polar']:
-                    ray_data.append(file_data['channels_VV'][0][bs_idx][0][0])
                     ray_data.append(file_data['channels_VH'][0][bs_idx][0][0])
                     ray_data.append(file_data['channels_HH'][0][bs_idx][0][0])
                     ray_data.append(file_data['channels_HV'][0][bs_idx][0][0])
-                else:
-                    ray_data.append(file_data['channels_VV'][0][bs_idx][0][0])
                     
             else:
                 ray_data.append(file_data['channels'][0][bs_idx][0][0])
