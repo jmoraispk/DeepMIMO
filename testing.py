@@ -17,6 +17,13 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
 
 # old: works with both
 # new: works only with simple_street_canyon 
+
+#%% V4 
+import deepmimo as dm
+scen_name = 'simple_street_canyon_test'
+# params.get_params_dict()['user_rows'] = np.arange(91)
+dataset = dm.generate(params)
+
 #%% V3 Generation
 
 import deepmimo as dm
@@ -25,18 +32,7 @@ params = dm.Parameters_old(scen_name)#asu_campus')
 # params.get_params_dict()['user_rows'] = np.arange(91)
 dataset = dm.generate_old(params)
 
-#%% V4 
-import deepmimo as dm
-scen_name = 'simple_street_canyon_test'
-# params.get_params_dict()['user_rows'] = np.arange(91)
-dataset = dm.generate(params)
-
-
 #%% Dream
-
-import deepmimo as dm
-scen_name = dm.create_scenario(path_to_p2m_outputs, old=True)
-dataset = dm.generate(scen_name)
 
 # 0- Conversion is general. Make bindings for a general generation
 #    (by having an old and new version of the code and calling diff funcs)
@@ -46,7 +42,7 @@ dataset = dm.generate(scen_name)
 # [DONE]
 
 # 2- Remove BS-BS specific function (use normal generation)
-
+# [DONE]
 
 # 3- Add new (multi-txrx) way of generating data
 
@@ -76,7 +72,6 @@ dataset = dm.generate(scen_name)
 # Available TX/RX sets
 
 # 1: Tx & Rx    (1 points)
-
 # 2: Rx      (5551 points) (x antennas)
 
 
