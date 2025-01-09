@@ -86,12 +86,15 @@ class InsiteTxRxSet():
     TX/RX set class
     """
     name: str = ''
-    p_id: int = 0
+    id: int = 0   # Wireless Insite ID 
+    idx: int = 0  # TxRxSet index for saving after conversion and generation
+    # id -> idx example: [3, 5, 7] -> [1, 2, 3]
     is_tx: bool = False
     is_rx: bool = False
     
     num_points: int = 0    # all points
     inactive_idxs: tuple = ()  # list of indices of points with at least one path
+    num_inactive_points: int = 0
     
     # Antenna elements of tx / rx
     tx_num_ant: int = 1
@@ -156,6 +159,8 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     p2m_basename = os.path.basename(p2m_folder)
     
     output_folder = os.path.join(insite_sim_folder, p2m_basename + '_deepmimo')
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
     os.makedirs(output_folder, exist_ok=True)
 
     # Check if necessary files exist
@@ -178,20 +183,20 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     
     tx_set_ids = tx_set_ids if tx_set_ids else avail_tx_set_ids
     rx_set_ids = rx_set_ids if rx_set_ids else avail_rx_set_ids
-
-    # NOTE: these TX/RX SET IDs will be reset to 1,2, after conversion! etc...
-    # After generation, the ids will be unwrapped into the respective tx and rx ids
-
+    
+    # Instead of Wireless Insite TX/RX SET IDs, we save and use only indices
+    id_to_idx_map = get_id_to_idx_map(txrx_dict)
+    
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
     # Save Position Matrices and Populate Number of Points in Each TxRxSet 
     # NOTE: only necessary for the inactive positions. Active pos exists in .paths
-    for tx_set_id in tx_set_ids:
+    for tx_set_id in tx_set_ids: 
         for rx_set_id in rx_set_ids:
             # <Project name>.pl.t<tx number> <tx set number>.r<rx set number>.p2m
             proj_name = os.path.basename(insite_sim_folder)
-            for tx_id in [1]: # We assume each TX/RX SET only has one BS    
+            for tx_idx, tx_id in enumerate([1]): # We assume each TX/RX SET only has one BS    
                 # 1- generate file names based on active txrx sets    
                 base_filename = f'{proj_name}.pl.t{tx_id:03}_{tx_set_id:02}.r{rx_set_id:03}.p2m'
                 pl_p2m_file = os.path.join(p2m_folder, base_filename)
@@ -199,19 +204,23 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 # Pathloss P2M parser
                 xyz, _, path_loss = read_pl_p2m_file(pl_p2m_file)
                 
+                rx_set_idx = id_to_idx_map[rx_set_id]
+                tx_set_idx = id_to_idx_map[tx_set_id]
+                
                 # 2- extract positions from pathloss.p2m
-                str_id = get_txrx_str_id(tx_set_id, tx_id, rx_set_id)
-                pos_file = output_folder + f'/{c.POS_MAT_NAME}_{str_id}.mat'
+                mat_id_str = get_txrx_str_id(tx_set_idx, tx_idx, rx_set_idx)
+                
+                pos_file = output_folder + f'/{c.POS_MAT_NAME}_{mat_id_str}.mat'
                 scipy.io.savemat(pos_file, {c.VNAME: xyz})
                 
                 # 3- populate number of points in txrx sets
-                txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] = xyz.shape[0]
+                txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = xyz.shape[0]
                 
                 # Save the indices of the active positions (can be done in .paths too)
-                inactive_idxs = np.where(path_loss == -250)[0]
-                txrx_dict[f'txrx_set_{rx_set_id}']['inactive_idxs'] = inactive_idxs
-    
-    
+                inactive_idxs = np.where(path_loss == 250.)[0]
+                txrx_dict[f'txrx_set_{rx_set_idx}']['inactive_idxs'] = inactive_idxs
+                txrx_dict[f'txrx_set_{rx_set_idx}']['num_inactive_points'] = len(inactive_idxs)
+                
                 # Save All Path information
                 # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
                 paths_p2m_file = pl_p2m_file.replace('.pl.', '.paths.')
@@ -219,7 +228,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 
                 for key in data.keys():
                     # save dict
-                    mat_file = output_folder + f'/{key}_{str_id}.mat'
+                    mat_file = output_folder + f'/{key}_{mat_id_str}.mat'
                     scipy.io.savemat(mat_file, {c.VNAME: data[key]})
                 
     # Export params.mat
@@ -238,8 +247,13 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         
     return scen_name
 
-def get_txrx_str_id(tx_set_id: int, tx_id: int, rx_set_id: int):
-    return f'txset{tx_set_id:03}_tx{tx_id:03}_rxset{rx_set_id:03}'
+def get_id_to_idx_map(txrx_dict: Dict):
+    ids = [txrx_dict[key]['id'] for key in txrx_dict.keys()]
+    idxs = [i + 1 for i in range(len(ids))]
+    return {key:val for key, val in zip(ids, idxs)}
+
+def get_txrx_str_id(tx_set_idx: int, tx_idx: int, rx_set_idx: int):
+    return f't{tx_set_idx:03}_tx{tx_idx:03}_r{rx_set_idx:03}'
 
 def read_pl_p2m_file(filename: str):
     """
@@ -279,16 +293,7 @@ def read_pl_p2m_file(filename: str):
 
 def read_config_file(file):
     return parse_document(tokenize_file(file))
-
-
-def measure_terrain_height(terrain_file):
-    # If .ter exists, measure the terrain height
-    ter_document = read_config_file(terrain_file)
-    ter_name = list(ter_document.keys())[0] # Assumes the first terrain spans the whole area
-    terrain_height = ter_document[ter_name].values['structure_group'].values['structure']\
-        .values['sub_structure'].values['face'].data[0][2]
-    return terrain_height 
-
+    
 
 def verify_sim_folder(sim_folder: str, verbose: bool):
     
@@ -413,12 +418,18 @@ def read_txrx(txrx_file, verbose: bool):
     n_tx, n_rx = 0, 0
     tx_ids, rx_ids = [], []
     txrx_objs = []
-    for key in document.keys():
+    for txrx_set_idx, key in enumerate(document.keys()):
         txrx = document[key]
         txrx_obj = InsiteTxRxSet()
         txrx_obj.name = key
-        txrx_obj.p_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
-                         else txrx.values['project_id'])
+        
+        # Insite ID is used during ray tracing
+        insite_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
+                     else txrx.values['project_id'])
+        txrx_obj.id = insite_id 
+        # TX/RX set ID is used to abstract from the ray tracing configurations
+        # (how the DeepMIMO dataset will be saved and generated)
+        txrx_obj.idx = txrx_set_idx + 1 # 1-indexed
         
         # Locations
         txrx_obj.loc_lat = txrx.values['location'].values['reference'].values['latitude']
@@ -431,12 +442,12 @@ def read_txrx(txrx_file, verbose: bool):
         
         # Antennas and Power
         if txrx_obj.is_tx:
-            tx_ids += [txrx_obj.p_id]
+            tx_ids += [insite_id]
             tx_vals = txrx.values['transmitter']
             assert tx_vals.values['power'] == 0.0, 'Tx power should be 0 dBm!'
             txrx_obj.tx_num_ant = tx_vals['pattern'].values['antenna']
         if txrx_obj.is_rx:
-            rx_ids += [txrx_obj.p_id]
+            rx_ids += [insite_id]
             rx_vals = txrx.values['receiver']
             txrx_obj.rx_num_ant = rx_vals['pattern'].values['antenna']
         
@@ -449,7 +460,7 @@ def read_txrx(txrx_file, verbose: bool):
         obj_dict = {key: val for key, val in asdict(obj).items() if val is not None}
         
         # Index separate txrx-sets based on p_id
-        txrx_dict = {**txrx_dict, **{f'txrx_set_{obj.p_id}': obj_dict}}
+        txrx_dict = {**txrx_dict, **{f'txrx_set_{obj.idx}': obj_dict}}
 
     return tx_ids, rx_ids, txrx_dict
 
