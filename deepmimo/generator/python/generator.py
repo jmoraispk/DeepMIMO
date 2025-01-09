@@ -13,6 +13,9 @@ def generate_data(params_obj=None):
     if params_obj is None:
         params_obj = Parameters()
     
+    if params_obj is str:
+        params_obj = Parameters(params_obj)
+    
     np.random.seed(1001)
     
     ext_params = params_obj.get_params_dict()
@@ -22,7 +25,7 @@ def generate_data(params_obj=None):
         ans = input()
         if not ('n' in ans.lower()):
             zip_path = download_scenario_handler(params_obj.get_name())
-            scen_path = extract_scenario(zip_path)
+            extract_scenario(zip_path)
         
     try:
         params = validate_params(copy.deepcopy(ext_params))
@@ -55,7 +58,8 @@ def generate_data(params_obj=None):
         
 def generate_scene_data(params):
     num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
-    dataset = [{c.DICT_UE_IDX: dict(), c.DICT_BS_IDX: dict(), c.OUT_LOC: None} for x in range(num_active_bs)]
+    dataset = [{c.DICT_UE_IDX: dict(), c.DICT_BS_IDX: dict(), c.OUT_LOC: None}
+               for x in range(num_active_bs)]
     
     for i in range(num_active_bs):
         bs_indx = params[c.PARAMSET_ACTIVE_BS][i]
@@ -63,7 +67,8 @@ def generate_scene_data(params):
         safe_print('\nBasestation %i' % bs_indx)
         
         safe_print('\nUE-BS Channels')
-        dataset[i][c.DICT_UE_IDX], dataset[i][c.OUT_LOC] = params['raytracing_fn'](bs_indx, params, user=True)
+        (dataset[i][c.DICT_UE_IDX], dataset[i][c.OUT_LOC]) = \
+            params['raytracing_fn'](bs_indx, params, user=True)
         
         if params['scenario_params']['dual_polar_available'] and params['enable_dual_polar']:
             for polar_str in ['VV', 'VH', 'HH', 'HV']:
