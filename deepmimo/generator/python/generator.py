@@ -67,17 +67,19 @@ def generate_scene_data(params):
         
         if params['scenario_params']['dual_polar_available'] and params['enable_dual_polar']:
             for polar_str in ['VV', 'VH', 'HH', 'HV']:
-                dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_CHANNEL], dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_LOS] = generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_PATH], 
-                                                                                                                                             params, 
-                                                                                                                                             params[c.PARAMSET_ANT_BS][i], 
-                                                                                                                                             params[c.PARAMSET_ANT_UE]
-                                                                                                                                             )
+                (dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_CHANNEL],
+                 dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_LOS]) = \
+                    generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_PATH], 
+                                          params, 
+                                          params[c.PARAMSET_ANT_BS][i], 
+                                          params[c.PARAMSET_ANT_UE])
         else:
-            dataset[i][c.DICT_UE_IDX][c.OUT_CHANNEL], dataset[i][c.DICT_UE_IDX][c.OUT_LOS] = generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][c.OUT_PATH], 
-                                                                                                                   params, 
-                                                                                                                   params[c.PARAMSET_ANT_BS][i], 
-                                                                                                                   params[c.PARAMSET_ANT_UE]
-                                                                                                                   )
+            (dataset[i][c.DICT_UE_IDX][c.OUT_CHANNEL], 
+             dataset[i][c.DICT_UE_IDX][c.OUT_LOS]) = \
+                generate_MIMO_channel(dataset[i][c.DICT_UE_IDX][c.OUT_PATH], 
+                                      params, 
+                                      params[c.PARAMSET_ANT_BS][i], 
+                                      params[c.PARAMSET_ANT_UE])
                 
         if params[c.PARAMSET_BS2BS]:
             safe_print('\nBS-BS Channels')
@@ -86,11 +88,13 @@ def generate_scene_data(params):
             
             if params['scenario_params']['dual_polar_available'] and params['enable_dual_polar']:
                 for polar_str in ['VV', 'VH', 'HH', 'HV']:
-                    dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_LOS] = generate_MIMO_channel_rx_ind(dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_PATH], 
-                                                                                                                                                        params, 
-                                                                                                                                                        params[c.PARAMSET_ANT_BS][i], 
-                                                                                                                                                        params[c.PARAMSET_ANT_BS]
-                                                                                                                                                        )
+                    (dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], 
+                     dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_LOS]) = \
+                        generate_MIMO_channel_rx_ind(dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_PATH], 
+                                                     params, 
+                                                     params[c.PARAMSET_ANT_BS][i], 
+                                                     params[c.PARAMSET_ANT_BS])
+                        
                 if not params[c.PARAMSET_ANT_BS_DIFF]:
                     dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_LOS] = np.stack(dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], axis=0)
             else:
@@ -170,13 +174,15 @@ def validate_params(params):
     # BS Antenna Radiation Pattern
     for i in range(len(params[c.PARAMSET_ACTIVE_BS])):
         if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS][i].keys():
-            assert params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, 'The antenna radiation pattern for BS-%i must have one of the following values: [%s]' %(i, c.PARAMSET_ANT_RAD_PAT_VALS.join(', '))
+            assert_str = f"The antenna radiation pattern for BS-{i} must have one of the following values: [{', '.join(c.PARAMSET_ANT_RAD_PAT_VALS)}]"
+            assert params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
         else:
             params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
                      
     # UE Antenna Radiation Pattern
     if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_UE].keys():
-        assert params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, 'The antenna radiation pattern for UEs must have one of the following values: [%s]' %(c.PARAMSET_ANT_RAD_PAT_VALS.join(', '))
+        assert_str = f"The antenna radiation pattern for UEs must have one of the following values: [{', '.join(c.PARAMSET_ANT_RAD_PAT_VALS)}]"
+        assert params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
     else:
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
                                              
@@ -221,7 +227,8 @@ def find_users_from_rows(params):
     max_grid = grids[:, 1].max()-1
     min_grid = grids[:, 0].min()-1
     if np.any(rows > max_grid):
-        raise ValueError(f'The rows are not selected properly. The available rows in this scenario are in [{min_grid}, {max_grid}]')
+        raise ValueError('The rows are not selected properly. '
+                         f'The available rows in this scenario are in [{min_grid}, {max_grid}]')
     
     user_ids = np.array([], dtype=int)
     for row in rows:
@@ -247,23 +254,19 @@ def get_scenario_params_path(params):
     if params['data_version'] == 'v2':
         if params['dynamic_scenario']:
             params_path = os.path.join(
-                                        os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                                        params[c.PARAMSET_SCENARIO],
-                                        'scene_' + str(params[c.PARAMSET_DYNAMIC_SCENES][0]), # 'scene_i' folder
-                                        params[c.PARAMSET_SCENARIO] + c.LOAD_FILE_SP_EXT
-                                        )
+                os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]),
+                params[c.PARAMSET_SCENARIO],
+                'scene_' + str(params[c.PARAMSET_DYNAMIC_SCENES][0]),
+                params[c.PARAMSET_SCENARIO] + c.LOAD_FILE_SP_EXT)
         else:
             params_path = os.path.join(
-                                        os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                                        params[c.PARAMSET_SCENARIO], 
-                                        params[c.PARAMSET_SCENARIO] + c.LOAD_FILE_SP_EXT
-                                      )
+                os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
+                params[c.PARAMSET_SCENARIO], 
+                params[c.PARAMSET_SCENARIO] + c.LOAD_FILE_SP_EXT)
     elif params['data_version'] == 'v3':
         params_path = os.path.join(
-                                   os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                                   params[c.PARAMSET_SCENARIO],
-                                   'params.mat'
-                                  )
+            os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
+            params[c.PARAMSET_SCENARIO], 'params.mat')
     else:
         raise NotImplementedError
         
