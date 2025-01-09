@@ -13,7 +13,7 @@ def generate_data(params_obj=None):
     if params_obj is None:
         params_obj = Parameters()
     
-    if params_obj is str:
+    if type(params_obj) is str:
         params_obj = Parameters(params_obj)
     
     np.random.seed(1001)
@@ -69,7 +69,9 @@ def generate_scene_data(params):
         safe_print('\nUE-BS Channels')
         (dataset[i][c.DICT_UE_IDX], dataset[i][c.OUT_LOC]) = \
             params['raytracing_fn'](bs_indx, params, user=True)
-        
+
+def generate_channels(dataset, params):
+    for i in range(num_active_bs):
         if params['scenario_params']['dual_polar_available'] and params['enable_dual_polar']:
             for polar_str in ['VV', 'VH', 'HH', 'HV']:
                 (dataset[i][c.DICT_UE_IDX][polar_str][c.OUT_CHANNEL],
