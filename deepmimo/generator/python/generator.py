@@ -9,16 +9,6 @@ from .params import Parameters
 from .downloader import download_scenario_handler, extract_scenario
 
 def generate_data(params_obj=None):
-    
-    if params_obj is None:
-        params_obj = Parameters()
-    
-    if type(params_obj) is str:
-        params_obj = Parameters(params_obj)
-    
-    np.random.seed(1001)
-    
-    ext_params = params_obj.get_params_dict()
 
     if not os.path.exists(params_obj.get_path()):
         print('Scenario not found. Would you like to download it? (Y/n)')
@@ -26,36 +16,33 @@ def generate_data(params_obj=None):
         if not ('n' in ans.lower()):
             zip_path = download_scenario_handler(params_obj.get_name())
             extract_scenario(zip_path)
-        
-    try:
-        params = validate_params(copy.deepcopy(ext_params))
-    except FileNotFoundError:
-        print('Scenario not found. ')
-        return
-            
-    # If dynamic scenario
+    
+    scen_folder = ''
+
+    params = load_params_mat()
+    dataset = load_raytracing_scene(scen_folder)
+
+    # If dynamic scenario, load each scene separately
     if is_dynamic_scenario(params):
         scene_list = params[c.PARAMSET_DYNAMIC_SCENES]
-        num_of_scenes = len(scene_list)
+        dataset_abs_folder = os.path.abspath(params[c.PARAMSET_DATASET_FOLDER])
         dataset = []
-        for scene_i in range(num_of_scenes):
-            scene = scene_list[scene_i]
+        for scene_i, scene in enumerate(scene_list):
             params[c.PARAMSET_SCENARIO_FIL] = \
-                os.path.join(os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                             params[c.PARAMSET_SCENARIO],
+                os.path.join(dataset_abs_folder, params[c.PARAMSET_SCENARIO],
                              'scene_' + str(scene))
                 
-            print('\nScene %i/%i' % (scene_i+1, num_of_scenes))
-            dataset.append(generate_scene_data(params))
+            print(f'\nScene {scene_i+1}/{len(scene_list)}')
+            dataset.append(load_raytracing_scene(params))
     else: # static scenario
-        params[c.PARAMSET_SCENARIO_FIL] = \
-            os.path.join(os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                         params[c.PARAMSET_SCENARIO])
-            
-        dataset = generate_scene_data(params)
+        dataset = load_raytracing_scene(scen_folder)
+
     return dataset
 
-def generate_scene_data(params):
+def load_params_mat():
+    pass
+
+def load_raytracing_scene(params):
     num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
     dataset = [{c.DICT_UE_IDX: dict(), c.DICT_BS_IDX: dict(), c.OUT_LOC: None}
                for x in range(num_active_bs)]
@@ -71,6 +58,18 @@ def generate_scene_data(params):
             params['raytracing_fn'](bs_indx, params, user=True)
 
 def generate_channels(dataset, params):
+    
+    if params_obj is None:
+        params_obj = Parameters()
+    elif type(params_obj) is str:
+        params_obj = Parameters(params_obj)
+    
+    np.random.seed(1001)
+    
+    ext_params = params_obj.get_params_dict()
+
+    validate_ch_gen_params(params)
+    
     num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
     for i in range(num_active_bs):
         (dataset[i][c.DICT_UE_IDX][c.OUT_CHANNEL], 
@@ -82,8 +81,8 @@ def generate_channels(dataset, params):
                 
     return dataset
 
-# TODO: Move validation into another script
-def validate_params(params):
+# TODO: Move validation into another file
+def validate_ch_gen_params(params):
 
     # Notify the user if something was not set correctly
     # JTODO: better have a object...
@@ -163,35 +162,13 @@ def is_dynamic_scenario(params):
     return 'dyn' in params[c.PARAMSET_SCENARIO]
 
 def check_data_version(params):
-    v3_params_path = os.path.join(os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                                    params[c.PARAMSET_SCENARIO],
-                                    'params.mat')
-    if os.path.isfile(v3_params_path):
-        return 'v3'
-    else:
-        return 'v2'
+    v3_params_path = get_scenario_params_path(params)
+    return os.path.isfile(v3_params_path)
+    
     
 def get_scenario_params_path(params):
-    if params['data_version'] == 'v2':
-        if params['dynamic_scenario']:
-            params_path = os.path.join(
-                os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]),
-                params[c.PARAMSET_SCENARIO],
-                'scene_' + str(params[c.PARAMSET_DYNAMIC_SCENES][0]),
-                params[c.PARAMSET_SCENARIO] + c.LOAD_FILE_SP_EXT)
-        else:
-            params_path = os.path.join(
-                os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                params[c.PARAMSET_SCENARIO], 
-                params[c.PARAMSET_SCENARIO] + c.LOAD_FILE_SP_EXT)
-    elif params['data_version'] == 'v3':
-        params_path = os.path.join(
-            os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-            params[c.PARAMSET_SCENARIO], 'params.mat')
-    else:
-        raise NotImplementedError
-        
-    return params_path
+    folder_path = os.path.abspath(params[c.PARAMSET_DATASET_FOLDER])
+    return os.path.join(folder_path, params[c.PARAMSET_SCENARIO], 'params.mat')
 
 def compare_two_dicts(dict1, dict2):
     
