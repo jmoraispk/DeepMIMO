@@ -16,7 +16,7 @@ class Parameters():
             c.PARAMSET_NUM_PATHS: 5,
             
             # Active Basestation IDs
-            c.PARAMSET_ACTIVE_BS: np.array([1]), # To be implemented
+            c.PARAMSET_ACTIVE_BS: np.array([1]),
             
             # Selected user rows
             c.PARAMSET_USER_ROWS: None, 
