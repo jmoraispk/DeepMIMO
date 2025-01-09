@@ -119,6 +119,9 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
     # WARNING: static params dict -> requires copy from the new version
     data_dict = {
                 c.LOAD_FILE_SP_VERSION: c.VERSION,
+                
+                # 'carrier_freq': 28e9, ##########
+                c.LOAD_FILE_SP_CF: 28e9, 
                 c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, 91, 61]], dtype=float),
                 c.LOAD_FILE_SP_NUM_BS: 1,
                 c.LOAD_FILE_SP_TX_POW: 0,
@@ -129,6 +132,13 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
                 }
     
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
+    
+    # export
+    scen_name = os.path.basename(os.path.dirname(output_folder))
+    scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
+    shutil.rmtree(scen_path)
+    shutil.copytree(output_folder, './' + scen_path)
+    
     return output_folder
 
 
@@ -212,8 +222,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                     scipy.io.savemat(mat_file, {c.VNAME: data[key]})
                 
     # Export params.mat
-    export_params_dict(output_folder, len(tx_set_ids), setup_dict, 
-                       txrx_dict, materials_dict)
+    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
     
     # Move scenario to deepmimo scenarios folder
     scen_name = export_scenario(output_folder, overwrite=overwrite)
@@ -526,20 +535,14 @@ def read_materials(files_in_sim_folder, verbose):
     return materials_dict
 
 
-def export_params_dict(output_folder: str, n_bs: int, setup_dict: Dict = {},
+def export_params_dict(output_folder: str, setup_dict: Dict = {},
                        txrx_dict: Dict = {}, mat_dict: Dict = {}):
     
     data_dict = {
-                c.LOAD_FILE_SP_VERSION: c.VERSION,
-                c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
-                c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
-                c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, 91, 61]], dtype=float),
-                c.LOAD_FILE_SP_NUM_BS: n_bs,
-                c.LOAD_FILE_SP_NUM_RX_ANT: 1,
-                c.LOAD_FILE_SP_NUM_TX_ANT: 1,
-                c.LOAD_FILE_SP_POLAR: 0,
-                c.LOAD_FILE_SP_DOPPLER: 0
-                }
+        c.LOAD_FILE_SP_VERSION: c.VERSION,
+        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
+        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
+    }
     
     merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
     pprint(merged_dict)

@@ -9,9 +9,7 @@ import deepmimo as dm
 # path_to_p2m_folder = r'.\P2Ms\ASU_campus_just_p2m\study_area_asu5'
 path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
 
-scen_name = dm.create_scenario(path_to_p2m_outputs)
-
-#%%
+# scen_name = dm.create_scenario(path_to_p2m_outputs)
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                copy_source=True, 
                                tx_set_ids=[1], rx_set_ids=[2],
@@ -30,7 +28,8 @@ dataset = dm.generate(params)
 #%% Dream
 
 import deepmimo as dm
-scen_name = dm.create_scenario(r'.\P2Ms\simple_street_canyon')
+scen_name = dm.create_scenario(r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz',
+                               old=True)
 dataset = dm.generate(scen_name)
 
 #%% READ Setup
