@@ -3,7 +3,7 @@ import copy
 import numpy as np
 
 from ... import consts as c
-from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
+from .construct_deepmimo import generate_MIMO_channel
 from .utils import safe_print
 from .params import Parameters
 from .downloader import download_scenario_handler, extract_scenario
@@ -40,27 +40,27 @@ def generate_data(params_obj=None):
         dataset = []
         for scene_i in range(num_of_scenes):
             scene = scene_list[scene_i]
-            params[c.PARAMSET_SCENARIO_FIL] = os.path.join(
-                                        os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                                        params[c.PARAMSET_SCENARIO],
-                                        'scene_' + str(scene)
-                                        )
+            params[c.PARAMSET_SCENARIO_FIL] = \
+                os.path.join(os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
+                             params[c.PARAMSET_SCENARIO],
+                             'scene_' + str(scene))
+                
             print('\nScene %i/%i' % (scene_i+1, num_of_scenes))
             dataset.append(generate_scene_data(params))
-    # If static scenario
-    else:
-        params[c.PARAMSET_SCENARIO_FIL] = os.path.join(
-                                    os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
-                                    params[c.PARAMSET_SCENARIO]
-                                    )
+    else: # static scenario
+        params[c.PARAMSET_SCENARIO_FIL] = \
+            os.path.join(os.path.abspath(params[c.PARAMSET_DATASET_FOLDER]), 
+                         params[c.PARAMSET_SCENARIO])
+            
         dataset = generate_scene_data(params)
     return dataset
-        
+
 def generate_scene_data(params):
     num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
     dataset = [{c.DICT_UE_IDX: dict(), c.DICT_BS_IDX: dict(), c.OUT_LOC: None}
                for x in range(num_active_bs)]
     
+    # JTODO: iterate on tx sets & rx sets (instead of BS)
     for i in range(num_active_bs):
         bs_indx = params[c.PARAMSET_ACTIVE_BS][i]
         
@@ -86,30 +86,6 @@ def generate_scene_data(params):
                                       params[c.PARAMSET_ANT_BS][i], 
                                       params[c.PARAMSET_ANT_UE])
                 
-        if params[c.PARAMSET_BS2BS]:
-            safe_print('\nBS-BS Channels')
-            
-            dataset[i][c.DICT_BS_IDX], _ = params['raytracing_fn'](bs_indx, params, user=False)
-            
-            if params['scenario_params']['dual_polar_available'] and params['enable_dual_polar']:
-                for polar_str in ['VV', 'VH', 'HH', 'HV']:
-                    (dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], 
-                     dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_LOS]) = \
-                        generate_MIMO_channel_rx_ind(dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_PATH], 
-                                                     params, 
-                                                     params[c.PARAMSET_ANT_BS][i], 
-                                                     params[c.PARAMSET_ANT_BS])
-                        
-                if not params[c.PARAMSET_ANT_BS_DIFF]:
-                    dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_LOS] = np.stack(dataset[i][c.DICT_BS_IDX][polar_str][c.OUT_CHANNEL], axis=0)
-            else:
-                dataset[i][c.DICT_BS_IDX][c.OUT_CHANNEL], dataset[i][c.DICT_BS_IDX][c.OUT_LOS] = generate_MIMO_channel_rx_ind(dataset[i][c.DICT_BS_IDX][c.OUT_PATH], 
-                                                                                                                              params, 
-                                                                                                                              params[c.PARAMSET_ANT_BS][i], 
-                                                                                                                              params[c.PARAMSET_ANT_BS])
-            
-                if not params[c.PARAMSET_ANT_BS_DIFF]:
-                    dataset[i][c.DICT_BS_IDX][c.OUT_CHANNEL], dataset[i][c.DICT_BS_IDX][c.OUT_LOS] = np.stack(dataset[i][c.DICT_BS_IDX][c.OUT_CHANNEL], axis=0)
     return dataset
 
 # TODO: Move validation into another script
