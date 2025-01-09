@@ -136,7 +136,8 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
     # export
     scen_name = os.path.basename(os.path.dirname(output_folder))
     scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
-    shutil.rmtree(scen_path)
+    if os.path.exists(scen_path):
+        shutil.rmtree(scen_path)
     shutil.copytree(output_folder, './' + scen_path)
     
     return output_folder
@@ -331,11 +332,8 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True):
 def read_setup(setup_file: str, verbose: bool):
     document = read_config_file(setup_file)
     
-    # Select study area (the one that matches the file)
-    prim = os.path.basename(setup_file)[:-6] # remove .setup
-    
-    if prim not in document.keys():
-        raise Exception("Couldn't find '{prim}' in {os.path.basename(setup_file)}")
+    # Select study area 
+    prim = list(document.keys())[0]
       
     prim_vals = document[prim].values
     antenna_vals = prim_vals['antenna'].values
@@ -354,17 +352,19 @@ def read_setup(setup_file: str, verbose: bool):
     setup_dict['bandwidth'] = waveform_vals['bandwidth']
     
     # Study Area Settings
-    # Model Settings
     model_vals = studyarea_vals['model'].values
-    setup_dict['initial_ray_mode']         = model_vals['initial_ray_mode']
-    setup_dict['foliage_model']            = model_vals['foliage_model']
-    setup_dict['foliage_attenuation_vert'] = model_vals['foliage_attenuation_vert']
-    setup_dict['foliage_attenuation_hor']  = model_vals['foliage_attenuation_hor']
-    setup_dict['terrain_diffractions']     = model_vals['terrain_diffractions']
-    setup_dict['ray_spacing']              = model_vals['ray_spacing']
-    setup_dict['max_reflections']          = model_vals['max_reflections']
-    setup_dict['initial_ray_mode']         = model_vals['initial_ray_mode']
-    
+    match_list = ['initial_ray_mode', 'foliage_model',
+                  'foliage_attenuation_vert', 'foliage_attenuation_hor', 
+                  'terrain_diffractions', 'ray_spacing', 'max_reflections', 
+                  'initial_ray_mode']
+    defaults = {'ray_spacing': 0.25, 'terrain_diffractions': 0}
+    for key in match_list:
+        try:
+            setup_dict[key] = model_vals[key]
+        except KeyError:
+            print(f'key "{key}" not found in setup file')
+            setup_dict[key] = defaults[key]
+            
     # Verify that the required outputs were generated
     output_vals = model_vals['OutputRequests'].values
     necessary_output_files_exist = True
