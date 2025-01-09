@@ -13,7 +13,8 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
     Ts = 1/bandwidth
     subcarriers = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(params, subcarriers)
-    antennapattern = AntennaPattern(tx_pattern = tx_ant_params[c.PARAMSET_ANT_RAD_PAT], rx_pattern = rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
+    antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
+                                    rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
 
     M_tx = np.prod(tx_ant_params[c.PARAMSET_ANT_SHAPE])
     ant_tx_ind = ant_indices(tx_ant_params[c.PARAMSET_ANT_SHAPE])
@@ -22,10 +23,10 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
     ant_rx_ind = ant_indices(rx_ant_params[c.PARAMSET_ANT_SHAPE])
     
     if  params[c.PARAMSET_FDTD]:
-        channel = np.zeros((len(raydata), M_rx, M_tx, len(subcarriers)), dtype = np.csingle)
+        channel = np.zeros((len(raydata), M_rx, M_tx, len(subcarriers)), dtype=np.csingle)
     else:
-        channel = np.zeros((len(raydata), M_rx, M_tx, params[c.PARAMSET_NUM_PATHS]), dtype = np.csingle)
-    LoS_status = np.zeros((len(raydata)), dtype=np.int8)-2
+        channel = np.zeros((len(raydata), M_rx, M_tx, params[c.PARAMSET_NUM_PATHS]), dtype=np.csingle)
+    LoS_status = np.zeros((len(raydata)), dtype=np.int8) - 2
         
     for i in tqdm(range(len(raydata)), desc='Generating channels'):
         
@@ -33,14 +34,13 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
             LoS_status[i] = -1
             continue
         
+        dod_theta, dod_phi = rotate_angles(rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
+                                           theta=raydata[i][c.OUT_PATH_DOD_THETA],
+                                           phi=raydata[i][c.OUT_PATH_DOD_PHI])
         
-        dod_theta, dod_phi = rotate_angles(rotation = tx_ant_params[c.PARAMSET_ANT_ROTATION],
-                                  theta = raydata[i][c.OUT_PATH_DOD_THETA],
-                                  phi = raydata[i][c.OUT_PATH_DOD_PHI])
-        
-        doa_theta, doa_phi = rotate_angles(rotation = rx_ant_params[c.PARAMSET_ANT_ROTATION][i],
-                                  theta = raydata[i][c.OUT_PATH_DOA_THETA],
-                                  phi = raydata[i][c.OUT_PATH_DOA_PHI])
+        doa_theta, doa_phi = rotate_angles(rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION][i],
+                                           theta=raydata[i][c.OUT_PATH_DOA_THETA],
+                                           phi=raydata[i][c.OUT_PATH_DOA_PHI])
         
         FoV_tx = apply_FoV(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta, dod_phi)
         FoV_rx = apply_FoV(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta, doa_phi)
@@ -61,126 +61,38 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
         else:
             LoS_status[i] = raydata[i]['LoS'].sum()
                 
-        array_response_TX = array_response(ant_ind = ant_tx_ind, 
-                                           theta = dod_theta, 
-                                           phi = dod_phi, 
-                                           kd = kd_tx)
+        array_response_TX = array_response(ant_ind=ant_tx_ind, 
+                                           theta=dod_theta, 
+                                           phi=dod_phi, 
+                                           kd=kd_tx)
         
-        array_response_RX = array_response(ant_ind = ant_rx_ind, 
-                                           theta =  doa_theta, 
-                                           phi = doa_phi,
-                                           kd = kd_rx)
+        array_response_RX = array_response(ant_ind=ant_rx_ind, 
+                                           theta=doa_theta, 
+                                           phi=doa_phi,
+                                           kd=kd_rx)
         
-        power = antennapattern.apply(power = raydata[i][c.OUT_PATH_RX_POW], 
-                                     doa_theta = doa_theta, 
-                                     doa_phi = doa_phi, 
-                                     dod_theta = dod_theta, 
-                                     dod_phi = dod_phi)
+        power = antennapattern.apply(power=raydata[i][c.OUT_PATH_RX_POW], 
+                                     doa_theta=doa_theta, 
+                                     doa_phi=doa_phi, 
+                                     dod_theta=dod_theta, 
+                                     dod_phi=dod_phi)
         raydata[i][c.OUT_PATH_RX_POW] = power
         
         if  params[c.PARAMSET_FDTD]: # OFDM
             path_const = path_gen.generate(raydata[i], Ts)
             
             # The next step is to be defined
+            channel[i] = np.sum(array_response_RX[:, None, None, :] * 
+                                array_response_TX[None, :, None, :] * 
+                                path_const.T[None, None, :, :], axis=3)
+            
             if params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_LPF] == 0:
-                channel[i] = np.sum(array_response_RX[:, None, None, :] * array_response_TX[None, :, None, :] * path_const.T[None, None, :, :], axis=3)
-            else:
-                channel[i] = np.sum(array_response_RX[:, None, None, :] * array_response_TX[None, :, None, :] * path_const.T[None, None, :, :], axis=3) @ path_gen.delay_to_OFDM
+                channel[i] = channel[i] @ path_gen.delay_to_OFDM
         
         else: # TD channel
-            channel[i, :, :, :raydata[i][c.OUT_PATH_NUM]] = array_response_RX[:, None, :] * array_response_TX[None, :, :] * (np.sqrt(power) * np.exp(1j*np.deg2rad(raydata[i][c.OUT_PATH_PHASE])))[None, None, :]
-
-    return channel, LoS_status
-
-# Generates everything for each rx_ant_params - 
-# necessary for BS-BS channels since different antennas can be defined. 
-# The output is a list.
-def generate_MIMO_channel_rx_ind(raydata, params, tx_ant_params, rx_ant_params):
-    
-    bandwidth = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BW] * c.PARAMSET_OFDM_BW_MULT
-    
-    Ts = 1/bandwidth
-    subcarriers = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_SAMP]
-    path_gen = OFDM_PathGenerator(params, subcarriers)
-    
-    
-    channel = []
-    LoS_status = []
-        
-    for i in tqdm(range(len(raydata)), desc='Generating channels'):
-        
-        antennapattern = AntennaPattern(tx_pattern = tx_ant_params[c.PARAMSET_ANT_RAD_PAT], rx_pattern = rx_ant_params[i][c.PARAMSET_ANT_RAD_PAT])
-        
-        kd_tx = 2*np.pi*tx_ant_params[c.PARAMSET_ANT_SPACING]
-        kd_rx = 2*np.pi*rx_ant_params[i][c.PARAMSET_ANT_SPACING]
-        
-        M_tx = np.prod(tx_ant_params[c.PARAMSET_ANT_SHAPE])
-        ant_tx_ind = ant_indices(tx_ant_params[c.PARAMSET_ANT_SHAPE])
-        
-        M_rx = np.prod(rx_ant_params[i][c.PARAMSET_ANT_SHAPE])
-        ant_rx_ind = ant_indices(rx_ant_params[i][c.PARAMSET_ANT_SHAPE])
-        
-        if raydata[i][c.OUT_PATH_NUM]==0:
-            channel.append(np.zeros((M_rx, M_tx, len(subcarriers))))
-            LoS_status.append(-1)
-            continue
-    
-        
-        dod_theta, dod_phi = rotate_angles(rotation = tx_ant_params[c.PARAMSET_ANT_ROTATION],
-                                  theta = raydata[i][c.OUT_PATH_DOD_THETA],
-                                  phi = raydata[i][c.OUT_PATH_DOD_PHI])
-        
-        doa_theta, doa_phi = rotate_angles(rotation = rx_ant_params[i][c.PARAMSET_ANT_ROTATION],
-                                  theta = raydata[i][c.OUT_PATH_DOA_THETA],
-                                  phi = raydata[i][c.OUT_PATH_DOA_PHI])
-                
-        FoV_tx = apply_FoV(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta, dod_phi)
-        FoV_rx = apply_FoV(rx_ant_params[i][c.PARAMSET_ANT_FOV], doa_theta, doa_phi)
-        FoV = np.logical_and(FoV_tx, FoV_rx)
-        dod_theta = dod_theta[FoV]
-        dod_phi = dod_phi[FoV]
-        doa_theta = doa_theta[FoV]
-        doa_phi = doa_phi[FoV]
-        
-        for key in raydata[i].keys():
-            if key == 'num_paths':
-                raydata[i][key] = FoV.sum()
-            else:
-                raydata[i][key] = raydata[i][key][FoV]
-        
-        if raydata[i]['num_paths'] == 0:
-            LoS_status.append(-1)
-        else:
-            LoS_status.append(raydata[i]['LoS'].sum())
-            
-        array_response_TX = array_response(ant_ind = ant_tx_ind, 
-                                           theta = dod_theta, 
-                                           phi = dod_phi, 
-                                           kd = kd_tx)
-        
-        array_response_RX = array_response(ant_ind = ant_rx_ind, 
-                                           theta =  doa_theta, 
-                                           phi = doa_phi,
-                                           kd = kd_rx)
-        
-        power = antennapattern.apply(power = raydata[i][c.OUT_PATH_RX_POW], 
-                                     doa_theta = doa_theta, 
-                                     doa_phi = doa_phi, 
-                                     dod_theta = dod_theta, 
-                                     dod_phi = dod_phi)
-        raydata[i][c.OUT_PATH_RX_POW] = power
-        
-        if  params[c.PARAMSET_FDTD]: # OFDM
-            path_const = path_gen.generate(raydata[i], Ts)
-            
-            # The next step is to be defined
-            if params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_LPF] == 0: # NO LPF
-                channel.append(np.sum(array_response_RX[:, None, None, :] * array_response_TX[None, :, None, :] * path_const.T[None, None, :, :], axis=3))
-            else: # Sinc LPF
-                channel.append(np.sum(array_response_RX[:, None, None, :] * array_response_TX[None, :, None, :] * path_const.T[None, None, :, :], axis=3) @ path_gen.delay_to_OFDM)
-        
-        else: # Time domain
-            channel.append(array_response_RX[:, None, :] * array_response_TX[None, :, :] * (np.sqrt(power) * np.exp(1j*np.deg2rad(raydata[i][c.OUT_PATH_PHASE])))[None, None, :])
+            channel[i, :, :, :raydata[i][c.OUT_PATH_NUM]] = \
+                (array_response_RX[:, None, :] * array_response_TX[None, :, :] *
+                 (np.sqrt(power) * np.exp(1j*np.deg2rad(raydata[i][c.OUT_PATH_PHASE])))[None, None, :]
 
     return channel, LoS_status
 
@@ -227,13 +139,11 @@ def rotate_angles(rotation, theta, phi): # Input all degrees - output radians
         sin_theta = np.sin(theta)
         cos_theta = np.cos(theta)
         
-        theta = np.arccos(cos_beta*cos_gamma*cos_theta 
-                              + sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha)
-                              )
-        phi = np.angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta 
-                           + 1j*(cos_beta*sin_gamma*cos_theta 
-                                 + sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha))
-                           )
+        theta = np.arccos(cos_beta*cos_gamma*cos_theta +
+                          sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha))
+        phi = np.angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta +
+                       1j*(cos_beta*sin_gamma*cos_theta + 
+                           sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
     return theta, phi
 
 class OFDM_PathGenerator:
