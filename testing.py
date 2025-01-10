@@ -9,9 +9,14 @@ import deepmimo as dm
 # path_to_p2m_outputs = r'.\P2Ms\asu_campus\study_area_asu5'
 path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
 
+old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61],   'freq': 3.5e9}   # simple canyon
+# old_params_dict = {'num_bs': 1, 'user_grid': [1, 411, 321], 'freq': 3.5e9} # asu
+
+
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                overwrite=True, 
-                               old=False) # V3 or V4 conversion flag
+                               old=False,
+                               old_params=old_params_dict) # V3 or V4 conversion flag
 #                              old has STATIC PARAMS! (asu scenario needs diff grids)
 
 #%% V4 

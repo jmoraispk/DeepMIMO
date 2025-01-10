@@ -30,7 +30,7 @@ import numpy as np
 import scipy.io
 
 from .. import converter_utils as cu
-from ...general_utilities import PrintIfVerbose
+from ...general_utilities import PrintIfVerbose, get_mat_filename
 from ... import consts as c
 
 from .ChannelDataLoader import WIChannelConverter
@@ -103,7 +103,7 @@ class InsiteTxRxSet():
     
     dual_pol: bool = False # if '_dual-pol' in name
     
-def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
+def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
     # P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
     
     insite_sim_folder = os.path.dirname(p2m_folder)
@@ -120,14 +120,11 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
     DeepMIMODataFormatter(intermediate_folder, output_folder, 
                           TX_order=tx_ids, RX_order=rx_ids)
     
-    # WARNING: static params dict -> requires copy from the new version
     data_dict = {
                 c.LOAD_FILE_SP_VERSION: c.VERSION,
-                
-                # 'carrier_freq': 28e9, ##########
-                c.LOAD_FILE_SP_CF: 28e9, 
-                c.LOAD_FILE_SP_USER_GRIDS: np.array([[1, 91, 61]], dtype=float),
-                c.LOAD_FILE_SP_NUM_BS: 1,
+                c.LOAD_FILE_SP_CF: params_dict['freq'], 
+                c.LOAD_FILE_SP_USER_GRIDS: np.array([params_dict['user_grid']], dtype=float),
+                c.LOAD_FILE_SP_NUM_BS: params_dict['num_bs'],
                 c.LOAD_FILE_SP_TX_POW: 0,
                 c.LOAD_FILE_SP_NUM_RX_ANT: 1,
                 c.LOAD_FILE_SP_NUM_TX_ANT: 1,
@@ -150,9 +147,10 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids):
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                         tx_set_ids: List[int] = None, rx_set_ids: List[int] = None,
                         verbose: bool = True, overwrite: bool | None = None, 
-                        vis_buildings: bool = False, old: bool = False):
+                        vis_buildings: bool = False, 
+                        old: bool = False, old_params: Dict = {}):
     if old: # v3
-        scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids)
+        scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params)
         return scen_name
     
     # Setup output folder
@@ -209,9 +207,9 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 tx_set_idx = id_to_idx_map[tx_set_id]
                 
                 # 2- extract positions from pathloss.p2m
-                mat_id_str = get_txrx_str_id(tx_set_idx, tx_idx, rx_set_idx)
-                
-                pos_file = output_folder + f'/{c.POS_MAT_NAME}_{mat_id_str}.mat'
+                pos_mat_file_name = get_mat_filename(c.POS_MAT_NAME, tx_set_idx, 
+                                                     tx_idx, rx_set_idx)
+                pos_file = output_folder + '/' + pos_mat_file_name
                 scipy.io.savemat(pos_file, {c.VNAME: xyz})
                 
                 # 3- populate number of points in txrx sets
@@ -229,7 +227,9 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 
                 for key in data.keys():
                     # save dict
-                    mat_file = output_folder + f'/{key}_{mat_id_str}.mat'
+                    
+                    mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
+                    mat_file = output_folder + '/' + mat_filename
                     scipy.io.savemat(mat_file, {c.VNAME: data[key]})
                 
     # Export params.mat
@@ -253,8 +253,6 @@ def get_id_to_idx_map(txrx_dict: Dict):
     idxs = [i + 1 for i in range(len(ids))]
     return {key:val for key, val in zip(ids, idxs)}
 
-def get_txrx_str_id(tx_set_idx: int, tx_idx: int, rx_set_idx: int):
-    return f't{tx_set_idx:03}_tx{tx_idx:03}_r{rx_set_idx:03}'
 
 def read_pl_p2m_file(filename: str):
     """
