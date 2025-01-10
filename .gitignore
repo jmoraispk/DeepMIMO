@@ -17,7 +17,6 @@ P2Ms/*
 #   For building visualizations
 building_*
 old/*
-deepmimo/generator/python_old/*
 keep_for_future/*
 
 # Gitignore Defaults
