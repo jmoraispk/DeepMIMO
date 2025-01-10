@@ -3,6 +3,7 @@ Converts Wireless Insite raytracing files into DeepMIMO scenarios ready to uploa
 
 TODOS:
     - support multi-antennas (includes polarization)
+    - support dynamic scenarios
     - (optional) dictionary mapping between Wireless Insite and DeepMIMO names
     - (optional) expand support multiple tx_ids per tx_set
       (requires reading number of ids from .txrx and use them to index files right)
@@ -553,6 +554,7 @@ def export_params_dict(output_folder: str, setup_dict: Dict = {},
         c.LOAD_FILE_SP_VERSION: c.VERSION,
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
+        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
     }
     
     merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
