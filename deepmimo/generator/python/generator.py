@@ -8,8 +8,9 @@ from .utils import safe_print
 from .params import Parameters
 from .downloader import download_scenario_handler, extract_scenario
 import scipy.io
+from typing import List, Dict
 
-def load_scenario(scen_name: str):
+def load_scenario(scen_name: str, **load_params):
     if '\\' in scen_name or '/' in scen_name:
         scen_folder = scen_name
         scen_name = os.path.basename(scen_folder)
@@ -26,20 +27,18 @@ def load_scenario(scen_name: str):
     
     params_mat_file = os.path.join(scen_folder, 'params.mat')
     rt_params = load_mat_file_as_dict(params_mat_file)
-
-    dataset = load_raytracing_scene(scen_folder, rt_params)
-
+    
     # If dynamic scenario, load each scene separately
-    scene_list = rt_params[c.PARAMSET_DYNAMIC_SCENES]
-    if len(scene_list) > 1: # dynamic scenario
+    n_scenes = rt_params[c.PARAMSET_DYNAMIC_SCENES]
+    if n_scenes > 1: # dynamic
         dataset = []
-        for scene_i, scene in enumerate(scene_list):
+        for scene_i in range(n_scenes):
             scene_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
-                                        'scene_' + str(scene))
-            print(f'Scene {scene_i + 1}/{len(scene_list)}')
-            dataset.append(load_raytracing_scene(scene_folder, rt_params))
-    else: # static scenario
-        dataset = load_raytracing_scene(scen_folder, rt_params)
+                                        f'scene_{scene_i}')
+            print(f'Scene {scene_i + 1}/{n_scenes}')
+            dataset.append(load_raytracing_scene(scene_folder, rt_params, **load_params))
+    else: # static 
+        dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
 
     return dataset
 
@@ -67,61 +66,121 @@ def load_mat_file_as_dict(file_path):
             if not key.startswith('__')}
 
 
-
-def process_mat_data2(data):
-    """
-    Recursively process a Python dictionary loaded from a .mat file.
-    Replaces data in cell arrays if suitable.
-    """
-    for key, value in data.items():
-        data[key] = process_mat_data(value)
+def load_raytracing_scene(folder, rt_params, 
+                          tx_sets: Dict | List | str = 'all',
+                          rx_sets: Dict | List | str = 'all'):
     
-    return data  # Return processed or original data
-
-
-def process_mat_data(data):
-    """
-    Recursively process a Python dictionary loaded from a .mat file.
-    Replaces data based on custom logic, ensuring operations are applied only to numeric types.
-    """
-    if isinstance(data, dict):  # If it's a dictionary (MATLAB struct)
-        for key, value in data.items():
-            data[key] = process_mat_data(value)
-    elif isinstance(data, np.ndarray):
-        if data.dtype == 'object':  # Likely a cell array
-            # Iterate over each cell and process
-            return np.array([process_mat_data(cell) for cell in data.flat]).reshape(data.shape)
-        elif np.issubdtype(data.dtype, np.number):  # Numeric array
-            # Replace data based on custom logic (e.g., replace negatives with 0)
-            return np.where(data < 0, 0, data)  # Example logic
-        else:
-            # Non-numeric arrays (e.g., strings) are returned unchanged
-            return data
-    return data  # Return processed or original data
-
-
-def load_raytracing_scene(params):
-    num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
-    dataset = [{c.DICT_UE_IDX: dict(), c.DICT_BS_IDX: dict(), c.OUT_LOC: None}
-               for x in range(num_active_bs)]
+    tx_sets = validate_txrx_sets(tx_sets, rt_params, 'tx')
+    rx_sets = validate_txrx_sets(rx_sets, rt_params, 'rx')
     
-    # JTODO: iterate on tx sets & rx sets (instead of BS)
-    for i in range(num_active_bs):
-        bs_indx = params[c.PARAMSET_ACTIVE_BS][i]
+    dataset_dict = {}
+    
+    return tx_sets, rx_sets
+    bs_idxs = []
+    for tx_set_idx, tx_idxs in tx_sets.items():
+        for rx_set_idx, rx_idxs in tx_sets.items():
+            for tx_idx in tx_idxs:
+                # Compute new index on the tx level
+                # e.g. tx_set_1: [0, 1, 2] and  tx_set_2: [0], then new_idxs = [0,1,2,3]
+                bs_idx = len(bs_idxs)
+                bs_idxs.append(bs_idx)
+
+                print('\nBasestation {bs_idx}')
+                
+                # print tx and rx set (if they are the same, say BS x - BS x)
+
+                print('\nUE-BS Channels')
+                dataset_dict[bs_idx] = load_tx_rx_raydata(bs_idx, rt_params, user=True)
+
+
+def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str = 'tx'):
+    """
+    Ensures the input to the generator is compatible with the available tx/rx sets
+    and their points.
+    """
+    valid_tx_set_idxs = []
+    valid_rx_set_idxs = []
+    for key, val in rt_params.items():
+        if key.startswith('txrx_set_'):
+            if val['is_tx']:
+                valid_tx_set_idxs.append(val['idx'])
+            if val['is_rx']:
+                valid_rx_set_idxs.append(val['idx'])
+    
+    valid_set_idxs = valid_tx_set_idxs if tx_or_rx == 'tx' else valid_rx_set_idxs
+    set_str = 'Tx' if tx_or_rx == 'tx' else 'Rx'
+    
+    info_str = "To see supported TX/RX sets run dm.info(<scenario_name>)"
+    if type(sets) is dict:
+        for set_idx, idxs in sets.items():    
+            # check the the tx/rx_set indices are valid
+            if set_idx not in valid_set_idxs:
+                raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
+                                + info_str)
+            
+            if type(idxs) is np.ndarray:
+                pass # correct
+            elif type(idxs) is list:
+                sets[set_idx] = np.array(idxs)
+            elif idxs == 'all':
+                sets[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+            else:
+                raise Exception('Only <list> of <np.ndarray> allowed as tx/rx sets indices')
+                
+            # JTODO: check that the specific tx/rx indices inside the sets are valid
+            # ... is list within list without iteration... 
+            continue
+        sets_dict = sets
+    elif type(sets) is list:
+        # Generate all user indices
+        sets_dict = {}
+        for set_idx in sets:
+            if set_idx not in valid_set_idxs:
+                raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
+                                + info_str)
+                
+            sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+    elif type(sets) is str:
+        if sets != 'all':
+            raise Exception(f"String '{sets}' not understood. Only string allowed "
+                            "is 'all' to generate all available sets and indices")
         
-        safe_print('\nBasestation %i' % bs_indx)
-        
-        safe_print('\nUE-BS Channels')
-        (dataset[i][c.DICT_UE_IDX], dataset[i][c.OUT_LOC]) = \
-            params['raytracing_fn'](bs_indx, params, user=True)
+        # Generate dict with all sets and indices available
+        sets_dict = {}
+        for set_idx in valid_set_idxs:
+            sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+    
+    return sets_dict
+
+
+def load_tx_rx_raydata(rayfolder, tx_set_id, tx_id, rx_set_id):
+    pass
+    
+    tx_dict = {c.AOA_AZ_PARAM_NAME: None,
+               c.AOA_EL_PARAM_NAME: None,
+               c.AOD_AZ_PARAM_NAME: None,
+               c.AOD_EL_PARAM_NAME: None,
+               c.TOA_PARAM_NAME: None,
+               c.PWR_PARAM_NAME: None,
+               c.PHASE_PARAM_NAME: None,
+               c.RX_POS_PARAM_NAME: None,
+               c.TX_POS_PARAM_NAME: None,
+               c.INTERACTIONS_PARAM_NAME: None,
+               c.INTERACTIONS_POS_PARAM_NAME: None}
+    
+    # generate files
+
+    # read files and populate the right field in tx dict
+
+    return tx_dict
 
 def generate_channels(dataset, params):
     
-    if params_obj is None:
-        params_obj = Parameters()
-    elif type(params_obj) is str:
-        params_obj = Parameters(params_obj)
-    
+    if params is None:
+        params = Parameters()
+    elif type(params) is str:
+        params = Parameters(params)
+        
     np.random.seed(1001)
     
     validate_ch_gen_params(params)

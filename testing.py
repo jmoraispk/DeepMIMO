@@ -18,8 +18,25 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
 import deepmimo as dm
 scen_name = 'simple_street_canyon_test'
 
-load_params = {}
+# Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
+# tx_sets = {1: [0,1]}
+# rx_sets = {2: 'all'}
+# ONE TEST LEFT: do tx_sets = [0, 1] to check if breaks
+
+# Option 2 - lists with tx/rx set (assumes all points inside the set)
+# tx_sets = [1]
+# rx_sets = [2]
+# Passing!
+
+# Option 3 - string 'all' (generates all points of all tx/rx sets) (default)
+tx_sets = rx_sets = 'all'
+
+load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets}
 dataset = dm.load_scenario(scen_name, **load_params)
+
+from pprint import pprint
+pprint(dataset)
+
 # dataset.gen_channels()
 
 #dataset = dm.generate(params)
