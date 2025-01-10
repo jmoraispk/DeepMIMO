@@ -86,10 +86,10 @@ def load_raytracing_scene(folder, rt_params,
                 bs_idx = len(bs_idxs)
                 bs_idxs.append(bs_idx)
 
-                print(f'\nTX: Basestation {bs_idx}')
+                print(f'\nTX set: {tx_set_idx} (basestation)')
                 
-                rx_id_str = 'Basestation' if rx_set_idx == tx_set_idx else 'Users set'
-                print(f'RX: {rx_id_str} {rx_set_idx}')
+                rx_id_str = 'basestation' if rx_set_idx == tx_set_idx else 'users'
+                print(f'RX set: {rx_set_idx} ({rx_id_str})')
                 
                 dataset_dict[bs_idx] = load_tx_rx_raydata(folder,
                                                           tx_set_idx, rx_set_idx,
@@ -175,9 +175,10 @@ def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
         
         mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
         # JTODO: move function to get filenames to common_utils (and use it in conversion too)
-        print(mat_filename)
+        mat_path = os.path.join(rayfolder, mat_filename)
+        if os.path.exists(mat_path):
+            print(f'Loading {mat_filename}..')
         # generate files
-        raise Exception()
         # read files and populate the right field in tx dict
 
     return tx_dict
