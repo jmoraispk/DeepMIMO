@@ -131,7 +131,7 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
                 raise Exception('Only <list> of <np.ndarray> allowed as tx/rx sets indices')
                 
             # JTODO: check that the specific tx/rx indices inside the sets are valid
-            # ... is list within list without iteration... 
+            # ... is list within list (without iteration! itertools?)... 
             continue
         sets_dict = sets
     elif type(sets) is list:
@@ -157,7 +157,6 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
 
 
 def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
-    pass
     
     tx_dict = {c.AOA_AZ_PARAM_NAME: None,
                c.AOA_EL_PARAM_NAME: None,
@@ -173,13 +172,22 @@ def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
     
     for key in tx_dict.keys():
         
-        mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
-        # JTODO: move function to get filenames to common_utils (and use it in conversion too)
+        load_key = key
+        
+        # Small logic to prevent writing repeated files for rx and tx locations
+        if key in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
+            load_key = c.POS_MAT_NAME
+        rx_set_to_load = rx_set_idx if key != c.TX_POS_PARAM_NAME else tx_set_idx
+        
+        mat_filename = get_mat_filename(load_key, tx_set_idx, tx_idx, rx_set_to_load)
+        
         mat_path = os.path.join(rayfolder, mat_filename)
+        
         if os.path.exists(mat_path):
             print(f'Loading {mat_filename}..')
-        # generate files
-        # read files and populate the right field in tx dict
+            tx_dict[key] = scipy.io.loadmat(mat_path)#[rx_idxs]
+        else:
+            print(f'File {mat_path} could not be found')
 
     return tx_dict
 
