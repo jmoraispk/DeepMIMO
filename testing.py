@@ -11,7 +11,7 @@ path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_
 
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                overwrite=True, 
-                               old=True) # V3 or V4 conversion flag
+                               old=False) # V3 or V4 conversion flag
 #                              old has STATIC PARAMS! (asu scenario needs diff grids)
 
 #%% V4 
@@ -19,7 +19,7 @@ import deepmimo as dm
 scen_name = 'simple_street_canyon_test'
 
 load_params = {}
-dataset = dm.load(scen_name, **load_params)
+dataset = dm.load_scenario(scen_name, **load_params)
 # dataset.gen_channels()
 
 #dataset = dm.generate(params)
