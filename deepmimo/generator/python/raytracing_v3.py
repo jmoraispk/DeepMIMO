@@ -99,12 +99,12 @@ def load_variables(path_params, path_verifier, params):
 def load_scenario_params(scenario_params_path):
     data = scipy.io.loadmat(scenario_params_path)
     scenario_params = {
-                        c.PARAMSET_SCENARIO_PARAMS_CF: data[c.LOAD_FILE_SP_CF].astype(float).item(),
-                        c.PARAMSET_SCENARIO_PARAMS_NUM_BS: data[c.LOAD_FILE_SP_NUM_BS].astype(int).item(),
-                        c.PARAMSET_SCENARIO_PARAMS_USER_GRIDS: data[c.LOAD_FILE_SP_USER_GRIDS].astype(int),
-                        c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN: data[c.LOAD_FILE_SP_DOPPLER].astype(int).item(),
-                        c.PARAMSET_SCENARIO_PARAMS_POLAR_EN: data[c.LOAD_FILE_SP_POLAR].astype(int).item()
-                      }
+        c.PARAMSET_SCENARIO_PARAMS_CF: data[c.LOAD_FILE_SP_CF].astype(float).item(),
+        c.PARAMSET_SCENARIO_PARAMS_NUM_BS: data[c.LOAD_FILE_SP_NUM_BS].astype(int).item(),
+        c.PARAMSET_SCENARIO_PARAMS_USER_GRIDS: data[c.LOAD_FILE_SP_USER_GRIDS].astype(int),
+        c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN: data[c.LOAD_FILE_SP_DOPPLER].astype(int).item(),
+        c.PARAMSET_SCENARIO_PARAMS_POLAR_EN: data[c.LOAD_FILE_SP_POLAR].astype(int).item()
+    }
     return scenario_params
 
 # Loads the user and basestation dataset files
