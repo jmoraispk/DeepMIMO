@@ -10,6 +10,8 @@ from .downloader import download_scenario_handler, extract_scenario
 import scipy.io
 from typing import List, Dict
 
+from ...general_utilities import get_mat_filename
+
 def load_scenario(scen_name: str, **load_params):
     if '\\' in scen_name or '/' in scen_name:
         scen_folder = scen_name
@@ -75,22 +77,23 @@ def load_raytracing_scene(folder, rt_params,
     
     dataset_dict = {}
     
-    return tx_sets, rx_sets
     bs_idxs = []
     for tx_set_idx, tx_idxs in tx_sets.items():
-        for rx_set_idx, rx_idxs in tx_sets.items():
+        for rx_set_idx, rx_idxs in rx_sets.items():
             for tx_idx in tx_idxs:
-                # Compute new index on the tx level
+                # Compute new index on the tx level - a BS relative index
                 # e.g. tx_set_1: [0, 1, 2] and  tx_set_2: [0], then new_idxs = [0,1,2,3]
                 bs_idx = len(bs_idxs)
                 bs_idxs.append(bs_idx)
 
-                print('\nBasestation {bs_idx}')
+                print(f'\nTX: Basestation {bs_idx}')
                 
-                # print tx and rx set (if they are the same, say BS x - BS x)
-
-                print('\nUE-BS Channels')
-                dataset_dict[bs_idx] = load_tx_rx_raydata(bs_idx, rt_params, user=True)
+                rx_id_str = 'Basestation' if rx_set_idx == tx_set_idx else 'Users set'
+                print(f'RX: {rx_id_str} {rx_set_idx}')
+                
+                dataset_dict[bs_idx] = load_tx_rx_raydata(folder,
+                                                          tx_set_idx, rx_set_idx,
+                                                          tx_idx, rx_idxs)
 
 
 def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str = 'tx'):
@@ -153,7 +156,7 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
     return sets_dict
 
 
-def load_tx_rx_raydata(rayfolder, tx_set_id, tx_id, rx_set_id):
+def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
     pass
     
     tx_dict = {c.AOA_AZ_PARAM_NAME: None,
@@ -168,9 +171,14 @@ def load_tx_rx_raydata(rayfolder, tx_set_id, tx_id, rx_set_id):
                c.INTERACTIONS_PARAM_NAME: None,
                c.INTERACTIONS_POS_PARAM_NAME: None}
     
-    # generate files
-
-    # read files and populate the right field in tx dict
+    for key in tx_dict.keys():
+        
+        mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
+        # JTODO: move function to get filenames to common_utils (and use it in conversion too)
+        print(mat_filename)
+        # generate files
+        raise Exception()
+        # read files and populate the right field in tx dict
 
     return tx_dict
 
@@ -199,8 +207,7 @@ def generate_channels(dataset, params):
 # TODO: Move validation into another file
 def validate_ch_gen_params(params):
 
-    # Notify the user if something was not set correctly
-    # JTODO: better have a object...
+    # Notify the user if some keyword is not used (likely set incorrectly)
     additional_keys = compare_two_dicts(params, Parameters().get_params_dict())
     if len(additional_keys):
         print('The following parameters seem unnecessary:')
