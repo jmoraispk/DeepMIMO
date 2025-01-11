@@ -132,7 +132,7 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
                 raise Exception('Only <list> of <np.ndarray> allowed as tx/rx sets indices')
                 
             # check that the specific tx/rx indices inside the sets are valid
-            if not set(idxs).issubset(all_idxs_available):
+            if not set(sets[set_idx]).issubset(set(all_idxs_available.tolist())):
                 raise Exception(f'Some indices of {idxs} are not in {all_idxs_available}. '
                                 + info_str)
         sets_dict = sets
@@ -193,15 +193,18 @@ def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
 
     return tx_dict
 
-def generate_channels(dataset, params):
+def compute_channels(dataset, params):
     
     if params is None:
-        params = Parameters()
+        params_obj = Parameters()
     elif type(params) is str:
-        params = Parameters(params)
+        params_obj = Parameters(params)
+    else:
+        params_obj = params
         
     np.random.seed(1001)
     
+    params = params_obj.get_params_dict()
     validate_ch_gen_params(params)
     
     num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
