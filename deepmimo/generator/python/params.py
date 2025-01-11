@@ -3,28 +3,10 @@ import numpy as np
 from ... import consts as c
 from pprint import pformat # returns pprint string
 
-class Parameters():
+class ChannelGenParameters():
     def __init__(self, scen_name=None):
         self.params = {
-            c.PARAMSET_DATASET_FOLDER: c.SCENARIOS_FOLDER,
-            c.PARAMSET_SCENARIO: scen_name if scen_name else'O1_60' ,
-            
-            # Dynamic scenario scene selection
-            c.PARAMSET_DYNAMIC_SCENES: np.array([1]),
-            
-            # Maximum # of paths to be loaded
-            c.PARAMSET_NUM_PATHS: 5,
-            
-            # Active Basestation IDs
-            c.PARAMSET_ACTIVE_BS: np.array([1]),
-            
-            # Selected user rows
-            c.PARAMSET_USER_ROWS: None, 
-            
-            # Subsampling
-            # c.PARAMSET_USER_ROW_SUBSAMP: 1,
-            c.PARAMSET_USER_SUBSAMP: 1,
-            
+
             # BS Antenna Parameters
             c.PARAMSET_ANT_BS: {
                 c.PARAMSET_ANT_SHAPE: np.array([8, 4]), # Antenna dimensions in X - Y - Z
@@ -45,7 +27,6 @@ class Parameters():
             
             c.PARAMSET_DOPPLER_EN: 0,
             c.PARAMSET_POLAR_EN: 0,
-            c.PARAMSET_BS2BS: 0,
             
             c.PARAMSET_FDTD: 1 , 
             # OFDM if 1 

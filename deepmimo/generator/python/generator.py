@@ -5,7 +5,7 @@ import numpy as np
 from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel
 from .utils import safe_print
-from .params import Parameters
+from .params import ChannelGenParameters
 from .downloader import download_scenario_handler, extract_scenario
 import scipy.io
 from typing import List, Dict
@@ -68,7 +68,7 @@ def load_mat_file_as_dict(file_path):
             if not key.startswith('__')}
 
 
-def load_raytracing_scene(folder, rt_params, 
+def load_raytracing_scene(folder, rt_params, max_paths: int = 5,
                           tx_sets: Dict | List | str = 'all',
                           rx_sets: Dict | List | str = 'all'):
     
@@ -93,7 +93,9 @@ def load_raytracing_scene(folder, rt_params,
                 
                 dataset_dict[bs_idx] = load_tx_rx_raydata(folder,
                                                           tx_set_idx, rx_set_idx,
-                                                          tx_idx, rx_idxs)
+                                                          tx_idx, rx_idxs,
+                                                          max_paths)
+    dataset_dict['rt_params'] = rt_params
     return dataset_dict
 
 def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str = 'tx'):
@@ -158,7 +160,8 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
     return sets_dict
 
 
-def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
+def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int,
+                       tx_idx: int, rx_idxs: np.ndarray | List, max_paths: int):
     
     tx_dict = {c.AOA_AZ_PARAM_NAME: None,
                c.AOA_EL_PARAM_NAME: None,
@@ -174,31 +177,33 @@ def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
     
     for key in tx_dict.keys():
         
-        load_key = key
-        
-        # Small logic to prevent writing repeated files for rx and tx locations
-        if key in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
-            load_key = c.POS_MAT_NAME
-        rx_set_to_load = rx_set_idx if key != c.TX_POS_PARAM_NAME else tx_set_idx
-        
-        mat_filename = get_mat_filename(load_key, tx_set_idx, tx_idx, rx_set_to_load)
+        mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
         
         mat_path = os.path.join(rayfolder, mat_filename)
         
         if os.path.exists(mat_path):
             print(f'Loading {mat_filename}..')
-            tx_dict[key] = scipy.io.loadmat(mat_path)['data']#[rx_idxs]
+            tx_dict[key] = scipy.io.loadmat(mat_path)[c.MAT_VAR_NAME]
         else:
             print(f'File {mat_path} could not be found')
-
+        
+        # Filter by selected rx indices (all but tx positions)
+        if key != c.TX_POS_PARAM_NAME: 
+            tx_dict[key] = tx_dict[key][rx_idxs]
+            
+        # Trim by max paths
+        if key not in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
+            tx_dict[key] = tx_dict[key][:, :max_paths, ...]
+        
+        print(f'shape = {tx_dict[key].shape}')
     return tx_dict
 
 def compute_channels(dataset, params):
     
     if params is None:
-        params_obj = Parameters()
+        params_obj = ChannelGenParameters()
     elif type(params) is str:
-        params_obj = Parameters(params)
+        params_obj = ChannelGenParameters(params)
     else:
         params_obj = params
         
@@ -222,19 +227,15 @@ def compute_channels(dataset, params):
 def validate_ch_gen_params(params):
 
     # Notify the user if some keyword is not used (likely set incorrectly)
-    additional_keys = compare_two_dicts(params, Parameters().get_params_dict())
+    additional_keys = compare_two_dicts(params, ChannelGenParameters().get_params_dict())
     if len(additional_keys):
         print('The following parameters seem unnecessary:')
         print(additional_keys)
     
-    params['dynamic_scenario'] = is_dynamic_scenario(params)
-    
-    params['data_version'] = check_data_version(params)
-    params[c.PARAMSET_SCENARIO_PARAMS_PATH] = get_scenario_params_path(params)
-
     # Active user IDs and related parameter
     assert_str = f"The subsampling parameter '{c.PARAMSET_USER_SUBSAMP}' needs to be in (0, 1]"
     assert params[c.PARAMSET_USER_SUBSAMP] > 0 and params[c.PARAMSET_USER_SUBSAMP] <= 1, assert_str
+    params[c.PARAMSET_ACTIVE_UE] = 0 ###### get rx_idxs
     
     # BS antenna format
     params[c.PARAMSET_ANT_BS_DIFF] = True
@@ -257,31 +258,33 @@ def validate_ch_gen_params(params):
                     
         else:
             params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION] = None                                            
-      
+    
+    n_active_ues = len(params[c.PARAMSET_ACTIVE_UE]) # TODO: active users
+    
     # UE Antenna Rotation
     if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys() and \
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None):
         rotation_shape = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION].shape
         cond_1 = len(rotation_shape) == 1 and rotation_shape[0] == 3
         cond_2 = len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2
-        cond_3 = rotation_shape[0] == len(params[c.PARAMSET_ACTIVE_UE])
+        cond_3 = rotation_shape[0] == n_active_ues
         
         assert_str = ('The UE antenna rotation must either be a 3D vector for ' +
                       'constant values or 3 x 2 matrix for random values')
         assert cond_1 or cond_2 or cond_3, assert_str
                 
         if len(rotation_shape) == 1 and rotation_shape[0] == 3:
-            rotation = np.zeros((len(params[c.PARAMSET_ACTIVE_UE]), 3))
+            rotation = np.zeros((n_active_ues, 3))
             rotation[:] =  params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
             params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = rotation
         elif (len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2):
             params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = np.random.uniform(
                               params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 0], 
                               params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 1], 
-                              (len(params[c.PARAMSET_ACTIVE_UE]), 3))
+                              (n_active_ues, 3))
     else:
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
-            np.array([None] * len(params[c.PARAMSET_ACTIVE_UE])) # List of None
+            np.array([None] * n_active_ues) # List of None
      
     # BS Antenna Radiation Pattern
     for i in range(len(params[c.PARAMSET_ACTIVE_BS])):
@@ -302,18 +305,6 @@ def validate_ch_gen_params(params):
                                              
     return params
 
-
-def is_dynamic_scenario(params):
-    return 'dyn' in params[c.PARAMSET_SCENARIO]
-
-def check_data_version(params):
-    v3_params_path = get_scenario_params_path(params)
-    return os.path.isfile(v3_params_path)
-    
-    
-def get_scenario_params_path(params):
-    folder_path = os.path.abspath(params[c.PARAMSET_DATASET_FOLDER])
-    return os.path.join(folder_path, params[c.PARAMSET_SCENARIO], 'params.mat')
 
 def compare_two_dicts(dict1, dict2):
     
