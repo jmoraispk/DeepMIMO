@@ -23,12 +23,11 @@ INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
 
 
 # DeepMIMOv4 (saved) matrix names
-VNAME = 'data' # all variable names inside single variable matrices
-POS_MAT_NAME = 'pos'
+MAT_VAR_NAME = 'data' # all variable names inside single variable matrices
 
 
 
-# JTODO: make a list of available names for each variable
+POS_MAT_NAME = 'pos' ######## rename!
 
 ############# JTODO: separate constants before and after v4 ##################
 
