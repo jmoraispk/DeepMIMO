@@ -69,7 +69,7 @@ def paths_parser(file):
             data[c.AOD_AZ_PARAM_NAME][rx_i, path_idx] = np.float32(i9) # i9 = <departure phi(deg)>
             
             # Line 2 (Example: "Tx-D-R-Rx")
-            line = lines[line_idx+1] 
+            line = lines[line_idx+1]
             inter_strs = line.split('-')[1:-1] # Example: ['D', 'R']
             # Map to interactions integers ['2', '1'] and join -> '21'
             inter_total_s = ''.join([str(INTERACTIONS_MAP[i_str]) for i_str in inter_strs])
@@ -126,6 +126,36 @@ def get_max_n_paths(arr):
     n_max_paths = np.where(all_nans_per_path_idx)[0]
     return n_max_paths[0] if len(n_max_paths) else MAX_PATHS
 
+
+def extract_tx_pos(filename):
+    
+    # Read file
+    print('Reading paths file looking for tx position...')
+    
+    with open(filename, 'r') as file:
+        for _ in range(LINE_START-1):  # Skip the first 20 lines
+            next(file)
+            
+        n_rxs = int(file.readline())
+        
+        for _ in range(n_rxs):
+            
+            # The start of each "path info" is the rx idx and *number of paths*
+            rx_n_paths = int(file.readline().split()[1])
+            
+            if rx_n_paths == 0:
+                continue
+            
+            # Found user with paths!
+            for _ in range(3):  # Skip 3 lines with other info
+                next(file)
+            
+            # Read position
+            tx_pos_line = file.readline()
+            tx_pos = np.array([float(i) for i in tx_pos_line.split()], dtype=np.float32)
+            break
+    
+    return tx_pos
 
 if __name__ == '__main__':
     file = './P2Ms/ASU_campus_just_p2m/study_area_asu5/asu_campus.paths.t001_01.r004.p2m'

@@ -40,8 +40,9 @@ from typing import List, Dict
 
 from dataclasses import dataclass, asdict
 
-from .setup_parser import tokenize_file, parse_document # for .setup, .txrx, .city, .ter, .veg
-from .paths_parser import paths_parser # for paths.p2m
+from .setup_parser import tokenize_file, parse_document # for: .setup, .txrx, .city, .ter, .veg
+from .paths_parser import paths_parser, extract_tx_pos  # for: .paths
+#from .pl_parser import ..    # for: .pl
 
 from .city_vis import city_vis
 
@@ -201,36 +202,42 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 pl_p2m_file = os.path.join(p2m_folder, base_filename)
                 
                 # Pathloss P2M parser
-                xyz, _, path_loss = read_pl_p2m_file(pl_p2m_file)
+                rx_pos, _, path_loss = read_pl_p2m_file(pl_p2m_file)
                 
                 rx_set_idx = id_to_idx_map[rx_set_id]
                 tx_set_idx = id_to_idx_map[tx_set_id]
                 
-                # 2- extract positions from pathloss.p2m
-                pos_mat_file_name = get_mat_filename(c.POS_MAT_NAME, tx_set_idx, 
-                                                     tx_idx, rx_set_idx)
-                pos_file = output_folder + '/' + pos_mat_file_name
-                scipy.io.savemat(pos_file, {c.VNAME: xyz})
+                # 2- extract all rx positions from pathloss.p2m
+                rx_pos_mat_file_name = get_mat_filename(c.RX_POS_PARAM_NAME, 
+                                                        tx_set_idx, tx_idx, rx_set_idx)
+                rx_pos_file = output_folder + '/' + rx_pos_mat_file_name
+                scipy.io.savemat(rx_pos_file, {c.MAT_VAR_NAME: rx_pos})
                 
-                # 3- populate number of points in txrx sets
-                txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = xyz.shape[0]
+                # 3- update number of (active/inactive) points in txrx sets
+                txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = rx_pos.shape[0]
                 
-                # Save the indices of the active positions (can be done in .paths too)
                 inactive_idxs = np.where(path_loss == 250.)[0]
                 txrx_dict[f'txrx_set_{rx_set_idx}']['inactive_idxs'] = inactive_idxs
                 txrx_dict[f'txrx_set_{rx_set_idx}']['num_inactive_points'] = len(inactive_idxs)
                 
-                # Save All Path information
+                # 4- save all path information
                 # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
                 paths_p2m_file = pl_p2m_file.replace('.pl.', '.paths.')
                 data = paths_parser(paths_p2m_file)
                 
                 for key in data.keys():
-                    # save dict
-                    
                     mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
                     mat_file = output_folder + '/' + mat_filename
-                    scipy.io.savemat(mat_file, {c.VNAME: data[key]})
+                    scipy.io.savemat(mat_file, {c.MAT_VAR_NAME: data[key]})
+                
+                # 5- also read tx position from path files
+                # (this can be done in many ways, but this is easiest on code & user)
+                tx_pos = extract_tx_pos(paths_p2m_file)
+                tx_pos_mat_file_name = get_mat_filename(c.TX_POS_PARAM_NAME, 
+                                                        tx_set_idx, tx_idx, rx_set_idx)
+                tx_pos_file = output_folder + '/' + tx_pos_mat_file_name
+                scipy.io.savemat(tx_pos_file, {c.MAT_VAR_NAME: tx_pos})
+                # TODO: make function with these 3 lines?
                 
     # Export params.mat
     export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
