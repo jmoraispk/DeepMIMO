@@ -26,12 +26,10 @@ scen_name = 'simple_street_canyon_test'
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
 rx_sets = {2: 'all'}
-# Passing
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
 # rx_sets = [2]
-# Passing!
 
 # Option 3 - string 'all' (generates all points of all tx/rx sets) (default)
 # tx_sets = rx_sets = 'all'
@@ -96,7 +94,10 @@ dataset = dm.generate_old(params)
 #   - dataset.compute_num_paths()        -> unlocks 'num_paths'
 #   - dataset.compute_num_interactions() -> unlocks 'num_interactions'
 
-# 8- 
+# 8- Add dataset.info() to dataset
+
+# QUESTION: if there's only one BS, why the list? -> flatten dataset?
+
 # ---- (later) ----
 
 # 9- Make it work with ['chs'], ['channels'], etc..

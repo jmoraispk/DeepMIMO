@@ -10,6 +10,11 @@ Comparing DeepMIMOv3 with DeepMIMO(v4)
 import DeepMIMOv3 as dm_v3
 import deepmimo as dm
 
+# 1- add converter
+# 2- add new features to enhance user experience
+# 3- improve the format (simpler, more efficient, more user friendly)
+# 4- organize, document, and make all code readable
+
 #%% Creating a scenario (v3)
 
 # Generators not available in dm_v3
@@ -20,7 +25,7 @@ import deepmimo as dm
 dm.old_conv.v3('')
 
 # V4
-dm.create_scenario('')
+dm.create('')
 
 # Diff
 # - space
@@ -37,6 +42,11 @@ dm.create_scenario('')
 # V3
 
 # V4
+# dm.generate(scen)
+
+# or
+# dm.load()
+# dataset.compute_chs()
 
 # Diff
 # - speed: ... vs ...
