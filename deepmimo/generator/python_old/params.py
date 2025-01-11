@@ -47,7 +47,7 @@ class Parameters():
             c.PARAMSET_POLAR_EN: 0,
             c.PARAMSET_BS2BS: 0,
             
-            c.PARAMSET_FDTD: 1 , 
+            c.PARAMSET_FD_CH: 1 , 
             # OFDM if 1 
             # Time domain if 0.
             # In time domain, the channel of 

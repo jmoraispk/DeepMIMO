@@ -28,9 +28,9 @@ class ChannelGenParameters():
             c.PARAMSET_DOPPLER_EN: 0,
             c.PARAMSET_POLAR_EN: 0,
             
-            c.PARAMSET_FDTD: 1 , 
-            # OFDM if 1 
-            # Time domain if 0.
+            c.PARAMSET_FD_CH: 1, 
+            # OFDM channel if 1 (True)
+            # Time domain if 0 (False.
             # In time domain, the channel of 
             # RX antennas x TX antennas x Number of available paths is generated.
             # Each matrix of RX ant x TX ant represent the response matrix of that path.

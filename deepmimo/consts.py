@@ -51,7 +51,7 @@ PARAMSET_POLAR_EN = 'enable_dual_polar'
 PARAMSET_DOPPLER_EN = 'enable_doppler'
 
 PARAMSET_BS2BS = 'enable_BS2BS'
-PARAMSET_FDTD = 'OFDM_channels' # TD/OFDM
+PARAMSET_FD_CH = 'OFDM_channels' # TD/OFDM
 
 PARAMSET_OFDM = 'OFDM'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'

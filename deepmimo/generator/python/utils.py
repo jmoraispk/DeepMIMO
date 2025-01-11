@@ -15,14 +15,14 @@ def safe_print(text, stop_dur=0.3):
 class PathVerifier:
     def __init__(self, params):
         self.params = params
-        if self.params[c.PARAMSET_FDTD]: # IF OFDM
+        if self.params[c.PARAMSET_FD_CH]: # IF OFDM
             Ts = 1 / (params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BW]*c.PARAMSET_OFDM_BW_MULT)
             self.FFT_duration = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_NUM] * Ts
             self.max_ToA = 0
             self.path_ratio_FFT = []
     
     def verify_path(self, ToA, power):
-        if self.params[c.PARAMSET_FDTD]: # OFDM CH
+        if self.params[c.PARAMSET_FD_CH]: # OFDM CH
             m_toa = np.max(ToA)
             self.max_ToA = max(self.max_ToA, m_toa)
             
@@ -31,7 +31,7 @@ class PathVerifier:
                 self.path_ratio_FFT.append( sum(power[violating_paths])/sum(power) )
                         
     def notify(self):
-        if self.params[c.PARAMSET_FDTD]: # IF OFDM
+        if self.params[c.PARAMSET_FD_CH]: # IF OFDM
             avg_ratio_FFT = 0
             if len(self.path_ratio_FFT) != 0:
                 avg_ratio_FFT = np.mean(self.path_ratio_FFT)*100

@@ -21,7 +21,7 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
     M_rx = np.prod(rx_ant_params[c.PARAMSET_ANT_SHAPE])
     ant_rx_ind = ant_indices(rx_ant_params[c.PARAMSET_ANT_SHAPE])
     
-    if  params[c.PARAMSET_FDTD]:
+    if  params[c.PARAMSET_FD_CH]:
         channel = np.zeros((len(raydata), M_rx, M_tx, len(subcarriers)), dtype = np.csingle)
     else:
         channel = np.zeros((len(raydata), M_rx, M_tx, params[c.PARAMSET_NUM_PATHS]), dtype = np.csingle)
@@ -78,7 +78,7 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
                                      dod_phi = dod_phi)
         raydata[i][c.OUT_PATH_RX_POW] = power
         
-        if  params[c.PARAMSET_FDTD]: # OFDM
+        if  params[c.PARAMSET_FD_CH]: # OFDM
             path_const = path_gen.generate(raydata[i], Ts)
             
             # The next step is to be defined
@@ -170,7 +170,7 @@ def generate_MIMO_channel_rx_ind(raydata, params, tx_ant_params, rx_ant_params):
                                      dod_phi = dod_phi)
         raydata[i][c.OUT_PATH_RX_POW] = power
         
-        if  params[c.PARAMSET_FDTD]: # OFDM
+        if  params[c.PARAMSET_FD_CH]: # OFDM
             path_const = path_gen.generate(raydata[i], Ts)
             
             # The next step is to be defined
