@@ -38,16 +38,15 @@ load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets}
 dataset = dm.load_scenario(scen_name, **load_params)
 # dataset[0].info() # -> bs to bs? bs to ue?
 
-# params = Parameters()
-# dataset['chs'] = dm.compute_chs(dataset, params)
-
 from pprint import pprint
 pprint(dataset)
 
+#%%
+params = dm.Parameters()
+dataset['chs'] = dm.compute_channels(dataset, params)
+
 # dataset.gen_channels()
-
-#dataset = dm.generate(params)
-
+# dataset = dm.generate(params) -> with both load and ch_gen
 #%% V3 Generation
 
 import deepmimo as dm
