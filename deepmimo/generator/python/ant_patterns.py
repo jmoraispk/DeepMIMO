@@ -24,7 +24,7 @@ class AntennaPattern():
                 rx_pattern = 'pattern_' + rx_pattern
                 self.rx_pattern_fn = globals()[rx_pattern]
         else:
-            raise NotImplementedError(f"The given '{rx_pattern}' antenna radiation pattern is not applicable.')
+            raise NotImplementedError(f"The given '{rx_pattern}' antenna radiation pattern is not applicable.")
     
     def apply(self, power, doa_theta, doa_phi, dod_theta, dod_phi):
         pattern = 1.
