@@ -94,7 +94,7 @@ def load_raytracing_scene(folder, rt_params,
                 dataset_dict[bs_idx] = load_tx_rx_raydata(folder,
                                                           tx_set_idx, rx_set_idx,
                                                           tx_idx, rx_idxs)
-
+    return dataset_dict
 
 def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str = 'tx'):
     """
@@ -185,7 +185,7 @@ def load_tx_rx_raydata(rayfolder, tx_set_idx, rx_set_idx, tx_idx, rx_idxs):
         
         if os.path.exists(mat_path):
             print(f'Loading {mat_filename}..')
-            tx_dict[key] = scipy.io.loadmat(mat_path)#[rx_idxs]
+            tx_dict[key] = scipy.io.loadmat(mat_path)['data']#[rx_idxs]
         else:
             print(f'File {mat_path} could not be found')
 

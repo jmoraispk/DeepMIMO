@@ -24,8 +24,8 @@ import deepmimo as dm
 scen_name = 'simple_street_canyon_test'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
-# tx_sets = {1: [0,1]}
-# rx_sets = {2: 'all'}
+tx_sets = {1: [0]}
+rx_sets = {2: 'all'}
 # ONE TEST LEFT: do tx_sets = [0, 1] to check if breaks
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
@@ -34,13 +34,15 @@ scen_name = 'simple_street_canyon_test'
 # Passing!
 
 # Option 3 - string 'all' (generates all points of all tx/rx sets) (default)
-tx_sets = rx_sets = 'all'
+# tx_sets = rx_sets = 'all'
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets}
 dataset = dm.load_scenario(scen_name, **load_params)
 
 from pprint import pprint
 pprint(dataset)
+
+# dataset[0].info() # -> bs to bs? bs to ue?
 
 # dataset.gen_channels()
 
@@ -71,21 +73,23 @@ dataset = dm.generate_old(params)
 # [DONE]
 
 # 3- Decouple channel generation from the dataset generation
+# [DONE]
 
 # 4- Add new (multi-txrx) way of generating data
-
 # tx_set = ...
 # Option 1: {1: [0,2,4], 2: [3,4,5,], 3: 'all'}
 # Option 2: [0, 1]
 # Option 3: 'all' (default)
+# [DONE]
 
 # 5- IMPLEMENT new structure of dataset and generate from new matrices
+# [DONE]
 
 # 6- Add new smart object: 
-#   - dataset.compute_channels()
-#   - dataset.compute_pl() -> unlocks 'pathloss'
-#   - dataset.compute_dists()
-#   - dataset.compute_num_paths()
+#   - dataset.compute_channels()         -> unlocks 'channels'
+#   - dataset.compute_pl()               -> unlocks 'pathloss'
+#   - dataset.compute_dists()            -> unlocks 'distance'
+#   - dataset.compute_num_paths()        -> unlocks 'num_paths'
 #   - dataset.compute_num_interactions() -> unlocks 'num_interactions'
 
 # ---- (later) ----
