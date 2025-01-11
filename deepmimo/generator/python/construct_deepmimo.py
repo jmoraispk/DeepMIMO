@@ -8,30 +8,25 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
     
     bandwidth = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BW] * c.PARAMSET_OFDM_BW_MULT
     
-    kd_tx = 2*np.pi*tx_ant_params[c.PARAMSET_ANT_SPACING]
-    kd_rx = 2*np.pi*rx_ant_params[c.PARAMSET_ANT_SPACING]
-    Ts = 1/bandwidth
+    kd_tx = 2 * np.pi * tx_ant_params[c.PARAMSET_ANT_SPACING]
+    kd_rx = 2 * np.pi * rx_ant_params[c.PARAMSET_ANT_SPACING]
+    Ts = 1 / bandwidth
     subcarriers = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(params, subcarriers)
     antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
                                     rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
 
     M_tx = np.prod(tx_ant_params[c.PARAMSET_ANT_SHAPE])
-    ant_tx_ind = ant_indices(tx_ant_params[c.PARAMSET_ANT_SHAPE])
-    
     M_rx = np.prod(rx_ant_params[c.PARAMSET_ANT_SHAPE])
+    
+    ant_tx_ind = ant_indices(tx_ant_params[c.PARAMSET_ANT_SHAPE])
     ant_rx_ind = ant_indices(rx_ant_params[c.PARAMSET_ANT_SHAPE])
     
-    fourth_dim = len(subcarriers) if params[c.PARAMSET_FDTD] else params[c.PARAMSET_NUM_PATHS]
-    channel = np.zeros((len(raydata), M_rx, M_tx, fourth_dim), dtype=np.csingle)
+    n_ues = len(ray_data)
+    last_ch_dim = len(subcarriers) if params[c.PARAMSET_FDTD] else params[c.PARAMSET_NUM_PATHS]
+    channel = np.zeros((n_ues, M_rx, M_tx, last_ch_dim), dtype=np.csingle)
     
-    LoS_status = np.zeros((len(raydata)), dtype=np.int8) - 2
-        
-    for i in tqdm(range(len(raydata)), desc='Generating channels'):
-        
-        if raydata[i][c.OUT_PATH_NUM]==0:
-            LoS_status[i] = -1
-            continue
+    for i in tqdm(range(n_ues), desc='Generating channels'):
         
         dod_theta, dod_phi = rotate_angles(rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
                                            theta=raydata[i][c.OUT_PATH_DOD_THETA],
@@ -41,6 +36,7 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
                                            theta=raydata[i][c.OUT_PATH_DOA_THETA],
                                            phi=raydata[i][c.OUT_PATH_DOA_PHI])
         
+        # Compute and apply FoV (field of view) - selects allowed angles
         FoV_tx = apply_FoV(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta, dod_phi)
         FoV_rx = apply_FoV(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta, doa_phi)
         FoV = np.logical_and(FoV_tx, FoV_rx)
@@ -55,11 +51,6 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
             else:
                 raydata[i][key] = raydata[i][key][FoV]
         
-        if raydata[i]['num_paths'] == 0:
-            LoS_status[i] = -1
-        else:
-            LoS_status[i] = raydata[i]['LoS'].sum()
-                
         array_response_TX = array_response(ant_ind=ant_tx_ind, 
                                            theta=dod_theta, 
                                            phi=dod_phi, 
@@ -75,6 +66,7 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
                                      doa_phi=doa_phi, 
                                      dod_theta=dod_theta, 
                                      dod_phi=dod_phi)
+        
         raydata[i][c.OUT_PATH_RX_POW] = power
         
         if  params[c.PARAMSET_FDTD]: # OFDM
@@ -93,7 +85,7 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
                 (array_response_RX[:, None, :] * array_response_TX[None, :, :] *
                  (np.sqrt(power) * np.exp(1j*np.deg2rad(raydata[i][c.OUT_PATH_PHASE])))[None, None, :])
 
-    return channel, LoS_status
+    return channel
 
 
 def array_response(ant_ind, theta, phi, kd):        
@@ -101,9 +93,9 @@ def array_response(ant_ind, theta, phi, kd):
     return np.exp(ant_ind@gamma.T)
     
 def array_response_phase(theta, phi, kd):
-    gamma_x = 1j*kd*np.sin(theta)*np.cos(phi)
-    gamma_y = 1j*kd*np.sin(theta)*np.sin(phi)
-    gamma_z = 1j*kd*np.cos(theta)
+    gamma_x = 1j * kd * np.sin(theta) * np.cos(phi)
+    gamma_y = 1j * kd * np.sin(theta) * np.sin(phi)
+    gamma_z = 1j * kd * np.cos(theta)
     return np.vstack([gamma_x, gamma_y, gamma_z]).T
  
 def ant_indices(panel_size):

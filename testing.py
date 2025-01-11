@@ -43,7 +43,7 @@ dataset = dm.load_scenario(scen_name, **load_params)
 
 #%%
 params = dm.ChannelGenParameters()
-dataset['chs'] = dm.compute_channels(dataset, params)
+dataset[1]['chs'] = dm.compute_channels(dataset[1], params)
 
 
 #%% V3 Generation
@@ -63,6 +63,24 @@ dataset = dm.generate_old(params)
 
 # 6- Make new DeepMIMO work with channel generation
 
+# IMPORTANT: There are functions inside compute_channels() that MODIFY the dataset
+# (I'll rename them to what I'd call them when implementing them outside)
+# - compute_angles_with_fov()            -> unlocks 'aoa_el_fov', ...
+# - compute_power_with_antenna_pattern() -> unlocks 'power_with_ant_pattern'
+    # (assumes pattern doesn't mess with polarizations)
+
+# DECISION:
+# The channel generation needs these quantities computed. 
+# In a first iteration, they will be left inside for now.
+# Afterwards, the channel_generation will try to access them and trigger a computation
+# in case they don't exist yet.
+
+# JTODO: make them explicitely available outside, so
+# people can use them WITHOUT computing the channels (and compare them with the originals!)
+
+
+
+
 # 7- Add dataset.info() to dataset (and documentation throughout)
 
 # QUESTION: if there's only one BS, why the list? -> flatten dataset?
@@ -72,6 +90,7 @@ dataset = dm.generate_old(params)
 # ---- (later) ----
 
 # 9- Add new smart object: 
+#   - dataset.compute_los_status()       -> unlocks 'los_status'
 #   - dataset.compute_channels()         -> unlocks 'channels'
 #   - dataset.compute_pl()               -> unlocks 'pathloss'
 #   - dataset.compute_dists()            -> unlocks 'distance'
@@ -92,6 +111,8 @@ dataset = dm.generate_old(params)
 
 # 12- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
 
+# 13- REFACTORING GENERATION: move validation into channel gen script
+
 # 13- Option to include (or not) interaction locations in dataset (3x more space and time needed)
 
 # 14- Enable loading x paths
@@ -99,6 +120,7 @@ dataset = dm.generate_old(params)
 # 15- Enable generating the channel only for R/D/... paths
 
 # 16- Enable generating only up to a given number of interactions
+
 
 #%% READ Setup
 

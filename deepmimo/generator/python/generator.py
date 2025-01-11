@@ -210,20 +210,17 @@ def compute_channels(dataset, params):
     np.random.seed(1001)
     
     params = params_obj.get_params_dict()
+    
+    # add active user and active BSs to the parameters
     validate_ch_gen_params(params)
     
-    num_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
-    for i in range(num_active_bs):
-        (dataset[i][c.DICT_UE_IDX][c.OUT_CHANNEL], 
-            dataset[i][c.DICT_UE_IDX][c.OUT_LOS]) = \
-            generate_MIMO_channel(raydata=dataset[i][c.DICT_UE_IDX][c.OUT_PATH], 
-                                  params=params, 
-                                  tx_ant_params=params[c.PARAMSET_ANT_BS][i], 
-                                  rx_ant_params=params[c.PARAMSET_ANT_UE])
-                
+    dataset[c.OUT_CHANNEL] = generate_MIMO_channel(raydata=dataset, # ..... this should have number of users
+                                                   params=params, # WHAT is this for?? OFDM PARAMS?
+                                                   tx_ant_params=params[c.PARAMSET_ANT_BS], 
+                                                   rx_ant_params=params[c.PARAMSET_ANT_UE])
+    
     return dataset
 
-# TODO: Move validation into another file
 def validate_ch_gen_params(params):
 
     # Notify the user if some keyword is not used (likely set incorrectly)
@@ -233,33 +230,20 @@ def validate_ch_gen_params(params):
         print(additional_keys)
     
     # Active user IDs and related parameter
-    assert_str = f"The subsampling parameter '{c.PARAMSET_USER_SUBSAMP}' needs to be in (0, 1]"
-    assert params[c.PARAMSET_USER_SUBSAMP] > 0 and params[c.PARAMSET_USER_SUBSAMP] <= 1, assert_str
     params[c.PARAMSET_ACTIVE_UE] = 0 ###### get rx_idxs
     
-    # BS antenna format
-    params[c.PARAMSET_ANT_BS_DIFF] = True
-    if type(params[c.PARAMSET_ANT_BS]) is dict: # Replicate BS Antenna for each active BS in a list
-        ant = params[c.PARAMSET_ANT_BS]
-        params[c.PARAMSET_ANT_BS] = []
-        for i in range(len(params[c.PARAMSET_ACTIVE_BS])):
-            params[c.PARAMSET_ANT_BS].append(ant)
-    else:
-        if len(params[c.PARAMSET_ACTIVE_BS]) == 1:
-            params[c.PARAMSET_ANT_BS_DIFF] = False 
-            
     # BS Antenna Rotation
     for i in range(len(params[c.PARAMSET_ACTIVE_BS])):
         if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_BS][i].keys() and \
             params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION] is not None):
             rotation_shape = params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION].shape
-            assert  (len(rotation_shape) == 1 and rotation_shape[0] == 3) \
-                    ,'The BS antenna rotation must be a 3D vector'
+            assert  (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
+                    'The BS antenna rotation must be a 3D vector'
                     
         else:
             params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION] = None                                            
     
-    n_active_ues = len(params[c.PARAMSET_ACTIVE_UE]) # TODO: active users
+    n_active_ues = len(params[c.PARAMSET_ACTIVE_UE])
     
     # UE Antenna Rotation
     if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys() and \
@@ -275,7 +259,7 @@ def validate_ch_gen_params(params):
                 
         if len(rotation_shape) == 1 and rotation_shape[0] == 3:
             rotation = np.zeros((n_active_ues, 3))
-            rotation[:] =  params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
+            rotation[:] = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
             params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = rotation
         elif (len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2):
             params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = np.random.uniform(
@@ -285,9 +269,10 @@ def validate_ch_gen_params(params):
     else:
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
             np.array([None] * n_active_ues) # List of None
-     
+    
+    n_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
     # BS Antenna Radiation Pattern
-    for i in range(len(params[c.PARAMSET_ACTIVE_BS])):
+    for i in range(n_active_bs):
         if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS][i].keys():
             assert_str = (f"The antenna radiation pattern for BS-{i} must have " + 
                           f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
