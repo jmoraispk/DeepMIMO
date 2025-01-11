@@ -1,5 +1,12 @@
 
 from . import consts as c
+
+
+MSG_DATASET_VAR_INTERACTIONS_LOC = \
+    """Location of interactions, Tx -> interaction_1 -> interction_2 -> .. -> Rx"""
+
+
+
 def info(s):
     if type(s) != str:
         help(s)
@@ -22,7 +29,11 @@ def info(s):
         c.RX_POS_PARAM_NAME: '...',
         c.TX_POS_PARAM_NAME: '...',
         c.INTERACTIONS_PARAM_NAME: '...', 
-        c.INTERACTIONS_POS_PARAM_NAME: '...',
+        c.INTERACTIONS_POS_PARAM_NAME: MSG_DATASET_VAR_INTERACTIONS_LOC,
         'materials': '...'
         }
+    
+    print(help_messages[s])
+    
+    return 
             
