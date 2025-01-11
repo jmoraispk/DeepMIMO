@@ -25,7 +25,7 @@ scen_name = 'simple_street_canyon_test'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {2: 'all'}
+rx_sets = {2: [1,2,3]}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -34,19 +34,18 @@ rx_sets = {2: 'all'}
 # Option 3 - string 'all' (generates all points of all tx/rx sets) (default)
 # tx_sets = rx_sets = 'all'
 
-load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets}
+load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
 dataset = dm.load_scenario(scen_name, **load_params)
 # dataset[0].info() # -> bs to bs? bs to ue?
 
-from pprint import pprint
-pprint(dataset)
+# from pprint import pprint
+# pprint(dataset)
 
 #%%
-params = dm.Parameters()
+params = dm.ChannelGenParameters()
 dataset['chs'] = dm.compute_channels(dataset, params)
 
-# dataset.gen_channels()
-# dataset = dm.generate(params) -> with both load and ch_gen
+
 #%% V3 Generation
 
 import deepmimo as dm
@@ -57,55 +56,49 @@ dataset = dm.generate_old(params)
 
 #%% Dream
 
+# ------
 # Wireless Insite IDXs = [3, 7, 8]
 # DeepMIMO (after conversion) TX/RX Sets: [1, 2, 3]
 # DeepMIMO (after generation) : only individual tx and rx indices
 
-# 0- Conversion is general. Make bindings for a general generation
-#    (by having an old and new version of the code and calling diff funcs)
-# [DONE]
-
-# 1- Make parameters optional in dm.generate (so we don't need to create params)
-# [DONE]
-
-# 2- Remove BS-BS specific function (use normal generation)
-# [DONE]
-
-# 3- Decouple channel generation from the dataset generation
-# [DONE]
-
-# 4- Add new (multi-txrx) way of generating data
-# tx_set = ...
-# Option 1: {1: [0,2,4], 2: [3,4,5,], 3: 'all'}
-# Option 2: [0, 1]
-# Option 3: 'all' (default)
-# [DONE]
-
-# 5- IMPLEMENT new structure of dataset and generate from new matrices
-# [DONE]
-
 # 6- Make new DeepMIMO work with channel generation
 
-# 7- Add new smart object: 
+# 7- Add dataset.info() to dataset (and documentation throughout)
+
+# QUESTION: if there's only one BS, why the list? -> flatten dataset?
+
+# 8 - Add option to load only active users
+
+# ---- (later) ----
+
+# 9- Add new smart object: 
 #   - dataset.compute_channels()         -> unlocks 'channels'
 #   - dataset.compute_pl()               -> unlocks 'pathloss'
 #   - dataset.compute_dists()            -> unlocks 'distance'
 #   - dataset.compute_num_paths()        -> unlocks 'num_paths'
 #   - dataset.compute_num_interactions() -> unlocks 'num_interactions'
 
-# 8- Add dataset.info() to dataset
 
-# QUESTION: if there's only one BS, why the list? -> flatten dataset?
+# 9.1) embed compute_channels in dataset (using the outside function?) -> dataset.gen_channels()
+# 9.2) make gen_channels() that computes all BSs (like dataset.gen_channels() vs dataset[0].gen_channels())
+#       where dataset.gen_channels() just does a for over the len of the dataset and calls gen_channels()
+# 9.3) make generate function that does the loading and channel gen.
+#       dataset = dm.generate(params) -> with both load and ch_gen
 
-# ---- (later) ----
 
-# 9- Make it work with ['chs'], ['channels'], etc..
-
-# 10- Simplified building save matrix & plots
+# 10- Save building matrix & plot building
 
 # 11- RUN BLACK to format all code (consistent)
 
 # 12- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
+
+# 13- Option to include (or not) interaction locations in dataset (3x more space and time needed)
+
+# 14- Enable loading x paths
+
+# 15- Enable generating the channel only for R/D/... paths
+
+# 16- Enable generating only up to a given number of interactions
 
 #%% READ Setup
 
@@ -126,10 +119,4 @@ def info(s):
     
     a = 'num_paths'
     b = 'Influences the sizes of the matrices aoa, aod, etc... and the generated channels'
-
-# 7) Generate scenario automatically for ASU and street canyon
-# 8) Save channels for validation
-# 9) Time conversion and Generation speeds to compare with new formats
-
-# 10) Redo Insite Converter to use the new format (and don't store empty users?)
 
