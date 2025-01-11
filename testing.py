@@ -26,7 +26,7 @@ scen_name = 'simple_street_canyon_test'
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
 rx_sets = {2: 'all'}
-# ONE TEST LEFT: do tx_sets = [0, 1] to check if breaks
+# Passing
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -38,11 +38,13 @@ rx_sets = {2: 'all'}
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets}
 dataset = dm.load_scenario(scen_name, **load_params)
+# dataset[0].info() # -> bs to bs? bs to ue?
+
+# params = Parameters()
+# dataset['chs'] = dm.compute_chs(dataset, params)
 
 from pprint import pprint
 pprint(dataset)
-
-# dataset[0].info() # -> bs to bs? bs to ue?
 
 # dataset.gen_channels()
 
@@ -85,22 +87,25 @@ dataset = dm.generate_old(params)
 # 5- IMPLEMENT new structure of dataset and generate from new matrices
 # [DONE]
 
-# 6- Add new smart object: 
+# 6- Make new DeepMIMO work with channel generation
+
+# 7- Add new smart object: 
 #   - dataset.compute_channels()         -> unlocks 'channels'
 #   - dataset.compute_pl()               -> unlocks 'pathloss'
 #   - dataset.compute_dists()            -> unlocks 'distance'
 #   - dataset.compute_num_paths()        -> unlocks 'num_paths'
 #   - dataset.compute_num_interactions() -> unlocks 'num_interactions'
 
+# 8- 
 # ---- (later) ----
 
-# 7- Make it work with ['chs'], ['channels'], etc..
+# 9- Make it work with ['chs'], ['channels'], etc..
 
-# 8- Simplified building save matrix & plots
+# 10- Simplified building save matrix & plots
 
-# 9- RUN BLACK to format all code (consistent)
+# 11- RUN BLACK to format all code (consistent)
 
-# 10- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
+# 12- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
 
 #%% READ Setup
 

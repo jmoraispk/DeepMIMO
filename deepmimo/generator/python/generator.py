@@ -113,7 +113,7 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
     valid_set_idxs = valid_tx_set_idxs if tx_or_rx == 'tx' else valid_rx_set_idxs
     set_str = 'Tx' if tx_or_rx == 'tx' else 'Rx'
     
-    info_str = "To see supported TX/RX sets run dm.info(<scenario_name>)"
+    info_str = "To see supported TX/RX sets and indices run dm.info(<scenario_name>)"
     if type(sets) is dict:
         for set_idx, idxs in sets.items():    
             # check the the tx/rx_set indices are valid
@@ -121,18 +121,20 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
                 raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
                                 + info_str)
             
+            all_idxs_available = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
             if type(idxs) is np.ndarray:
                 pass # correct
             elif type(idxs) is list:
                 sets[set_idx] = np.array(idxs)
             elif idxs == 'all':
-                sets[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+                sets[set_idx] = all_idxs_available
             else:
                 raise Exception('Only <list> of <np.ndarray> allowed as tx/rx sets indices')
                 
-            # JTODO: check that the specific tx/rx indices inside the sets are valid
-            # ... is list within list (without iteration! itertools?)... 
-            continue
+            # check that the specific tx/rx indices inside the sets are valid
+            if not set(idxs).issubset(all_idxs_available):
+                raise Exception(f'Some indices of {idxs} are not in {all_idxs_available}. '
+                                + info_str)
         sets_dict = sets
     elif type(sets) is list:
         # Generate all user indices
