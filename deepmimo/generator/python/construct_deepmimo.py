@@ -22,10 +22,9 @@ def generate_MIMO_channel(raydata, params, tx_ant_params, rx_ant_params):
     M_rx = np.prod(rx_ant_params[c.PARAMSET_ANT_SHAPE])
     ant_rx_ind = ant_indices(rx_ant_params[c.PARAMSET_ANT_SHAPE])
     
-    if  params[c.PARAMSET_FDTD]:
-        channel = np.zeros((len(raydata), M_rx, M_tx, len(subcarriers)), dtype=np.csingle)
-    else:
-        channel = np.zeros((len(raydata), M_rx, M_tx, params[c.PARAMSET_NUM_PATHS]), dtype=np.csingle)
+    fourth_dim = len(subcarriers) if params[c.PARAMSET_FDTD] else params[c.PARAMSET_NUM_PATHS]
+    channel = np.zeros((len(raydata), M_rx, M_tx, fourth_dim), dtype=np.csingle)
+    
     LoS_status = np.zeros((len(raydata)), dtype=np.int8) - 2
         
     for i in tqdm(range(len(raydata)), desc='Generating channels'):
