@@ -201,17 +201,14 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 base_filename = f'{proj_name}.pl.t{tx_id:03}_{tx_set_id:02}.r{rx_set_id:03}.p2m'
                 pl_p2m_file = os.path.join(p2m_folder, base_filename)
                 
-                # Pathloss P2M parser
+                # 2- extract all rx positions from pathloss.p2m
                 rx_pos, _, path_loss = read_pl_p2m_file(pl_p2m_file)
                 
                 rx_set_idx = id_to_idx_map[rx_set_id]
                 tx_set_idx = id_to_idx_map[tx_set_id]
                 
-                # 2- extract all rx positions from pathloss.p2m
-                rx_pos_mat_file_name = get_mat_filename(c.RX_POS_PARAM_NAME, 
-                                                        tx_set_idx, tx_idx, rx_set_idx)
-                rx_pos_file = output_folder + '/' + rx_pos_mat_file_name
-                scipy.io.savemat(rx_pos_file, {c.MAT_VAR_NAME: rx_pos})
+                save_mat(rx_pos, c.RX_POS_PARAM_NAME, output_folder, 
+                         tx_set_idx, tx_idx, rx_set_idx)
                 
                 # 3- update number of (active/inactive) points in txrx sets
                 txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = rx_pos.shape[0]
@@ -226,18 +223,13 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 data = paths_parser(paths_p2m_file)
                 
                 for key in data.keys():
-                    mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
-                    mat_file = output_folder + '/' + mat_filename
-                    scipy.io.savemat(mat_file, {c.MAT_VAR_NAME: data[key]})
+                    save_mat(data[key], key, output_folder, tx_set_idx, tx_idx, rx_set_idx)
                 
                 # 5- also read tx position from path files
-                # (this can be done in many ways, but this is easiest on code & user)
+                # (can be done in many ways, but this is easiest on code & user requirements)
                 tx_pos = extract_tx_pos(paths_p2m_file)
-                tx_pos_mat_file_name = get_mat_filename(c.TX_POS_PARAM_NAME, 
-                                                        tx_set_idx, tx_idx, rx_set_idx)
-                tx_pos_file = output_folder + '/' + tx_pos_mat_file_name
-                scipy.io.savemat(tx_pos_file, {c.MAT_VAR_NAME: tx_pos})
-                # TODO: make function with these 3 lines?
+                save_mat(tx_pos, c.RX_POS_PARAM_NAME, output_folder, 
+                         tx_set_idx, tx_idx, rx_set_idx)
                 
     # Export params.mat
     export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
@@ -254,6 +246,12 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
             city_vis(city_files[0])
         
     return scen_name
+
+def save_mat(data, data_key, output_folder, tx_set_idx, tx_idx, rx_set_idx):
+    mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
+    file_path = output_folder + '/' + mat_file_name
+    scipy.io.savemat(file_path, {c.MAT_VAR_NAME: data})
+    
 
 def get_id_to_idx_map(txrx_dict: Dict):
     ids = [txrx_dict[key]['id'] for key in txrx_dict.keys()]
