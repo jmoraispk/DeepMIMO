@@ -74,9 +74,6 @@ def steering_vec(array, phi=0, theta=0, spacing=0.5):
     resp = array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
     return resp / np.linalg.norm(resp)
 
-# TODO: add info field to dataset (so data like number of users per row doesn't 
-#       need to be read from the webstie). This way, we can make the arguments
-#       of this function defaults based on the dataset
 
 def uniform_sampling(sampling_div, n_rows, users_per_row):
     """
@@ -105,39 +102,6 @@ def uniform_sampling(sampling_div, n_rows, users_per_row):
     uniform_idxs = np.array([j + i*users_per_row for i in rows for j in cols])
     
     return uniform_idxs
-
-
-def trim_by_idx(dataset, idxs):
-    """
-    Returns a DeepMIMO dataset with only the selected user indices.
-
-    Parameters
-    ----------
-    dataset : DeepMIMO dataset (dictionary)
-        A dataset as the output of DeepMIMO.generate_data()
-    idxs : list or array
-        List of selected indices.
-
-    Returns
-    -------
-    dataset_t : DeepMIMO dataset (dictionary)
-        Trimmed dataset.
-    """
-    
-    if len(idxs) == dataset[0]['user']['location'].shape[0]:
-        return dataset
-    
-    dataset_t = []
-    for bs_idx in range(len(dataset)):
-        dataset_t.append({})
-        for key in dataset[bs_idx].keys():
-            dataset_t[bs_idx]['location'] = dataset[bs_idx]['location']
-            dataset_t[bs_idx]['user'] = {}
-            for key in dataset[bs_idx]['user']:
-                dataset_t[bs_idx]['user'][key] = dataset[bs_idx]['user'][key][idxs]
-        
-    return dataset_t
-
 
 
 class LinearPath():
