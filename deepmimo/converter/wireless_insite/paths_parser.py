@@ -130,7 +130,7 @@ def get_max_n_paths(arr):
 def extract_tx_pos(filename):
     
     # Read file
-    print('Reading paths file looking for tx position...')
+    print('Reading paths file looking for tx position... ', end='')
     
     with open(filename, 'r') as file:
         for _ in range(LINE_START-1):  # Skip the first 20 lines
@@ -155,6 +155,7 @@ def extract_tx_pos(filename):
             tx_pos = np.array([float(i) for i in tx_pos_line.split()], dtype=np.float32)
             break
     
+    print('Found it!')
     return tx_pos
 
 if __name__ == '__main__':
