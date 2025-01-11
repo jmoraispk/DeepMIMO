@@ -56,7 +56,7 @@ def extract_data_from_ray(ray_data, ids, params):
         pointer += 1 # First Path
         if user in ids:
             num_paths_read = min(num_paths_available, params[c.PARAMSET_NUM_PATHS])
-            path_limited_data_length = num_paths_read*4;
+            path_limited_data_length = num_paths_read*4
                 
             if num_paths_available>0:
                 data[c.OUT_PATH][j] = load_variables(num_paths_read=num_paths_read, 
