@@ -36,6 +36,8 @@ rx_sets = {2: [1,2,3]}
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
 dataset = dm.load_scenario(scen_name, **load_params)
+
+# make sure the rt_params are in each dataset
 # dataset[0].info() # -> bs to bs? bs to ue?
 
 # from pprint import pprint
@@ -43,8 +45,7 @@ dataset = dm.load_scenario(scen_name, **load_params)
 
 #%%
 params = dm.ChannelGenParameters()
-dataset[1]['chs'] = dm.compute_channels(dataset[1], params)
-
+dataset[0]['chs'] = dm.compute_channels(dataset[0], params)
 
 #%% V3 Generation
 
@@ -78,8 +79,12 @@ dataset = dm.generate_old(params)
 # JTODO: make them explicitely available outside, so
 # people can use them WITHOUT computing the channels (and compare them with the originals!)
 
+# NOTE 2: better to have an antenna "orientation" than an antenna "rotation"
 
-
+# NOTE 3: having doppler here will only bring trouble because it's RT/conversion dependent, 
+#         NOT channel dependent. Since there is only ONE fixed amount
+#         of Doppler that can be added, it will be confusing. Better remove it 
+#         for now and add it to the right place: generation (not conversion!)
 
 # 7- Add dataset.info() to dataset (and documentation throughout)
 
