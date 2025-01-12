@@ -103,7 +103,8 @@ class InsiteTxRxSet():
     rx_num_ant: int = 1
     
     dual_pol: bool = False # if '_dual-pol' in name
-    
+
+
 def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
     # P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
     
@@ -246,6 +247,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
             city_vis(city_files[0])
         
     return scen_name
+
 
 def save_mat(data, data_key, output_folder, tx_set_idx, tx_idx, rx_set_idx):
     mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
@@ -419,7 +421,6 @@ def read_setup(setup_file: str, verbose: bool):
 def read_txrx(txrx_file, verbose: bool):
     print(f'Reading txrx file: {os.path.basename(txrx_file)}')
     document = read_config_file(txrx_file)
-    n_tx, n_rx = 0, 0
     tx_ids, rx_ids = [], []
     txrx_objs = []
     for txrx_set_idx, key in enumerate(document.keys()):
