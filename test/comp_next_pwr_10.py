@@ -2,7 +2,9 @@
 """
 Created on Wed Jan  8 14:26:47 2025
 
-@author: jmora
+@author: joao
+
+test for compute_number_paths(.)
 """
 
 import numpy as np
