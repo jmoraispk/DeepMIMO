@@ -15,7 +15,7 @@ old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61],   'freq': 3.5e9}   # s
 
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                overwrite=True, 
-                               old=False,
+                               old=True,
                                old_params=old_params_dict) # V3 or V4 conversion flag
 #                              old has STATIC PARAMS! (asu scenario needs diff grids)
 
@@ -36,6 +36,7 @@ rx_sets = {2: 'all'}
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
 dataset = dm.load_scenario(scen_name, **load_params)
+dataset['load_params'] = load_params
 
 # dataset[0].info() # -> bs to bs? bs to ue?
 
@@ -47,7 +48,7 @@ params = dm.ChannelGenParameters()
 dataset['num_paths'] = dm.compute_num_paths(dataset)
 dataset['chs'] = dm.compute_channels(dataset, params)
 
-# ADD 'num_paths' computation requirement (to have a per-user) flag whether it's active.
+# ADD 'fov trim' and 'ant pat pwr' requirements to the compute channels
 
 #%% V3 Generation
 
@@ -56,6 +57,8 @@ scen_name = 'simple_street_canyon_test'
 params = dm.Parameters_old(scen_name)#asu_campus')
 # params.get_params_dict()['user_rows'] = np.arange(91)
 dataset = dm.generate_old(params)
+
+chs = dataset[0]['user']['channel']
 
 # TODOOOO: test PARAMSET_OFDM_LPF = 1! (crashing on the other.)
 
@@ -94,6 +97,7 @@ dataset = dm.generate_old(params)
 # 7 - Add option to load only active users
 
 # 8- Add dataset.info() to dataset (and documentation throughout)
+# dm.info('inter') (or dataset['inter'].info())
 
 # ---- (later) ----
 
@@ -134,6 +138,23 @@ dataset = dm.generate_old(params)
 # - To repeat back and forth: linpath3.append(linpath3.flip())
 # - Supposing the last position of linpath3 coincides with the first, it can be looped like:
 # linpath3.append(linpath3, linpath3, linpath3) or linpath3.repeat(3)
+
+# 18 - Add list of variables (keys) to load.
+# This will make the generation faster, leaner and customized (for space-constraint applications)
+# +++ Since only information is loaded, we can avoid downloading the scenario with
+# interactions locations! (and save 3x the speed and space requirements!)
+# If access is attempted via dataset['inter_loc'], we can explain how to add this
+# variable to the load chain, etc...
+
+# 19 - If anyone asks for aoa or aod, ask if they would like to concatenate them. 
+#      np.concatenate(dataset['aoa_az'], dataset['aoa_el'] )
+# dataset['aoa'] # N x PATHS x 2 (azimuth / elevation)
+# dataset['aoa'] = # concat...aoa_el / aoa_az
+
+# 20 - Add space requirements to auto downloader
+
+####### Obvious TODOs ######
+# 21 - Add dual-polarization AND multi-antenna support
 
 #%% READ Setup
 
