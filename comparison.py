@@ -56,7 +56,10 @@ dm.create('')
 #   vs
 #    - .pl and .paths (and only .paths if we didn't want positions without paths)
 # - fair speed (with channel gen): ... vs ...
-# - simpler API: access dataset[''][''] vs dataset[tx]['rx_loc']
+# - simpler and more consistent API
+#   - dataset['aoa']
+#   vs
+#   - dataset[0]['user']['paths'][0]['DoA_phi']
 # - gen features
 #   - generates all TX-RX sets by default
 #   - generates only selected users (not rows)
