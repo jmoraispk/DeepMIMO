@@ -4,6 +4,8 @@ from .generator.python_old.params import Parameters as Parameters_old
 
 from .generator.python.generator import load_scenario as load_scenario
 from .generator.python.generator import compute_channels as compute_channels
+from .generator.python.generator import compute_num_paths as compute_num_paths
+
 from .generator.python.params import ChannelGenParameters
 from .converter.converter import create_scenario
 from .info import info
