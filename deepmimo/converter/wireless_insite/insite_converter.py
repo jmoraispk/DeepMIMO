@@ -276,8 +276,7 @@ def read_pl_p2m_file(filename: str):
     # Define (regex) patterns to match numbers (optionally signed floats)
     re_data = r"-?\d+\.?\d*"
     
-    # If we want to preallocate matrices, count lines
-    # num_lines = sum(1 for _ in open(filename, 'rb'))
+    # To preallocate matrices, count lines: sum(1 for _ in open(filename, 'rb'))
     
     with open(filename, 'r') as fp:
         lines = fp.readlines()
