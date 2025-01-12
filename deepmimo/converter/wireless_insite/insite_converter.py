@@ -228,7 +228,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 # 5- also read tx position from path files
                 # (can be done in many ways, but this is easiest on code & user requirements)
                 tx_pos = extract_tx_pos(paths_p2m_file)
-                save_mat(tx_pos, c.RX_POS_PARAM_NAME, output_folder, 
+                save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, 
                          tx_set_idx, tx_idx, rx_set_idx)
                 
     # Export params.mat
