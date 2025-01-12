@@ -206,13 +206,6 @@ class LinearPath():
     def get_feature_names(self):
         return self.feature_names
     
-# TODO: add more LinearPath functions
-# - To append paths use, for example: linpath3.append(linpath1, linpath2)
-# - To repeat back and forth: linpath3.append(linpath3.flip())
-# - Supposing the last position of linpath3 coincides with the first, it can be looped like:
-# linpath3.append(linpath3, linpath3, linpath3) or linpath3.repeat(3)
-
-
 
 def get_idxs_in_xy_box(data_pos, x_min, x_max, y_min, y_max):
     """

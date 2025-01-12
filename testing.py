@@ -25,7 +25,7 @@ scen_name = 'simple_street_canyon_test'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {2: [1,2,3]}
+rx_sets = {2: 'all'}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -37,7 +37,6 @@ rx_sets = {2: [1,2,3]}
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
 dataset = dm.load_scenario(scen_name, **load_params)
 
-# make sure the rt_params are in each dataset
 # dataset[0].info() # -> bs to bs? bs to ue?
 
 # from pprint import pprint
@@ -45,7 +44,10 @@ dataset = dm.load_scenario(scen_name, **load_params)
 
 #%%
 params = dm.ChannelGenParameters()
-dataset[0]['chs'] = dm.compute_channels(dataset[0], params)
+dataset['num_paths'] = dm.compute_num_paths(dataset)
+dataset['chs'] = dm.compute_channels(dataset, params)
+
+# ADD 'num_paths' computation requirement (to have a per-user) flag whether it's active.
 
 #%% V3 Generation
 
@@ -54,6 +56,8 @@ scen_name = 'simple_street_canyon_test'
 params = dm.Parameters_old(scen_name)#asu_campus')
 # params.get_params_dict()['user_rows'] = np.arange(91)
 dataset = dm.generate_old(params)
+
+# TODOOOO: test PARAMSET_OFDM_LPF = 1! (crashing on the other.)
 
 #%% Dream
 
@@ -86,11 +90,10 @@ dataset = dm.generate_old(params)
 #         of Doppler that can be added, it will be confusing. Better remove it 
 #         for now and add it to the right place: generation (not conversion!)
 
-# 7- Add dataset.info() to dataset (and documentation throughout)
 
-# QUESTION: if there's only one BS, why the list? -> flatten dataset?
+# 7 - Add option to load only active users
 
-# 8 - Add option to load only active users
+# 8- Add dataset.info() to dataset (and documentation throughout)
 
 # ---- (later) ----
 
@@ -126,6 +129,11 @@ dataset = dm.generate_old(params)
 
 # 16- Enable generating only up to a given number of interactions
 
+# 17- Add more LinearPath functions
+# - To append paths use, for example: linpath3.append(linpath1, linpath2)
+# - To repeat back and forth: linpath3.append(linpath3.flip())
+# - Supposing the last position of linpath3 coincides with the first, it can be looped like:
+# linpath3.append(linpath3, linpath3, linpath3) or linpath3.repeat(3)
 
 #%% READ Setup
 
