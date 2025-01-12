@@ -1,6 +1,4 @@
 
-import os
-
 class PrintIfVerbose():
     def __init__(self, verbose):
         self.verbose = verbose
