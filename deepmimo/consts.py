@@ -21,15 +21,17 @@ TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
 RT_PARAMS_PARAM_NAME = 'rt_params'
+NUM_PATHS_PARAM_NAME = 'num_paths'
+PWR_LINEAR_PARAM_NAME = 'power_linear'
+
+LOAD_PARAMS_PARAM_NAME = 'load_params'
+LOAD_PARAM_MAX_PATH = 'max_paths'
 
 # DeepMIMOv4 (saved) matrix names
 MAT_VAR_NAME = 'data' # all variable names inside single variable matrices
 
 
-
-POS_MAT_NAME = 'pos' ######## rename!
-
-############# JTODO: separate constants before and after v4 ##################
+############# BEFORE and AFTER v4 ##################
 
 SCENARIOS_FOLDER = 'deepmimo_scenarios2'
 

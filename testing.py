@@ -31,7 +31,7 @@ rx_sets = {2: 'all'}
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
 dataset = dm.load_scenario(scen_name, **load_params)
-dataset['load_params'] = load_params
+dataset['load_params'] = load_params  # c.LOAD_PARAMS_PARAM_NAME
 
 # dataset[0].info() # -> bs to bs? bs to ue?
 
@@ -40,9 +40,12 @@ dataset['load_params'] = load_params
 
 #%%
 params = dm.ChannelGenParameters()
-dataset['num_paths'] = dm.compute_num_paths(dataset)
+dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
+dataset['power_linear'] = dm.utils.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
 dataset['chs'] = dm.compute_channels(dataset, params)
 
+chs2 = dataset['chs'] 
+# ADD dataset['power_linear']?
 # ADD 'fov trim' and 'ant pat pwr' requirements to the compute channels
 
 #%% V3 Generation

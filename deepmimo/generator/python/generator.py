@@ -95,8 +95,9 @@ def load_raytracing_scene(folder, rt_params, max_paths: int = 5,
                                                           tx_set_idx, rx_set_idx,
                                                           tx_idx, rx_idxs,
                                                           max_paths)
-    dataset_dict['rt_params'] = rt_params
-    return dataset_dict
+                dataset_dict[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
+    
+    return dataset_dict if len(dataset_dict) != 1 else dataset_dict[0]
 
 def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str = 'tx'):
     """
@@ -198,6 +199,32 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int,
         print(f'shape = {tx_dict[key].shape}')
     return tx_dict
 
+
+def compute_num_paths(dataset):
+    # any matrix with paths in last dim
+    max_paths = dataset[c.AOA_AZ_PARAM_NAME].shape[-1] # 
+    
+    nan_count_matrix = np.isnan(dataset[c.AOA_AZ_PARAM_NAME]).sum(axis=1)
+    
+    return max_paths - nan_count_matrix
+
+def compute_num_interactions(dataset):
+    
+    # NOTE: dm.info('inter') (or dataset['inter'].info())
+    # number of paths = number of digits in this array. 
+    
+    # Compute next power of 10 (fast way to know the number of digits
+    
+    # Zero = no bounce/interaction
+    result = np.zeros_like(dataset['inter'], dtype=int)
+    
+    # For non-zero values, calculate order
+    non_zero = dataset['inter'] > 0
+    result[non_zero] = np.floor(np.log10(dataset['inter'][non_zero])).astype(int) + 1
+    
+    # dataset['num_interaction'] = result
+    return result
+
 def compute_channels(dataset, params):
     
     if params is None:
@@ -211,17 +238,18 @@ def compute_channels(dataset, params):
     
     params = params_obj.get_params_dict()
     
-    # add active user and active BSs to the parameters
-    validate_ch_gen_params(params)
+    dataset['num_ues'] = dataset[c.RX_POS_PARAM_NAME].shape[0]
+    validate_ch_gen_params(params, n_active_ues=dataset['num_ues'])
     
-    dataset[c.OUT_CHANNEL] = generate_MIMO_channel(raydata=dataset, # ..... this should have number of users
-                                                   params=params, # WHAT is this for?? OFDM PARAMS?
-                                                   tx_ant_params=params[c.PARAMSET_ANT_BS], 
-                                                   rx_ant_params=params[c.PARAMSET_ANT_UE])
+    chs = generate_MIMO_channel(dataset=dataset,
+                                ofdm_params=params[c.PARAMSET_OFDM],
+                                tx_ant_params=params[c.PARAMSET_ANT_BS], 
+                                rx_ant_params=params[c.PARAMSET_ANT_UE],
+                                freq_domain=params[c.PARAMSET_FD_CH])
     
-    return dataset
+    return chs
 
-def validate_ch_gen_params(params):
+def validate_ch_gen_params(params, n_active_ues):
 
     # Notify the user if some keyword is not used (likely set incorrectly)
     additional_keys = compare_two_dicts(params, ChannelGenParameters().get_params_dict())
@@ -229,25 +257,16 @@ def validate_ch_gen_params(params):
         print('The following parameters seem unnecessary:')
         print(additional_keys)
     
-    # Active user IDs and related parameter
-    params[c.PARAMSET_ACTIVE_UE] = 0 ###### get rx_idxs
-    
     # BS Antenna Rotation
-    for i in range(len(params[c.PARAMSET_ACTIVE_BS])):
-        if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_BS][i].keys() and \
-            params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION] is not None):
-            rotation_shape = params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION].shape
-            assert  (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
-                    'The BS antenna rotation must be a 3D vector'
-                    
-        else:
-            params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_ROTATION] = None                                            
-    
-    n_active_ues = len(params[c.PARAMSET_ACTIVE_UE])
+    if c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_BS].keys():
+        rotation_shape = params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION].shape
+        assert  (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
+                'The BS antenna rotation must be a 3D vector'
+    else:
+        params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None                                            
     
     # UE Antenna Rotation
-    if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys() and \
-        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None):
+    if c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys():
         rotation_shape = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION].shape
         cond_1 = len(rotation_shape) == 1 and rotation_shape[0] == 3
         cond_2 = len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2
@@ -270,19 +289,17 @@ def validate_ch_gen_params(params):
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
             np.array([None] * n_active_ues) # List of None
     
-    n_active_bs = len(params[c.PARAMSET_ACTIVE_BS])
     # BS Antenna Radiation Pattern
-    for i in range(n_active_bs):
-        if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS][i].keys():
-            assert_str = (f"The antenna radiation pattern for BS-{i} must have " + 
-                          f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
-            assert params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
-        else:
-            params[c.PARAMSET_ANT_BS][i][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
+    if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys():
+        assert_str = (f"The BS antenna radiation pattern must have " + 
+                      f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
+        assert params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
+    else:
+        params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
                      
     # UE Antenna Radiation Pattern
     if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_UE].keys():
-        assert_str = ("The antenna radiation pattern for UEs must have one of the " + 
+        assert_str = ("The UE antenna radiation pattern must have one of the " + 
                       f"following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
         assert params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
     else:
