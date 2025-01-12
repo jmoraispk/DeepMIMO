@@ -1,8 +1,3 @@
-#%%
-# The directives below are for ipykernel to auto reload updated modules (e.g. in vscode)
-# %reload_ext autoreload
-# %autoreload 2
-
 #%% V3 & V4 Conversion
 
 import deepmimo as dm
