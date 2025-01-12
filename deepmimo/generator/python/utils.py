@@ -44,7 +44,7 @@ class PathVerifier:
 
 ################################## For User ###################################
 
-def dbm2pow(val):
+def dbm2watt(val):
     return 10**(val/10 - 3)
 
 def steering_vec(array, phi=0, theta=0, spacing=0.5):

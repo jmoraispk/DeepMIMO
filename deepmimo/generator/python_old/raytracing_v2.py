@@ -2,7 +2,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 from ... import consts as c
-from .utils import PathVerifier, dbm2pow
+from .utils import PathVerifier, dbm2watt
 import scipy.io
 
 def read_raytracing(bs_id, params, user=True):
@@ -100,7 +100,7 @@ def load_variables(num_paths_read, path_DoD, path_DoA, path_CIR, LoS_status, pat
     aux[0] = LoS_status
     user_data[c.OUT_PATH_LOS] = aux
     
-    user_data[c.OUT_PATH_RX_POW] = dbm2pow(path_CIR[3::4] + 30 - params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_TX_POW])
+    user_data[c.OUT_PATH_RX_POW] = dbm2watt(path_CIR[3::4] + 30 - params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_TX_POW])
     path_verifier.verify_path(user_data[c.OUT_PATH_TOA], user_data[c.OUT_PATH_RX_POW])
     return user_data
 
