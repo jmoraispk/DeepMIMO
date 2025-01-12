@@ -20,7 +20,7 @@ RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
-
+RT_PARAMS_PARAM_NAME = 'rt_params'
 
 # DeepMIMOv4 (saved) matrix names
 MAT_VAR_NAME = 'data' # all variable names inside single variable matrices
