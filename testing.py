@@ -112,7 +112,7 @@ dataset = dm.generate_old(params)
 
 # 10- Save building matrix & plot building
 
-# 11- RUN BLACK to format all code (consistent)
+# 11- RUN RUFF to format all code (consistently - https://github.com/astral-sh/ruff)
 
 # 12- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
 
