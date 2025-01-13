@@ -87,7 +87,7 @@ def generate_MIMO_channel(dataset,
             path_const = path_gen.generate(pwr=power, #dataset[c.PWR_PARAM_NAME][i],
                                            toa=dataset[c.TOA_PARAM_NAME][i],
                                            phs=dataset[c.PHASE_PARAM_NAME][i],
-                                           Ts=Ts)
+                                           Ts=Ts)[:dataset['num_paths'][i]]
             
             channel[i] = np.sum(array_response_RX[:, None, None, :] * 
                                 array_response_TX[None, :, None, :] * 
