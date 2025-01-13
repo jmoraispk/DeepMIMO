@@ -41,10 +41,9 @@ dataset['load_params'] = load_params  # c.LOAD_PARAMS_PARAM_NAME
 #%%
 params = dm.ChannelGenParameters()
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
-dataset['power_linear'] = dm.utils.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
+dataset['power_linear'] = dm.utils.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
 dataset['chs'] = dm.compute_channels(dataset, params)
 
-chs2 = dataset['chs'] 
 # ADD dataset['power_linear']?
 # ADD 'fov trim' and 'ant pat pwr' requirements to the compute channels
 
@@ -54,9 +53,9 @@ import deepmimo as dm
 scen_name = 'simple_street_canyon_test'
 params = dm.Parameters_old(scen_name)#asu_campus')
 # params.get_params_dict()['user_rows'] = np.arange(91)
-dataset = dm.generate_old(params)
+dataset2 = dm.generate_old(params)
 
-chs = dataset[0]['user']['channel']
+chs2 = dataset2[0]['user']['channel']
 
 # TODOOOO: test PARAMSET_OFDM_LPF = 1! (crashing on the other.)
 
@@ -67,7 +66,7 @@ chs = dataset[0]['user']['channel']
 # DeepMIMO (after conversion) TX/RX Sets: [1, 2, 3]
 # DeepMIMO (after generation) : only individual tx and rx indices
 
-# 6- Make new DeepMIMO work with channel generation
+# 6- Make new DeepMIMO work with channel generation [DONE]
 
 # IMPORTANT: There are functions inside compute_channels() that MODIFY the dataset
 # (I'll rename them to what I'd call them when implementing them outside)
