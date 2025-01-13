@@ -291,7 +291,7 @@ def validate_ch_gen_params(params, n_active_ues):
     
     # BS Antenna Radiation Pattern
     if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys():
-        assert_str = (f"The BS antenna radiation pattern must have " + 
+        assert_str = ("The BS antenna radiation pattern must have " + 
                       f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
         assert params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
     else:
