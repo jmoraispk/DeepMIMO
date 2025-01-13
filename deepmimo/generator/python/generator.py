@@ -1,16 +1,48 @@
 import os
-import copy
 import numpy as np
 
 from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel
-from .utils import safe_print
+
+from .utils import dbm2watt
 from .params import ChannelGenParameters
 from .downloader import download_scenario_handler, extract_scenario
 import scipy.io
 from typing import List, Dict
 
 from ...general_utilities import get_mat_filename
+
+def generate(scen_name: str, load_params: Dict = {}, 
+             ch_gen_params = ChannelGenParameters()):
+    
+    if len(load_params) == 0:
+        # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
+        tx_sets = {1: [0]}
+        rx_sets = {2: 'active'}
+        
+        # Option 2 - lists with tx/rx set (assumes all points inside the set)
+        # tx_sets = [1]
+        # rx_sets = [2]
+        
+        # Option 3 - string 'all' (generates all points of all tx/rx sets) (default)
+        # tx_sets = rx_sets = 'all'
+        
+        load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
+    
+    dataset = load_scenario(scen_name, **load_params)
+    
+    # Add load params to dataset
+    dataset['load_params'] = load_params  # c.LOAD_PARAMS_PARAM_NAME
+    
+    # dataset.info() # print available tx-rx information
+    
+    # Compute num_paths and power_linear - necessary for channel generation
+    dataset['num_paths'] = compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
+    dataset['power_linear'] = dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
+    dataset['channel'] = compute_channels(dataset, ch_gen_params)
+    
+    return dataset
+
 
 def load_scenario(scen_name: str, **load_params):
     if '\\' in scen_name or '/' in scen_name:
@@ -129,10 +161,17 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
                 pass # correct
             elif type(idxs) is list:
                 sets[set_idx] = np.array(idxs)
-            elif idxs == 'all':
-                sets[set_idx] = all_idxs_available
+            elif type(idxs) is str:
+                if idxs == 'all':
+                    sets[set_idx] = all_idxs_available
+                elif idxs == 'active':
+                    inactive_idx = rt_params[f'txrx_set_{set_idx}']['inactive_idxs']
+                    sets[set_idx] = np.array(list(set(all_idxs_available.tolist()) - 
+                                                  set(inactive_idx.tolist())))
+                else:
+                    raise Exception(f"String '{idxs}' not recognized for tx/rx indices " )
             else:
-                raise Exception('Only <list> of <np.ndarray> allowed as tx/rx sets indices')
+                raise Exception('Only <list> of <np.ndarray> allowed as tx/rx indices')
                 
             # check that the specific tx/rx indices inside the sets are valid
             if not set(sets[set_idx]).issubset(set(all_idxs_available.tolist())):
@@ -266,7 +305,8 @@ def validate_ch_gen_params(params, n_active_ues):
         params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None                                            
     
     # UE Antenna Rotation
-    if c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys():
+    if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys() and \
+        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None):
         rotation_shape = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION].shape
         cond_1 = len(rotation_shape) == 1 and rotation_shape[0] == 3
         cond_2 = len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2
@@ -290,7 +330,8 @@ def validate_ch_gen_params(params, n_active_ues):
             np.array([None] * n_active_ues) # List of None
     
     # BS Antenna Radiation Pattern
-    if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys():
+    if (c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys() and \
+        params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] is not None):
         assert_str = ("The BS antenna radiation pattern must have " + 
                       f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
         assert params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str

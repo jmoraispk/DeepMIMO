@@ -10,7 +10,7 @@ old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61],   'freq': 3.5e9}   # s
 
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                overwrite=True, 
-                               old=True,
+                               old=False,
                                old_params=old_params_dict) # V3 or V4 conversion flag
 #                              old has STATIC PARAMS! (asu scenario needs diff grids)
 
@@ -20,7 +20,7 @@ scen_name = 'simple_street_canyon_test'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {2: 'all'}
+rx_sets = {2: 'active'}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -33,17 +33,23 @@ load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
 dataset = dm.load_scenario(scen_name, **load_params)
 dataset['load_params'] = load_params  # c.LOAD_PARAMS_PARAM_NAME
 
-# dataset[0].info() # -> bs to bs? bs to ue?
+dataset.info() # print available tx-rx information
 
-# from pprint import pprint
-# pprint(dataset)
+#%%
+from pprint import pprint
+pprint(dataset)
 
 #%%
 params = dm.ChannelGenParameters()
-dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
-dataset['power_linear'] = dm.utils.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
-dataset['chs'] = dm.compute_channels(dataset, params)
 
+# num_paths and power_linear are necessary for channel
+dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
+dataset['power_linear'] = dm.utils.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
+dataset['channel'] = dm.compute_channels(dataset, params)
+
+#%%
+import deepmimo as dm
+dataset = dm.generate(scen_name)
 # ADD dataset['power_linear']?
 # ADD 'fov trim' and 'ant pat pwr' requirements to the compute channels
 
@@ -66,7 +72,8 @@ chs2 = dataset2[0]['user']['channel']
 # DeepMIMO (after conversion) TX/RX Sets: [1, 2, 3]
 # DeepMIMO (after generation) : only individual tx and rx indices
 
-# 6- Make new DeepMIMO work with channel generation [DONE]
+# 6- Make new DeepMIMO work with channel generation 
+# [DONE]
 
 # IMPORTANT: There are functions inside compute_channels() that MODIFY the dataset
 # (I'll rename them to what I'd call them when implementing them outside)
@@ -93,10 +100,10 @@ chs2 = dataset2[0]['user']['channel']
 
 # 7 - Add option to load only active users
 
+# ---- (later) ----
+
 # 8- Add dataset.info() to dataset (and documentation throughout)
 # dm.info('inter') (or dataset['inter'].info())
-
-# ---- (later) ----
 
 # 9- Add new smart object: 
 #   - dataset.compute_los_status()       -> unlocks 'los_status'
