@@ -4,11 +4,8 @@ Created on Tue Jan  7 11:16:57 2025
 
 @author: joao
 
-Comparing DeepMIMOv3 with DeepMIMO(v4)
+Comparing DeepMIMO v3 vs v4
 """
-
-import DeepMIMOv3 as dm_v3
-import deepmimo as dm
 
 # Objectives of v4:
 #   1- add converter(s)
@@ -37,36 +34,37 @@ old_params_dict = {'num_bs': 1, 'user_grid': [1, 411, 321], 'freq': 3.5e9} # asu
 t1 = time.time()
 
 # V3
-# scen_name = dm.create_scenario(path_to_p2m_outputs, overwrite=True, 
-#                                old=True, old_params=old_params_dict)
+scen_name = dm.create_scenario(path_to_p2m_outputs, overwrite=True, 
+                               old=True, old_params=old_params_dict)
                                # old has STATIC PARAMS (manually defined)
 
 # V4
-scen_name = dm.create_scenario(path_to_p2m_outputs, overwrite=True)
+# scen_name = dm.create_scenario(path_to_p2m_outputs, overwrite=True)
 
 t2 = time.time()
 print(f'{t2 - t1:.2f}s')
 
-# Diff
-# - speed: 32.75s vs 8.51s
-# - space: vs 3.80 MB(*1) [vs 4.31 MB(*2) vs 12.2 MB(*3)]
+# Diff v3 vs v4 in ASU campus
+# - time: 32.75s vs 8.51s
+# - space: 42.6 MB vs 37.1 MB(*1) [vs 42.1 MB(*2) vs 132.2 MB(*3)]
 #   *1 = (same data)
 #   *2 = with interaction types but not locations
 #   *3 = all
-# - space (with interaction types and locations):  vs 
+#   (extra space is due to dictionary overhead. compute cost >> space)
 # - less necessary files for conversion: 
 #   - .cir, .doa, .dod, .pl, .paths[.t001_{tx_id}.r{rx_id}.p2m], 
 #   vs
-#    - .pl and .paths (and only .paths if we didn't want positions without paths)
-# - no intermediate files during generation
-# - ready to upload zipped to DeepMIMO database
-# - other:
+#   - .pl and .paths
+#    (only .paths if positions without paths were not needed)
+# - other advantages of v4:
+#   - no intermediate files during generation
+#   - ready to upload zipped to DeepMIMO database
 #   - outputs to deepmimo_scenarios
 #   - saves interactions and interactions types (R, D, S, T, F/X)
-#   - not yet supported: 
-#       - dynamic scenes (easy) 
-#       - dual polarization (= ray tracing multi antenna) (done poorly before)
-#       - doppler (done in the wrong place before)
+# - not yet supported: 
+#   - dynamic scenes (easy) 
+#   - dual polarization (= ray tracing multi antenna) (done poorly before)
+#   - doppler (done in the wrong place before)
 
 #%% Generating a scenario (v4)
 # scen_name = 'simple_street_canyon_test'
@@ -75,24 +73,22 @@ scen_name = 'asu_campus'
 t1 = time.time()
 
 # V3
-# params = dm.Parameters_old(scen_name)
-# dataset_old = dm.generate_old(params)
+params = dm.Parameters_old(scen_name)
+dataset_old = dm.generate_old(params)
 
 # V4
-dataset = dm.generate(scen_name) # wrapper to elementary operations load() and compute_chs()
+# dataset = dm.generate(scen_name) # wrapper to elementary operations load() and compute_chs()
 
 t2 = time.time()
 print(f'{t2 - t1:.2f}s')
 
-# Diff
-# - speed:
-#   - fair speed (with channel gen): ... vs ...
-#   - speed: ... vs ... (vs -> generating only active users)
+# Diff v3 vs v4
+# - speed (with channel gen): 13.57s vs 10.32 (all) vs 10.30s (only active users)
+#   (if channels are not generated, this takes ~0.5s per 100MB of data)
 # - simpler and more consistent API
-#   - dataset['aoa']
-#   vs
-#   - dataset[0]['user']['paths'][0]['DoA_phi']
-# - gen features
+#   - v3: dataset[0]['user']['paths'][0]['DoA_phi']
+#   - v4: dataset['aoa_az'] (later: dataset.aoa_az)
+# - new v4 generation features:
 #   - generates 'all' TX-RX sets by default
 #   - can generate only selected users (not rows)
 #   - downloads scenarios automatically by name (no need for manual download)
@@ -107,10 +103,4 @@ print(f'{t2 - t1:.2f}s')
 #       - compute_dist()
 #       - compute_channels() [done]
 #       - get_min_usr_spacing()
-#       - ...
-# - info features
-#   - scenario information
-#   - help about any function or parameter (including website ref)
-# - plot features
-#   - buildings
 

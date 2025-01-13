@@ -12,8 +12,7 @@ from typing import List, Dict
 
 from ...general_utilities import get_mat_filename
 
-def generate(scen_name: str, load_params: Dict = {}, 
-             ch_gen_params = ChannelGenParameters()):
+def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}):
     
     if len(load_params) == 0:
         # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
@@ -37,9 +36,11 @@ def generate(scen_name: str, load_params: Dict = {},
     # dataset.info() # print available tx-rx information
     
     # Compute num_paths and power_linear - necessary for channel generation
-    dataset['num_paths'] = compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
+    dataset['num_paths'] = compute_num_paths(dataset)    # c.NUM_PATHS_PARAM_NAME
     dataset['power_linear'] = dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
-    dataset['channel'] = compute_channels(dataset, ch_gen_params)
+    
+    channel_generation_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
+    dataset['channel'] = compute_channels(dataset, channel_generation_params)
     
     return dataset
 
