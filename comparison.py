@@ -10,11 +10,13 @@ Comparing DeepMIMOv3 with DeepMIMO(v4)
 import DeepMIMOv3 as dm_v3
 import deepmimo as dm
 
-# 1- add converter(s)
-# 2- add new features to enhance user experience
-# 3- improve the format (simpler, more efficient, more user friendly)
-#   - dictionary bottleneck ("Dicts of Lists >> Lists of Dicts")
-# 4- organize, document, and make all code readable -> prepare for wide-scale open source
+# Objectives of v4:
+#   1- add converter(s)
+#   2- add new features to enhance user experience
+#   3- improve DeepMIMO format (simpler, more efficient, more user-friendly)
+#      (avoids dictionary bottleneck -> "Dicts of Lists >> Lists of Dicts")
+#   4- Prepare for open-source: 
+#     - improve code cleaniness, organization, readibility and documentation
 
 #%% Creating a scenario (v3)
 
@@ -81,4 +83,4 @@ dm.create('')
 #   - buildings
 # - plot features
 #   - buildings
-#
+
