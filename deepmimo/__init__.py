@@ -9,6 +9,7 @@ from .generator.python.generator import compute_channels as compute_channels
 from .generator.python.generator import compute_num_paths as compute_num_paths
 from .generator.python.generator import compute_num_interactions as compute_num_interactions
 
+from .generator.python import visualization
 from .generator.python import utils
 
 from .generator.python.params import ChannelGenParameters
