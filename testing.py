@@ -72,18 +72,21 @@ import deepmimo as dm
 scen_name = dm.create_scenario(r'.\P2Ms\asu_campus\study_area_asu5')
 dataset = dm.generate(scen_name)
 #%%
-# load_params = {'tx_sets': [1], 'rx_sets': [2], 'max_paths': 5}
-# load_params = {'tx_sets': [1], 'rx_sets': {2: 'active'}}
-load_params = {'tx_sets': [1], 'rx_sets': {2: [1,2,3]}}
+# load_params = {'tx_sets': [1], 'rx_sets': [2], 'max_paths': 1}
+load_params = {'tx_sets': [1], 'rx_sets': {2: 'active'}}
+# load_params = {'tx_sets': [1], 'rx_sets': {2: [1,2,3]}}
 dataset = dm.load_scenario(scen_name, **load_params)
 # dataset = dm.load_scenario('city_10_austin')
 
 #%%
 
 import deepmimo as dm
+import matplotlib.pyplot as plt
 
 dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
                                bs_pos=dataset['tx_pos'].T)
+
+plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=100)
 
 #%% Dream
 
