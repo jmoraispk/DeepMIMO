@@ -150,7 +150,8 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                         tx_set_ids: List[int] = None, rx_set_ids: List[int] = None,
                         verbose: bool = True, overwrite: bool | None = None, 
                         vis_buildings: bool = False, 
-                        old: bool = False, old_params: Dict = {}):
+                        old: bool = False, old_params: Dict = {},
+                        scenario_name=''):
     if old: # v3
         scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params)
         return scen_name
@@ -158,8 +159,9 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # Setup output folder
     insite_sim_folder = os.path.dirname(p2m_folder)
     p2m_basename = os.path.basename(p2m_folder)
+    scenario_name = scenario_name if scenario_name else p2m_basename 
     
-    output_folder = os.path.join(insite_sim_folder, p2m_basename + '_deepmimo')
+    output_folder = os.path.join(insite_sim_folder, scenario_name + '_deepmimo')
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
     os.makedirs(output_folder, exist_ok=True)

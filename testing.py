@@ -9,13 +9,13 @@ if 'asu_campus' in path_to_p2m_outputs:
 else:
     old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61],   'freq': 3.5e9}   # simple canyon
 
-#scen_name = None if old else 
+old = True
+scen_name = path_to_p2m_outputs.split('\\')[2] + ('_old' if old else '')
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                overwrite=True, 
-                               old=False,
-                               old_params=old_params_dict)
-                               #scen_name='...') # V3 or V4 conversion flag
-#                              old has STATIC PARAMS! (asu scenario needs diff grids)
+                               old=old,
+                               old_params=old_params_dict,
+                               scenario_name=scen_name)
 
 #%% V4 
 import deepmimo as dm
@@ -48,8 +48,23 @@ params = dm.ChannelGenParameters()
 # num_paths and power_linear are necessary for channel
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
 dataset['power_linear'] = dm.utils.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
-dataset['channel'] = dm.compute_channels(dataset, params)
+dataset['channel'] = dm.compute_channels(dataset, params)     # c.CHANNEL_PARAM_NAME
+dataset['pathloss'] = dm.compute_pathloss(dataset['power'][10], 
+                                          dataset['phase'][10]) # c.PATHLOSS_PARAM_NAME
+dataset['distances'] = dm.compute_distances(dataset['rx_pos'], 
+                                            dataset['tx_pos'])  # c.DIST_PARAM_NAME
 
+
+# Aliases for convenience
+dataset['pwr'] = dataset['power']
+dataset['pwr_lin'] = dataset['power_linear']
+dataset['ch'] = dataset['channel']
+dataset['pl'] = dataset['pathloss']
+dataset['rx_loc'] = dataset['rx_pos']
+dataset['tx_loc'] = dataset['tx_pos']
+dataset['dist'] = dataset['distances']
+
+# TODO: eliminate c.MAT_VAR_NAME -> use the name of the variable!
 #%%
 import deepmimo as dm
 dataset = dm.generate(scen_name)
@@ -93,16 +108,11 @@ plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=100)
 
 #%% Dream
 
-# JTODO: load only some matrices (by name)
-    # 'aoa' -> 'aoa_az', 'aoa_el'
-    # 'aod' -> 'aod_az', 'aod_el'
-
 # 12- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
 # 13- REFACTORING GENERATION: move validation into channel gen script
-
-
 # 10- Save building matrix & plot building
 
+###############
 
 # -- PRINT INFO: (after loading)
 # Wireless Insite IDXs = [3, 7, 8]
