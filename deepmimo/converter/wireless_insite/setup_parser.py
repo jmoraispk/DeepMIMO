@@ -212,6 +212,18 @@ def parse_line_value(tokens):
     eat(tokens, NL_TOKEN)
     return tuple(values)
 
+def parse_file(file_path: str) -> dict:
+    """
+    Wrapper function to tokenize and parse a file.
+    
+    Args:
+        file_path: Path to the file to parse
+        
+    Returns:
+        Parsed document as a dictionary
+    """
+    return parse_document(tokenize_file(file_path))
+
 if __name__ == "__main__":
     tokens = tokenize_file("sample.txrx")
     document = parse_document(tokens)

@@ -38,71 +38,16 @@ from .ChannelDataFormatter import DeepMIMODataFormatter
 
 from typing import List, Dict
 
-from dataclasses import dataclass, asdict
-
-from .setup_parser import tokenize_file, parse_document # for: .setup, .txrx, .city, .ter, .veg
 from .paths_parser import paths_parser, extract_tx_pos  # for: .paths
-#from .pl_parser import ..    # for: .pl
 
 from .city_vis import city_vis
 
+from .insite_materials import read_materials
+from .insite_setup import read_setup
+from .insite_txrx import read_txrx, get_id_to_idx_map
+
 MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES 
-
-@dataclass
-class InsiteMaterial():
-    """
-    Materials in Wireless InSite.
-    
-    Notes:
-    - Diffuse model implemented from [1] + extended with cross-polarization scattering terms
-    - Diffuse scattering models explained in [2], slides 29-31. 
-    
-    - At present, all MATERIALS in Wireless InSite are nonmagnetic, 
-      and the permeability for all materials is that of free space 
-      (µ0 = 4π x 10e-7 H/m) [3]. 
-
-    Sources:
-        [1] A Diffuse Scattering Model for Urban Propagation Prediction - Vittorio Degli-Esposti 2001
-            https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=933491
-        [2] https://x.webdo.cc/userfiles/Qiwell/files/Remcom_Wireless%20InSite_5G_final.pdf
-        [3] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
-    """
-    # These field names match the names in Material section of the feature file
-    name: str = ''
-    diffuse_scattering_model: str = ''    # 'labertian', 'directive', 'directive_w_backscatter'
-    fields_diffusively_scattered: int = 0 # 0-1, fraction of incident fields that are scattered
-    cross_polarized_power: str = 0        # 0-1, fraction of the scattered field that is cross pol
-    directive_alpha: int = 0     # 1-10, defines how broad forward beam is
-    directive_beta: int = 0      # 1-10, defines how broad backscatter beam is
-    directive_lambda: int = 0    # 0-1, fraction of the scattered power in forward direction (vs back)
-    conductivity: int = 0        # >=0, conductivity
-    permittivity: int = 0        # >=0, permittivity
-    roughness: int = 0           # >=0, roughness
-    thickness: int = 0           # >=0, thickness [m]
-
-
-@dataclass
-class InsiteTxRxSet():
-    """
-    TX/RX set class
-    """
-    name: str = ''
-    id: int = 0   # Wireless Insite ID 
-    idx: int = 0  # TxRxSet index for saving after conversion and generation
-    # id -> idx example: [3, 5, 7] -> [1, 2, 3]
-    is_tx: bool = False
-    is_rx: bool = False
-    
-    num_points: int = 0    # all points
-    inactive_idxs: tuple = ()  # list of indices of points with at least one path
-    num_inactive_points: int = 0
-    
-    # Antenna elements of tx / rx
-    tx_num_ant: int = 1
-    rx_num_ant: int = 1
-    
-    dual_pol: bool = False # if '_dual-pol' in name
 
 
 def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
@@ -257,12 +202,6 @@ def save_mat(data, data_key, output_folder, tx_set_idx, tx_idx, rx_set_idx):
     scipy.io.savemat(file_path, {c.MAT_VAR_NAME: data})
     
 
-def get_id_to_idx_map(txrx_dict: Dict):
-    ids = [txrx_dict[key]['id'] for key in txrx_dict.keys()]
-    idxs = [i + 1 for i in range(len(ids))]
-    return {key:val for key, val in zip(ids, idxs)}
-
-
 def read_pl_p2m_file(filename: str):
     """
     Returns xyz, distance, pl from p2m file.
@@ -297,10 +236,6 @@ def read_pl_p2m_file(filename: str):
 
     return xyz_matrix, dist_matrix, path_loss_matrix
 
-
-def read_config_file(file):
-    return parse_document(tokenize_file(file))
-    
 
 def verify_sim_folder(sim_folder: str, verbose: bool):
     
@@ -339,217 +274,6 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True):
     shutil.rmtree(zip_temp_folder)
     
     vprint('Done')
-
-
-def read_setup(setup_file: str, verbose: bool):
-    document = read_config_file(setup_file)
-    
-    # Select study area 
-    prim = list(document.keys())[0]
-      
-    prim_vals = document[prim].values
-    antenna_vals = prim_vals['antenna'].values
-    waveform_vals = prim_vals['Waveform'].values
-    studyarea_vals = prim_vals['studyarea'].values
-    
-    setup_dict = {}
-    
-    # Antenna Settings
-    setup_dict['antenna'] = antenna_vals['type']
-    setup_dict['polarization'] = antenna_vals['polarization']
-    setup_dict['power_threshold'] = antenna_vals['power_threshold']
-    
-    # Waveform Settings
-    setup_dict['frequency'] = waveform_vals['CarrierFrequency']
-    setup_dict['bandwidth'] = waveform_vals['bandwidth']
-    
-    # Study Area Settings
-    model_vals = studyarea_vals['model'].values
-    match_list = ['initial_ray_mode', 'foliage_model',
-                  'foliage_attenuation_vert', 'foliage_attenuation_hor', 
-                  'terrain_diffractions', 'ray_spacing', 'max_reflections', 
-                  'initial_ray_mode']
-    defaults = {'ray_spacing': 0.25, 'terrain_diffractions': 0}
-    for key in match_list:
-        try:
-            setup_dict[key] = model_vals[key]
-        except KeyError:
-            print(f'key "{key}" not found in setup file')
-            setup_dict[key] = defaults[key]
-            
-    # Verify that the required outputs were generated
-    output_vals = model_vals['OutputRequests'].values
-    necessary_output_files_exist = True
-    necessary_outputs = ['Paths']
-    for output in necessary_outputs:
-        if not output_vals[output]:
-            print(f'One of the NECESSARY outputs is missing. Output missing: {output}')
-            necessary_output_files_exist = False
-            
-    if not necessary_output_files_exist:
-        raise Exception('Missing output file. Please rerun the simulation '
-                        'with the necessary outputs enabled.')
-    
-    # APG settings
-    apg_accel_vals = studyarea_vals['apg_acceleration'].values
-    setup_dict['apg_acceleration']   = apg_accel_vals['enabled']
-    setup_dict['workflow_mode']      = apg_accel_vals['workflow_mode']
-    # setup_dict['binary_output_mode'] = apg_accel_vals['binary_output_mode']
-    # setup_dict['binary_rate']        = apg_accel_vals['binary_rate']
-    # setup_dict['database_mode']      = apg_accel_vals['database_mode']
-    setup_dict['path_depth']         = apg_accel_vals['path_depth']
-    setup_dict['adjacency_distance'] = apg_accel_vals['adjacency_distance']
-    
-    # Diffuse scattering settings
-    diffuse_scat_vals = studyarea_vals['diffuse_scattering'].values
-    setup_dict['diffuse_scattering']     = diffuse_scat_vals['enabled']
-    setup_dict['diffuse_reflections']    = diffuse_scat_vals['diffuse_reflections']
-    setup_dict['diffuse_diffractions']   = diffuse_scat_vals['diffuse_diffractions']
-    setup_dict['diffuse_transmissions']  = diffuse_scat_vals['diffuse_transmissions']
-    setup_dict['final_interaction_only'] = diffuse_scat_vals['final_interaction_only']
-    
-    # Boundary settings
-    setup_dict['boundary_zmin'] = studyarea_vals['boundary']['zmin']
-    setup_dict['boundary_zmax'] = studyarea_vals['boundary']['zmax']
-    setup_dict['boundary_xmin'] = studyarea_vals['boundary'].data[0][0]
-    setup_dict['boundary_xmax'] = studyarea_vals['boundary'].data[2][0]
-    setup_dict['boundary_ymin'] = studyarea_vals['boundary'].data[0][1]
-    setup_dict['boundary_ymax'] = studyarea_vals['boundary'].data[2][1]
-    
-    return setup_dict
-
-    
-def read_txrx(txrx_file, verbose: bool):
-    print(f'Reading txrx file: {os.path.basename(txrx_file)}')
-    document = read_config_file(txrx_file)
-    tx_ids, rx_ids = [], []
-    txrx_objs = []
-    for txrx_set_idx, key in enumerate(document.keys()):
-        txrx = document[key]
-        txrx_obj = InsiteTxRxSet()
-        txrx_obj.name = key
-        
-        # Insite ID is used during ray tracing
-        insite_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
-                     else txrx.values['project_id'])
-        txrx_obj.id = insite_id 
-        # TX/RX set ID is used to abstract from the ray tracing configurations
-        # (how the DeepMIMO dataset will be saved and generated)
-        txrx_obj.idx = txrx_set_idx + 1 # 1-indexed
-        
-        # Locations
-        txrx_obj.loc_lat = txrx.values['location'].values['reference'].values['latitude']
-        txrx_obj.loc_lon = txrx.values['location'].values['reference'].values['longitude']
-        txrx_obj.coord_ref = txrx.values['location'].values['reference'].labels[1]
-        
-        # Is TX or RX?
-        txrx_obj.is_tx = txrx.values['is_transmitter']
-        txrx_obj.is_rx = txrx.values['is_receiver']
-        
-        # Antennas and Power
-        if txrx_obj.is_tx:
-            tx_ids += [insite_id]
-            tx_vals = txrx.values['transmitter']
-            assert tx_vals.values['power'] == 0.0, 'Tx power should be 0 dBm!'
-            txrx_obj.tx_num_ant = tx_vals['pattern'].values['antenna']
-        if txrx_obj.is_rx:
-            rx_ids += [insite_id]
-            rx_vals = txrx.values['receiver']
-            txrx_obj.rx_num_ant = rx_vals['pattern'].values['antenna']
-        
-        # The number of tx/rx points inside set is updated when reading the p2m
-        txrx_objs.append(txrx_obj)
-    
-    txrx_dict = {}
-    for obj in txrx_objs:
-        # Remove 'None' from dict (to be saved as .mat)
-        obj_dict = {key: val for key, val in asdict(obj).items() if val is not None}
-        
-        # Index separate txrx-sets based on p_id
-        txrx_dict = {**txrx_dict, **{f'txrx_set_{obj.idx}': obj_dict}}
-
-    return tx_ids, rx_ids, txrx_dict
-
-
-def read_material_files(files: List[str], verbose: bool):
-    if verbose:
-        print(f'Reading materials in {[os.path.basename(f) for f in files]}')
-    
-    # Extract materials for each file
-    material_list = []
-    for file in files:
-        material_list += read_single_material_file(file, verbose)
-
-    # Filter the list of materials so they are unique
-    unique_mat_list = make_mat_list_unique(material_list)
-    
-    return unique_mat_list
-
-
-def read_single_material_file(file: str, verbose: bool):
-    document = read_config_file(file)
-    direct_fields = ['diffuse_scattering_model', 'fields_diffusively_scattered', 
-                     'cross_polarized_power', 'directive_alpha',
-                     'directive_beta', 'directive_lambda']
-    dielectric_fields = ['conductivity', 'permittivity', 'roughness', 'thickness']
-    
-    mat_objs = []
-    for prim in document.keys():
-        materials = document[prim].values['Material']
-        materials = [materials] if type(materials) != list else materials
-        for mat in materials:
-            material_obj = InsiteMaterial()
-            material_obj.name = mat.name
-            for field in direct_fields:
-                setattr(material_obj, field, mat.values[field])
-            
-            for field in dielectric_fields:
-                setattr(material_obj, field, mat.values['DielectricLayer'].values[field])
-            
-            mat_objs += [material_obj]
-
-    return mat_objs
-
-
-def make_mat_list_unique(mat_list):
-    
-    n_mats = len(mat_list)
-    idxs_to_discard = []
-    for i1 in range(n_mats):
-        for i2 in range(n_mats):
-            if i1 == i2:
-                continue
-            if mat_list[i1].get_dict() == mat_list[i2].get_dict():
-                idxs_to_discard.append(i2)
-
-    for idx in sorted(np.unique(idxs_to_discard), reverse=True):
-        del mat_list[idx]
-    
-    return mat_list
-
-
-def read_materials(files_in_sim_folder, verbose):
-
-    city_files = cu.ext_in_list('.city', files_in_sim_folder)
-    ter_files  = cu.ext_in_list('.ter', files_in_sim_folder)
-    veg_files  = cu.ext_in_list('.veg', files_in_sim_folder)
-    fpl_files  = cu.ext_in_list('.flp', files_in_sim_folder)
-    obj_files  = cu.ext_in_list('.obj', files_in_sim_folder)
-    
-    city_materials = read_material_files(city_files, verbose)
-    ter_materials = read_material_files(ter_files, verbose)
-    veg_materials = read_material_files(veg_files, verbose)
-    floor_plan_materials = read_material_files(fpl_files, verbose)
-    obj_materials = read_material_files(obj_files, verbose)
-
-    materials_dict = {'city': city_materials, 
-                      'terrain': ter_materials,
-                      'vegetation': veg_materials,
-                      'floorplans': floor_plan_materials,
-                      'obj_materials': obj_materials}
-    if verbose:
-        pprint(materials_dict)
-    return materials_dict
 
 
 def export_params_dict(output_folder: str, setup_dict: Dict = {},
