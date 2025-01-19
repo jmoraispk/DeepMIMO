@@ -46,13 +46,25 @@ def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}):
 
 
 def load_scenario(scen_name: str, **load_params):
+    """Load a DeepMIMO scenario with specified parameters.
+    
+    Args:
+        scen_name (str): Name or path of the scenario
+        **load_params: Additional loading parameters including:
+            - tx_sets: Transmitter sets to load.
+            - rx_sets: Receiver sets to load. 
+            - max_paths: Maximum number of paths to load.
+            - matrices: List of matrix names to load. If None, loads all available matrices.
+                       Matrix names correspond to the raytracing data files.
+            See load_raytracing_data() for details.
+    """
     if '\\' in scen_name or '/' in scen_name:
         scen_folder = scen_name
         scen_name = os.path.basename(scen_folder)
     else:
-        # Use default deepmimo scenario folder
         scen_folder = os.path.join(c.SCENARIOS_FOLDER, scen_name)
     
+    # Download scenario if needed
     if not os.path.exists(scen_folder):
         print('Scenario not found. Would you like to download it? [Y/n]')
         ans = input()
@@ -63,13 +75,13 @@ def load_scenario(scen_name: str, **load_params):
     params_mat_file = os.path.join(scen_folder, 'params.mat')
     rt_params = load_mat_file_as_dict(params_mat_file)
     
-    # If dynamic scenario, load each scene separately
+    # Load scenario data
     n_scenes = rt_params[c.PARAMSET_DYNAMIC_SCENES]
     if n_scenes > 1: # dynamic
         dataset = []
         for scene_i in range(n_scenes):
             scene_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
-                                        f'scene_{scene_i}')
+                                      f'scene_{scene_i}')
             print(f'Scene {scene_i + 1}/{n_scenes}')
             dataset.append(load_raytracing_scene(scene_folder, rt_params, **load_params))
     else: # static 
@@ -101,9 +113,26 @@ def load_mat_file_as_dict(file_path):
             if not key.startswith('__')}
 
 
-def load_raytracing_scene(folder, rt_params, max_paths: int = 5,
-                          tx_sets: Dict | List | str = 'all',
-                          rx_sets: Dict | List | str = 'all'):
+def load_raytracing_scene(scene_folder: str, rt_params: dict,  max_paths: int = 5,
+                          tx_sets: Dict[int, list | str] | list | str = 'all',
+                          rx_sets: Dict[int, list | str] | list | str = 'all',
+                          matrices: List[str] = None):
+    """Load raytracing data for a scene.
+    
+    Args:
+        scene_folder (str): Path to scene folder containing raytracing data files
+        rt_params (dict): Dictionary containing raytracing parameters
+        - tx_sets OR rx_sets: Can be:
+            - dict: {set_id: [indices] or 'all' or 'active'}, 
+                e.g. {1: [0, 1, 2], 2: 'active'}
+            - list: List of tx/rx sets to load all points from e.g. [1]
+            - str: 'all' to load all available sets and points
+        - max_paths: Maximum number of paths to load per link
+        - matrices: List of matrix names to load. If None, loads all available matrices.
+
+    Returns:
+        dict: Dataset containing the requested matrices for each tx-rx pair
+    """
     
     tx_sets = validate_txrx_sets(tx_sets, rt_params, 'tx')
     rx_sets = validate_txrx_sets(rx_sets, rt_params, 'rx')
@@ -124,10 +153,10 @@ def load_raytracing_scene(folder, rt_params, max_paths: int = 5,
                 rx_id_str = 'basestation' if rx_set_idx == tx_set_idx else 'users'
                 print(f'RX set: {rx_set_idx} ({rx_id_str})')
                 
-                dataset_dict[bs_idx] = load_tx_rx_raydata(folder,
+                dataset_dict[bs_idx] = load_tx_rx_raydata(scene_folder,
                                                           tx_set_idx, rx_set_idx,
                                                           tx_idx, rx_idxs,
-                                                          max_paths)
+                                                          max_paths, matrices)
                 dataset_dict[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
     
     return dataset_dict if len(dataset_dict) != 1 else dataset_dict[0]
@@ -202,7 +231,8 @@ def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str =
 
 
 def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int,
-                       tx_idx: int, rx_idxs: np.ndarray | List, max_paths: int):
+                       tx_idx: int, rx_idxs: np.ndarray | List, max_paths: int,
+                       matrices_to_load: List[str] = None):
     
     tx_dict = {c.AOA_AZ_PARAM_NAME: None,
                c.AOA_EL_PARAM_NAME: None,
@@ -216,7 +246,19 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int,
                c.INTERACTIONS_PARAM_NAME: None,
                c.INTERACTIONS_POS_PARAM_NAME: None}
     
+    if matrices_to_load is None:
+        matrices_to_load = tx_dict.keys()
+    else:
+        valid_matrices = set(tx_dict.keys())
+        invalid = set(matrices_to_load) - valid_matrices
+        if invalid:
+            raise ValueError(f"Invalid matrix names: {invalid}. "
+                             f"Valid names are: {valid_matrices}")
+        
     for key in tx_dict.keys():
+        
+        if key not in matrices_to_load:
+            continue
         
         mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
         
