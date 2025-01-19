@@ -96,8 +96,8 @@ def plot_coverage(rxs, cov_map, dpi=300, figsize=(6,4), cbar_title=None, title=F
         [0,0,90] = Antenna pointing towards +y
         [0,90,0] = Antenna pointing towards -z
         Another way of interpreting: 
-            z-rotation is azimuth (where 0 is +x)
-            y-rotation is elevation/tilt (where 0 is the horizon)
+        z-rotation is azimuth (where 0 is +x)
+        y-rotation is elevation/tilt (where 0 is the horizon)
         The default is None.
     legend : bool, optional
         Whether to include a plot legend. The default is False.
@@ -117,7 +117,7 @@ def plot_coverage(rxs, cov_map, dpi=300, figsize=(6,4), cbar_title=None, title=F
         Colormap string identifier for matplotlib. 
         See available colormaps in: 
         https://matplotlib.org/stable/users/explain/colors/colormaps.html
-        or by runnign: plt.colormaps.get_cmap('not a colormap')
+        or by running: plt.colormaps.get_cmap('not a colormap')
         The default is 'viridis'.
 
     Returns
@@ -129,8 +129,7 @@ def plot_coverage(rxs, cov_map, dpi=300, figsize=(6,4), cbar_title=None, title=F
     ax : matplotlib axes
         ax as in "fig, ax = plt.subplots()"
     cbar : matplotlib colorbar
-        The colorbar associated with the coverage map. 
-
+        The colorbar associated with the coverage map.
     """
     
     plt_params = {'cmap': cmap}

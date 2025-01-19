@@ -12,12 +12,13 @@ TODOS:
       2- remove inactive positions from position array
 
 Requirements:
+
     - keep the transmit power at its default (0 dBm)
     - for dual polarization, end the name of the antenna as '_pol', so the 
       converter knows alternated antennas should be considered for different 
       polarizations. Otherwise, a single polarization is used
     - Request the folowing outputs: path loss (.pl file) and paths (.path file)
-    (the .pl.p2m is only needed to get the positions of points without paths)
+      (the .pl.p2m is only needed to get the positions of points without paths)
     - across a tx/rx set, the same antenna is used
 """
 
