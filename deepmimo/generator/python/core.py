@@ -16,23 +16,16 @@ from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ..python.downloader import download_scenario_handler, extract_scenario
 
-def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}):
-    """
-    Main function to generate DeepMIMO dataset.
-    
-    Parameters
-    ----------
-    scen_name : str
-        Name or path of the scenario
-    load_params : dict, optional
-        Parameters for loading the scenario. The default is {}.
-    ch_gen_params : dict, optional
-        Channel generation parameters. The default is {}.
-        
-    Returns
-    -------
-    dict
-        Generated DeepMIMO dataset
+def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}) -> Dict | List[Dict]:
+    """Generate a DeepMIMO dataset for a given scenario.
+
+    Args:
+        scen_name (str): Name of the scenario to generate data for
+        load_params (Dict, optional): Parameters for loading the scenario. Defaults to {}.
+        ch_gen_params (Dict, optional): Parameters for channel generation. Defaults to {}.
+
+    Returns:
+        Dict: Generated DeepMIMO dataset containing channel matrices and metadata
     """
     if len(load_params) == 0:
         tx_sets = {1: [0]}
@@ -50,21 +43,15 @@ def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}):
     
     return dataset
 
-def load_scenario(scen_name: str, **load_params):
-    """
-    Load a DeepMIMO scenario with specified parameters.
-    
-    Parameters
-    ----------
-    scen_name : str
-        Name or path of the scenario
-    **load_params : dict
-        Additional loading parameters
-        
-    Returns
-    -------
-    dict
-        Loaded scenario data
+def load_scenario(scen_name: str, **load_params) -> Dict | List[Dict]:
+    """Load a DeepMIMO scenario from disk or download if not available.
+
+    Args:
+        scen_name (str): Name of the scenario to load
+        **load_params: Additional loading parameters
+
+    Returns:
+        Dict: Loaded scenario data including ray-tracing results and parameters
     """
     if '\\' in scen_name or '/' in scen_name:
         scen_folder = scen_name
@@ -101,28 +88,18 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
                          tx_sets: Dict[int, list | str] | list | str = 'all',
                          rx_sets: Dict[int, list | str] | list | str = 'all',
                          matrices: List[str] = None):
-    """
-    Load raytracing data for a scene.
-    
-    Parameters
-    ----------
-    scene_folder : str
-        Path to scene folder containing raytracing data files
-    rt_params : dict
-        Dictionary containing raytracing parameters
-    max_paths : int, optional
-        Maximum number of paths to load. The default is 5.
-    tx_sets : dict or list or str, optional
-        Transmitter sets to load. The default is 'all'.
-    rx_sets : dict or list or str, optional
-        Receiver sets to load. The default is 'all'.
-    matrices : list of str, optional
-        List of matrix names to load. The default is None.
-        
-    Returns
-    -------
-    dict
-        Dataset containing the requested matrices for each tx-rx pair
+    """Load raytracing data for a scene.
+
+    Args:
+        scene_folder (str): Path to scene folder containing raytracing data files
+        rt_params (dict): Dictionary containing raytracing parameters 
+        max_paths (int, optional): Maximum number of paths to load. Defaults to 5.
+        tx_sets (dict or list or str, optional): Transmitter sets to load. Defaults to 'all'.
+        rx_sets (dict or list or str, optional): Receiver sets to load. Defaults to 'all'.
+        matrices (list of str, optional): List of matrix names to load. Defaults to None.
+
+    Returns:
+        dict: Dataset containing the requested matrices for each tx-rx pair
     """
     tx_sets = validate_txrx_sets(tx_sets, rt_params, 'tx')
     rx_sets = validate_txrx_sets(rx_sets, rt_params, 'rx')
@@ -166,24 +143,16 @@ def compute_distances(rx, tx):
     return np.linalg.norm(rx - tx, axis=1)
 
 def compute_pathloss(received_powers_dbm, phases_degrees, transmitted_power_dbm=0, coherent=True):
-    """
-    Compute path loss.
-    
-    Parameters
-    ----------
-    received_powers_dbm : array_like
-        Received powers in dBm for each path
-    phases_degrees : array_like
-        Phases in degrees for each path
-    transmitted_power_dbm : float, optional
-        Transmitted power in dBm. The default is 0.
-    coherent : bool, optional
-        Whether to use coherent sum. The default is True.
-        
-    Returns
-    -------
-    float
-        Path loss in dB
+    """Compute path loss from received powers and phases.
+
+    Args:
+        received_powers_dbm (array_like): Received powers in dBm for each path
+        phases_degrees (array_like): Phases in degrees for each path 
+        transmitted_power_dbm (float, optional): Transmitted power in dBm. Defaults to 0.
+        coherent (bool, optional): Whether to use coherent sum. Defaults to True.
+
+    Returns:
+        float: Path loss in dB
     """
     received_powers_linear = 10 ** (np.array(received_powers_dbm) / 10)
 
@@ -218,18 +187,13 @@ def compute_channels(dataset, params):
                                freq_domain=params[c.PARAMSET_FD_CH])
 
 def compute_los(interactions):
-    """
-    Compute Line of Sight status.
-    
-    Parameters
-    ----------
-    interactions : numpy.ndarray
-        Matrix containing interaction codes for each path
-        
-    Returns
-    -------
-    numpy.ndarray
-        LoS status for each receiver (1: LoS, 0: NLoS, -1: No paths)
+    """Calculate Line of Sight status for each receiver.
+
+    Args:
+        interactions (numpy.ndarray): Matrix containing interaction codes for each path
+
+    Returns:
+        numpy.ndarray: LoS status for each receiver (1: LoS, 0: NLoS, -1: No paths)
     """
     result = np.full(interactions.shape[0], -1)
     has_paths = np.any(interactions > 0, axis=1)
@@ -243,23 +207,15 @@ def compute_los(interactions):
 
 # Helper functions
 def validate_txrx_sets(sets, rt_params, tx_or_rx='tx'):
-    """
-    Ensures the input to the generator is compatible with the available tx/rx sets
-    and their points.
-    
-    Parameters
-    ----------
-    sets : dict or list or str
-        TX/RX set specifications
-    rt_params : dict
-        Raytracing parameters
-    tx_or_rx : str, optional
-        Whether validating TX or RX sets. The default is 'tx'.
-        
-    Returns
-    -------
-    dict
-        Validated and processed sets dictionary
+    """Validate and process TX/RX set specifications.
+
+    Args:
+        sets (dict or list or str): TX/RX set specifications
+        rt_params (dict): Raytracing parameters
+        tx_or_rx (str, optional): Whether validating TX or RX sets. Defaults to 'tx'.
+
+    Returns:
+        dict: Validated and processed sets dictionary
     """
     valid_tx_set_idxs = []
     valid_rx_set_idxs = []
@@ -325,20 +281,14 @@ def validate_txrx_sets(sets, rt_params, tx_or_rx='tx'):
     return sets_dict
 
 def validate_ch_gen_params(params, n_active_ues):
-    """
-    Validate channel generation parameters.
-    
-    Parameters
-    ----------
-    params : dict
-        Channel generation parameters
-    n_active_ues : int
-        Number of active UEs
-        
-    Returns
-    -------
-    dict
-        Validated parameters
+    """Validate channel generation parameters.
+
+    Args:
+        params (dict): Channel generation parameters
+        n_active_ues (int): Number of active UEs
+
+    Returns:
+        dict: Validated parameters
     """
     # Notify the user if some keyword is not used (likely set incorrectly)
     additional_keys = compare_two_dicts(params, ChannelGenParameters().get_params_dict())
@@ -399,20 +349,14 @@ def validate_ch_gen_params(params, n_active_ues):
     return params
 
 def compare_two_dicts(dict1, dict2):
-    """
-    Compare two dictionaries recursively.
-    
-    Parameters
-    ----------
-    dict1 : dict
-        First dictionary
-    dict2 : dict
-        Second dictionary
-        
-    Returns
-    -------
-    set
-        Set of keys in dict1 that are not in dict2
+    """Compare two dictionaries recursively.
+
+    Args:
+        dict1 (dict): First dictionary
+        dict2 (dict): Second dictionary
+
+    Returns:
+        set: Set of keys in dict1 that are not in dict2
     """
     additional_keys = dict1.keys() - dict2.keys()
     for key, item in dict1.items():
@@ -422,36 +366,26 @@ def compare_two_dicts(dict1, dict2):
     return additional_keys
 
 def load_mat_file_as_dict(file_path):
-    """
-    Load MATLAB file as dictionary.
-    
-    Parameters
-    ----------
-    file_path : str
-        Path to .mat file
-        
-    Returns
-    -------
-    dict
-        Dictionary containing file contents
+    """Load MATLAB file as dictionary.
+
+    Args:
+        file_path (str): Path to .mat file
+
+    Returns:
+        dict: Dictionary containing file contents
     """
     mat_data = scipy.io.loadmat(file_path, squeeze_me=True, struct_as_record=False)
     return {key: mat_struct_to_dict(value) for key, value in mat_data.items()
             if not key.startswith('__')}
 
 def mat_struct_to_dict(mat_struct):
-    """
-    Convert MATLAB struct to dictionary.
-    
-    Parameters
-    ----------
-    mat_struct : scipy.io.matlab.mio5_params.mat_struct
-        MATLAB struct to convert
-        
-    Returns
-    -------
-    dict or numpy.ndarray
-        Converted structure
+    """Convert MATLAB struct to dictionary.
+
+    Args:
+        mat_struct (scipy.io.matlab.mio5_params.mat_struct): MATLAB struct to convert
+
+    Returns:
+        dict or numpy.ndarray: Converted structure
     """
     if isinstance(mat_struct, scipy.io.matlab.mio5_params.mat_struct):
         result = {}
@@ -466,30 +400,19 @@ def mat_struct_to_dict(mat_struct):
 def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int,
                       tx_idx: int, rx_idxs: np.ndarray | List, max_paths: int,
                       matrices_to_load: List[str] = None):
-    """
-    Load raytracing data for a specific TX-RX pair.
-    
-    Parameters
-    ----------
-    rayfolder : str
-        Path to folder containing raytracing data
-    tx_set_idx : int
-        Transmitter set index
-    rx_set_idx : int
-        Receiver set index
-    tx_idx : int
-        Transmitter index within set
-    rx_idxs : array_like
-        Receiver indices to load
-    max_paths : int
-        Maximum number of paths to load
-    matrices_to_load : list of str, optional
-        List of matrix names to load
-        
-    Returns
-    -------
-    dict
-        Dictionary containing loaded raytracing data
+    """Load raytracing data for a specific TX-RX pair.
+
+    Args:
+        rayfolder (str): Path to folder containing raytracing data
+        tx_set_idx (int): Transmitter set index
+        rx_set_idx (int): Receiver set index
+        tx_idx (int): Transmitter index within set
+        rx_idxs (array_like): Receiver indices to load
+        max_paths (int): Maximum number of paths to load
+        matrices_to_load (list of str, optional): List of matrix names to load
+
+    Returns:
+        dict: Dictionary containing loaded raytracing data
     """
     tx_dict = {c.AOA_AZ_PARAM_NAME: None,
                c.AOA_EL_PARAM_NAME: None,

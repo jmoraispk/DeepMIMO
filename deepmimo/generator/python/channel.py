@@ -1,10 +1,13 @@
 """
 Channel module for DeepMIMO.
-Contains classes and functions for MIMO channel generation, including:
-- Channel parameter management
-- OFDM path generation
-- Path verification
+
+This module provides functionality for MIMO channel generation, including:
+- Channel parameter management through the ChannelGenParameters class
+- OFDM path generation and verification 
 - Channel matrix computation
+
+The main function is generate_MIMO_channel() which generates MIMO channel matrices
+based on path information from ray-tracing and antenna configurations.
 """
 
 import os
@@ -17,8 +20,19 @@ from .geometry import array_response, ant_indices, rotate_angles, apply_FoV
 from .ant_patterns import AntennaPattern
 
 class ChannelGenParameters:
-    def __init__(self, scen_name=None):
-        """Initialize channel generation parameters"""
+    """Class for managing channel generation parameters.
+    
+    This class provides an interface for setting and accessing various parameters
+    needed for MIMO channel generation, including:
+    - BS/UE antenna array configurations
+    - OFDM parameters
+    - Channel domain settings (time/frequency)
+    
+    Attributes:
+        params (dict): Dictionary containing all channel generation parameters
+    """
+    def __init__(self):
+        """Initialize channel generation parameters with default values."""
         self.params = {
             # BS Antenna Parameters
             c.PARAMSET_ANT_BS: {
@@ -53,23 +67,59 @@ class ChannelGenParameters:
         }
     
     def get_params_dict(self):
+        """Get dictionary of all parameters.
+        
+        Returns:
+            dict: Dictionary containing all channel generation parameters
+        """
         return self.params
     
     def get_name(self):
+        """Get scenario name.
+        
+        Returns:
+            str: Name of scenario
+        """
         return self.params[c.PARAMSET_SCENARIO]
     
     def get_folder(self):
+        """Get absolute path to dataset folder.
+        
+        Returns:
+            str: Absolute path to dataset folder
+        """
         return os.path.abspath(self.params[c.PARAMSET_DATASET_FOLDER])
     
     def get_path(self):
+        """Get full path to scenario folder.
+        
+        Returns:
+            str: Full path to scenario folder
+        """
         return os.path.join(self.get_folder(), self.params[c.PARAMSET_SCENARIO])
     
     def __repr__(self):
         return pformat(self.get_params_dict())
 
 class PathVerifier:
-    """Verify and validate paths based on configuration parameters"""
+    """Class for verifying and validating paths based on configuration parameters.
+    
+    This class checks path validity against OFDM parameters and provides warnings
+    when paths exceed the OFDM symbol duration.
+    
+    Attributes:
+        params (dict): Channel generation parameters
+        FFT_duration (float): OFDM symbol duration
+        max_ToA (float): Maximum time of arrival seen
+        path_ratio_FFT (list): Ratios of clipped path powers
+    """
+    
     def __init__(self, params):
+        """Initialize path verifier.
+        
+        Args:
+            params (dict): Channel generation parameters
+        """
         self.params = params
         if self.params[c.PARAMSET_FD_CH]: # IF OFDM
             Ts = 1 / (params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BW]*c.PARAMSET_OFDM_BW_MULT)
@@ -78,6 +128,12 @@ class PathVerifier:
             self.path_ratio_FFT = []
     
     def verify_path(self, ToA, power):
+        """Verify a path's time of arrival against OFDM parameters.
+        
+        Args:
+            ToA (float): Time of arrival
+            power (float): Path power
+        """
         if self.params[c.PARAMSET_FD_CH]: # OFDM CH
             m_toa = np.max(ToA)
             self.max_ToA = max(self.max_ToA, m_toa)
@@ -87,6 +143,7 @@ class PathVerifier:
                 self.path_ratio_FFT.append(sum(power[violating_paths])/sum(power))
                         
     def notify(self):
+        """Print notification about paths exceeding OFDM duration if needed."""
         if self.params[c.PARAMSET_FD_CH]:
             avg_ratio_FFT = 0
             if len(self.path_ratio_FFT) != 0:
@@ -98,8 +155,26 @@ class PathVerifier:
                       'the useful OFDM symbol duration and are clipped.')
 
 class OFDM_PathGenerator:
-    """Generate OFDM paths with specified parameters"""
+    """Class for generating OFDM paths with specified parameters.
+    
+    This class handles the generation of OFDM paths including optional
+    low-pass filtering.
+    
+    Attributes:
+        OFDM_params (dict): OFDM parameters
+        subcarriers (array): Selected subcarrier indices
+        total_subcarriers (int): Total number of subcarriers
+        delay_d (array): Delay domain array
+        delay_to_OFDM (array): Delay to OFDM transform matrix
+    """
+    
     def __init__(self, params, subcarriers):
+        """Initialize OFDM path generator.
+        
+        Args:
+            params (dict): OFDM parameters
+            subcarriers (array): Selected subcarrier indices
+        """
         self.OFDM_params = params
         self.subcarriers = subcarriers
         self.total_subcarriers = self.OFDM_params[c.PARAMSET_OFDM_SC_NUM]
@@ -109,6 +184,17 @@ class OFDM_PathGenerator:
                                    np.outer(self.delay_d, self.subcarriers))
     
     def generate(self, pwr, toa, phs, Ts):
+        """Generate OFDM paths.
+        
+        Args:
+            pwr (array): Path powers
+            toa (array): Times of arrival
+            phs (array): Path phases
+            Ts (float): Sampling period
+            
+        Returns:
+            array: Generated OFDM paths
+        """
         power = pwr.reshape(-1, 1)
         delay_n = toa.reshape(-1, 1) / Ts
         phase = phs.reshape(-1, 1)
@@ -129,28 +215,23 @@ class OFDM_PathGenerator:
 def generate_MIMO_channel(dataset, ofdm_params: Dict, tx_ant_params: Dict, 
                          rx_ant_params: Dict, freq_domain: bool = True,
                          carrier_freq: float = 3e9):
-    """
-    Generate MIMO channel matrices.
+    """Generate MIMO channel matrices.
     
-    Parameters
-    ----------
-    dataset : dict
-        DeepMIMO dataset containing path information
-    ofdm_params : dict
-        OFDM parameters
-    tx_ant_params : dict
-        Transmitter antenna parameters
-    rx_ant_params : dict
-        Receiver antenna parameters
-    freq_domain : bool, optional
-        Whether to generate frequency domain channel. Default is True
-    carrier_freq : float, optional
-        Carrier frequency in Hz. Default is 3GHz
+    This function generates MIMO channel matrices based on path information from
+    ray-tracing and antenna configurations. It supports both time and frequency
+    domain channel generation.
+    
+    Args:
+        dataset (dict): DeepMIMO dataset containing path information
+        ofdm_params (dict): OFDM parameters
+        tx_ant_params (dict): Transmitter antenna parameters
+        rx_ant_params (dict): Receiver antenna parameters
+        freq_domain (bool, optional): Whether to generate frequency domain channel.
+            Defaults to True.
+        carrier_freq (float, optional): Carrier frequency in Hz. Defaults to 3GHz.
         
-    Returns
-    -------
-    numpy.ndarray
-        MIMO channel matrices
+    Returns:
+        numpy.ndarray: MIMO channel matrices with shape (n_users, n_rx_ant, n_tx_ant, n_paths/subcarriers)
     """
     bandwidth = ofdm_params[c.PARAMSET_OFDM_BW] * c.PARAMSET_OFDM_BW_MULT
     

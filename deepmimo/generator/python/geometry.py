@@ -7,45 +7,30 @@ Core geometric operations used in MIMO channel generation.
 import numpy as np
 
 def array_response(ant_ind, theta, phi, kd):
-    """
-    Compute array response.
-    
-    Parameters
-    ----------
-    ant_ind : numpy.ndarray
-        Antenna indices matrix
-    theta : numpy.ndarray
-        Elevation angles in radians
-    phi : numpy.ndarray
-        Azimuth angles in radians
-    kd : float
-        Wave number times antenna spacing
-        
-    Returns
-    -------
-    numpy.ndarray
-        Array response matrix
+    """Calculate the array response for given antenna indices and angles.
+
+    Args:
+        ant_ind (numpy.ndarray): Array of antenna indices [x, y, z]
+        theta (float): Elevation angle in radians
+        phi (float): Azimuth angle in radians
+        kd (float): Product of wavenumber k and antenna spacing d
+
+    Returns:
+        numpy.ndarray: Complex array response vector
     """
     gamma = array_response_phase(theta, phi, kd)
     return np.exp(ant_ind@gamma.T)
     
 def array_response_phase(theta, phi, kd):
-    """
-    Compute array response phase.
-    
-    Parameters
-    ----------
-    theta : numpy.ndarray
-        Elevation angles in radians
-    phi : numpy.ndarray
-        Azimuth angles in radians
-    kd : float
-        Wave number times antenna spacing
-        
-    Returns
-    -------
-    numpy.ndarray
-        Array response phase matrix
+    """Calculate the phase component of the array response.
+
+    Args:
+        theta (float): Elevation angle in radians
+        phi (float): Azimuth angle in radians
+        kd (float): Product of wavenumber k and antenna spacing d
+
+    Returns:
+        tuple: Phase components (x, y, z) for each dimension
     """
     gamma_x = 1j * kd * np.sin(theta) * np.cos(phi)
     gamma_y = 1j * kd * np.sin(theta) * np.sin(phi)
@@ -53,18 +38,13 @@ def array_response_phase(theta, phi, kd):
     return np.vstack([gamma_x, gamma_y, gamma_z]).T
  
 def ant_indices(panel_size):
-    """
-    Compute antenna indices for a rectangular panel.
-    
-    Parameters
-    ----------
-    panel_size : tuple, list or numpy.ndarray
-        Number of [elements along the horizontal, elements along the vertical]
-        
-    Returns
-    -------
-    numpy.ndarray
-        Matrix of antenna indices
+    """Generate antenna element indices for a rectangular panel.
+
+    Args:
+        panel_size (tuple): Panel dimensions (Mx, My, Mz)
+
+    Returns:
+        numpy.ndarray: Array of antenna indices with shape (N, 3) where N is total number of elements
     """
     gamma_x = np.tile(np.arange(1), panel_size[0]*panel_size[1])
     gamma_y = np.tile(np.repeat(np.arange(panel_size[0]), 1), panel_size[1])
@@ -72,22 +52,15 @@ def ant_indices(panel_size):
     return np.vstack([gamma_x, gamma_y, gamma_z]).T
 
 def apply_FoV(FoV, theta, phi):
-    """
-    Apply field of view constraints.
-    
-    Parameters
-    ----------
-    FoV : numpy.ndarray
-        Field of view limits [horizontal, vertical] in degrees
-    theta : numpy.ndarray
-        Elevation angles in radians
-    phi : numpy.ndarray
-        Azimuth angles in radians
-        
-    Returns
-    -------
-    numpy.ndarray
-        Boolean mask of angles within FoV
+    """Apply field of view constraints to angles.
+
+    Args:
+        FoV (tuple): Field of view limits (theta_min, theta_max, phi_min, phi_max) in degrees
+        theta (float): Elevation angle in degrees
+        phi (float): Azimuth angle in degrees
+
+    Returns:
+        tuple: Boolean mask indicating which angles are within FoV, and the filtered angles
     """
     theta = np.mod(theta, 2*np.pi)
     phi = np.mod(phi, 2*np.pi)
@@ -98,22 +71,15 @@ def apply_FoV(FoV, theta, phi):
     return path_inclusion
 
 def rotate_angles(rotation, theta, phi):
-    """
-    Rotate angles based on antenna orientation.
-    
-    Parameters
-    ----------
-    rotation : numpy.ndarray
-        Rotation angles [x, y, z] in degrees
-    theta : numpy.ndarray
-        Elevation angles in degrees
-    phi : numpy.ndarray
-        Azimuth angles in degrees
-        
-    Returns
-    -------
-    tuple
-        (rotated_theta, rotated_phi) in radians
+    """Rotate angles according to specified rotation angles.
+
+    Args:
+        rotation (tuple): Rotation angles (alpha, beta, gamma) in degrees
+        theta (float): Elevation angle in degrees
+        phi (float): Azimuth angle in degrees
+
+    Returns:
+        tuple: Rotated angles (theta, phi) in radians
     """
     theta = np.deg2rad(theta)
     phi = np.deg2rad(phi)
@@ -139,26 +105,16 @@ def rotate_angles(rotation, theta, phi):
     return theta, phi
 
 def steering_vec(array, phi=0, theta=0, spacing=0.5):
-    """
-    Creates the array steering vector for uniform (linear and rectangular) arrays.
+    """Calculate the steering vector for an antenna array.
 
-    Parameters
-    ----------
-    array : tuple, list or numpy.ndarray
-        Number of [elements along the horizontal, elements along the vertical]
-    phi : float, optional    
-        Azimuth angle in degrees. 0 azimuth is normal to the array. 
-        Positive azimuth points beams to the right. The default is 0.
-    theta : float, optional
-        Elevation angle in degrees. 0 elevation is horizon (normal to the array). 
-        Positive elevation tilts the beam downards. The default is 0.
-    spacing : float, optional
-        Antenna spacing in wavelengths. The default is 0.5.
+    Args:
+        array (numpy.ndarray): Array of antenna positions
+        phi (float, optional): Azimuth angle in degrees. Defaults to 0.
+        theta (float, optional): Elevation angle in degrees. Defaults to 0.
+        spacing (float, optional): Antenna spacing in wavelengths. Defaults to 0.5.
 
-    Returns
-    -------
-    numpy.ndarray
-        The normalized array response vector.
+    Returns:
+        numpy.ndarray: Complex (normalized) steering (array response) vector
     """
     idxs = ant_indices(array)
     resp = array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
