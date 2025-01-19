@@ -207,33 +207,47 @@ class LinearPath():
         return self.feature_names
     
 
-def get_idxs_in_xy_box(data_pos, x_min, x_max, y_min, y_max):
+def get_idxs_with_limits(data_pos, **limits):
     """
-    Obtains the indices of <data_pos> that lie between the xy limits.
-
+    Returns indices of positions that satisfy the given coordinate limits.
+    
     Parameters
     ----------
     data_pos : numpy.ndarray
-        Array with all positions. Dimensions: [n_positions, 2]
-    x_min : float
-        Minimum x limit. Only positions where x > x_min have their indices returned.
-    x_max : float
-        Maximum x limit. Only positions where x < x_max have their indices returned.
-    y_min : float
-        Minimum y limit. Only positions where y > y_min have their indices returned.
-    y_max : float
-        Maximum y limit. Only positions where y < y_max have their indices returned.
-
+        Array with all positions. Dimensions: [n_positions, 2 or 3]
+    **limits : dict
+        Arbitrary combination of limits as keyword arguments.
+        Supported keys: x_min, x_max, y_min, y_max, z_min, z_max
+        Example: x_min=10, y_max=50, z_min=-2
+        
     Returns
     -------
     numpy.ndarray
-        Indices of the positions in data_pos that are within the defined min-max box.
-
+        Indices of positions that satisfy all specified limits.
     """
-
-    idxs_x = np.where((x_min < data_pos[:, 0]) & (data_pos[:, 0] < x_max))[0]
-    idxs_y = np.where((y_min < data_pos[:, 1]) & (data_pos[:, 1] < y_max))[0]
+    valid_limits = {'x_min', 'x_max', 'y_min', 'y_max', 'z_min', 'z_max'}
+    if not all(key in valid_limits for key in limits):
+        raise ValueError(f"Invalid limit key. Supported limits are: {valid_limits}")
     
-    return np.array(sorted(list(set(idxs_x).intersection(idxs_y))))
+    # Start with all indices as valid
+    valid_idxs = np.arange(len(data_pos))
+    
+    # Apply each limit sequentially
+    coord_map = {'x': 0, 'y': 1, 'z': 2}
+    for limit_name, limit_value in limits.items():
+        coord = limit_name.split('_')[0]  # Extract 'x', 'y', or 'z'
+        is_min = limit_name.endswith('min')
+        
+        if coord_map[coord] >= data_pos.shape[1]:
+            raise ValueError(f"Cannot apply {coord} limit to {data_pos.shape[1]}D positions")
+            
+        if is_min:
+            mask = data_pos[valid_idxs, coord_map[coord]] >= limit_value
+        else:  # is_max
+            mask = data_pos[valid_idxs, coord_map[coord]] <= limit_value
+            
+        valid_idxs = valid_idxs[mask]
+    
+    return valid_idxs
 
 

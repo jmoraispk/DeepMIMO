@@ -5,7 +5,7 @@ from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel
 
 from .utils import dbm2watt
-from .params import ChannelGenParameters
+from .channel_params import ChannelGenParameters
 from .downloader import download_scenario_handler, extract_scenario
 import scipy.io
 from typing import List, Dict
