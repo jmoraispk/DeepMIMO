@@ -265,6 +265,50 @@ def compute_num_interactions(dataset):
     # dataset['num_interaction'] = result
     return result
 
+
+
+
+def compute_distances(rx, tx):
+    return np.linalg.norm(rx - tx, axis=1)
+
+def compute_pathloss(received_powers_dbm, phases_degrees, transmitted_power_dbm=0, coherent=True):
+    """
+    Computes the total path loss of a link.
+    
+    Parameters:
+        received_powers_dbm (list or np.array): Received powers in dBm for each path.
+        phases_degrees (list or np.array): Phases in degrees for each path.
+        transmitted_power_dbm (float): Transmitted power in dBm (default is 0 dBm).
+        coherent (bool): If True, considers the phases of the paths (coherent sum).
+                         If False, ignores the phases (non-coherent sum).
+
+    Returns:
+        float: The total path loss in dB.
+    
+    # Example Usage:
+    received_powers = [-83.1005, -92.8987]
+    phases = [-15.8284, -126.971]
+    coherent_pathlos = compute_pathloss(received_powers, phases, coherent=True)     # = 83.25 dB
+    non_coherent_result = compute_pathloss(received_powers, phases, coherent=False) # = 82.67 dB
+    """
+    # Convert received powers to linear scale (mW)
+    received_powers_linear = 10 ** (np.array(received_powers_dbm) / 10)
+
+    if coherent:
+        # Coherent sum: Considering phases
+        total_complex_power = np.sum(received_powers_linear * np.exp(1j * np.radians(phases_degrees)))
+    else:
+        # Non-coherent sum: Ignoring phases (set all phases to 0)
+        total_complex_power = np.sum(received_powers_linear)
+
+    # Compute the total received power magnitude (linear scale) and convert to dBm
+    total_received_power_dbm = 10 * np.log10(np.abs(total_complex_power))
+
+    # Compute total path loss
+    path_loss = transmitted_power_dbm - total_received_power_dbm
+
+    return path_loss
+
 def compute_channels(dataset, params):
     
     if params is None:
@@ -359,4 +403,34 @@ def compare_two_dicts(dict1, dict2):
                 additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
 
     return additional_keys
+
+def compute_los(interactions):
+    """
+    Computes the Line of Sight (LoS) status for each receiver based on path interactions.
+    
+    Parameters:
+        interactions (np.ndarray): Matrix containing interaction codes for each path
+                                 Shape: (num_receivers, num_paths)
+    
+    Returns:
+        np.ndarray: LoS status for each receiver
+                   1: LoS path exists
+                   0: Only NLoS paths exist
+                   -1: No paths exist
+    """
+    # Initialize result array with -1 (no paths)
+    result = np.full(interactions.shape[0], -1)
+    
+    # For receivers with at least one path (non-zero interaction)
+    has_paths = np.any(interactions > 0, axis=1)
+    result[has_paths] = 0  # Set to NLoS by default if has paths
+    
+    # Check first path (paths are sorted by power, so first path is strongest)
+    first_path = interactions[:, 0]
+    
+    # If first path has no interactions (0) then it's a LoS path
+    los_mask = first_path == 0
+    result[los_mask & has_paths] = 1
+    
+    return result
 
