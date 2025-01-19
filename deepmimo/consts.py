@@ -8,7 +8,7 @@ FP_TYPE = np.float32 # floating point precision for saving values
 
 
 # DEEPMIMOv4 consts
-CHS_PARAM_NAME = 'chs'
+# Fundamental
 AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
 AOD_AZ_PARAM_NAME = 'aod_az'
@@ -21,38 +21,67 @@ TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
 RT_PARAMS_PARAM_NAME = 'rt_params'
+LOAD_PARAMS_PARAM_NAME = 'load_params'
+
+# Computed
+CHANNEL_PARAM_NAME = 'channel'
 NUM_PATHS_PARAM_NAME = 'num_paths'
 PWR_LINEAR_PARAM_NAME = 'power_linear'
+PATHLOSS_PARAM_NAME = 'pathloss'
+DIST_PARAM_NAME = 'distance'
 
-LOAD_PARAMS_PARAM_NAME = 'load_params'
+# Aliases
+# Channel aliases
+CHANNEL_PARAM_NAME_2 = 'channels'
+CHANNEL_PARAM_NAME_3 = 'ch'
+CHANNEL_PARAM_NAME_4 = 'chs'
+# Pathloss aliases
+PATHLOSS_PARAM_NAME_2 = 'path_loss'
+PATHLOSS_PARAM_NAME_3 = 'pl'
+# Distance aliases
+DIST_PARAM_NAME_2 = 'distances'
+DIST_PARAM_NAME_3 = 'dist'
+DIST_PARAM_NAME_4 = 'dists'
+# Power aliases
+PWR_PARAM_NAME_2 = 'pwr'
+PWR_PARAM_NAME_3 = 'powers'
+PWR_LINEAR_PARAM_NAME_2 = 'pwr_lin'
+PWR_LINEAR_PARAM_NAME_3 = 'power_lin'
+PWR_LINEAR_PARAM_NAME_4 = 'pwr_linear'
+# Position aliases
+RX_POS_PARAM_NAME_2 = 'rx_loc'
+RX_POS_PARAM_NAME_3 = 'rx_position'
+RX_POS_PARAM_NAME_4 = 'rx_locations'
+TX_POS_PARAM_NAME_2 = 'tx_loc'
+TX_POS_PARAM_NAME_3 = 'tx_position'
+TX_POS_PARAM_NAME_4 = 'tx_locations'
+# Angle aliases
+AOA_AZ_PARAM_NAME_2 = 'aoa_azimuth'
+AOA_EL_PARAM_NAME_2 = 'aoa_elevation'
+AOD_AZ_PARAM_NAME_2 = 'aod_azimuth'
+AOD_EL_PARAM_NAME_2 = 'aod_elevation'
+# Time aliases
+TOA_PARAM_NAME_2 = 'time_of_arrival'
+# Interaction aliases
+INTERACTIONS_PARAM_NAME_2 = 'interactions'
+INTERACTIONS_POS_PARAM_NAME_2 = 'interaction_locations'
+
+# Load Params
 LOAD_PARAM_MAX_PATH = 'max_paths'
+
+
+
 
 # DeepMIMOv4 (saved) matrix names
 MAT_VAR_NAME = 'data' # all variable names inside single variable matrices
 
-
-############# BEFORE and AFTER v4 ##################
+# ######### BOTH DM v4 and older versions ###########
 
 SCENARIOS_FOLDER = 'deepmimo_scenarios2'
 
-# Dict names
-DICT_UE_IDX = 'user'
-DICT_BS_IDX = 'basestation'
-
-# NAME OF PARAMETER VARIABLES
-PARAMSET_DATASET_FOLDER = 'dataset_folder'
-PARAMSET_SCENARIO = 'scenario'
-PARAMSET_DYNAMIC_SCENES = 'dynamic_scenario_scenes'
-
-PARAMSET_NUM_PATHS = 'num_paths'
-PARAMSET_ACTIVE_BS = 'active_BS'
-PARAMSET_USER_ROWS = 'user_rows'
-PARAMSET_USER_SUBSAMP = 'user_subsampling'
-
+# Channel parameters
 PARAMSET_POLAR_EN = 'enable_dual_polar'
 PARAMSET_DOPPLER_EN = 'enable_doppler'
-
-PARAMSET_BS2BS = 'enable_BS2BS'
 PARAMSET_FD_CH = 'OFDM_channels' # TD/OFDM
 
 PARAMSET_OFDM = 'OFDM'
@@ -70,6 +99,27 @@ PARAMSET_ANT_ROTATION = 'rotation'
 PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
 PARAMSET_ANT_FOV = 'FoV'
+
+# Some scenario parameter variables
+# ...
+
+# ######### OLDER VERSIONS ###########
+
+# Dict names
+DICT_UE_IDX = 'user'
+DICT_BS_IDX = 'basestation'
+
+# NAME OF PARAMETER VARIABLES
+PARAMSET_DATASET_FOLDER = 'dataset_folder'
+PARAMSET_SCENARIO = 'scenario'
+PARAMSET_DYNAMIC_SCENES = 'dynamic_scenario_scenes'
+
+PARAMSET_NUM_PATHS = 'num_paths'
+PARAMSET_ACTIVE_BS = 'active_BS'
+PARAMSET_USER_ROWS = 'user_rows'
+PARAMSET_USER_SUBSAMP = 'user_subsampling'
+
+PARAMSET_BS2BS = 'enable_BS2BS'
 
 # INNER VARIABLES
 PARAMSET_ACTIVE_UE = 'active_UE'
