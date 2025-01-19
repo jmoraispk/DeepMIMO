@@ -1,3 +1,8 @@
+"""
+Antenna patterns module for DeepMIMO.
+Contains classes and functions for antenna radiation pattern modeling.
+Supports various antenna types including omnidirectional and half-wave dipole patterns.
+"""
 from ... import consts as c
 import numpy as np
 

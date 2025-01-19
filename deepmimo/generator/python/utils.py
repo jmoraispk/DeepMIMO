@@ -1,50 +1,26 @@
+"""
+Utilities module for DeepMIMO.
+Contains commonly used functions across the package, including:
+- Unit conversions
+- Sampling utilities
+- Path calculations
+- Display helpers
+"""
 import time
 import numpy as np
 from ... import consts as c
-from .construct_deepmimo import ant_indices, array_response
 
 ################################# Internal ####################################
 
-# Sleep between print and tqdm displays
 def safe_print(text, stop_dur=0.3):
+    """Print with delay for better display (usually after tqdm)"""
     print(text)
     time.sleep(stop_dur)
         
-# Determine active paths with the given configurations
-# (For OFDM, only the paths within DS are activated)
-class PathVerifier:
-    def __init__(self, params):
-        self.params = params
-        if self.params[c.PARAMSET_FD_CH]: # IF OFDM
-            Ts = 1 / (params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BW]*c.PARAMSET_OFDM_BW_MULT)
-            self.FFT_duration = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_NUM] * Ts
-            self.max_ToA = 0
-            self.path_ratio_FFT = []
-    
-    def verify_path(self, ToA, power):
-        if self.params[c.PARAMSET_FD_CH]: # OFDM CH
-            m_toa = np.max(ToA)
-            self.max_ToA = max(self.max_ToA, m_toa)
-            
-            if m_toa > self.FFT_duration:
-                violating_paths = ToA > self.FFT_duration
-                self.path_ratio_FFT.append( sum(power[violating_paths])/sum(power) )
-                        
-    def notify(self):
-        if self.params[c.PARAMSET_FD_CH]: # IF OFDM
-            avg_ratio_FFT = 0
-            if len(self.path_ratio_FFT) != 0:
-                avg_ratio_FFT = np.mean(self.path_ratio_FFT)*100
-                
-            if self.max_ToA > self.FFT_duration and avg_ratio_FFT >= 1.:
-                safe_print(f'ToA of some paths of {len(self.path_ratio_FFT)} channels '
-                           f'with an average total power of {avg_ratio_FFT:.2f}% exceed '
-                           'the useful OFDM symbol duration and are clipped.')
-
-
 ################################## For User ###################################
 
 def dbm2watt(val):
+    """Convert dBm to Watts"""
     return 10**(val/10 - 3)
 
 def steering_vec(array, phi=0, theta=0, spacing=0.5):
@@ -75,7 +51,7 @@ def steering_vec(array, phi=0, theta=0, spacing=0.5):
     return resp / np.linalg.norm(resp)
 
 
-def uniform_sampling(sampling_div, n_rows, users_per_row):
+def uniform_sampling(steps, n_rows, users_per_row):
     """
     Returns indices of users at uniform steps/intervals.
     
@@ -105,6 +81,7 @@ def uniform_sampling(sampling_div, n_rows, users_per_row):
 
 
 class LinearPath():
+    """Creates a linear path of features"""
     def __init__(self, deepmimo_dataset, first_pos, last_pos, res=1, n_steps=False, filter_repeated=True):
         """
         Creates a linear path of features. 
@@ -249,5 +226,3 @@ def get_idxs_with_limits(data_pos, **limits):
         valid_idxs = valid_idxs[mask]
     
     return valid_idxs
-
-

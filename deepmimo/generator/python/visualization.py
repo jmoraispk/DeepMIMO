@@ -1,3 +1,11 @@
+"""
+Visualization module for DeepMIMO.
+Contains functions for plotting and visualizing:
+- Line of sight status
+- Coverage maps
+- Path characteristics
+- Channel properties
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 import csv

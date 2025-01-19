@@ -104,6 +104,7 @@ def mat_struct_to_dict(mat_struct):
         return np.array([mat_struct_to_dict(item) for item in mat_struct])
     return mat_struct  # Return the object as is for other types
 
+
 def load_mat_file_as_dict(file_path):
     """
     Loads a .mat file and converts any mat_struct objects to Python dictionaries.
@@ -160,6 +161,7 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict,  max_paths: int = 
                 dataset_dict[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
     
     return dataset_dict if len(dataset_dict) != 1 else dataset_dict[0]
+
 
 def validate_txrx_sets(sets: Dict | List | str, rt_params: Dict, tx_or_rx: str = 'tx'):
     """
@@ -290,6 +292,7 @@ def compute_num_paths(dataset):
     
     return max_paths - nan_count_matrix
 
+
 def compute_num_interactions(dataset):
     
     # NOTE: dm.info('inter') (or dataset['inter'].info())
@@ -306,8 +309,6 @@ def compute_num_interactions(dataset):
     
     # dataset['num_interaction'] = result
     return result
-
-
 
 
 def compute_distances(rx, tx):
@@ -445,6 +446,7 @@ def compare_two_dicts(dict1, dict2):
                 additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
 
     return additional_keys
+
 
 def compute_los(interactions):
     """

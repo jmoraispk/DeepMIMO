@@ -1,20 +1,49 @@
 from .generator.python_old.generator import generate_data as generate_old
 from .generator.python_old.params import Parameters as Parameters_old
 
-from .generator.python.generator import generate as generate
-from .generator.python.generator import load_scenario as load_scenario
-from .generator.python.generator import compute_channels as compute_channels
-from .generator.python.generator import compute_num_paths as compute_num_paths
-from .generator.python.generator import compute_num_interactions as compute_num_interactions
-from .generator.python.generator import compute_pathloss as compute_pathloss
-from .generator.python.generator import compute_distances as compute_distances
-from .generator.python.generator import compute_los as compute_los
+# Core functionality
+from .generator.python.core import (
+    generate,
+    load_scenario,
+    compute_channels,
+    compute_num_paths,
+    compute_num_interactions,
+    compute_pathloss,
+    compute_distances,
+    compute_los
+)
 
+# Keep visualization module as is
 from .generator.python import visualization
-from .generator.python import utils
 
-from .generator.python.channel_params import ChannelGenParameters
+# Utils module with commonly used functions
+from .generator.python.utils import (
+    dbm2watt,
+    uniform_sampling,
+    LinearPath,
+    get_idxs_with_limits
+)
+
+# Channel parameters
+from .generator.python.channel import ChannelGenParameters
+
 from .converter.converter import create_scenario
 from .info import info
 
-__all__ = ['generate', 'create_scenario', 'info']
+__all__ = [
+    'generate',
+    'create_scenario', 
+    'info',
+    'load_scenario',
+    'compute_channels',
+    'compute_num_paths',
+    'compute_num_interactions',
+    'compute_pathloss',
+    'compute_distances',
+    'compute_los',
+    'ChannelGenParameters',
+    'LinearPath',
+    'uniform_sampling',
+    'dbm2watt',
+    'get_idxs_with_limits'
+]
