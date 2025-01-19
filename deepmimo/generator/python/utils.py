@@ -37,9 +37,9 @@ class PathVerifier:
                 avg_ratio_FFT = np.mean(self.path_ratio_FFT)*100
                 
             if self.max_ToA > self.FFT_duration and avg_ratio_FFT >= 1.:
-                safe_print('ToA of some paths of %i channels with an average total power of %.2f%% exceed the useful OFDM symbol duration and are clipped.' % (len(self.path_ratio_FFT), avg_ratio_FFT))
-            
-
+                safe_print(f'ToA of some paths of {len(self.path_ratio_FFT)} channels '
+                           f'with an average total power of {avg_ratio_FFT:.2f}% exceed '
+                           'the useful OFDM symbol duration and are clipped.')
 
 
 ################################## For User ###################################
