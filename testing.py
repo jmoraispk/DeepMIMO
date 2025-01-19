@@ -9,7 +9,7 @@ if 'asu_campus' in path_to_p2m_outputs:
 else:
     old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61],   'freq': 3.5e9}   # simple canyon
 
-old = True
+old = False
 scen_name = path_to_p2m_outputs.split('\\')[2] + ('_old' if old else '')
 scen_name = dm.create_scenario(path_to_p2m_outputs,
                                overwrite=True, 
@@ -47,7 +47,7 @@ params = dm.ChannelGenParameters()
 
 # num_paths and power_linear are necessary for channel
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
-dataset['power_linear'] = dm.utils.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
+dataset['power_linear'] = dm.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
 dataset['channel'] = dm.compute_channels(dataset, params)     # c.CHANNEL_PARAM_NAME
 dataset['pathloss'] = dm.compute_pathloss(dataset['power'][10], 
                                           dataset['phase'][10]) # c.PATHLOSS_PARAM_NAME
@@ -108,8 +108,6 @@ plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=100)
 
 #%% Dream
 
-# 12- REFACTORING CONVERSION: move MATERIAL and TXRX to separate files
-# 13- REFACTORING GENERATION: move validation into channel gen script
 # 10- Save building matrix & plot building
 
 ###############
