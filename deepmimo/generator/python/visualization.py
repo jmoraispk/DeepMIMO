@@ -1,37 +1,42 @@
 """
-Visualization module for DeepMIMO.
-Contains functions for plotting and visualizing:
-- Line of sight status
-- Coverage maps
-- Path characteristics
-- Channel properties
+DeepMIMO Visualization Module.
+
+This module provides visualization utilities for the DeepMIMO dataset, including:
+- Coverage map visualization with customizable parameters
+- Path characteristics visualization
+- Channel properties plotting
+- Data export utilities for external visualization tools
+
+The module uses matplotlib for generating plots and supports both 2D and 3D visualizations.
 """
-import matplotlib.pyplot as plt
-import numpy as np
+
+# Standard library imports
 import csv
+from typing import Optional, Tuple, Union, Dict, Any, List
 
-def plot_LoS_status(bs_location, user_locations, user_LoS, scat_size='auto'):
-    """
-    Scatters the users and one basestations and colors the users based on their
-    line-of-sight status.
+# Third-party imports
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
+from matplotlib.colorbar import Colorbar
 
-    Parameters
-    ----------
-    bs_location : numpy array
-        One dimensional array with the xy position of the basestation.
-    user_locations : numpy array
-        A matrix containing user locations across rows and xy positions across
-        columns. Expected shape: <n_users> by 2
-    user_LoS : numpy array
-        One dimensional array with the LoS status of each user. The length
-        should match the number of users in user_locations.
-    scat_size : float, optional
-        Size of the scatter points. The default is 'auto'.
 
-    Returns
-    -------
-    None.
+def plot_LoS_status(bs_location: np.ndarray, user_locations: np.ndarray, user_LoS: np.ndarray,
+                    scat_size: Union[str, float] = 'auto') -> None:
+    """Plot users and basestation with color-coded line-of-sight status.
+    
+    This function creates a 2D scatter plot showing user positions colored by their
+    line-of-sight status relative to the basestation position.
 
+    Args:
+        bs_location (np.ndarray): Array containing the x,y position of the basestation
+        user_locations (np.ndarray): Matrix of user locations with shape (n_users, 2)
+        user_LoS (np.ndarray): Array of LoS status values for each user
+        scat_size (Union[str, float]): Size of scatter points. Defaults to 'auto'.
+
+    Returns:
+        None. Displays the plot using matplotlib.
     """
     LoS_map = {-1: ('r', 'No Path'), 0: ('b', 'NLoS'), 1: ('g', 'LoS')}
     
@@ -62,76 +67,41 @@ def plot_LoS_status(bs_location, user_locations, user_LoS, scat_size='auto'):
     plt.ylim([user_locations[:, 1].min(), user_locations[:, 1].max()])
 
 
-def plot_coverage(rxs, cov_map, dpi=300, figsize=(6,4), cbar_title=None, title=False,
-                  scat_sz=.5, bs_pos=None, bs_ori=None, legend=False, lims=None,
-                  proj_3D=False, equal_aspect=False, tight=True, cmap='viridis'):
-    """
-    This function scatters the users' positions <rxs> and colors them with <cov_map>.
-
-    Parameters
-    ----------
-    rxs : numpy.ndarray
-        User position array. Dimensions: [n_users, 3].
-    cov_map : tuple, list or numpy.ndarray
-        Coverage map. Or a map of the feature based on which to color the user positions.
-        Dimension: n_users
-    dpi : int, optional
-        Resolution. The default is 300.
-    figsize : tuple, optional
-        Figure (horizontal size, vertical size) in inches. The default is (6,4).
-    cbar_title : string, optional
-        Title/text of the colorbar. The default is None.
-    title : string, optional
-        Title of the plot. No title if None, empty string or False. The default is False.
-    scat_sz : float, optional
-        Scatter marker size. The default is .5.
-    bs_pos : tuple, list or numpy.ndarray, optional
-        Transmitter (considered the Base station) position. If valid (not None),
-        it puts a 'x' marker in that [x,y (,z)] position. The default is None.
-    bs_ori : tuple, list or numpy.ndarray, optional
-        Transmitter (considered the Base station) orientation. If valid (not None),
-        it draws a line with this direction, starting at the BS position. 
-        Orientation/Rotation is around [x,y,z] following the right hand rule. 
-        [0,0,0] = Antenna pointing towards +x
-        [0,0,90] = Antenna pointing towards +y
-        [0,90,0] = Antenna pointing towards -z
-        Another way of interpreting: 
-        z-rotation is azimuth (where 0 is +x)
-        y-rotation is elevation/tilt (where 0 is the horizon)
-        The default is None.
-    legend : bool, optional
-        Whether to include a plot legend. The default is False.
-    lims : tuple, list or numpy.ndarray, optional
-        Coverage color limits. Helps setting the limits of the colormap and colorbar. 
-        The default is None.
-    proj_3D : bool, optional
-        Whether to make a 3D or 2D plot. True is 3D, False is 2D. The default is False.
-    equal_aspect : bool, optional
-        Whether to have axis with the same scale. Note: if not done with 
-        precaution, it can ruin a 3D visualization. The default is False.
-    tight : bool, optional
-        Whether to set the plot xy(z) limits automatically based on the values
-        so that the axis are maximally used and no data is omitted.
-        The default is True.
-    cmap : string, optional
-        Colormap string identifier for matplotlib. 
-        See available colormaps in: 
-        https://matplotlib.org/stable/users/explain/colors/colormaps.html
-        or by running: plt.colormaps.get_cmap('not a colormap')
-        The default is 'viridis'.
-
-    Returns
-    -------
-    fig : matplotlib figure
-        fig as in "fig, ax = plt.subplots()"
-        The motivation behind returning these elements is allowing editing and
-        saving, before displaying (plt.show() is not used).
-    ax : matplotlib axes
-        ax as in "fig, ax = plt.subplots()"
-    cbar : matplotlib colorbar
-        The colorbar associated with the coverage map.
-    """
+def plot_coverage(rxs: np.ndarray, cov_map: Union[Tuple[float, ...], List[float], np.ndarray],
+                 dpi: int = 300, figsize: Tuple[int, int] = (6,4), cbar_title: Optional[str] = None,
+                 title: Union[bool, str] = False, scat_sz: float = 0.5,
+                 bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
+                 legend: bool = False, lims: Optional[Tuple[float, float]] = None,
+                 proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
+                 cmap: str = 'viridis') -> Tuple[Figure, Axes, Colorbar]:
+    """Generate coverage map visualization for user positions.
     
+    This function creates a customizable plot showing user positions colored by
+    coverage values, with optional base station position and orientation indicators.
+
+    Args:
+        rxs (np.ndarray): User position array with shape (n_users, 3)
+        cov_map (Union[Tuple[float, ...], List[float], np.ndarray]): Coverage map values for coloring
+        dpi (int): Plot resolution in dots per inch. Defaults to 300.
+        figsize (Tuple[int, int]): Figure dimensions (width, height) in inches. Defaults to (6,4).
+        cbar_title (Optional[str]): Title for the colorbar. Defaults to None.
+        title (Union[bool, str]): Plot title. Defaults to False.
+        scat_sz (float): Size of scatter markers. Defaults to 0.5.
+        bs_pos (Optional[np.ndarray]): Base station position coordinates. Defaults to None.
+        bs_ori (Optional[np.ndarray]): Base station orientation angles. Defaults to None.
+        legend (bool): Whether to show plot legend. Defaults to False.
+        lims (Optional[Tuple[float, float]]): Color scale limits (min, max). Defaults to None.
+        proj_3D (bool): Whether to create 3D projection. Defaults to False.
+        equal_aspect (bool): Whether to maintain equal axis scaling. Defaults to False.
+        tight (bool): Whether to set tight axis limits around data points. Defaults to True.
+        cmap (str): Matplotlib colormap name. Defaults to 'viridis'.
+
+    Returns:
+        Tuple containing:
+        - matplotlib Figure object
+        - matplotlib Axes object
+        - matplotlib Colorbar object
+    """
     plt_params = {'cmap': cmap}
     if lims:
         plt_params['vmin'], plt_params['vmax'] = lims[0], lims[1]
@@ -187,48 +157,28 @@ def plot_coverage(rxs, cov_map, dpi=300, figsize=(6,4), cbar_title=None, title=F
     return fig, ax, cbar
 
 
-
-def export_xyz_csv(data, z_var, outfile='', google_earth=False,
-                   lat_min=33.418081, lat_max=33.420961, 
-                   lon_min=-111.932875, lon_max=-111.928567):
-    """
-    Generates a CSV with x,y,z coordinates. This can be used in Blender or, 
-    if selected, in Google Earth, in which case the xy are translated to 
-    geographical coordinates.
-
-    Parameters
-    ----------
-    data : DeepMIMO Dataset
-        DeepMIMO dataset for one basestation. 
-        E.g. data = DeepMIMOv3.generate_data(parameters)[0]
-    z_var : np.ndarray
-        One-dimensional list or numpy array with the values for the z variable
-        which can be used either for heights or color, depending on how the
-        next software used
-    outfile : string, optional
-        Path to the output csv file. The default is ''.
-    google_earth : bool, optional
-        Whether to use the coordinates t. The default is False.
-    lat_min : float, optional
-        Minimum latitude in the user grid - used to translate xy to geographical coordinates. 
-        The default is 33.418081, the one used in ASU Campus 1 scenario.
-    lat_max : float, optional
-        Maximum latitude in the user grid - used to translate xy to geographical coordinates. 
-        The default is 33.420961, the one used in ASU Campus 1 scenario.
-    lon_min : float, optional
-        Minimum longitude in the user grid - used to translate xy to geographical coordinates. 
-        The default is -111.932875, the one used in ASU Campus 1 scenario.
-    lon_max : float, optional
-        Maximum longitude in the user grid - used to translate xy to geographical coordinates. 
-        The default is -111.928567, the one used in ASU Campus 1 scenario.
-
-    Returns
-    -------
-    None.
+def export_xyz_csv(data: Dict[str, Any], z_var: np.ndarray, outfile: str = '',
+                  google_earth: bool = False, lat_min: float = 33.418081,
+                  lat_max: float = 33.420961, lon_min: float = -111.932875,
+                  lon_max: float = -111.928567) -> None:
+    """Export user locations and values to CSV format.
     
-    Example usage:
-        
-    export_xyz_csv(data=data, z_var=max_bf_pwr, outfile='test.csv')
+    This function generates a CSV file containing x,y,z coordinates that can be 
+    imported into visualization tools like Blender or Google Earth. It supports
+    both Cartesian and geographical coordinate formats.
+
+    Args:
+        data (Dict[str, Any]): DeepMIMO dataset for one basestation
+        z_var (np.ndarray): Values to use for z-coordinate or coloring
+        outfile (str): Output CSV file path. Defaults to ''.
+        google_earth (bool): Whether to convert coordinates to geographical format. Defaults to False.
+        lat_min (float): Minimum latitude for coordinate conversion. Defaults to 33.418081.
+        lat_max (float): Maximum latitude for coordinate conversion. Defaults to 33.420961.
+        lon_min (float): Minimum longitude for coordinate conversion. Defaults to -111.932875.
+        lon_max (float): Maximum longitude for coordinate conversion. Defaults to -111.928567.
+
+    Returns:
+        None. Writes data to CSV file.
     """
     user_idxs = np.where(data['user']['LoS'] != -1)[0]
     

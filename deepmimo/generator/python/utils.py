@@ -1,117 +1,129 @@
 """
-Utilities module for DeepMIMO.
-Contains commonly used functions across the package, including:
-- Unit conversions
-- Sampling utilities
-- Path calculations
-- Display helpers
+Utilities Module for DeepMIMO Dataset Processing.
+
+This module provides utility functions and classes for processing DeepMIMO datasets,
+including:
+- Unit conversions (dBm to Watts)
+- Array steering vector calculations
+- Path analysis and feature extraction
+- Position sampling and filtering utilities
+
+The module serves as a collection of helper functions used throughout the DeepMIMO
+dataset generation process.
 """
+
+# Standard library imports
 import time
+from typing import List, Tuple, Union, Optional, Dict, Any
+
+# Third-party imports
 import numpy as np
+
+# Local imports
 from ... import consts as c
 
 ################################# Internal ####################################
 
-def safe_print(text, stop_dur=0.3):
-    """Print with delay for better display (usually after tqdm)"""
+def safe_print(text: str, stop_dur: float = 0.3) -> None:
+    """Print text with a delay for better display compatibility.
+    
+    This function adds a delay after printing to ensure compatibility with
+    progress bars and other dynamic terminal output.
+
+    Args:
+        text: The text to print
+        stop_dur: Delay duration in seconds. Defaults to 0.3.
+    """
     print(text)
     time.sleep(stop_dur)
         
 ################################## For User ###################################
 
-def dbm2watt(val):
-    """Convert dBm to Watts"""
+def dbm2watt(val: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    """Convert power from dBm to Watts.
+    
+    This function performs the standard conversion from decibel-milliwatts (dBm)
+    to linear power in Watts.
+
+    Args:
+        val: Power value(s) in dBm
+
+    Returns:
+        Power value(s) in Watts
+    """
     return 10**(val/10 - 3)
 
-def steering_vec(array, phi=0, theta=0, spacing=0.5):
-    """
-    Creates the array steering vector for uniform (linear and rectangular) arrays.
+def steering_vec(array: Union[Tuple[int, ...], List[int], np.ndarray], phi: float = 0, theta: float = 0,
+                spacing: float = 0.5) -> np.ndarray:
+    """Create array steering vector for uniform arrays.
+    
+    This function computes the normalized array steering vector for a uniform
+    antenna array with specified geometry and steering direction.
 
-    Parameters
-    ----------
-    array : tuple, list or numpy.ndarray
-        Number of [elements along the horizontal, elements along the vertical]
-    phi : float, optional    
-        Azimuth angle in degrees. 0 azimuth is normal to the array. 
-        Positive azimuth points beams to the right. The default is 0.
-    theta : float, optional
-        Elevation angle in degrees. 0 elevation is horizon (normal to the array). 
-        Positive elevation tilts the beam downards. The default is 0.
-    spacing : flaot, optional
-        Antenna spacing in wavelengths. The default is 0.5.
+    Args:
+        array: Array dimensions as tuple/list/array (Mx, My, Mz)
+        phi: Azimuth angle in degrees. Defaults to 0.
+        theta: Elevation angle in degrees. Defaults to 0.
+        spacing: Antenna spacing in wavelengths. Defaults to 0.5.
 
-    Returns
-    -------
-    numpy.ndarray
-        The normalized array response vector.
-
+    Returns:
+        Normalized steering vector for the array
     """
     idxs = ant_indices(array)
     resp = array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
     return resp / np.linalg.norm(resp)
 
 
-def uniform_sampling(steps, n_rows, users_per_row):
-    """
-    Returns indices of users at uniform steps/intervals.
+def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.ndarray:
+    """Return indices of users at uniform intervals.
     
-    Parameters
-    ----------
-    steps : list
-        Step size along x and y dimensions. The list should have 2 elements only.
-        Examples:
-        [1,1] = indices of all users
-        [1,2] = same number of users across x, one every two users along y. Results: half the users.
-        [2,2] = takes one user every 2 users (step=2), along x and y. Results: 1/4 the total users
-    n_rows : int
-        Number of rows in the generated dataset. Necessary for indexing users.
-    users_per_row : int
-        Number of users per row in the generated dataset. Necessary for indexing users.
-        
-    Returns
-    -------
-    data : list
-        List of undersampled indices.
+    This function generates indices for uniform sampling of users in a grid,
+    allowing for different sampling rates in each dimension.
+
+    Args:
+        steps: List of sampling steps for each dimension
+        n_rows: Number of rows in the grid
+        users_per_row: Number of users per row
+
+    Returns:
+        Array of indices for uniformly sampled users
     """
     cols = np.arange(users_per_row, step=sampling_div[0])
     rows = np.arange(n_rows, step=sampling_div[1])
     uniform_idxs = np.array([j + i*users_per_row for i in rows for j in cols])
-    
     return uniform_idxs
 
 
-class LinearPath():
-    """Creates a linear path of features"""
-    def __init__(self, deepmimo_dataset, first_pos, last_pos, res=1, n_steps=False, filter_repeated=True):
-        """
-        Creates a linear path of features. 
-
-        Parameters
-        ----------
-        deepmimo_dataset : DeepMIMO dataset
-            A dataset generated from DeepMIMO.generate_data(parameters).
-        first_pos : numpy.ndarray
-            [x, y, (z)] position of the start of the linear path.
-        last_pos : numpy.ndarray
-            [x, y, (z)] position of the end of the linear path.
-        res : float, optional
-            Resolution [in meters]. The same as providing n_steps. The default is 1.
-        n_steps : int, optional
-            Number of positions / samples between first and last position (including).
-            If False, either uses the resolution parameter <res>. The default is False.
-        filter_repeated : bool, optional
-            Whether to eliminated repeated positions. 
-            Repeated positions happen when a path is oversampled or the closest
-            dataste position repeats for a set of path positions. 
-            If True, the repeated positions are removed. The default is True.
-
-        Returns
-        -------
-        None.
-
-        """
+class LinearPath:
+    """Class for creating and analyzing linear paths through DeepMIMO datasets.
+    
+    This class handles the creation of linear sampling paths through a DeepMIMO
+    dataset and extracts relevant features along these paths, including path
+    loss, delays, and angles.
+    
+    Attributes:
+        dataset (Dict): DeepMIMO dataset containing path information
+        first_pos (np.ndarray): Starting position of the linear path
+        last_pos (np.ndarray): Ending position of the linear path
+        n (int): Number of points along the path
+        idxs (np.ndarray): Indices of dataset points along the path
+        pos (np.ndarray): Positions of points along the path
+        feature_names (List[str]): Names of extracted features
+    """
+    def __init__(self, deepmimo_dataset: Union[Dict[str, Any], List[Dict[str, Any]]], first_pos: np.ndarray,
+                 last_pos: np.ndarray, res: float = 1, n_steps: Optional[int] = None, 
+                 filter_repeated: bool = True) -> None:
+        """Initialize a linear path through the dataset.
         
-        if len(first_pos) == 2: # if not given, assume z-coordinate = 0
+        Args:
+            deepmimo_dataset: DeepMIMO dataset or list of datasets
+            first_pos: Starting position coordinates
+            last_pos: Ending position coordinates
+            res: Spatial resolution in meters. Defaults to 1.
+            n_steps: Number of steps along path. Defaults to None.
+            filter_repeated: Whether to filter repeated positions. Defaults to True.
+        """
+        if len(first_pos) == 2:  # if not given, assume z-coordinate = 0
             first_pos = np.concatenate((first_pos,[0]))
             last_pos = np.concatenate((last_pos,[0]))
             
@@ -122,8 +134,16 @@ class LinearPath():
         self._set_idxs_pos_res_steps(res, n_steps, filter_repeated)
         self._copy_data_from_dataset()
         self._extract_features()
+
+    def _set_idxs_pos_res_steps(self, res: float, n_steps: Optional[int], 
+                                filter_repeated: bool) -> None:
+        """Set path indices, positions, resolution and steps.
         
-    def _set_idxs_pos_res_steps(self, res, n_steps, filter_repeated):
+        Args:
+            res: Spatial resolution in meters
+            n_steps: Number of steps along path
+            filter_repeated: Whether to filter repeated positions
+        """
         dataset_pos = self.dataset['user']['location']
         if not n_steps:
             data_res = np.linalg.norm(dataset_pos[0] - dataset_pos[1])
@@ -155,8 +175,9 @@ class LinearPath():
     
         self.idxs = idxs
         self.pos = dataset_pos[idxs]
-    
-    def _copy_data_from_dataset(self):
+
+    def _copy_data_from_dataset(self) -> None:
+        """Copy relevant data from dataset to class attributes."""
         self.feature_names = ['LoS', 'pathloss', 'distance']
         
         self.LoS = self.dataset['user']['LoS'][self.idxs]
@@ -164,43 +185,49 @@ class LinearPath():
         self.distance = self.dataset['user']['distance'][self.idxs]
         self.paths = self.dataset['user']['paths'][self.idxs]
         self.channel = self.dataset['user']['channel'][self.idxs]
-        
-    def _extract_features(self):
+
+    def _extract_features(self) -> None:
+        """Extract path features and compute derived quantities."""
         # Main path features
-        self.path_features = ['DoD_phi', 'DoD_theta', 'DoA_phi', 'DoA_theta', 
-                              'ToA', 'phase', 'power']
+        self.path_features = ['DoD_phi', 'DoD_theta', 'DoA_phi', 'DoA_theta',
+                            'ToA', 'phase', 'power']
         self.feature_names += ['main_path_' + var for var in self.path_features]
         for feat in self.path_features:
-            setattr(self, f'main_path_{feat}', 
-                    np.array([self.paths[i][feat][0] for i in range(self.n)]))#self.idxs]))
+            setattr(self, f'main_path_{feat}',
+                    np.array([self.paths[i][feat][0] for i in range(self.n)]))
         
         # Other features
         self.feature_names += ['pwr_ratio_main_path', 'total_power']
         self.total_power = np.array([np.sum(self.paths[i]['power']) for i in range(self.n)])
         self.pwr_ratio_main_path = np.array([self.main_path_power[i] / np.sum(self.paths[i]['power'])
-                                             if self.LoS[i] != -1 else np.nan for i in range(self.n)])
+                                           if self.LoS[i] != -1 else np.nan for i in range(self.n)])
 
-    def get_feature_names(self):
-        return self.feature_names
-    
-
-def get_idxs_with_limits(data_pos, **limits):
-    """
-    Returns indices of positions that satisfy the given coordinate limits.
-    
-    Parameters
-    ----------
-    data_pos : numpy.ndarray
-        Array with all positions. Dimensions: [n_positions, 2 or 3]
-    **limits : dict
-        Arbitrary combination of limits as keyword arguments.
-        Supported keys: x_min, x_max, y_min, y_max, z_min, z_max
-        Example: x_min=10, y_max=50, z_min=-2
+    def get_feature_names(self) -> List[str]:
+        """Get list of available feature names.
         
-    Returns
-    -------
-    numpy.ndarray
-        Indices of positions that satisfy all specified limits.
+        Returns:
+            List of feature names extracted from the path
+        """
+        return self.feature_names
+
+
+def get_idxs_with_limits(data_pos: np.ndarray, **limits) -> np.ndarray:
+    """Get indices of positions within specified coordinate limits.
+    
+    This function filters position indices based on specified minimum and
+    maximum coordinate values in each dimension. Each limit (x_min, x_max, y_min,
+    y_max, z_min, z_max) is optional and only applied if provided.
+
+    Args:
+        data_pos: Array of positions with shape (n_points, n_dims)
+        **limits: Keyword arguments specifying coordinate limits
+                 (x_min, x_max, y_min, y_max, z_min, z_max)
+
+    Returns:
+        Array of indices for positions within the specified limits
+        
+    Raises:
+        ValueError: If invalid limit keys are provided or dimensions don't match
     """
     valid_limits = {'x_min', 'x_max', 'y_min', 'y_max', 'z_min', 'z_max'}
     if not all(key in valid_limits for key in limits):

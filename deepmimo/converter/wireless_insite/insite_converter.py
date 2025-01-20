@@ -1,58 +1,59 @@
-"""
-Converts Wireless Insite raytracing files into DeepMIMO scenarios ready to upload.
+"""Wireless Insite to DeepMIMO Scenario Converter.
 
-TODOS:
-    - support multi-antennas (includes polarization)
-    - support dynamic scenarios
-    - (optional) dictionary mapping between Wireless Insite and DeepMIMO names
-    - (optional) expand support multiple tx_ids per tx_set
-      (requires reading number of ids from .txrx and use them to index files right)
-    - (optional) if we decide to drop the inactive positions, the changes are simple:
-      1- remove "active_points<..>.mat"
-      2- remove inactive positions from position array
+This module provides functionality to convert Wireless Insite raytracing simulation
+outputs into DeepMIMO-compatible scenario files. It handles:
+- Channel data formatting and conversion
+- Single and multi-user scenario support
+- Single and multi-basestation configurations
+- Path delay and coefficient extraction
 
-Requirements:
-
-    - keep the transmit power at its default (0 dBm)
-    - for dual polarization, end the name of the antenna as '_pol', so the 
-      converter knows alternated antennas should be considered for different 
-      polarizations. Otherwise, a single polarization is used
-    - Request the folowing outputs: path loss (.pl file) and paths (.path file)
-      (the .pl.p2m is only needed to get the positions of points without paths)
-    - across a tx/rx set, the same antenna is used
+The adapter assumes BSs are transmitters and users are receivers. Uplink channels
+can be generated using (transpose) reciprocity.
 """
 
-
+# Standard library imports
 import os
 import re
-from pprint import pprint # for debugging
+from pprint import pprint
 import shutil
+from typing import List, Dict, Tuple, Optional
+
+# Third-party imports
 import numpy as np
 import scipy.io
 
+# Local imports
 from .. import converter_utils as cu
 from ...general_utilities import PrintIfVerbose, get_mat_filename
 from ... import consts as c
-
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
-
-from typing import List, Dict
-
-from .paths_parser import paths_parser, extract_tx_pos  # for: .paths
-
+from .paths_parser import paths_parser, extract_tx_pos
 from .city_vis import city_vis
-
 from .insite_materials import read_materials
 from .insite_setup import read_setup
 from .insite_txrx import read_txrx, get_id_to_idx_map
 
+
+# Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
-SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES 
+SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
 
+def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int], rx_ids: List[int], 
+                          params_dict: Dict, scenario_name: str = '') -> str:
+    """Convert Wireless Insite files to DeepMIMO format using legacy v3 converter.
 
-def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
-    # P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
+    Args:
+        p2m_folder (str): Path to folder containing .p2m files.
+        tx_ids (List[int]): List of transmitter IDs to process.
+        rx_ids (List[int]): List of receiver IDs to process.
+        params_dict (Dict): Dictionary containing simulation parameters.
+        scenario_name (str): Custom name for output folder. Uses p2m parent folder name if empty.
+
+    Returns:
+        str: Path to output folder containing converted files.
+    """
+    # Loads P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
     
     insite_sim_folder = os.path.dirname(p2m_folder)
 
@@ -65,8 +66,7 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
     # Convert P2M files to mat format
     WIChannelConverter(p2m_folder, intermediate_folder)
 
-    DeepMIMODataFormatter(intermediate_folder, output_folder, 
-                          TX_order=tx_ids, RX_order=rx_ids)
+    DeepMIMODataFormatter(intermediate_folder, output_folder, TX_order=tx_ids, RX_order=rx_ids)
     
     data_dict = {
                 c.LOAD_FILE_SP_VERSION: c.VERSION,
@@ -83,7 +83,7 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), data_dict)
     
     # export
-    scen_name = os.path.basename(os.path.dirname(output_folder))
+    scen_name = scenario_name if scenario_name else os.path.basename(os.path.dirname(output_folder))
     scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
     if os.path.exists(scen_path):
         shutil.rmtree(scen_path)
@@ -92,14 +92,38 @@ def insite_rt_converter_v3(p2m_folder, tx_ids, rx_ids, params_dict):
     return output_folder
 
 
-def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
-                        tx_set_ids: List[int] = None, rx_set_ids: List[int] = None,
-                        verbose: bool = True, overwrite: bool | None = None, 
-                        vis_buildings: bool = False, 
-                        old: bool = False, old_params: Dict = {},
-                        scenario_name=''):
+def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: Optional[List[int]] = None,
+                       rx_set_ids: Optional[List[int]] = None, verbose: bool = True, 
+                       overwrite: Optional[bool] = None, vis_buildings: bool = False, 
+                       old: bool = False, old_params: Dict = {}, scenario_name: str = '') -> str:
+    """Convert Wireless InSite ray-tracing data to DeepMIMO format.
+
+    This function handles the conversion of Wireless InSite ray-tracing simulation 
+    data into the DeepMIMO dataset format. It processes path files (.p2m), setup files,
+    and transmitter/receiver configurations to generate channel matrices and metadata.
+
+    Args:
+        p2m_folder (str): Path to folder containing .p2m path files.
+        copy_source (bool): Whether to copy ray-tracing source files to output.
+        tx_set_ids (Optional[List[int]]): List of transmitter set IDs. Uses all if None. Defaults to None.
+        rx_set_ids (Optional[List[int]]): List of receiver set IDs. Uses all if None. Defaults to None.
+        verbose (bool): Whether to print progress messages. Defaults to True.
+        overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
+        vis_buildings (bool): Whether to visualize building layouts.
+        old (bool): Whether to use legacy v3 converter.
+        old_params (Dict): Parameters for legacy v3 converter.
+        scenario_name (str): Custom name for output folder. Uses p2m folder name if empty.
+        Default is False, None, None, True, None, False, False, {}, ''.
+
+    Returns:
+        str: Path to output folder containing converted DeepMIMO dataset.
+        
+    Raises:
+        FileNotFoundError: If required input files are missing.
+        ValueError: If transmitter or receiver IDs are invalid.
+    """
     if old: # v3
-        scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params)
+        scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params, scenario_name)
         return scen_name
     
     # Setup output folder
@@ -156,8 +180,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 rx_set_idx = id_to_idx_map[rx_set_id]
                 tx_set_idx = id_to_idx_map[tx_set_id]
                 
-                save_mat(rx_pos, c.RX_POS_PARAM_NAME, output_folder, 
-                         tx_set_idx, tx_idx, rx_set_idx)
+                save_mat(rx_pos, c.RX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
                 
                 # 3- update number of (active/inactive) points in txrx sets
                 txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = rx_pos.shape[0]
@@ -177,8 +200,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                 # 5- also read tx position from path files
                 # (can be done in many ways, but this is easiest on code & user requirements)
                 tx_pos = extract_tx_pos(paths_p2m_file)
-                save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, 
-                         tx_set_idx, tx_idx, rx_set_idx)
+                save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
                 
     # Export params.mat
     export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
@@ -197,15 +219,37 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     return scen_name
 
 
-def save_mat(data, data_key, output_folder, tx_set_idx, tx_idx, rx_set_idx):
+def save_mat(data: np.ndarray, data_key: str, output_folder: str, tx_set_idx: int,
+             tx_idx: int, rx_set_idx: int) -> None:
+    """Save data to a .mat file with standardized naming.
+    
+    Args:
+        data (np.ndarray): Data array to save.
+        data_key (str): Key identifier for the data type.
+        output_folder (str): Output directory path.
+        tx_set_idx (int): Transmitter set index.
+        tx_idx (int): Transmitter index within set.
+        rx_set_idx (int): Receiver set index.
+    """
     mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
     file_path = output_folder + '/' + mat_file_name
     scipy.io.savemat(file_path, {c.MAT_VAR_NAME: data})
     
 
-def read_pl_p2m_file(filename: str):
-    """
-    Returns xyz, distance, pl from p2m file.
+def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Read position and path loss data from a .p2m file.
+    
+    Args:
+        filename (str): Path to the .p2m file to read.
+        
+    Returns:
+        Tuple containing:
+        - xyz (np.ndarray): Array of positions with shape (n_points, 3)
+        - dist (np.ndarray): Array of distances with shape (n_points, 1)
+        - path_loss (np.ndarray): Array of path losses with shape (n_points, 1)
+        
+    Raises:
+        AssertionError: If file extension or format is invalid
     """
     assert filename.endswith('.p2m') # should be a .p2m file
     assert '.pl.' in filename        # should be the pathloss p2m
@@ -238,8 +282,16 @@ def read_pl_p2m_file(filename: str):
     return xyz_matrix, dist_matrix, path_loss_matrix
 
 
-def verify_sim_folder(sim_folder: str, verbose: bool):
+def verify_sim_folder(sim_folder: str, verbose: bool) -> None:
+    """Verify that required simulation files exist.
     
+    Args:
+        sim_folder (str): Path to simulation folder.
+        verbose (bool): Whether to print progress messages.
+        
+    Raises:
+        Exception: If required files are missing or duplicated.
+    """
     files_in_sim_folder = os.listdir(sim_folder)
     for ext in ['.setup', '.txrx']:
         files_found_with_ext = cu.ext_in_list(ext, files_in_sim_folder)
@@ -251,8 +303,13 @@ def verify_sim_folder(sim_folder: str, verbose: bool):
             raise Exception(f'Several {ext} found in {sim_folder}')
 
 
-def copy_rt_source_files(sim_folder: str, verbose: bool = True):
+def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
+    """Copy raytracing source files to a new directory.
     
+    Args:
+        sim_folder (str): Path to simulation folder.
+        verbose (bool): Whether to print progress messages. Defaults to True.
+    """
     vprint = PrintIfVerbose(verbose) # prints if verbose 
     rt_source_folder = os.path.basename(sim_folder) + '_raytracing_source'
     files_in_sim_folder = os.listdir(sim_folder)
@@ -278,8 +335,15 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True):
 
 
 def export_params_dict(output_folder: str, setup_dict: Dict = {},
-                       txrx_dict: Dict = {}, mat_dict: Dict = {}):
+                       txrx_dict: Dict = {}, mat_dict: Dict = {}) -> None:
+    """Export parameter dictionaries to a .mat file.
     
+    Args:
+        output_folder (str): Output directory path.
+        setup_dict (Dict): Dictionary of setup parameters. Defaults to {}.
+        txrx_dict (Dict): Dictionary of transmitter/receiver parameters. Defaults to {}.
+        mat_dict (Dict): Dictionary of material parameters. Defaults to {}.
+    """
     data_dict = {
         c.LOAD_FILE_SP_VERSION: c.VERSION,
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
@@ -292,7 +356,16 @@ def export_params_dict(output_folder: str, setup_dict: Dict = {},
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
 
 
-def export_scenario(sim_folder, overwrite: bool | None = None):
+def export_scenario(sim_folder: str, overwrite: Optional[bool] = None) -> Optional[str]:
+    """Export scenario to the DeepMIMO scenarios folder.
+    
+    Args:
+        sim_folder (str): Path to simulation folder.
+        overwrite (Optional[bool]): Whether to overwrite existing scenario. Defaults to None.
+        
+    Returns:
+        Optional[str]: Name of the exported scenario.
+    """
     scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
     scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
     if os.path.exists(scen_path):
@@ -306,7 +379,5 @@ def export_scenario(sim_folder, overwrite: bool | None = None):
         else:
             return None
     
-    
     shutil.copytree(sim_folder, scen_path)
-
     return scen_name

@@ -1,14 +1,25 @@
+"""
+Constants and configuration parameters for the DeepMIMO dataset generation.
+
+This module contains all constant definitions used throughout the DeepMIMO toolkit,
+including parameter names, file paths, and configuration options for both v4 and
+legacy versions of DeepMIMO.
+"""
+
 import numpy as np
+
+
+# Core Configuration
 VERSION = 4
+FP_TYPE = np.float32  # floating point precision for saving values
+
+# Ray Tracer Configurations
 RAYTRACER_NAME_WIRELESS_INSITE = 'Remcom Wireless Insite'
 RAYTRACER_VERSION_WIRELESS_INSITE = 3.3
 RAYTRACER_NAME_SIONNA = 'Sionna Ray Tracing'           # not supported yet
 RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'  # not supported yet
-FP_TYPE = np.float32 # floating point precision for saving values
 
-
-# DEEPMIMOv4 consts
-# Fundamental
+# DEEPMIMOv4 Fundamental Parameters
 AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
 AOD_AZ_PARAM_NAME = 'aod_az'
@@ -23,7 +34,7 @@ INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
 RT_PARAMS_PARAM_NAME = 'rt_params'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
 
-# Computed
+# DEEPMIMOv4 Computed Parameters
 CHANNEL_PARAM_NAME = 'channel'
 NUM_PATHS_PARAM_NAME = 'num_paths'
 PWR_LINEAR_PARAM_NAME = 'power_linear'
@@ -68,9 +79,6 @@ INTERACTIONS_POS_PARAM_NAME_2 = 'interaction_locations'
 
 # Load Params
 LOAD_PARAM_MAX_PATH = 'max_paths'
-
-
-
 
 # DeepMIMOv4 (saved) matrix names
 MAT_VAR_NAME = 'data' # all variable names inside single variable matrices
@@ -184,5 +192,5 @@ LOAD_FILE_SP_POLAR = 'dual_polar_available'
 LOAD_FILE_SP_NUM_TX_ANT = 'num_tx_ant' 
 LOAD_FILE_SP_NUM_RX_ANT = 'num_rx_ant' 
 
-# Constants
-LIGHTSPEED = 299792458
+# Physical Constants
+LIGHTSPEED = 299792458  # Speed of light in m/s

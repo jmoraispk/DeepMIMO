@@ -13,10 +13,10 @@ from .generator.python.core import (
     compute_los
 )
 
-# Keep visualization module as is
+# Visualization
 from .generator.python import visualization
 
-# Utils module with commonly used functions
+# Utilities
 from .generator.python.utils import (
     dbm2watt,
     uniform_sampling,

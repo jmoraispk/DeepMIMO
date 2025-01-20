@@ -66,7 +66,7 @@ class ChannelGenParameters:
             }
         }
     
-    def get_params_dict(self):
+    def get_params_dict(self) -> Dict:
         """Get dictionary of all parameters.
         
         Returns:
@@ -74,7 +74,7 @@ class ChannelGenParameters:
         """
         return self.params
     
-    def get_name(self):
+    def get_name(self) -> str:
         """Get scenario name.
         
         Returns:
@@ -82,7 +82,7 @@ class ChannelGenParameters:
         """
         return self.params[c.PARAMSET_SCENARIO]
     
-    def get_folder(self):
+    def get_folder(self) -> str:
         """Get absolute path to dataset folder.
         
         Returns:
@@ -90,7 +90,7 @@ class ChannelGenParameters:
         """
         return os.path.abspath(self.params[c.PARAMSET_DATASET_FOLDER])
     
-    def get_path(self):
+    def get_path(self) -> str:
         """Get full path to scenario folder.
         
         Returns:
@@ -98,7 +98,7 @@ class ChannelGenParameters:
         """
         return os.path.join(self.get_folder(), self.params[c.PARAMSET_SCENARIO])
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return pformat(self.get_params_dict())
 
 class PathVerifier:
@@ -114,7 +114,7 @@ class PathVerifier:
         path_ratio_FFT (list): Ratios of clipped path powers
     """
     
-    def __init__(self, params):
+    def __init__(self, params: Dict):
         """Initialize path verifier.
         
         Args:
@@ -127,7 +127,7 @@ class PathVerifier:
             self.max_ToA = 0
             self.path_ratio_FFT = []
     
-    def verify_path(self, ToA, power):
+    def verify_path(self, ToA: float, power: float) -> None:
         """Verify a path's time of arrival against OFDM parameters.
         
         Args:
@@ -142,7 +142,7 @@ class PathVerifier:
                 violating_paths = ToA > self.FFT_duration
                 self.path_ratio_FFT.append(sum(power[violating_paths])/sum(power))
                         
-    def notify(self):
+    def notify(self) -> None:
         """Print notification about paths exceeding OFDM duration if needed."""
         if self.params[c.PARAMSET_FD_CH]:
             avg_ratio_FFT = 0
@@ -168,7 +168,7 @@ class OFDM_PathGenerator:
         delay_to_OFDM (array): Delay to OFDM transform matrix
     """
     
-    def __init__(self, params, subcarriers):
+    def __init__(self, params: Dict, subcarriers: np.ndarray):
         """Initialize OFDM path generator.
         
         Args:
@@ -183,7 +183,7 @@ class OFDM_PathGenerator:
         self.delay_to_OFDM = np.exp(-1j * 2 * np.pi / self.total_subcarriers * 
                                    np.outer(self.delay_d, self.subcarriers))
     
-    def generate(self, pwr, toa, phs, Ts):
+    def generate(self, pwr: np.ndarray, toa: np.ndarray, phs: np.ndarray, Ts: float) -> np.ndarray:
         """Generate OFDM paths.
         
         Args:
@@ -212,9 +212,9 @@ class OFDM_PathGenerator:
                                np.outer(delay_n, self.subcarriers))
         return path_const
 
-def generate_MIMO_channel(dataset, ofdm_params: Dict, tx_ant_params: Dict, 
-                         rx_ant_params: Dict, freq_domain: bool = True,
-                         carrier_freq: float = 3e9):
+def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
+                         rx_ant_params: Dict, freq_domain: bool = True, 
+                         carrier_freq: float = 3e9) -> np.ndarray:
     """Generate MIMO channel matrices.
     
     This function generates MIMO channel matrices based on path information from

@@ -47,6 +47,7 @@ params = dm.ChannelGenParameters()
 
 # num_paths and power_linear are necessary for channel
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
+# Note: *1000  is needed to match old DM
 dataset['power_linear'] = dm.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
 dataset['channel'] = dm.compute_channels(dataset, params)     # c.CHANNEL_PARAM_NAME
 dataset['pathloss'] = dm.compute_pathloss(dataset['power'][10], 
@@ -74,22 +75,25 @@ dataset = dm.generate(scen_name)
 #%% V3 Generation
 
 import deepmimo as dm
-# scen_name = 'simple_street_canyon_test'
-scen_name = 'asu_campus'
+# scen_name = 'simple_street_canyon_test_old'
+scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
-# params.get_params_dict()['user_rows'] = np.arange(91)
 dataset2 = dm.generate_old(params)
 
 chs2 = dataset2[0]['user']['channel']
 
 # TODOOOO: test PARAMSET_OFDM_LPF = 1! (crashing on the other.)
 
-#%%
+#%% Verification
+dataset['ch'][10]
+chs2[10]
+
+#%% Demo
 
 import deepmimo as dm
 scen_name = dm.create_scenario(r'.\P2Ms\asu_campus\study_area_asu5')
 dataset = dm.generate(scen_name)
-#%%
+#%% Demo part 2
 # load_params = {'tx_sets': [1], 'rx_sets': [2], 'max_paths': 1}
 load_params = {'tx_sets': [1], 'rx_sets': {2: 'active'}}
 # load_params = {'tx_sets': [1], 'rx_sets': {2: [1,2,3]}}
@@ -184,24 +188,4 @@ Other notes:
 # 20 - Add space requirements to auto downloader information
 
 # 21 - Add dual-polarization AND multi-antenna support
-
-#%% READ Setup
-
-# Generation:
-# 6) Generate a <info> field with all sorts of information
-# dataset[tx]['info']
-# maybe also dm.info('chs') | dm.info('aoa_az') | ..
-
-dataset.info() # Print general scenario info, including about available TX/RX Sets
-dm.info()
-dm.info('params num_paths')
-dm.info('params')['num_paths']
-
-def info(s):
-    if ' ' in s:
-        s1, s2 = s.split()
-        info(s2)
-    
-    a = 'num_paths'
-    b = 'Influences the sizes of the matrices aoa, aod, etc... and the generated channels'
 

@@ -1,17 +1,38 @@
+"""
+DeepMIMO Scenario Downloader Module.
+
+This module provides functionality for downloading and managing DeepMIMO scenario files,
+including:
+- Automated scenario downloading from remote storage
+- Progress tracking and status reporting
+- Retry mechanisms for failed downloads
+- Scenario extraction and verification
+- Support for multiple scenario types and variants
+
+The module maintains a mapping of scenario names to their download URLs and handles
+the complete download and extraction process.
+"""
+
+# Standard library imports
 import os
+import zipfile
+from typing import Optional, Dict
+
+# Third-party imports
 import requests
 from tqdm import tqdm
-import zipfile 
 
+# Local imports
 from ... import consts as c
 
-# Headers to mimic a browser request
+
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 }
 
-# Mapping of current scenarios names and their dropbox links:
-NAME_TO_LINK = {
+# Mapping of current scenarios names and their dropbox links
+NAME_TO_LINK: Dict[str, str] = {
     # ASU Campus
     'asu_campus1': 'https://www.dropbox.com/scl/fi/unldvnar22cuxjh7db2rf/ASU_Campus1.zip?rlkey=rs2ofv3pt4ctafs2zi3vwogrh&dl=1', 
     
@@ -66,17 +87,32 @@ NAME_TO_LINK = {
     'city_17_seatle': 'https://www.dropbox.com/scl/fi/1jqvqmijfgtdoqg0hdfq4/city_17_seattle.zip?rlkey=xllzpe22huags0aou2hws2vnu&dl=1',
     'city_18_denver': 'https://www.dropbox.com/scl/fi/fpttaunc7j3gla0lrqp63/city_18_denver.zip?rlkey=zd4zs4qhwdpzjf329ozr45r4k&dl=1',
     'city_19_oklaoma': 'https://www.dropbox.com/scl/fi/yexjytvahsf27x9sunmfi/city_19_oklahoma.zip?rlkey=vgz7drqyjudmxqyepocu05b5u&dl=1',
-} # In the future, this dictionary may be fetched from a server. Or just URLs not present. 
+}
 
 
-def download_scenario(name):
+def download_scenario(name: str) -> Optional[str]:
+    """Download a specific DeepMIMO scenario file.
+    
+    This function downloads a scenario file from remote storage, creating the
+    necessary directories and tracking download progress.
+
+    Args:
+        name (str): Name of the scenario to download.
+
+    Returns:
+        Optional[str]: Path to the downloaded zip file if successful, None otherwise.
+        
+    Raises:
+        KeyError: If scenario name is not found in NAME_TO_LINK.
+        ConnectionError: If download fails due to network issues.
+    """
     os.makedirs(c.SCENARIOS_FOLDER, exist_ok=True)
     url = NAME_TO_LINK[name]
     output_path = os.path.join(c.SCENARIOS_FOLDER, name + '.zip')
 
     if os.path.exists(output_path):
         print(f'output path "{output_path}" already exists')
-        return
+        return output_path
 
     response = requests.get(url, stream=True, headers=HEADERS)
     if response.status_code == 200:
@@ -94,17 +130,45 @@ def download_scenario(name):
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  # Filter out keep-alive new chunks
                         file.write(chunk)
-                        progress_bar.update(len(chunk) / (1024 * 1024))  # Update progress in MB
+                        progress_bar.update(len(chunk) / (1024 * 1024))
+        return output_path
     else:
         print(f"Failed to download file. Status code: {response.status_code}")
+        return None
 
-    return output_path
 
-def extract_scenario(path_to_zip):
+def extract_scenario(path_to_zip: str) -> None:
+    """Extract a downloaded scenario zip file.
+    
+    This function extracts the contents of a downloaded scenario zip file
+    to the appropriate directory.
+
+    Args:
+        path_to_zip (str): Path to the zip file to extract.
+        
+    Raises:
+        zipfile.BadZipFile: If zip file is corrupted.
+        OSError: If extraction fails due to file system issues.
+    """
     with zipfile.ZipFile(path_to_zip, 'r') as zip_ref:
         zip_ref.extractall(os.path.dirname(path_to_zip))
 
-def download_scenario_handler(name):
+
+def download_scenario_handler(name: str) -> str:
+    """Handle scenario download with retry mechanism.
+    
+    This function attempts to download a scenario multiple times in case of
+    network failures, implementing a simple retry mechanism.
+
+    Args:
+        name (str): Name of the scenario to download.
+
+    Returns:
+        str: Path to the downloaded zip file.
+        
+    Raises:
+        RuntimeError: If all download attempts fail.
+    """
     zip_path = ''
     attempt = 0
     while attempt < 3:
@@ -117,6 +181,12 @@ def download_scenario_handler(name):
     
     return zip_path
 
-def test_all_scen_download():
+
+def test_all_scen_download() -> None:
+    """Test downloading all available scenarios.
+    
+    This function attempts to download all scenarios listed in NAME_TO_LINK
+    to verify their availability and accessibility.
+    """
     for scen in NAME_TO_LINK.keys():
         download_scenario_handler(scen)

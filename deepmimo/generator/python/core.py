@@ -1,31 +1,49 @@
 """
-Core module for DeepMIMO.
-Contains the main generation functionality and data loading operations.
-Handles scenario management, dataset generation, and parameter validation.
+DeepMIMO Core Generation Module.
+
+This module provides the core functionality for generating and managing DeepMIMO datasets.
+It handles:
+- Dataset generation and scenario management
+- Ray-tracing data loading and processing
+- Channel computation and parameter validation
+- Multi-user MIMO channel generation
+
+The module serves as the main entry point for creating DeepMIMO datasets from ray-tracing data.
 """
 
+# Standard library imports
 import os
+from typing import Dict, List, Union, Optional, Any
+
+# Third-party imports
 import numpy as np
 import scipy.io
-from typing import Dict, List
 from tqdm import tqdm
 
+# Local imports
 from .utils import dbm2watt, safe_print
 from .channel import generate_MIMO_channel, ChannelGenParameters
 from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ..python.downloader import download_scenario_handler, extract_scenario
 
-def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}) -> Dict | List[Dict]:
+
+def generate(scen_name: str, load_params: Dict[str, Any] = {},
+            ch_gen_params: Dict[str, Any] = {}) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
     """Generate a DeepMIMO dataset for a given scenario.
+    
+    This function wraps loading scenario data, computing channels, and organizing results.
 
     Args:
         scen_name (str): Name of the scenario to generate data for
-        load_params (Dict, optional): Parameters for loading the scenario. Defaults to {}.
-        ch_gen_params (Dict, optional): Parameters for channel generation. Defaults to {}.
+        load_params (dict): Parameters for loading the scenario. Defaults to {}.
+        ch_gen_params (dict): Parameters for channel generation. Defaults to {}.
 
     Returns:
-        Dict: Generated DeepMIMO dataset containing channel matrices and metadata
+        dict or list: Generated DeepMIMO dataset containing channel matrices and metadata
+        
+    Raises:
+        ValueError: If scenario name is invalid or required files are missing
     """
     if len(load_params) == 0:
         tx_sets = {1: [0]}
@@ -43,15 +61,21 @@ def generate(scen_name: str, load_params: Dict = {}, ch_gen_params: Dict = {}) -
     
     return dataset
 
-def load_scenario(scen_name: str, **load_params) -> Dict | List[Dict]:
+def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[str, Any]]:
     """Load a DeepMIMO scenario from disk or download if not available.
+    
+    This function handles scenario data loading, including automatic downloading
+    if the scenario is not found locally.
 
     Args:
         scen_name (str): Name of the scenario to load
-        **load_params: Additional loading parameters
+        **load_params (dict): Additional loading parameters including tx_sets, rx_sets, max_paths
 
     Returns:
-        Dict: Loaded scenario data including ray-tracing results and parameters
+        dict or list: Loaded scenario data including ray-tracing results and parameters
+        
+    Raises:
+        ValueError: If scenario files cannot be loaded
     """
     if '\\' in scen_name or '/' in scen_name:
         scen_folder = scen_name
@@ -87,16 +111,16 @@ def load_scenario(scen_name: str, **load_params) -> Dict | List[Dict]:
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
                          tx_sets: Dict[int, list | str] | list | str = 'all',
                          rx_sets: Dict[int, list | str] | list | str = 'all',
-                         matrices: List[str] = None):
+                         matrices: List[str] = None) -> Dict[str, Any]:
     """Load raytracing data for a scene.
 
     Args:
         scene_folder (str): Path to scene folder containing raytracing data files
         rt_params (dict): Dictionary containing raytracing parameters 
-        max_paths (int, optional): Maximum number of paths to load. Defaults to 5.
-        tx_sets (dict or list or str, optional): Transmitter sets to load. Defaults to 'all'.
-        rx_sets (dict or list or str, optional): Receiver sets to load. Defaults to 'all'.
-        matrices (list of str, optional): List of matrix names to load. Defaults to None.
+        max_paths (int): Maximum number of paths to load. Defaults to 5
+        tx_sets (dict or list or str): Transmitter sets to load. Defaults to 'all'
+        rx_sets (dict or list or str): Receiver sets to load. Defaults to 'all'
+        matrices (list of str): List of matrix names to load. Defaults to None
 
     Returns:
         dict: Dataset containing the requested matrices for each tx-rx pair
@@ -125,31 +149,54 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
     
     return dataset_dict if len(dataset_dict) != 1 else dataset_dict[0]
 
-def compute_num_paths(dataset):
-    """Compute number of paths for each user"""
+def compute_num_paths(dataset: Dict[str, Any]) -> np.ndarray:
+    """Compute number of valid paths for each user.
+    
+    Args:
+        dataset (dict): DeepMIMO dataset containing path information
+        
+    Returns:
+        numpy.ndarray: Array containing number of valid paths for each user
+    """
     max_paths = dataset[c.AOA_AZ_PARAM_NAME].shape[-1]
     nan_count_matrix = np.isnan(dataset[c.AOA_AZ_PARAM_NAME]).sum(axis=1)
     return max_paths - nan_count_matrix
 
-def compute_num_interactions(dataset):
-    """Compute number of interactions for each path"""
+def compute_num_interactions(dataset: Dict[str, Any]) -> np.ndarray:
+    """Compute number of interactions for each path.
+    
+    Args:
+        dataset (dict): DeepMIMO dataset containing interaction information
+        
+    Returns:
+        numpy.ndarray: Array containing number of interactions for each path
+    """
     result = np.zeros_like(dataset['inter'], dtype=int)
     non_zero = dataset['inter'] > 0
     result[non_zero] = np.floor(np.log10(dataset['inter'][non_zero])).astype(int) + 1
     return result
 
-def compute_distances(rx, tx):
-    """Compute distances between receivers and transmitter"""
+def compute_distances(rx: np.ndarray, tx: np.ndarray) -> np.ndarray:
+    """Compute Euclidean distances between receivers and transmitter.
+    
+    Args:
+        rx (numpy.ndarray): Receiver positions array of shape (n_receivers, 3)
+        tx (numpy.ndarray): Transmitter position array of shape (3,)
+        
+    Returns:
+        numpy.ndarray: Array of distances between each receiver and the transmitter
+    """
     return np.linalg.norm(rx - tx, axis=1)
 
-def compute_pathloss(received_powers_dbm, phases_degrees, transmitted_power_dbm=0, coherent=True):
+def compute_pathloss(received_powers_dbm: np.ndarray, phases_degrees: np.ndarray, 
+                    transmitted_power_dbm: float = 0, coherent: bool = True) -> float:
     """Compute path loss from received powers and phases.
 
     Args:
-        received_powers_dbm (array_like): Received powers in dBm for each path
-        phases_degrees (array_like): Phases in degrees for each path 
-        transmitted_power_dbm (float, optional): Transmitted power in dBm. Defaults to 0.
-        coherent (bool, optional): Whether to use coherent sum. Defaults to True.
+        received_powers_dbm (numpy.ndarray): Received powers in dBm for each path
+        phases_degrees (numpy.ndarray): Phases in degrees for each path 
+        transmitted_power_dbm (float): Transmitted power in dBm. Defaults to 0
+        coherent (bool): Whether to use coherent sum. Defaults to True
 
     Returns:
         float: Path loss in dB
@@ -165,8 +212,17 @@ def compute_pathloss(received_powers_dbm, phases_degrees, transmitted_power_dbm=
     total_received_power_dbm = 10 * np.log10(np.abs(total_complex_power))
     return transmitted_power_dbm - total_received_power_dbm
 
-def compute_channels(dataset, params):
-    """Compute MIMO channels"""
+def compute_channels(dataset: Dict[str, Any], 
+                    params: Optional[Union[str, ChannelGenParameters]] = None) -> np.ndarray:
+    """Compute MIMO channel matrices for all users.
+    
+    Args:
+        dataset (dict): DeepMIMO dataset containing path information
+        params (str or ChannelGenParameters, optional): Channel generation parameters. Defaults to None
+        
+    Returns:
+        numpy.ndarray: MIMO channel matrix
+    """
     if params is None:
         params_obj = ChannelGenParameters()
     elif type(params) is str:
@@ -186,12 +242,17 @@ def compute_channels(dataset, params):
                                rx_ant_params=params[c.PARAMSET_ANT_UE],
                                freq_domain=params[c.PARAMSET_FD_CH])
 
-def compute_los(interactions):
+def compute_los(interactions: np.ndarray) -> np.ndarray:
     """Calculate Line of Sight status for each receiver.
 
     Args:
-        interactions (numpy.ndarray): Matrix containing interaction codes for each path
-
+        interactions (numpy.ndarray): Matrix containing interaction codes for each path.
+            The codes are read from left to right, starting from the transmitter end.
+            0: Line-of-sight (direct path)
+            1: Reflection 
+            2: Diffraction
+            3: Transmission
+            4: Scattering
     Returns:
         numpy.ndarray: LoS status for each receiver (1: LoS, 0: NLoS, -1: No paths)
     """
@@ -206,16 +267,23 @@ def compute_los(interactions):
     return result
 
 # Helper functions
-def validate_txrx_sets(sets, rt_params, tx_or_rx='tx'):
+def validate_txrx_sets(sets: Union[Dict[int, Union[List, str]], List, str], 
+                        rt_params: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, List]:
     """Validate and process TX/RX set specifications.
 
+    This function validates and processes transmitter/receiver set specifications,
+    ensuring they match the available sets in the raytracing parameters.
+
     Args:
-        sets (dict or list or str): TX/RX set specifications
-        rt_params (dict): Raytracing parameters
-        tx_or_rx (str, optional): Whether validating TX or RX sets. Defaults to 'tx'.
+        sets (dict or list or str): TX/RX set specifications as dict, list, or string
+        rt_params (dict): Raytracing parameters containing valid set information
+        tx_or_rx (str): Whether validating TX or RX sets. Defaults to 'tx'
 
     Returns:
-        dict: Validated and processed sets dictionary
+        dict: Dictionary mapping set indices to lists of valid TX/RX indices
+        
+    Raises:
+        ValueError: If invalid TX/RX sets are specified
     """
     valid_tx_set_idxs = []
     valid_rx_set_idxs = []
@@ -280,15 +348,21 @@ def validate_txrx_sets(sets, rt_params, tx_or_rx='tx'):
     
     return sets_dict
 
-def validate_ch_gen_params(params, n_active_ues):
+def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
     """Validate channel generation parameters.
+    
+    This function checks that channel generation parameters are valid and
+    consistent with the dataset configuration.
 
     Args:
-        params (dict): Channel generation parameters
-        n_active_ues (int): Number of active UEs
+        params (dict): Channel generation parameters to validate
+        n_active_ues (int): Number of active users in the dataset
 
     Returns:
         dict: Validated parameters
+
+    Raises:
+        ValueError: If parameters are invalid or inconsistent
     """
     # Notify the user if some keyword is not used (likely set incorrectly)
     additional_keys = compare_two_dicts(params, ChannelGenParameters().get_params_dict())
@@ -348,13 +422,16 @@ def validate_ch_gen_params(params, n_active_ues):
                                              
     return params
 
-def compare_two_dicts(dict1, dict2):
-    """Compare two dictionaries recursively.
+def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
+    """Compare two dictionaries for equality.
+    
+    This function performs a deep comparison of two dictionaries, handling
+    nested dictionaries and numpy arrays.
 
     Args:
-        dict1 (dict): First dictionary
-        dict2 (dict): Second dictionary
-
+        dict1 (dict): First dictionary to compare
+        dict2 (dict): Second dictionary to compare
+        
     Returns:
         set: Set of keys in dict1 that are not in dict2
     """
@@ -365,27 +442,33 @@ def compare_two_dicts(dict1, dict2):
                 additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
     return additional_keys
 
-def load_mat_file_as_dict(file_path):
-    """Load MATLAB file as dictionary.
-
+def load_mat_file_as_dict(file_path: str) -> Dict[str, Any]:
+    """Load MATLAB .mat file as Python dictionary.
+    
     Args:
-        file_path (str): Path to .mat file
-
+        file_path (str): Path to .mat file to load
+        
     Returns:
-        dict: Dictionary containing file contents
+        dict: Dictionary containing loaded MATLAB data
+        
+    Raises:
+        ValueError: If file cannot be loaded
     """
     mat_data = scipy.io.loadmat(file_path, squeeze_me=True, struct_as_record=False)
     return {key: mat_struct_to_dict(value) for key, value in mat_data.items()
             if not key.startswith('__')}
 
-def mat_struct_to_dict(mat_struct):
-    """Convert MATLAB struct to dictionary.
+def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
+    """Convert MATLAB structure to Python dictionary.
+    
+    This function recursively converts MATLAB structures and arrays to
+    Python dictionaries and numpy arrays.
 
     Args:
-        mat_struct (scipy.io.matlab.mio5_params.mat_struct): MATLAB struct to convert
-
+        mat_struct (any): MATLAB structure to convert
+        
     Returns:
-        dict or numpy.ndarray: Converted structure
+        dict: Dictionary containing converted data
     """
     if isinstance(mat_struct, scipy.io.matlab.mio5_params.mat_struct):
         result = {}
@@ -397,22 +480,28 @@ def mat_struct_to_dict(mat_struct):
         return np.array([mat_struct_to_dict(item) for item in mat_struct])
     return mat_struct  # Return the object as is for other types
 
-def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int,
-                      tx_idx: int, rx_idxs: np.ndarray | List, max_paths: int,
-                      matrices_to_load: List[str] = None):
-    """Load raytracing data for a specific TX-RX pair.
+def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx: int, 
+                        rx_idxs: Union[np.ndarray, List], max_paths: int, 
+                        matrices_to_load: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Load raytracing data for a transmitter-receiver pair.
+
+    This function loads raytracing data files containing path information
+    between a transmitter and set of receivers.
 
     Args:
         rayfolder (str): Path to folder containing raytracing data
-        tx_set_idx (int): Transmitter set index
-        rx_set_idx (int): Receiver set index
-        tx_idx (int): Transmitter index within set
-        rx_idxs (array_like): Receiver indices to load
-        max_paths (int): Maximum number of paths to load
-        matrices_to_load (list of str, optional): List of matrix names to load
-
+        tx_set_idx (int): Index of transmitter set
+        rx_set_idx (int): Index of receiver set
+        tx_idx (int): Index of transmitter within its set
+        rx_idxs (numpy.ndarray or list): Indices of receivers to load data for
+        max_paths (int): Maximum number of paths to load per receiver
+        matrices_to_load (list of str, optional): Optional list of specific matrices to load
+        
     Returns:
         dict: Dictionary containing loaded raytracing data
+        
+    Raises:
+        ValueError: If required data files are missing or invalid
     """
     tx_dict = {c.AOA_AZ_PARAM_NAME: None,
                c.AOA_EL_PARAM_NAME: None,
