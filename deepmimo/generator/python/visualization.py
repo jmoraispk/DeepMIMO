@@ -22,51 +22,6 @@ from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
 
 
-def plot_LoS_status(bs_location: np.ndarray, user_locations: np.ndarray, user_LoS: np.ndarray,
-                    scat_size: Union[str, float] = 'auto') -> None:
-    """Plot users and basestation with color-coded line-of-sight status.
-    
-    This function creates a 2D scatter plot showing user positions colored by their
-    line-of-sight status relative to the basestation position.
-
-    Args:
-        bs_location (np.ndarray): Array containing the x,y position of the basestation
-        user_locations (np.ndarray): Matrix of user locations with shape (n_users, 2)
-        user_LoS (np.ndarray): Array of LoS status values for each user
-        scat_size (Union[str, float]): Size of scatter points. Defaults to 'auto'.
-
-    Returns:
-        None. Displays the plot using matplotlib.
-    """
-    LoS_map = {-1: ('r', 'No Path'), 0: ('b', 'NLoS'), 1: ('g', 'LoS')}
-    
-    # Calculate scatter size based on point density
-    if scat_size == 'auto':
-        n_points = user_locations.shape[0]
-        area = np.prod(np.max(user_locations, axis=0)[:2] - 
-                       np.min(user_locations, axis=0)[:2])
-        point_density = n_points / area
-        scat_size = 1 / (100 * point_density)
-    
-    for unique_LoS_status in LoS_map.keys():
-    # Plot different status one by one to assign legend labels
-        users_w_key = user_LoS==unique_LoS_status
-        plt.scatter(user_locations[users_w_key, 0], 
-                    user_locations[users_w_key, 1], 
-                    c=LoS_map[unique_LoS_status][0], 
-                    label=LoS_map[unique_LoS_status][1], s=scat_size)
-    plt.scatter(bs_location[0], bs_location[1], 
-                c='k', marker='x', label='Basestation')
-    plt.xlabel('x (m)')
-    plt.ylabel('y (m)')
-    lgd = plt.legend(framealpha=.9, loc='lower left')
-    lgd.legend_handles[0]._sizes = [20]
-    lgd.legend_handles[1]._sizes = [20]
-    lgd.legend_handles[2]._sizes = [20]
-    plt.xlim([user_locations[:, 0].min(), user_locations[:, 0].max()])
-    plt.ylim([user_locations[:, 1].min(), user_locations[:, 1].max()])
-
-
 def plot_coverage(rxs: np.ndarray, cov_map: Union[Tuple[float, ...], List[float], np.ndarray],
                  dpi: int = 300, figsize: Tuple[int, int] = (6,4), cbar_title: Optional[str] = None,
                  title: Union[bool, str] = False, scat_sz: float = 0.5,
