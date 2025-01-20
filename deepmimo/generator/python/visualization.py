@@ -111,6 +111,30 @@ def plot_coverage(rxs: np.ndarray, cov_map: Union[Tuple[float, ...], List[float]
     
     return fig, ax, cbar
 
+def transform_coordinates(coords, lon_max, lon_min, lat_min, lat_max):
+    """Transform Cartesian coordinates to geographical coordinates.
+    
+    This function converts x,y coordinates from a local Cartesian coordinate system
+    to latitude/longitude coordinates using linear interpolation between provided bounds.
+    
+    Args:
+        coords (np.ndarray): Array of shape (N,2) or (N,3) containing x,y coordinates
+        lon_max (float): Maximum longitude value for output range
+        lon_min (float): Minimum longitude value for output range  
+        lat_min (float): Minimum latitude value for output range
+        lat_max (float): Maximum latitude value for output range
+        
+    Returns:
+        Tuple[List[float], List[float]]: Lists of transformed latitudes and longitudes
+    """
+    lats = []
+    lons = []
+    x_min, y_min = np.min(coords, axis=0)[:2]
+    x_max, y_max = np.max(coords, axis=0)[:2]
+    for (x, y) in zip(coords[:,0], coords[:,1]):
+        lons += [lon_min + ((x - x_min) / (x_max - x_min)) * (lon_max - lon_min)]
+        lats += [lat_min + ((y - y_min) / (y_max - y_min)) * (lat_max - lat_min)]
+    return lats, lons
 
 def export_xyz_csv(data: Dict[str, Any], z_var: np.ndarray, outfile: str = '',
                   google_earth: bool = False, lat_min: float = 33.418081,
@@ -140,9 +164,9 @@ def export_xyz_csv(data: Dict[str, Any], z_var: np.ndarray, outfile: str = '',
     locs = data['user']['location'][user_idxs]
     
     if google_earth:
-        lats, lons = dt.transform_coordinates(locs, 
-                                              lon_min=lon_min, lon_max=lon_max, 
-                                              lat_min=lat_min, lat_max=lat_max)
+        lats, lons = transform_coordinates(locs, 
+                                           lon_min=lon_min, lon_max=lon_max, 
+                                           lat_min=lat_min, lat_max=lat_max)
     else:
         lats, lons = locs[:,0], locs[:,1]
     
