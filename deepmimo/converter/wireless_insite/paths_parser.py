@@ -24,19 +24,18 @@ def paths_parser(file):
     n_rxs = int(lines[LINE_START-1])
     
     # Make data dictionary (to save for each tx set pair)
-    data = dict(
-        n_paths = np.zeros((n_rxs), dtype=np.float32),
-        aoa_az = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        aoa_el = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan, 
-        aod_az = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        aod_el = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        toa    = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        power  = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        phase  = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        inter  = np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        inter_loc = np.zeros((n_rxs, MAX_PATHS, MAX_INTER_PER_PATH, 3),
-                              dtype=np.float32) * np.nan,
-        )
+    data = {
+        c.NUM_PATHS_PARAM_NAME: np.zeros((n_rxs), dtype=np.float32),
+        c.AOA_AZ_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.AOA_EL_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.AOD_AZ_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.AOD_EL_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.TOA_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.PWR_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.PHASE_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.INTERACTIONS_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
+        c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS, MAX_INTER_PER_PATH, 3), dtype=np.float32) * np.nan,
+    }
     
     line_idx = LINE_START
     for rx_i in tqdm(range(n_rxs), desc='Processing paths of each RX'):
@@ -51,7 +50,7 @@ def paths_parser(file):
         
         n_paths_to_read = min(rx_n_paths, MAX_PATHS)
         
-        data['n_paths'][rx_i] = n_paths_to_read
+        data[c.NUM_PATHS_PARAM_NAME][rx_i] = n_paths_to_read
         line_idx += 2
         
         for path_idx in range(n_paths_to_read):
@@ -88,14 +87,14 @@ def paths_parser(file):
     # Remove extra paths and bounces
     data_compressed = compress_data(data)
     
-    del data['n_paths'] # not needed
+    del data[c.NUM_PATHS_PARAM_NAME] # not needed
     
     return data_compressed
 
 def compress_data(data):
     """ Remove extra paths and path bounces (interactions with environment)"""
     # Compute max paths
-    max_paths = data['n_paths'].max().astype(int)
+    max_paths = data[c.NUM_PATHS_PARAM_NAME].max().astype(int)
     
     # Compute max bounces
     max_bounces = np.max(comp_next_pwr_10(data[c.INTERACTIONS_PARAM_NAME]))
@@ -122,7 +121,7 @@ def comp_next_pwr_10(arr): # = number of bounces
 
 def get_max_n_paths(arr):
     # The first path index with all entries at NaN
-    all_nans_per_path_idx = np.all(np.isnan(arr['aoa_azi']), axis=0)
+    all_nans_per_path_idx = np.all(np.isnan(arr[c.AOA_AZ_PARAM_NAME]), axis=0)
     n_max_paths = np.where(all_nans_per_path_idx)[0]
     return n_max_paths[0] if len(n_max_paths) else MAX_PATHS
 
