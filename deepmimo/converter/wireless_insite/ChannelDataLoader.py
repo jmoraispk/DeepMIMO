@@ -169,7 +169,7 @@ class WIChannelConverter:
             if num_paths > 0:
                 cnt += 1
                 for j in np.arange(num_paths):
-                    num_interactions = np.fromstring(lines[cnt], sep=' ', dtype=int)[1]
+                    num_interactions = int(lines[cnt].strip().split()[1]) 
 
                     cnt += 1
                     interactions = lines[cnt].strip(' \n').split('-')[:]
