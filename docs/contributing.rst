@@ -15,6 +15,23 @@ Setting up for Development
 
     pip install -e ".[dev]"
 
+Running Tests
+---------------------------
+
+The project uses pytest for testing. To run the tests:
+
+1. Run all tests::
+
+    pytest
+
+2. Run specific test files::
+
+    pytest test/test_end_to_end.py -v -s
+
+The flags:
+    * ``-v``: verbose output
+    * ``-s``: allows output capturing (required for scenario creation and generation)
+
 Building Documentation
 ------------------------
 
