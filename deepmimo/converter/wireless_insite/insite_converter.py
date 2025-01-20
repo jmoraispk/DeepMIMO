@@ -123,15 +123,14 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         ValueError: If transmitter or receiver IDs are invalid.
     """
     if old: # v3
-        scen_name = insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params, scenario_name)
-        return scen_name
+        return insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params, scenario_name)
     
     # Setup output folder
     insite_sim_folder = os.path.dirname(p2m_folder)
     p2m_basename = os.path.basename(p2m_folder)
-    scenario_name = scenario_name if scenario_name else p2m_basename 
+    out_fold_name = scenario_name if scenario_name else p2m_basename 
     
-    output_folder = os.path.join(insite_sim_folder, scenario_name + '_deepmimo')
+    output_folder = os.path.join(insite_sim_folder, out_fold_name + '_deepmimo')
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
     os.makedirs(output_folder, exist_ok=True)
@@ -206,7 +205,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
     
     # Move scenario to deepmimo scenarios folder
-    scen_name = export_scenario(output_folder, overwrite=overwrite)
+    scen_name = export_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
     cu.zip_folder(output_folder) # ready for upload
@@ -356,7 +355,8 @@ def export_params_dict(output_folder: str, setup_dict: Dict = {},
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
 
 
-def export_scenario(sim_folder: str, overwrite: Optional[bool] = None) -> Optional[str]:
+def export_scenario(sim_folder: str, scen_name: str = '', 
+                    overwrite: Optional[bool] = None) -> Optional[str]:
     """Export scenario to the DeepMIMO scenarios folder.
     
     Args:
@@ -366,7 +366,8 @@ def export_scenario(sim_folder: str, overwrite: Optional[bool] = None) -> Option
     Returns:
         Optional[str]: Name of the exported scenario.
     """
-    scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
+    default_scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
+    scen_name = scen_name if scen_name else default_scen_name
     scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
     if os.path.exists(scen_path):
         if overwrite is None:
