@@ -533,7 +533,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         
         if os.path.exists(mat_path):
             print(f'Loading {mat_filename}..')
-            tx_dict[key] = scipy.io.loadmat(mat_path)[c.MAT_VAR_NAME]
+            tx_dict[key] = scipy.io.loadmat(mat_path)[key]
         else:
             print(f'File {mat_path} could not be found')
         

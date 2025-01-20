@@ -233,7 +233,7 @@ def save_mat(data: np.ndarray, data_key: str, output_folder: str, tx_set_idx: in
     """
     mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
     file_path = output_folder + '/' + mat_file_name
-    scipy.io.savemat(file_path, {c.MAT_VAR_NAME: data})
+    scipy.io.savemat(file_path, {data_key: data})
     
 
 def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
