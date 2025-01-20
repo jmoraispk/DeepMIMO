@@ -12,7 +12,7 @@ can be generated using (transpose) reciprocity.
 """
 
 # Standard library imports
-from typing import Optional, Union, List, Tuple, Any
+from typing import Optional, List, Tuple, Any
 
 # Third-party imports
 import numpy as np
@@ -42,14 +42,14 @@ class DeepMIMOSionnaAdapter:
         t_shape (tuple): Required shape for path delays.
     """
 
-    def __init__(self, DeepMIMO_dataset: dict, bs_idx: Optional[Union[int, List[int], NDArray]] = None,
-                 ue_idx: Optional[Union[int, List[int], NDArray]] = None) -> None:
+    def __init__(self, DeepMIMO_dataset: dict, bs_idx: Optional[int | List[int] | NDArray] = None,
+                 ue_idx: Optional[int | List[int] | NDArray] = None) -> None:
         """Initialize the Sionna adapter.
         
         Args:
             DeepMIMO_dataset (dict): The loaded DeepMIMO dataset.
-            bs_idx (Optional[Union[int, List[int], NDArray]]): Basestation indices to include. Defaults to [0].
-            ue_idx (Optional[Union[int, List[int], NDArray]]): User indices to include. Defaults to all users.
+            bs_idx (Optional[int | List[int] | NDArray]): Basestation indices to include. Defaults to [0].
+            ue_idx (Optional[int | List[int] | NDArray]): User indices to include. Defaults to all users.
             
         Examples:
             Multi-user channels:
@@ -96,14 +96,14 @@ class DeepMIMOSionnaAdapter:
         # The required path delay shape for Sionna
         self.t_shape = (self.num_rx, self.num_tx, self.num_paths)
     
-    def _verify_idx(self, idx: Union[int, List[int], NDArray]) -> NDArray:
+    def _verify_idx(self, idx: int | List[int] | NDArray) -> NDArray:
         """Verify and format input indices.
         
         This function checks and converts input indices to the proper format,
         handling various input types and dimensions.
         
         Args:
-            idx (Union[int, List[int], NDArray]): Input indices in various formats.
+            idx (int | List[int] | NDArray): Input indices in various formats.
             
         Returns:
             NDArray: Verified and formatted indices as numpy array.
@@ -116,13 +116,13 @@ class DeepMIMOSionnaAdapter:
         idx = self._numpy_size_check(idx)
         return idx
     
-    def _idx_to_numpy(self, idx: Union[int, List[int], range, NDArray]) -> NDArray:
+    def _idx_to_numpy(self, idx: int | List[int] | range | NDArray) -> NDArray:
         """Convert input indices to numpy array format.
         
         This function handles conversion of various input types to numpy arrays.
         
         Args:
-            idx (Union[int, List[int], range, NDArray]): Input indices as integer, list, range, or numpy array.
+            idx (int | List[int] | range | NDArray): Input indices as integer, list, range, or numpy array.
             
         Returns:
             NDArray: Input converted to numpy array.

@@ -13,7 +13,7 @@ The module serves as the main entry point for creating DeepMIMO datasets from ra
 
 # Standard library imports
 import os
-from typing import Dict, List, Union, Optional, Any
+from typing import Dict, List, Optional, Any
 
 # Third-party imports
 import numpy as np
@@ -29,7 +29,7 @@ from ..python.downloader import download_scenario_handler, extract_scenario
 
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
-            ch_gen_params: Dict[str, Any] = {}) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+            ch_gen_params: Dict[str, Any] = {}) -> Dict[str, Any] | List[Dict[str, Any]]:
     """Generate a DeepMIMO dataset for a given scenario.
     
     This function wraps loading scenario data, computing channels, and organizing results.
@@ -213,7 +213,7 @@ def compute_pathloss(received_powers_dbm: np.ndarray, phases_degrees: np.ndarray
     return transmitted_power_dbm - total_received_power_dbm
 
 def compute_channels(dataset: Dict[str, Any], 
-                    params: Optional[Union[str, ChannelGenParameters]] = None) -> np.ndarray:
+                    params: Optional[str | ChannelGenParameters] = None) -> np.ndarray:
     """Compute MIMO channel matrices for all users.
     
     Args:
@@ -267,8 +267,8 @@ def compute_los(interactions: np.ndarray) -> np.ndarray:
     return result
 
 # Helper functions
-def validate_txrx_sets(sets: Union[Dict[int, Union[List, str]], List, str], 
-                        rt_params: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, List]:
+def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
+                      rt_params: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
     """Validate and process TX/RX set specifications.
 
     This function validates and processes transmitter/receiver set specifications,
@@ -481,7 +481,7 @@ def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
     return mat_struct  # Return the object as is for other types
 
 def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx: int, 
-                        rx_idxs: Union[np.ndarray, List], max_paths: int, 
+                        rx_idxs: np.ndarray | List, max_paths: int, 
                         matrices_to_load: Optional[List[str]] = None) -> Dict[str, Any]:
     """Load raytracing data for a transmitter-receiver pair.
 

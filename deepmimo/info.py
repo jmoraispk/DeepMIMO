@@ -5,7 +5,6 @@ This module contains utilities to display helpful information about various Deep
 parameters, material properties, and dataset variables through a simple info() interface.
 """
 
-from typing import Union
 
 from . import consts as c
 
@@ -14,7 +13,7 @@ MSG_DATASET_VAR_INTERACTIONS_LOC = \
     """Location of interactions, Tx -> interaction_1 -> interction_2 -> .. -> Rx"""
 
 
-def info(param_name: Union[str, object]) -> None:
+def info(param_name: str | object) -> None:
     """Display help information about DeepMIMO parameters and materials.
     
     Args:

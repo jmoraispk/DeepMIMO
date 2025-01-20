@@ -12,7 +12,7 @@ The module uses matplotlib for generating plots and supports both 2D and 3D visu
 
 # Standard library imports
 import csv
-from typing import Optional, Tuple, Union, Dict, Any, List
+from typing import Optional, Tuple, Dict, Any, List
 
 # Third-party imports
 import numpy as np
@@ -22,9 +22,9 @@ from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
 
 
-def plot_coverage(rxs: np.ndarray, cov_map: Union[Tuple[float, ...], List[float], np.ndarray],
-                 dpi: int = 300, figsize: Tuple[int, int] = (6,4), cbar_title: Optional[str] = None,
-                 title: Union[bool, str] = False, scat_sz: float = 0.5,
+def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np.ndarray,
+                 dpi: int = 300, figsize: tuple = (6,4), cbar_title: Optional[str] = None,
+                 title: bool | str = False, scat_sz: float = 0.5,
                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
                  proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
@@ -36,11 +36,11 @@ def plot_coverage(rxs: np.ndarray, cov_map: Union[Tuple[float, ...], List[float]
 
     Args:
         rxs (np.ndarray): User position array with shape (n_users, 3)
-        cov_map (Union[Tuple[float, ...], List[float], np.ndarray]): Coverage map values for coloring
+        cov_map (tuple[float, ...] | list[float] | np.ndarray): Coverage map values for coloring
         dpi (int): Plot resolution in dots per inch. Defaults to 300.
         figsize (Tuple[int, int]): Figure dimensions (width, height) in inches. Defaults to (6,4).
         cbar_title (Optional[str]): Title for the colorbar. Defaults to None.
-        title (Union[bool, str]): Plot title. Defaults to False.
+        title (bool | str): Plot title. Defaults to False.
         scat_sz (float): Size of scatter markers. Defaults to 0.5.
         bs_pos (Optional[np.ndarray]): Base station position coordinates. Defaults to None.
         bs_ori (Optional[np.ndarray]): Base station orientation angles. Defaults to None.

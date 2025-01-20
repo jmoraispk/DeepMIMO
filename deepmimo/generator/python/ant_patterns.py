@@ -12,7 +12,7 @@ calculations in MIMO channel generation.
 """
 
 # Standard library imports
-from typing import Optional, Union, Callable
+from typing import Optional, Callable
 
 # Third-party imports
 import numpy as np

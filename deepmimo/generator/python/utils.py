@@ -14,7 +14,7 @@ dataset generation process.
 
 # Standard library imports
 import time
-from typing import List, Tuple, Union, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any
 
 # Third-party imports
 import numpy as np
@@ -39,7 +39,7 @@ def safe_print(text: str, stop_dur: float = 0.3) -> None:
         
 ################################## For User ###################################
 
-def dbm2watt(val: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+def dbm2watt(val: float | np.ndarray) -> float | np.ndarray:
     """Convert power from dBm to Watts.
     
     This function performs the standard conversion from decibel-milliwatts (dBm)
@@ -53,7 +53,7 @@ def dbm2watt(val: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
     """
     return 10**(val/10 - 3)
 
-def steering_vec(array: Union[Tuple[int, ...], List[int], np.ndarray], phi: float = 0, theta: float = 0,
+def steering_vec(array: Tuple[int, ...] | List[int] | np.ndarray, phi: float = 0, theta: float = 0,
                 spacing: float = 0.5) -> np.ndarray:
     """Create array steering vector for uniform arrays.
     
@@ -110,7 +110,7 @@ class LinearPath:
         pos (np.ndarray): Positions of points along the path
         feature_names (List[str]): Names of extracted features
     """
-    def __init__(self, deepmimo_dataset: Union[Dict[str, Any], List[Dict[str, Any]]], first_pos: np.ndarray,
+    def __init__(self, deepmimo_dataset: Dict[str, Any] | List[Dict[str, Any]], first_pos: np.ndarray,
                  last_pos: np.ndarray, res: float = 1, n_steps: Optional[int] = None, 
                  filter_repeated: bool = True) -> None:
         """Initialize a linear path through the dataset.
