@@ -1,20 +1,61 @@
 # -*- coding: utf-8 -*-
 """
-paths_parser(.) collects all the information inside the paths.p2m file. 
+Wireless Insite Path File Parser Module.
+
+This module provides functionality for parsing Wireless Insite .p2m path files,
+which contain detailed ray-tracing information including:
+- Path angles (arrival/departure)
+- Path delays, powers and phases
+- Interaction coordinates and types
+- Transmitter/receiver positions
+
+The module handles both single and multi-path scenarios, with support for
+various interaction types (reflection, diffraction, scattering, etc).
 """
 
 import numpy as np
 from tqdm import tqdm
+from typing import Dict, List, Any
 
 from ... import consts as c
 
+# Configuration constants for parsing p2m files
 LINE_START = 22 # Skip info lines and n_rxs line. 
 MAX_PATHS = 25
 MAX_INTER_PER_PATH = 10
 
-INTERACTIONS_MAP = {'R': 1, 'D': 2, 'DS': 3, 'T': 4, 'F': 5, 'X': 6}
+# Map interaction types to numeric codes (R=Reflection, D=Diffraction, etc.)
+INTERACTIONS_MAP = {'R': 1,   # Reflection
+                    'D': 2,   # Diffraction
+                    'DS': 3,  # Diffuse Scattering
+                    'T': 4,   # Transmission
+                    'F': 5,   # Transmission through Leafs/Trees/Vegetation
+                    'X': 6,   # Transmission through Leafs/Trees/Vegetation
+                    }
 
-def paths_parser(file):
+def paths_parser(file: str) -> Dict[str, np.ndarray]:
+    """Parse a Wireless Insite paths.p2m file to extract path information.
+    
+    This function reads and processes a .p2m file to extract detailed path information
+    for each receiver, including angles, delays, powers, and interaction points.
+    
+    Args:
+        file (str): Path to the .p2m file to parse
+        
+    Returns:
+        Dict[str, np.ndarray]: Dictionary containing path information with keys:
+            - aoa_az/el: Angles of arrival (azimuth/elevation)
+            - aod_az/el: Angles of departure (azimuth/elevation)
+            - toa: Time of arrival
+            - power: Received power
+            - phase: Path phase
+            - inter: Interaction codes
+            - inter_pos: Interaction point positions
+            
+    Note:
+        The function limits the maximum number of paths per receiver to MAX_PATHS(25)
+        and the maximum interactions per path to MAX_INTER_PER_PATH(10).
+    """
     
     # Read file
     print('Reading file...')
@@ -91,8 +132,20 @@ def paths_parser(file):
     
     return data_compressed
 
-def compress_data(data):
-    """ Remove extra paths and path bounces (interactions with environment)"""
+def compress_data(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    """Remove unused paths and interactions to optimize memory usage.
+    
+    This function compresses the path data by:
+    1. Finding the maximum number of actual paths used
+    2. Computing maximum number of interactions (bounces)
+    3. Trimming arrays to remove unused entries
+    
+    Args:
+        data (Dict[str, np.ndarray]): Dictionary containing path information arrays
+        
+    Returns:
+        Dict[str, np.ndarray]: Compressed data dictionary with unused entries removed
+    """
     # Compute max paths
     max_paths = data[c.NUM_PATHS_PARAM_NAME].max().astype(int)
     
@@ -108,7 +161,18 @@ def compress_data(data):
     
     return data
 
-def comp_next_pwr_10(arr): # = number of bounces
+def comp_next_pwr_10(arr: np.ndarray) -> np.ndarray:
+    """Calculate number of interactions from interaction codes.
+    
+    This function computes the number of interactions (bounces) from the
+    interaction code array by calculating the number of digits.
+    
+    Args:
+        arr (np.ndarray): Array of interaction codes
+        
+    Returns:
+        np.ndarray: Array containing number of interactions for each path
+    """
     # Handle zero separately
     result = np.zeros_like(arr, dtype=int)
     
@@ -118,15 +182,39 @@ def comp_next_pwr_10(arr): # = number of bounces
     
     return result
 
-
-def get_max_n_paths(arr):
+def get_max_n_paths(arr: Dict[str, np.ndarray]) -> int:
+    """Find maximum number of valid paths in the dataset.
+    
+    This function determines the maximum number of valid paths by finding
+    the first path index where all entries are NaN.
+    
+    Args:
+        arr (Dict[str, np.ndarray]): Dictionary containing path information arrays
+        
+    Returns:
+        int: Maximum number of valid paths, or MAX_PATHS if all paths contain data
+    """
     # The first path index with all entries at NaN
     all_nans_per_path_idx = np.all(np.isnan(arr[c.AOA_AZ_PARAM_NAME]), axis=0)
     n_max_paths = np.where(all_nans_per_path_idx)[0]
     return n_max_paths[0] if len(n_max_paths) else MAX_PATHS
 
-
-def extract_tx_pos(filename):
+def extract_tx_pos(filename: str) -> np.ndarray:
+    """Extract transmitter position from a paths.p2m file.
+    
+    This function reads through a .p2m file to find and extract the transmitter
+    position coordinates from the first valid path information.
+    
+    Args:
+        filename (str): Path to the .p2m file to read
+        
+    Returns:
+        np.ndarray: Array containing transmitter [x, y, z] coordinates of shape (3,)
+        
+    Note:
+        The function skips receivers with no paths until it finds one with
+        valid path information containing the transmitter position.
+    """
     
     # Read file
     print('Reading paths file looking for tx position... ', end='')
