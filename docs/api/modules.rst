@@ -1,9 +1,9 @@
 DeepMIMO API Reference
-===================
+====================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
-   generator
    converter
+   generator
    utils 

@@ -5,8 +5,10 @@ Utilities
    :members:
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
 .. automodule:: deepmimo.generator.python.visualization
    :members:
    :undoc-members:
-   :show-inheritance: 
+   :show-inheritance:
+   :noindex: 

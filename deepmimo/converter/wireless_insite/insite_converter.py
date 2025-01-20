@@ -29,7 +29,7 @@ from ... import consts as c
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
 from .paths_parser import paths_parser, extract_tx_pos
-from .city_vis import city_vis
+from .insite_buildings import city_vis
 from .insite_materials import read_materials
 from .insite_setup import read_setup
 from .insite_txrx import read_txrx, get_id_to_idx_map
