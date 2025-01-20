@@ -205,9 +205,9 @@ def compute_pathloss(received_powers_dbm: np.ndarray, phases_degrees: np.ndarray
 
     if coherent:
         total_complex_power = np.sum(received_powers_linear * 
-                                   np.exp(1j * np.radians(phases_degrees)))
+                                     np.exp(1j * np.radians(phases_degrees)), axis=1)
     else:
-        total_complex_power = np.sum(received_powers_linear)
+        total_complex_power = np.sum(received_powers_linear, axis=1)
 
     total_received_power_dbm = 10 * np.log10(np.abs(total_complex_power))
     return transmitted_power_dbm - total_received_power_dbm
