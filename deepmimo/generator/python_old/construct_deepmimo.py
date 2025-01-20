@@ -260,7 +260,7 @@ class OFDM_PathGenerator:
         
         path_const = np.sqrt(power / self.total_subcarriers) * np.exp(1j * np.deg2rad(phase))
         if use_LPF: # LPF convolution
-            path_const *= np.sinc(self.delay_d - delay_n)
+            path_const = path_const * np.sinc(self.delay_d - delay_n)
         else: # Path construction without LPF
             path_const *= np.exp(-1j * (2 * np.pi / self.total_subcarriers) * np.outer(delay_n, self.subcarriers))
     

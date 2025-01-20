@@ -196,10 +196,10 @@ class OFDM_PathGenerator:
             subcarriers (array): Selected subcarrier indices
         """
         self.OFDM_params = params
-        self.subcarriers = subcarriers
+        self.subcarriers = subcarriers  # selected
         self.total_subcarriers = self.OFDM_params[c.PARAMSET_OFDM_SC_NUM]
         
-        self.delay_d = np.arange(self.OFDM_params['subcarriers'])
+        self.delay_d = np.arange(self.OFDM_params[c.PARAMSET_OFDM_SC_NUM])
         self.delay_to_OFDM = np.exp(-1j * 2 * np.pi / self.total_subcarriers * 
                                    np.outer(self.delay_d, self.subcarriers))
     
@@ -220,13 +220,13 @@ class OFDM_PathGenerator:
         phase = phs.reshape(-1, 1)
     
         # Ignore paths over CP
-        paths_over_FFT = (delay_n >= self.OFDM_params['subcarriers'])
+        paths_over_FFT = (delay_n >= self.OFDM_params[c.PARAMSET_OFDM_SC_NUM])
         power[paths_over_FFT] = 0
-        delay_n[paths_over_FFT] = self.OFDM_params['subcarriers']
+        delay_n[paths_over_FFT] = self.OFDM_params[c.PARAMSET_OFDM_SC_NUM]
         
         path_const = np.sqrt(power / self.total_subcarriers) * np.exp(1j * np.deg2rad(phase))
         if self.OFDM_params[c.PARAMSET_OFDM_LPF]: # Low-pass filter (LPF) convolution
-            path_const *= np.sinc(self.delay_d - delay_n)
+            path_const = path_const * np.sinc(self.delay_d - delay_n) @ self.delay_to_OFDM
         else: # Path construction without LPF
             path_const *= np.exp(-1j * (2 * np.pi / self.total_subcarriers) * 
                                np.outer(delay_n, self.subcarriers))
@@ -320,12 +320,9 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
                                          Ts=Ts)[:dataset['num_paths'][i]]
             
             channel[i] = np.sum(array_response_RX[:, None, None, :] * 
-                              array_response_TX[None, :, None, :] * 
-                              path_const.T[None, None, :, :], axis=3)
-                
-            if ofdm_params[c.PARAMSET_OFDM_LPF]: # apply LPF
-                channel[i] = channel[i] @ path_gen.delay_to_OFDM
-        
+                        array_response_TX[None, :, None, :] * 
+                        path_const.T[None, None, :, :], axis=3)
+            
         else: # TD channel
             channel[i, :, :, :dataset[c.NUM_PATHS_PARAM_NAME][i]] = \
                 (array_response_RX[:, None, :] * array_response_TX[None, :, :] *
