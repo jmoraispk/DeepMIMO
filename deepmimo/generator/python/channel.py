@@ -100,6 +100,26 @@ class ChannelGenParameters:
     
     def __repr__(self) -> str:
         return pformat(self.get_params_dict())
+        
+    def __getitem__(self, key):
+        """Enable dictionary-style access to parameters.
+        
+        Args:
+            key: Parameter key to access
+            
+        Returns:
+            Parameter value
+        """
+        return self.params[key]
+        
+    def __setitem__(self, key, value):
+        """Enable dictionary-style setting of parameters.
+        
+        Args:
+            key: Parameter key to set
+            value: Value to set parameter to
+        """
+        self.params[key] = value
 
 class PathVerifier:
     """Class for verifying and validating paths based on configuration parameters.

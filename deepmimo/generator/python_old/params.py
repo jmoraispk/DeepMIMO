@@ -83,3 +83,11 @@ class Parameters():
     def __repr__(self):
         return pformat(self.get_params_dict())
     
+    def __getitem__(self, key):
+        """Enable dictionary-style access to parameters."""
+        return self.params[key]
+        
+    def __setitem__(self, key, value):
+        """Enable dictionary-style setting of parameters."""
+        self.params[key] = value
+    
