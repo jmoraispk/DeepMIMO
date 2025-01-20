@@ -105,6 +105,7 @@ def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[s
     else: # static 
         dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
 
+    dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
     return dataset
 
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
