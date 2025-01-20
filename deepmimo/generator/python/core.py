@@ -470,7 +470,7 @@ def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
     Returns:
         dict: Dictionary containing converted data
     """
-    if isinstance(mat_struct, scipy.io.matlab.mio5_params.mat_struct):
+    if isinstance(mat_struct, scipy.io.matlab.mat_struct):
         result = {}
         for field in mat_struct._fieldnames:
             result[field] = mat_struct_to_dict(getattr(mat_struct, field))
