@@ -53,6 +53,8 @@ PATHLOSS_PARAM_NAME_3 = 'pl'
 DIST_PARAM_NAME_2 = 'distances'
 DIST_PARAM_NAME_3 = 'dist'
 DIST_PARAM_NAME_4 = 'dists'
+# Number of paths aliases
+NUM_PATHS_PARAM_NAME_2 = 'n_paths'
 # Power aliases
 PWR_PARAM_NAME_2 = 'pwr'
 PWR_PARAM_NAME_3 = 'powers'
