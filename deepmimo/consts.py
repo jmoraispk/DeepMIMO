@@ -30,7 +30,7 @@ PHASE_PARAM_NAME = 'phase'
 RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
-INTERACTIONS_POS_PARAM_NAME = 'inter_loc'
+INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 RT_PARAMS_PARAM_NAME = 'rt_params'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
 
@@ -79,9 +79,6 @@ INTERACTIONS_POS_PARAM_NAME_2 = 'interaction_locations'
 
 # Load Params
 LOAD_PARAM_MAX_PATH = 'max_paths'
-
-# DeepMIMOv4 (saved) matrix names
-MAT_VAR_NAME = 'data' # all variable names inside single variable matrices
 
 # ######### BOTH DM v4 and older versions ###########
 
