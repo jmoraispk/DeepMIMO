@@ -24,7 +24,7 @@ scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {2: 'all'}
+rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -36,22 +36,20 @@ rx_sets = {2: 'all'}
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5,
                'matrices': None}#['aoa_az']}
 dataset = dm.load_scenario(scen_name, **load_params)
-dataset['load_params'] = load_params  # c.LOAD_PARAMS_PARAM_NAME
 
 # dataset.info() # print available tx-rx information
 # from pprint import pprint
 # pprint(dataset)
 
 #%%
-params = dm.ChannelGenParameters()
+ch_params = dm.ChannelGenParameters()
 
 # num_paths and power_linear are necessary for channel
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
 # Note: *1000  is needed to match old DM
-dataset['power_linear'] = dm.dbm2watt(dataset['power']) # c.PWR_LINEAR_PARAM_NAME
-dataset['channel'] = dm.compute_channels(dataset, params)     # c.CHANNEL_PARAM_NAME
-dataset['pathloss'] = dm.compute_pathloss(dataset['power'][10], 
-                                          dataset['phase'][10]) # c.PATHLOSS_PARAM_NAME
+dataset['power_linear'] = dm.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
+dataset['channel'] = dm.compute_channels(dataset, ch_params)     # c.CHANNEL_PARAM_NAME
+dataset['pathloss'] = dm.compute_pathloss(dataset['power'], dataset['phase']) # c.PATHLOSS_PARAM_NAME
 dataset['distances'] = dm.compute_distances(dataset['rx_pos'], 
                                             dataset['tx_pos'])  # c.DIST_PARAM_NAME
 
@@ -65,28 +63,30 @@ dataset['rx_loc'] = dataset['rx_pos']
 dataset['tx_loc'] = dataset['tx_pos']
 dataset['dist'] = dataset['distances']
 
-# TODO: eliminate c.MAT_VAR_NAME -> use the name of the variable!
-#%%
-import deepmimo as dm
-dataset = dm.generate(scen_name)
-# ADD dataset['power_linear']?
-# ADD 'fov trim' and 'ant pat pwr' requirements to the compute channels
-
 #%% V3 Generation
 
 import deepmimo as dm
 # scen_name = 'simple_street_canyon_test_old'
 scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
+import numpy as np
+
+params['user_rows'] = np.arange(1)
 dataset2 = dm.generate_old(params)
 
 chs2 = dataset2[0]['user']['channel']
 
-# TODOOOO: test PARAMSET_OFDM_LPF = 1! (crashing on the other.)
-
 #%% Verification
 dataset['ch'][10]
 chs2[10]
+
+#%% 
+
+
+# Test...
+# file = r'./P2Ms/simple_street_canyon/simple_street_canyon_buildings.city'    
+# city_vis(file)
+
 
 #%% Demo
 
@@ -100,7 +100,7 @@ load_params = {'tx_sets': [1], 'rx_sets': {2: 'active'}}
 dataset = dm.load_scenario(scen_name, **load_params)
 # dataset = dm.load_scenario('city_10_austin')
 
-#%%
+#%% Visualization check
 
 import deepmimo as dm
 import matplotlib.pyplot as plt
@@ -120,23 +120,7 @@ plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=100)
 # Wireless Insite IDXs = [3, 7, 8]
 # DeepMIMO (after conversion) TX/RX Sets: [1, 2, 3]
 # DeepMIMO (after generation) : only individual tx and rx indices
-
-###########
-# Essential for release
-
-# 8- Add dataset.info() to dataset (and documentation throughout)
-# dm.info('inter') (or dataset['inter'].info())
-
-# 9- Add new smart object: 
-# - compute_angles_with_fov()            -> unlocks 'aoa_el_fov', ...
-# - compute_power_with_antenna_pattern() -> unlocks 'power_with_ant_pattern'
-#   - dataset.compute_los_status()       -> unlocks 'los_status'
-#   - dataset.compute_channels()         -> unlocks 'channels'
-#   - dataset.compute_pl()               -> unlocks 'pathloss'
-#   - dataset.compute_dists()            -> unlocks 'distance'
-#   - dataset.compute_num_paths()        -> unlocks 'num_paths'
-#   - dataset.compute_num_interactions() -> unlocks 'num_interactions'
-
+###############
 # 9.2) dataset.gen_chs() = dataset[i].gen_chs()
 
 """
@@ -154,16 +138,13 @@ Other notes:
 * __help__, __getitem__, __setitem__, __getattr__, can be used to make our dataset object
 """
 
-
-
-
 # Other features:
 
 # 11- RUN RUFF to format all code (consistently - https://github.com/astral-sh/ruff)
 
 # 13- Option to include (or not) interaction locations in dataset (3x more space and time needed)
 
-# 15- Enable generating the channel only for R/D/... paths
+# 15- Enable generating the channel only for R/D/ paths
 
 # 16- Enable generating only up to a given number of interactions
 
@@ -173,19 +154,9 @@ Other notes:
 # - Supposing the last position of linpath3 coincides with the first, it can be looped like:
 # linpath3.append(linpath3, linpath3, linpath3) or linpath3.repeat(3)
 
-# 18 - Add list of variables (keys) to load.
-# This will make the generation faster, leaner and customized (for space-constraint applications)
-# +++ Since only information is loaded, we can avoid downloading the scenario with
-# interactions locations! (and save 3x the speed and space requirements!)
-# If access is attempted via dataset['inter_loc'], we can explain how to add this
-# variable to the load chain, etc...
-
 # 19 - If anyone asks for aoa or aod, ask if they would like to concatenate them. 
 #      np.concatenate(dataset['aoa_az'], dataset['aoa_el'] )
 # dataset['aoa'] # N x PATHS x 2 (azimuth / elevation)
 # dataset['aoa'] = # concat...aoa_el / aoa_az
 
 # 20 - Add space requirements to auto downloader information
-
-# 21 - Add dual-polarization AND multi-antenna support
-
