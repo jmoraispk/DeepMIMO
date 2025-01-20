@@ -18,10 +18,9 @@ from typing import Dict, List, Optional, Any
 # Third-party imports
 import numpy as np
 import scipy.io
-from tqdm import tqdm
 
 # Local imports
-from .utils import dbm2watt, safe_print
+from .utils import dbm2watt
 from .channel import generate_MIMO_channel, ChannelGenParameters
 from ... import consts as c
 from ...general_utilities import get_mat_filename
