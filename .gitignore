@@ -10,10 +10,14 @@
 # Daily use folders
 deepmimo_scenarios*
 
+# Artifacts
+manuals/*
+
 # Development:
 #   For wireless insite outputs
 P2Ms/*
 *.p2m
+
 #   For building visualizations
 building_*
 old/*
