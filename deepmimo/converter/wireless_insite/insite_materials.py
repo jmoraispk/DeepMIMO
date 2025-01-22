@@ -1,15 +1,29 @@
 """
 Materials handling for Wireless Insite conversion.
+
+This module provides functionality for parsing materials from Wireless Insite files
+and converting them to the base Material format.
 """
+
+import os
+from typing import List, Dict
 from dataclasses import dataclass
-from typing import List
-import numpy as np
 
 from .setup_parser import parse_file
 from .. import converter_utils as cu
+from ...materials import (
+    Material,
+    MaterialList,
+    CATEGORY_BUILDINGS,
+    CATEGORY_TERRAIN,
+    CATEGORY_VEGETATION,
+    CATEGORY_FLOORPLANS,
+    CATEGORY_OBJECTS
+)
+
 
 @dataclass
-class InsiteMaterial():
+class InsiteMaterial:
     """
     Materials in Wireless InSite.
     
@@ -27,94 +41,113 @@ class InsiteMaterial():
         [2] https://x.webdo.cc/userfiles/Qiwell/files/Remcom_Wireless%20InSite_5G_final.pdf
         [3] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
     """
+    id: int = -1
     name: str = ''
     diffuse_scattering_model: str = ''    # 'labertian', 'directive', 'directive_w_backscatter'
-    fields_diffusively_scattered: int = 0  # 0-1, fraction of incident fields that are scattered
-    cross_polarized_power: str = 0        # 0-1, fraction of the scattered field that is cross pol
-    directive_alpha: int = 0     # 1-10, defines how broad forward beam is
-    directive_beta: int = 0      # 1-10, defines how broad backscatter beam is
-    directive_lambda: int = 0    # 0-1, fraction of the scattered power in forward direction (vs back)
-    conductivity: int = 0        # >=0, conductivity
-    permittivity: int = 0        # >=0, permittivity
-    roughness: int = 0           # >=0, roughness
-    thickness: int = 0           # >=0, thickness [m]
-
-
-def read_materials(files_in_sim_folder, verbose):
-    city_files = cu.ext_in_list('.city', files_in_sim_folder)
-    ter_files  = cu.ext_in_list('.ter', files_in_sim_folder)
-    veg_files  = cu.ext_in_list('.veg', files_in_sim_folder)
-    fpl_files  = cu.ext_in_list('.flp', files_in_sim_folder)
-    obj_files  = cu.ext_in_list('.obj', files_in_sim_folder)
+    fields_diffusively_scattered: float = 0.0  # 0-1, fraction of incident fields that are scattered
+    cross_polarized_power: float = 0.0    # 0-1, fraction of the scattered field that is cross pol
+    directive_alpha: float = 4.0  # 1-10, defines how broad forward beam is
+    directive_beta: float = 4.0   # 1-10, defines how broad backscatter beam is
+    directive_lambda: float = 0.5 # 0-1, fraction of the scattered power in forward direction (vs back)
+    conductivity: float = 0.0     # >=0, conductivity
+    permittivity: float = 1.0     # >=0, permittivity
+    roughness: float = 0.0        # >=0, roughness
+    thickness: float = 0.0        # >=0, thickness [m]
     
-    city_materials = read_material_files(city_files, verbose)
-    ter_materials = read_material_files(ter_files, verbose)
-    veg_materials = read_material_files(veg_files, verbose)
-    floor_plan_materials = read_material_files(fpl_files, verbose)
-    obj_materials = read_material_files(obj_files, verbose)
+    def to_material(self) -> Material:
+        """Convert InsiteMaterial to base Material."""
+        # Map scattering model names
+        model_mapping = {
+            '': Material.SCATTERING_NONE,
+            'lambertian': Material.SCATTERING_LAMBERTIAN,
+            'directive': Material.SCATTERING_DIRECTIVE,
+            'directive_w_backscatter': Material.SCATTERING_DIRECTIVE  # Map both directive models to same type
+        }
+        
+        return Material(
+            id=self.id,
+            name=self.name,
+            permittivity=self.permittivity,
+            conductivity=self.conductivity,
+            scattering_model=model_mapping.get(self.diffuse_scattering_model, Material.SCATTERING_NONE),
+            scattering_coefficient=self.fields_diffusively_scattered,
+            cross_polarization_coefficient=self.cross_polarized_power,
+            alpha=self.directive_alpha,
+            beta=self.directive_beta,
+            lambda_param=self.directive_lambda,
+            roughness=self.roughness,
+            thickness=self.thickness
+        )
 
-    materials_dict = {'city': city_materials, 
-                     'terrain': ter_materials,
-                     'vegetation': veg_materials,
-                     'floorplans': floor_plan_materials,
-                     'obj_materials': obj_materials}
+
+def parse_materials_from_file(file: str) -> List[Material]:
+    """Parse materials from a single Wireless Insite file.
+    
+    Args:
+        file: Path to file to read
+        
+    Returns:
+        List of Material objects
+    """
+    document = parse_file(file)
+    materials = []
+    
+    for prim in document.keys():
+        mat_entries = document[prim].values['Material']
+        mat_entries = [mat_entries] if not isinstance(mat_entries, list) else mat_entries
+        
+        for mat in mat_entries:
+            # Create InsiteMaterial object
+            insite_mat = InsiteMaterial(
+                name=mat.name,
+                diffuse_scattering_model=mat.values['diffuse_scattering_model'],
+                fields_diffusively_scattered=mat.values['fields_diffusively_scattered'],
+                cross_polarized_power=mat.values['cross_polarized_power'],
+                directive_alpha=mat.values['directive_alpha'],
+                directive_beta=mat.values['directive_beta'],
+                directive_lambda=mat.values['directive_lambda'],
+                conductivity=mat.values['DielectricLayer'].values['conductivity'],
+                permittivity=mat.values['DielectricLayer'].values['permittivity'],
+                roughness=mat.values['DielectricLayer'].values['roughness'],
+                thickness=mat.values['DielectricLayer'].values['thickness']
+            )
+            
+            # Convert to base Material
+            materials.append(insite_mat.to_material())
+    
+    return materials
+
+
+def read_materials(files_in_sim_folder: List[str], verbose: bool = False) -> Dict:
+    """Read materials from Wireless Insite files.
+    
+    Args:
+        files_in_sim_folder: List of files in simulation folder
+        verbose: Whether to print debug information
+        
+    Returns:
+        Dict containing materials and their categorization
+    """
+    # Initialize material list
+    material_list = MaterialList()
+    
+    # Get files by type
+    file_types = {
+        CATEGORY_BUILDINGS: cu.ext_in_list('.city', files_in_sim_folder),
+        CATEGORY_TERRAIN: cu.ext_in_list('.ter', files_in_sim_folder),
+        CATEGORY_VEGETATION: cu.ext_in_list('.veg', files_in_sim_folder),
+        CATEGORY_FLOORPLANS: cu.ext_in_list('.flp', files_in_sim_folder),
+        CATEGORY_OBJECTS: cu.ext_in_list('.obj', files_in_sim_folder)
+    }
+    
+    # Parse materials from each file type
+    for category, files in file_types.items():
+        for file in files:
+            materials = parse_materials_from_file(file)
+            material_list.add_materials(materials, category)
+            
     if verbose:
         from pprint import pprint
-        pprint(materials_dict)
-    return materials_dict
-
-
-def read_material_files(files: List[str], verbose: bool):
-    if verbose:
-        print(f'Reading materials in {[os.path.basename(f) for f in files]}')
-    
-    # Extract materials for each file
-    material_list = []
-    for file in files:
-        material_list += read_single_material_file(file, verbose)
-
-    # Filter the list of materials so they are unique
-    unique_mat_list = make_mat_list_unique(material_list)
-    
-    return unique_mat_list
-
-
-def read_single_material_file(file: str, verbose: bool):
-    document = parse_file(file)
-    direct_fields = ['diffuse_scattering_model', 'fields_diffusively_scattered', 
-                     'cross_polarized_power', 'directive_alpha',
-                     'directive_beta', 'directive_lambda']
-    dielectric_fields = ['conductivity', 'permittivity', 'roughness', 'thickness']
-    
-    mat_objs = []
-    for prim in document.keys():
-        materials = document[prim].values['Material']
-        materials = [materials] if type(materials) != list else materials
-        for mat in materials:
-            material_obj = InsiteMaterial()
-            material_obj.name = mat.name
-            for field in direct_fields:
-                setattr(material_obj, field, mat.values[field])
-            
-            for field in dielectric_fields:
-                setattr(material_obj, field, mat.values['DielectricLayer'].values[field])
-            
-            mat_objs += [material_obj]
-
-    return mat_objs
-
-
-def make_mat_list_unique(mat_list):
-    n_mats = len(mat_list)
-    idxs_to_discard = []
-    for i1 in range(n_mats):
-        for i2 in range(n_mats):
-            if i1 == i2:
-                continue
-            if mat_list[i1].get_dict() == mat_list[i2].get_dict():
-                idxs_to_discard.append(i2)
-
-    for idx in sorted(np.unique(idxs_to_discard), reverse=True):
-        del mat_list[idx]
-    
-    return mat_list 
+        pprint(material_list.get_materials_dict())
+        
+    return material_list.get_materials_dict() 
