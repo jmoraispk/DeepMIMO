@@ -28,3 +28,9 @@ Left to test:
   on the corner of the grid? Hypothesis: the 2nd. 
   Limitation: our code considers the 2nd option and won't locate points properly.
 - 
+
+
+In Sionna:
+- Be aware when using the isotropic antenna. The UE tilt must not be different from 0. 
+  This is because Sionna applies phase rotations even with the isotropic antenna. 
+  So, it won't match the other raytracers and can give strange results.
