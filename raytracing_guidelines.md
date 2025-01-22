@@ -18,6 +18,8 @@ In Wireless Insite:
 - When defining a set of <points>, define a single location per set. 
 - Ensure the txrx elements in your workspace have growing ids ("1,2,3.." and not "1 3 2")
 - Keep the default VSWR of 1 (perfect antenna matching).
+- scattering properties: do not enable "use reflection coefficient" - it will use 
+  a method completely different than the other ray tracers and it's not advised
 
 
 Left to test:
