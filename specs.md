@@ -35,7 +35,9 @@ E.g. count nans: number of paths = dataset[scene][tx]['toa']
   (we flatten datset[scene][tx] to dataset if it's a single-scene and single-tx dataset)
 - All .mat files are matrices and as low dimension as possible. The only non-matrix
   is a struct/dictionairy called params.mat.
-- 
+- To the user, the only visible differences of which ray tracer was used, will be 
+  explicit in params.mat (ray tracer and version). Everything else should be transparent
+  to the ray tracer.
 
 
 We have these in helper functions.
@@ -58,7 +60,7 @@ Rx-Tx pair i (BS1_BS.mat or BS3_UE_0-1024.mat)                                  
         AoA_phi
         AoA_theta
         AoD_phi
-        AoD_phi
+        AoD_theta
         ToA
         num_paths
         phase
