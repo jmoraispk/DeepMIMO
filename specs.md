@@ -4,14 +4,18 @@ This folder contains the files that specify how each DeepMIMO version organizes 
 ## DeepMIMOv4 Spec
 
 1. dataset[scene][tx][...]
-    1. [‘rx_loc’] is N x 3
-    2. [‘tx_loc’] is 1 x 3
-    2. [‘chs’] is N x N_ant_pairs. N_ant_pairs is an index that refers to tx (h,v,p) ↔ rx (h,v,p)
-    3. [‘aoa_az’] | [‘aod_az’] | [‘aoa_el’] | [‘aod_el’] | [‘toa’] | [‘phase’] | [‘power’] are N x MAX_PATHS
-    4. [‘inter’] is N x MAX_PATHS
+    1. ['rx_loc'] is N x 3
+    2. ['tx_loc'] is 1 x 3
+    2. ['chs'] is N x N_ant_pairs. N_ant_pairs is an index that refers to tx (h,v,p) ↔ rx (h,v,p)
+    3. ['aoa_az'] | ['aod_az'] | ['aoa_el'] | ['aod_el'] | ['toa'] | ['phase'] | ['power'] are N x MAX_PATHS
+    4. ['inter'] is N x MAX_PATHS
         1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
-    5. [‘inter_loc’] is N x MAX_PATHS x 3
-    6. New format storage: 
+    5. ['inter_loc'] is N x MAX_PATHS x 3
+    6. ['building_faces'] is N_building_faces x 9 (xyz of vertex 1, xyz of vertex 2, xyz of vertex 3)
+       Note that each face is triangular.
+    7. ['building_materials'] ...
+    8. Similar to building faces and materials, there can be matrices for the ground, moving objects and vegetation.
+    7. New format storage: 
         1. 8 matrices of N x MAX_PATHS
             (4 angles → aoa_azi, aoa_el, aod_azi, aod_el)
             (4 others → toa, power, phase, inter)
@@ -21,13 +25,18 @@ This folder contains the files that specify how each DeepMIMO version organizes 
         5. 1 params.mat
 
 Design principles:
-- The dataset does not include information that can be easily derived. 
+- The dataset does not include information that be easily derived. 
 E.g. number of interactions per path = dataset[scene][tx]['inter'] // 10 + 1
 E.g. count nans: number of paths = dataset[scene][tx]['toa']
 - Each dataset keeps constant a number of things: 
-    - all TXs have the same number of antennas
-    - all RXs have the same number of antennas
+    - all TXs/RXs have the same number and type of antennas
     - 
+- If there is a single element in a list, there is no point having a list.
+  (we flatten datset[scene][tx] to dataset if it's a single-scene and single-tx dataset)
+- All .mat files are matrices and as low dimension as possible. The only non-matrix
+  is a struct/dictionairy called params.mat.
+- 
+
 
 We have these in helper functions.
 
@@ -67,3 +76,7 @@ params.mat
     - 'num_BS': 1,
     - 'dual_polar_available': 0,
     - 'doppler_available': 0
+
+## DeepMIMOv2 Spec
+
+Needs inspection... 
