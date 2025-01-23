@@ -91,7 +91,7 @@ def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[s
             extract_scenario(zip_path)
     
     params_mat_file = os.path.join(scen_folder, 'params.mat')
-    rt_params = load_mat_file_as_dict(params_mat_file)
+    rt_params = load_mat_file_as_dict(params_mat_file) # should be appended in upper level
     
     # Load scenario data
     n_scenes = rt_params[c.PARAMSET_DYNAMIC_SCENES]
@@ -305,7 +305,11 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
                 raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
                               + info_str)
             
-            all_idxs_available = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+            # Get the txrx_set info for this index
+            txrx_set_key = f'txrx_set_{set_idx}'
+            txrx_set = rt_params[txrx_set_key]
+            all_idxs_available = np.arange(txrx_set['num_points'])
+            
             if type(idxs) is np.ndarray:
                 pass # correct
             elif type(idxs) is list:
@@ -314,7 +318,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
                 if idxs == 'all':
                     sets[set_idx] = all_idxs_available
                 elif idxs == 'active':
-                    inactive_idx = rt_params[f'txrx_set_{set_idx}']['inactive_idxs']
+                    inactive_idx = txrx_set['inactive_idxs']
                     sets[set_idx] = np.array(list(set(all_idxs_available.tolist()) - 
                                                 set(inactive_idx.tolist())))
                 else:
@@ -326,6 +330,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             if not set(sets[set_idx]).issubset(set(all_idxs_available.tolist())):
                 raise Exception(f'Some indices of {idxs} are not in {all_idxs_available}. '
                               + info_str)
+                
         sets_dict = sets
     elif type(sets) is list:
         # Generate all user indices
@@ -334,7 +339,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             if set_idx not in valid_set_idxs:
                 raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
                               + info_str)
-                
+            
             sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
     elif type(sets) is str:
         if sets != 'all':
@@ -345,7 +350,6 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
         sets_dict = {}
         for set_idx in valid_set_idxs:
             sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
-    
     return sets_dict
 
 def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
@@ -492,11 +496,11 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         rayfolder (str): Path to folder containing raytracing data
         tx_set_idx (int): Index of transmitter set
         rx_set_idx (int): Index of receiver set
-        tx_idx (int): Index of transmitter within its set
-        rx_idxs (numpy.ndarray or list): Indices of receivers to load data for
-        max_paths (int): Maximum number of paths to load per receiver
-        matrices_to_load (list of str, optional): Optional list of specific matrices to load
-        
+        tx_idx (int): Index of transmitter within set
+        rx_idxs (numpy.ndarray or list): Indices of receivers to load
+        max_paths (int): Maximum number of paths to load
+        matrices_to_load (list of str, optional): List of matrix names to load. 
+
     Returns:
         dict: Dictionary containing loaded raytracing data
         

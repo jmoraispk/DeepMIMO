@@ -9,11 +9,11 @@ legacy versions of DeepMIMO.
 import numpy as np
 
 
-# Core Configuration
+# Core Configuration - defines DeepMIMO version and numerical precision
 VERSION = 4
 FP_TYPE = np.float32  # floating point precision for saving values
 
-# Ray Tracer Configurations
+# Supported ray tracers and their versions
 RAYTRACER_NAME_WIRELESS_INSITE = 'Remcom Wireless Insite'
 RAYTRACER_VERSION_WIRELESS_INSITE = 3.3
 RAYTRACER_NAME_SIONNA = 'Sionna Ray Tracing'           # not supported yet

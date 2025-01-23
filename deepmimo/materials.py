@@ -106,7 +106,7 @@ class MaterialList:
         materials_dict = {}
         for mat in self._materials:
             mat_dict = asdict(mat)
-            materials_dict[mat.id] = mat_dict  # Use numeric ID as key
+            materials_dict[f'material_{mat.id}'] = mat_dict  # Use numeric ID as key
             
         # Add _materials suffix to category names
         materials_by_type = {
@@ -115,7 +115,7 @@ class MaterialList:
         }
         
         # Combine both in final dictionary
-        return {'materials': materials_dict, **materials_by_type}
+        return {**materials_dict, **materials_by_type}
     
     def _filter_duplicates(self) -> None:
         """Remove duplicate materials based on their properties."""

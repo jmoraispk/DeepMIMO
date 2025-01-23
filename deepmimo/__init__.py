@@ -1,3 +1,7 @@
+"""
+DeepMIMO Python Package.
+"""
+
 from .generator.python_old.generator import generate_data as generate_old
 from .generator.python_old.params import Parameters as Parameters_old
 
@@ -30,7 +34,28 @@ from .generator.python.channel import ChannelGenParameters
 from .converter.converter import create_scenario
 from .info import info
 
+# Physical world representation
+from .buildings import (
+    Building,
+    Face,
+    Terrain,
+    Vegetation,
+    PhysicalObject,
+    Scene,
+    BuildingsGroup,
+    TerrainGroup,
+    VegetationGroup
+)
+
+# Wireless InSite specific
+from .converter.wireless_insite.city_parser import (
+    PhysicalObjectParser,
+    WirelessInsiteScene,
+    create_scene_from_files
+)
+
 __all__ = [
+    # Core functionality
     'generate',
     'create_scenario', 
     'info',
@@ -42,8 +67,26 @@ __all__ = [
     'compute_distances',
     'compute_los',
     'ChannelGenParameters',
+    
+    # Utilities
     'LinearPath',
     'uniform_sampling',
     'dbm2watt',
-    'get_idxs_with_limits'
+    'get_idxs_with_limits',
+    
+    # Physical world representation
+    'Building',
+    'Face',
+    'Terrain',
+    'Vegetation',
+    'PhysicalObject',
+    'Scene',
+    'BuildingsGroup',
+    'TerrainGroup',
+    'VegetationGroup',
+    
+    # Wireless InSite specific
+    'PhysicalObjectParser',
+    'WirelessInsiteScene',
+    'create_scene_from_files'
 ]

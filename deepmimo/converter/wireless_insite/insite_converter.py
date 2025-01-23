@@ -26,14 +26,16 @@ import scipy.io
 from .. import converter_utils as cu
 from ...general_utilities import PrintIfVerbose, get_mat_filename
 from ... import consts as c
-from .ChannelDataLoader import WIChannelConverter
-from .ChannelDataFormatter import DeepMIMODataFormatter
+# from ...buildings import City
+# from .city_parser import CityFileParser
 from .paths_parser import paths_parser, extract_tx_pos
-from .insite_buildings import city_vis
 from .insite_materials import read_materials
 from .insite_setup import read_setup
-from .insite_txrx import read_txrx, get_id_to_idx_map
-
+from .insite_txrx import read_txrx, get_id_to_idx_map, update_txrx_points
+# v3 (old)
+from .ChannelDataLoader import WIChannelConverter
+from .ChannelDataFormatter import DeepMIMODataFormatter
+from .city_parser import WirelessInsiteScene  # New import
 
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
@@ -95,7 +97,8 @@ def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int], rx_ids: List[int]
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: Optional[List[int]] = None,
                        rx_set_ids: Optional[List[int]] = None, verbose: bool = True, 
                        overwrite: Optional[bool] = None, vis_buildings: bool = False, 
-                       old: bool = False, old_params: Dict = {}, scenario_name: str = '') -> str:
+                       convert_buildings: bool = True, old: bool = False, 
+                       old_params: Dict = {}, scenario_name: str = '') -> str:
     """Convert Wireless InSite ray-tracing data to DeepMIMO format.
 
     This function handles the conversion of Wireless InSite ray-tracing simulation 
@@ -109,11 +112,11 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         rx_set_ids (Optional[List[int]]): List of receiver set IDs. Uses all if None. Defaults to None.
         verbose (bool): Whether to print progress messages. Defaults to True.
         overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
-        vis_buildings (bool): Whether to visualize building layouts.
-        old (bool): Whether to use legacy v3 converter.
-        old_params (Dict): Parameters for legacy v3 converter.
+        vis_buildings (bool): Whether to visualize building layouts. Defaults to False.
+        convert_buildings (bool): Whether to convert extract buldings from the .city file. Defaults to True.
+        old (bool): Whether to use legacy v3 converter. Defaults to False.
+        old_params (Dict): Parameters for legacy v3 converter. Defaults to {}.
         scenario_name (str): Custom name for output folder. Uses p2m folder name if empty.
-        Default is False, None, None, True, None, False, False, {}, ''.
 
     Returns:
         str: Path to output folder containing converted DeepMIMO dataset.
@@ -162,8 +165,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
-    # Save Position Matrices and Populate Number of Points in Each TxRxSet 
-    # NOTE: only necessary for the inactive positions. Active pos exists in .paths
+    # Save Position Matrices and Populate Number of Points in Each TxRxSet
     for tx_set_id in tx_set_ids: 
         for rx_set_id in rx_set_ids:
             # <Project name>.pl.t<tx number> <tx set number>.r<rx set number>.p2m
@@ -174,6 +176,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
                 pl_p2m_file = os.path.join(p2m_folder, base_filename)
                 
                 # 2- extract all rx positions from pathloss.p2m
+                # NOTE: only necessary for the inactive positions. Active pos exist in .paths
                 rx_pos, _, path_loss = read_pl_p2m_file(pl_p2m_file)
                 
                 rx_set_idx = id_to_idx_map[rx_set_id]
@@ -182,14 +185,10 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
                 save_mat(rx_pos, c.RX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
                 
                 # 3- update number of (active/inactive) points in txrx sets
-                txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = rx_pos.shape[0]
-                
-                inactive_idxs = np.where(path_loss == 250.)[0]
-                txrx_dict[f'txrx_set_{rx_set_idx}']['inactive_idxs'] = inactive_idxs
-                txrx_dict[f'txrx_set_{rx_set_idx}']['num_inactive_points'] = len(inactive_idxs)
+                update_txrx_points(txrx_dict, rx_set_idx, rx_pos, path_loss)
                 
                 # 4- save all path information
-                # Paths P2M (.paths[.t{tx_id}_{??}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
+                # Paths P2M (.paths[.t{tx_id}_{tx_idx}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
                 paths_p2m_file = pl_p2m_file.replace('.pl.', '.paths.')
                 data = paths_parser(paths_p2m_file)
                 
@@ -200,7 +199,51 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
                 # (can be done in many ways, but this is easiest on code & user requirements)
                 tx_pos = extract_tx_pos(paths_p2m_file)
                 save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
-                
+    
+    
+    """
+    # New approach using WirelessInsiteScene (commented out for now)
+    # This would replace the current buildings conversion code
+    
+    # Find all physical object files
+    physical_object_files = []
+    for ext in ['.city', '.ter', '.veg']:
+        files = cu.ext_in_list(ext, files_in_sim_folder)
+        physical_object_files.extend(files)
+    
+    if convert_buildings and physical_object_files:
+        # Create scene from all physical object files
+        scene = WirelessInsiteScene.from_files(
+            files=physical_object_files,
+            name=out_fold_name
+        )
+        
+        # Export scene data
+        metadata = scene.export_data(output_folder)
+        
+        # Add statistics to materials dict
+        for group_type, group in scene.groups.items():
+            materials_dict.update({
+                f'{group_type}_stats': {
+                    'count': len(group.objects),
+                    'total_faces': sum(len(obj.faces) for obj in group.objects),
+                    'total_triangular_faces': sum(
+                        sum(f.num_triangular_faces for f in obj.faces) 
+                        for obj in group.objects
+                    )
+                }
+            })
+        
+        # Visualize if requested
+        if vis_buildings:
+            scene.plot_3d(
+                show=True, 
+                save=True,
+                filename=os.path.join(output_folder, 'scene_3d.png')
+            )
+    """
+    
+    
     # Export params.mat
     export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
     
@@ -210,11 +253,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
     cu.zip_folder(output_folder) # ready for upload
     
-    if vis_buildings:
-        city_files = cu.ext_in_list('.city', files_in_sim_folder)
-        if city_files:
-            city_vis(city_files[0])
-        
     return scen_name
 
 
