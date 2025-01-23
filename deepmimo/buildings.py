@@ -7,14 +7,12 @@ including buildings, terrain, vegetation, and other structures that affect wirel
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
 from scipy.io import savemat, loadmat
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 from pathlib import Path
-import json
 
 @dataclass
 class BoundingBox:
@@ -386,27 +384,22 @@ class ObjectGroup:
         savemat(f"{base_folder}/{self.prefix}_materials.mat", {'materials': materials})
         
         # Return metadata
+        objects_metadata = []
+        for obj, obj_indices in zip(self.objects, self.face_indices):
+            n_tri_faces = [len(indices) for indices in obj_indices]
+            objects_metadata.append({
+                'id': obj.object_id,
+                'n_faces': len(obj.faces), 
+                'n_tri_faces': sum(n_tri_faces),
+                'n_tri_faces_per_face': n_tri_faces
+            })
+            
         return {
-            'type': self.prefix,
+            'type': self.prefix, # or type(self.objects[0]).__name__
             'n_objects': len(self.objects),
-            'files': {
-                'faces': f'{self.prefix}_faces.mat',
-                'materials': f'{self.prefix}_materials.mat'
-            },
-            'objects': [
-                {
-                    'id': obj.object_id,
-                    'faces': [
-                        {
-                            'n_triangles': len(indices)
-                        }
-                        for indices in obj_indices
-                    ]
-                }
-                for obj, obj_indices in zip(self.objects, self.face_indices)
-            ]
+            'objects': objects_metadata
         }
-    
+        
     @classmethod
     def from_data(cls, metadata: Dict, base_folder: str, object_class: type) -> 'ObjectGroup':
         """Create group from metadata and matrix files.
@@ -416,9 +409,9 @@ class ObjectGroup:
             base_folder: Base folder containing matrix files
             object_class: Class to use for creating objects (Building, Vegetation, etc.)
         """
-        # Load matrices
-        faces = loadmat(f"{base_folder}/{metadata['files']['faces']}")['faces']
-        materials = loadmat(f"{base_folder}/{metadata['files']['materials']}")['materials'].flatten()
+        # Load matrices using prefix pattern
+        faces = loadmat(f"{base_folder}/{metadata['type']}_faces.mat")['faces']
+        materials = loadmat(f"{base_folder}/{metadata['type']}_materials.mat")['materials'].flatten()
         
         # Create objects using face counts from metadata
         objects = []
@@ -426,11 +419,17 @@ class ObjectGroup:
         
         for object_data in metadata['objects']:
             object_faces = []
-            for face_data in object_data['faces']:
-                n_triangles = face_data['n_triangles']
+            n_tri_faces = object_data['n_tri_faces_per_face']
+            
+            for n_triangles in n_tri_faces:
                 # Get triangles for this face
                 triangles = faces[current_index:current_index + n_triangles]
-                material_idx = materials[current_index]  # Use first material (should be same for all triangles)
+
+                # Get material index for this face and verify all triangles have same material
+                material_idx = materials[current_index]
+                if not np.all(materials[current_index:current_index + n_triangles] == material_idx):
+                    # One may want to silence this if mixed materials are okay
+                    raise ValueError(f"All triangles in a face must have the same material index")
                 
                 # Create face from triangles
                 vertices = triangles.reshape(-1, 3)  # Reshape to (N*3, 3)
@@ -496,11 +495,18 @@ class TerrainGroup(ObjectGroup):
 class Scene:
     """Represents a physical scene with various objects affecting wireless propagation."""
     
-    # Map object types to their group classes and visualization colors
+    # Map object types to their group classes
     GROUP_TYPES = {
         'buildings': BuildingsGroup,
         'vegetation': VegetationGroup,
         'terrain': TerrainGroup
+    }
+    
+    # Visualization settings for each object type
+    VISUALIZATION_SETTINGS = {
+        'terrain': {'z_order': 1, 'alpha': 0.1, 'color': 'grey'},
+        'vegetation': {'z_order': 2, 'alpha': 0.8, 'color': 'green'},
+        'buildings': {'z_order': 3, 'alpha': 0.8, 'color': None}  # None = use rainbow colors
     }
     
     def __init__(self, name: str = "unnamed_scene"):
@@ -612,23 +618,22 @@ class Scene:
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(111, projection='3d')
         
-        zorders = {'terrain': 1, 'vegetation': 2, 'buildings': 3}  # Not working...
-        alphas = {'terrain': 0.1, 'vegetation': 0.8, 'buildings': 0.8}
-        
         # Plot each group
         for object_type, group in self.groups.items():
-            # Use rainbow colormap for better distinction between objects
-            colors = plt.cm.rainbow(np.linspace(0, 1, len(group.objects)))
-            z_order = zorders[object_type]
-            alpha = alphas[object_type]
+            # Get visualization settings for this type
+            vis_settings = self.VISUALIZATION_SETTINGS[object_type]
             
-            for obj, color in zip(group.objects, colors):
+            # Use rainbow colormap for objects without fixed color
+            colors = (plt.cm.rainbow(np.linspace(0, 1, len(group.objects))) 
+                     if vis_settings['color'] is None else None)
+            
+            for obj_idx, obj in enumerate(group.objects):
                 # Create 3D polygons for each face
                 for face in obj.faces:
-                    poly3d = Poly3DCollection([face.vertices], alpha=alpha)
-                    poly3d.set_facecolor('grey' if object_type == 'terrain' else color)
+                    poly3d = Poly3DCollection([face.vertices], alpha=vis_settings['alpha'])
+                    poly3d.set_facecolor(vis_settings['color'] or colors[obj_idx])
                     poly3d.set_edgecolor('black')
-                    poly3d.set_zorder(z_order)
+                    poly3d.set_zorder(vis_settings['z_order'])
                     ax.add_collection3d(poly3d)
         
         self._set_axes_lims_to_scale(ax)
@@ -637,18 +642,7 @@ class Scene:
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         
-        # Count objects in each group
-        title = f"{self.name}\n"
-        counts = []
-        for object_type, group in self.groups.items():
-            n_objects = len(group.objects)
-            if n_objects > 0:
-                type_name = object_type.capitalize()
-                if n_objects == 1 and type_name.endswith('s'):
-                    type_name = type_name[:-1]
-                counts.append(f"{type_name}: {n_objects}")
-        
-        ax.set_title(title + ", ".join(counts))
+        ax.set_title(self._get_title_with_counts())
         
         # Set the view angle for better perspective
         ax.view_init(elev=40, azim=-45)
@@ -687,3 +681,21 @@ class Scene:
         
         # Ensure equal aspect ratio
         ax.set_box_aspect([1, 1, 1])
+    
+    def _get_title_with_counts(self) -> str:
+        """Generate a title string with object counts for each group.
+        
+        Returns:
+            Title string with scene name and object counts
+        """
+        title = f"{self.name}\n"
+        counts = []
+        for object_type, group in self.groups.items():
+            n_objects = len(group.objects)
+            if n_objects > 0:
+                type_name = object_type.capitalize()
+                if n_objects == 1 and type_name.endswith('s'):
+                    type_name = type_name[:-1]
+                counts.append(f"{type_name}: {n_objects}")
+        
+        return title + ", ".join(counts)
