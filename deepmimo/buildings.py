@@ -498,9 +498,9 @@ class Scene:
     
     # Map object types to their group classes and visualization colors
     GROUP_TYPES = {
-        'buildings': (BuildingsGroup, 'Reds'),
-        'terrain': (TerrainGroup, 'Greys'),
-        'vegetation': (VegetationGroup, 'Greens')
+        'buildings': BuildingsGroup,
+        'vegetation': VegetationGroup,
+        'terrain': TerrainGroup
     }
     
     def __init__(self, name: str = "unnamed_scene"):
@@ -523,7 +523,7 @@ class Scene:
         if object_type not in self.GROUP_TYPES:
             raise ValueError(f"Unknown object type: {object_type}")
         
-        group_class = self.GROUP_TYPES[object_type][0]
+        group_class = self.GROUP_TYPES[object_type]
         self.groups[object_type] = group_class(objects)
         print(f'object_type = {object_type}')
         self._bounding_box = None  # Reset cached bounding box
@@ -596,67 +596,42 @@ class Scene:
     
     def plot_3d(self, show: bool = True, save: bool = False, 
                 filename: str | None = None) -> Tuple[plt.Figure, plt.Axes]:
-        """Create a 3D visualization of the scene."""
+        """Create a 3D visualization of the scene using pre-computed faces.
+        
+        This method uses the faces already stored in each object, making it more efficient
+        than plot_3d() which recomputes the faces from vertices.
+        
+        Args:
+            show: Whether to display the plot
+            save: Whether to save the plot to a file
+            filename: Name of the file to save the plot to (if save is True)
+            
+        Returns:
+            Tuple of (Figure, Axes) for the plot
+        """
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(111, projection='3d')
         
-        group_zorder = {}
+        zorders = {'terrain': 1, 'vegetation': 2, 'buildings': 3}  # Not working...
+        alphas = {'terrain': 0.1, 'vegetation': 0.8, 'buildings': 0.8}
+        
         # Plot each group
         for object_type, group in self.groups.items():
             # Use rainbow colormap for better distinction between objects
             colors = plt.cm.rainbow(np.linspace(0, 1, len(group.objects)))
+            z_order = zorders[object_type]
+            alpha = alphas[object_type]
             
             for obj, color in zip(group.objects, colors):
-                # Get vertices (already in correct order from parser)
-                vertices = [(v[0], v[1], v[2]) for v in obj.vertices]
-                
-                # Extract footprint points (x,y coordinates)
-                points_2d = np.array([(x, y) for x, y, _ in vertices])
-                
-                # Get building height
-                heights = [z for _, _, z in vertices]
-                obj_height = max(heights) - min(heights)
-                base_height = min(heights)
-                
-                # Create convex hull for footprint
-                hull = ConvexHull(points_2d)
-                footprint = points_2d[hull.vertices]
-                
-                # Create top and bottom faces
-                bottom_face = [(x, y, base_height) for x, y in footprint]
-                top_face = [(x, y, base_height + obj_height) for x, y in footprint]
-                
-                # Create walls (side faces)
-                walls = []
-                for i in range(len(footprint)):
-                    j = (i + 1) % len(footprint)
-                    wall = [
-                        bottom_face[i],
-                        bottom_face[j],
-                        top_face[j],
-                        top_face[i]
-                    ]
-                    walls.append(wall)
-                
-                # Combine all faces
-                faces = [bottom_face, top_face] + walls
-                
-                # Create 3D polygons
-                poly3d = Poly3DCollection(faces, alpha=0.6)#, zorder=group_zorder[object_type])
-                poly3d.set_facecolor(color)
-                poly3d.set_edgecolor('black')
-                ax.add_collection3d(poly3d)
+                # Create 3D polygons for each face
+                for face in obj.faces:
+                    poly3d = Poly3DCollection([face.vertices], alpha=alpha)
+                    poly3d.set_facecolor('grey' if object_type == 'terrain' else color)
+                    poly3d.set_edgecolor('black')
+                    poly3d.set_zorder(z_order)
+                    ax.add_collection3d(poly3d)
         
-        # Set axis limits
-        bb = self.bounding_box
-        max_range = max(bb.width, bb.length, bb.height) / 2.0
-        mid_x = (bb.x_max + bb.x_min) * 0.5
-        mid_y = (bb.y_max + bb.y_min) * 0.5
-        mid_z = (bb.z_max + bb.z_min) * 0.5
-        
-        ax.set_xlim(mid_x - max_range, mid_x + max_range)
-        ax.set_ylim(mid_y - max_range, mid_y + max_range)
-        ax.set_zlim(mid_z - max_range*0.5, mid_z + max_range*1.5)
+        self._set_axes_lims_to_scale(ax)
         
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -676,7 +651,7 @@ class Scene:
         ax.set_title(title + ", ".join(counts))
         
         # Set the view angle for better perspective
-        ax.view_init(elev=20, azim=45)
+        ax.view_init(elev=40, azim=-45)
         
         if save:
             output_file = filename or f'{self.name}_3d.png'
@@ -686,4 +661,29 @@ class Scene:
         if show:
             plt.show()
         
-        return fig, ax 
+        return fig, ax
+    
+    def _set_axes_lims_to_scale(self, ax, zoom: float = 1.3):
+        """Set axis limits based on scene bounding box with equal scaling.
+        
+        Args:
+            ax: Matplotlib 3D axes to set limits on
+            zoom: Zoom factor (>1 zooms out, <1 zooms in)
+        """
+        bb = self.bounding_box
+        
+        # Find center point
+        center_x = (bb.x_max + bb.x_min) / 2
+        center_y = (bb.y_max + bb.y_min) / 2
+        center_z = (bb.z_max + bb.z_min) / 2
+        
+        # Use the largest dimension to ensure equal scaling
+        max_range = max(bb.width, bb.length, bb.height) / 2 / zoom
+        
+        # Set limits equidistant from center
+        ax.set_xlim3d([center_x - max_range, center_x + max_range])
+        ax.set_ylim3d([center_y - max_range, center_y + max_range])
+        ax.set_zlim3d([center_z - max_range, center_z + max_range])
+        
+        # Ensure equal aspect ratio
+        ax.set_box_aspect([1, 1, 1])
