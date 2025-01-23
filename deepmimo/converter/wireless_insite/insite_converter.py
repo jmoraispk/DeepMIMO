@@ -26,16 +26,14 @@ import scipy.io
 from .. import converter_utils as cu
 from ...general_utilities import PrintIfVerbose, get_mat_filename
 from ... import consts as c
-# from ...buildings import City
-# from .city_parser import CityFileParser
 from .paths_parser import paths_parser, extract_tx_pos
 from .insite_materials import read_materials
 from .insite_setup import read_setup
 from .insite_txrx import read_txrx, get_id_to_idx_map, update_txrx_points
+from .insite_scene import create_scene_from_folder
 # v3 (old)
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
-from .city_parser import WirelessInsiteScene  # New import
 
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
@@ -200,52 +198,20 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
                 tx_pos = extract_tx_pos(paths_p2m_file)
                 save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
     
-    
-    """
-    # New approach using WirelessInsiteScene (commented out for now)
-    # This would replace the current buildings conversion code
-    
-    # Find all physical object files
-    physical_object_files = []
-    for ext in ['.city', '.ter', '.veg']:
-        files = cu.ext_in_list(ext, files_in_sim_folder)
-        physical_object_files.extend(files)
-    
-    if convert_buildings and physical_object_files:
-        # Create scene from all physical object files
-        scene = WirelessInsiteScene.from_files(
-            files=physical_object_files,
-            name=out_fold_name
-        )
+    if convert_buildings:
         
-        # Export scene data
-        metadata = scene.export_data(output_folder)
+        # Create scene from simulation folder
+        scene = create_scene_from_folder(insite_sim_folder)
         
-        # Add statistics to materials dict
-        for group_type, group in scene.groups.items():
-            materials_dict.update({
-                f'{group_type}_stats': {
-                    'count': len(group.objects),
-                    'total_faces': sum(len(obj.faces) for obj in group.objects),
-                    'total_triangular_faces': sum(
-                        sum(f.num_triangular_faces for f in obj.faces) 
-                        for obj in group.objects
-                    )
-                }
-            })
+        # Export scene data (save {building/terrain/vegetaion}_{faces/materials}.mat files)
+        scene_dict = scene.export_data(output_folder)
         
         # Visualize if requested
         if vis_buildings:
-            scene.plot_3d(
-                show=True, 
-                save=True,
-                filename=os.path.join(output_folder, 'scene_3d.png')
-            )
-    """
-    
+            scene.plot_3d(show=True)#, save=True, filename=os.path.join(output_folder, 'scene_3d.png'))
     
     # Export params.mat
-    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict)
+    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict, scene_dict)
     
     # Move scenario to deepmimo scenarios folder
     scen_name = export_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
@@ -371,24 +337,24 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
     vprint('Done')
 
 
-def export_params_dict(output_folder: str, setup_dict: Dict = {},
-                       txrx_dict: Dict = {}, mat_dict: Dict = {}) -> None:
+def export_params_dict(output_folder: str, *dicts: Dict) -> None:
     """Export parameter dictionaries to a .mat file.
     
     Args:
         output_folder (str): Output directory path.
-        setup_dict (Dict): Dictionary of setup parameters. Defaults to {}.
-        txrx_dict (Dict): Dictionary of transmitter/receiver parameters. Defaults to {}.
-        mat_dict (Dict): Dictionary of material parameters. Defaults to {}.
+        *dicts: Variable number of dictionaries to merge and export.
     """
-    data_dict = {
+    base_dict = {
         c.LOAD_FILE_SP_VERSION: c.VERSION,
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
         c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
     }
     
-    merged_dict = {**data_dict, **setup_dict, **txrx_dict, **mat_dict}
+    merged_dict = base_dict.copy()
+    for d in dicts:
+        merged_dict.update(d)
+        
     pprint(merged_dict)
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
 

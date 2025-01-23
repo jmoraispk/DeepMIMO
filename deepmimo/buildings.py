@@ -525,6 +525,7 @@ class Scene:
         
         group_class = self.GROUP_TYPES[object_type][0]
         self.groups[object_type] = group_class(objects)
+        print(f'object_type = {object_type}')
         self._bounding_box = None  # Reset cached bounding box
     
     @property
@@ -593,49 +594,70 @@ class Scene:
         
         return scene
     
-    def plot_3d(self, show: bool = True, save: bool = True, 
+    def plot_3d(self, show: bool = True, save: bool = False, 
                 filename: str | None = None) -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene."""
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(111, projection='3d')
         
+        group_zorder = {}
         # Plot each group
         for object_type, group in self.groups.items():
-            color_map = getattr(plt.cm, self.GROUP_TYPES[object_type][1])
-            colors = color_map(np.linspace(0.3, 0.7, len(group.objects)))
+            # Use rainbow colormap for better distinction between objects
+            colors = plt.cm.rainbow(np.linspace(0, 1, len(group.objects)))
             
             for obj, color in zip(group.objects, colors):
-                face_vertices = [face.vertices for face in obj.faces]
-                poly3d = Poly3DCollection(face_vertices, alpha=0.6)
+                # Get vertices (already in correct order from parser)
+                vertices = [(v[0], v[1], v[2]) for v in obj.vertices]
+                
+                # Extract footprint points (x,y coordinates)
+                points_2d = np.array([(x, y) for x, y, _ in vertices])
+                
+                # Get building height
+                heights = [z for _, _, z in vertices]
+                obj_height = max(heights) - min(heights)
+                base_height = min(heights)
+                
+                # Create convex hull for footprint
+                hull = ConvexHull(points_2d)
+                footprint = points_2d[hull.vertices]
+                
+                # Create top and bottom faces
+                bottom_face = [(x, y, base_height) for x, y in footprint]
+                top_face = [(x, y, base_height + obj_height) for x, y in footprint]
+                
+                # Create walls (side faces)
+                walls = []
+                for i in range(len(footprint)):
+                    j = (i + 1) % len(footprint)
+                    wall = [
+                        bottom_face[i],
+                        bottom_face[j],
+                        top_face[j],
+                        top_face[i]
+                    ]
+                    walls.append(wall)
+                
+                # Combine all faces
+                faces = [bottom_face, top_face] + walls
+                
+                # Create 3D polygons
+                poly3d = Poly3DCollection(faces, alpha=0.6)#, zorder=group_zorder[object_type])
                 poly3d.set_facecolor(color)
                 poly3d.set_edgecolor('black')
                 ax.add_collection3d(poly3d)
         
-        self._set_plot_limits(ax)
-        self._set_plot_labels(ax)
-        
-        if save:
-            output_file = filename or f'{self.name}_3d.png'
-            plt.savefig(output_file, dpi=300, bbox_inches='tight')
-            print(f"\nPlot saved as '{output_file}'")
-        
-        if show:
-            plt.show()
-        
-        return fig, ax
-    
-    def _set_plot_limits(self, ax: plt.Axes) -> None:
-        """Set the plot limits to properly display all objects."""
+        # Set axis limits
         bb = self.bounding_box
-        center = (bb.x_min + bb.width / 2, bb.y_min + bb.length / 2, bb.z_min + bb.height / 2)
         max_range = max(bb.width, bb.length, bb.height) / 2.0
+        mid_x = (bb.x_max + bb.x_min) * 0.5
+        mid_y = (bb.y_max + bb.y_min) * 0.5
+        mid_z = (bb.z_max + bb.z_min) * 0.5
         
-        ax.set_xlim(center[0] - max_range, center[0] + max_range)
-        ax.set_ylim(center[1] - max_range, center[1] + max_range)
-        ax.set_zlim(center[2] - max_range*0.5, center[2] + max_range*1.5)
-    
-    def _set_plot_labels(self, ax: plt.Axes) -> None:
-        """Set the plot labels and title."""
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range*0.5, mid_z + max_range*1.5)
+        
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
@@ -646,10 +668,22 @@ class Scene:
         for object_type, group in self.groups.items():
             n_objects = len(group.objects)
             if n_objects > 0:
-                # Capitalize and remove 's' if count is 1
                 type_name = object_type.capitalize()
                 if n_objects == 1 and type_name.endswith('s'):
                     type_name = type_name[:-1]
                 counts.append(f"{type_name}: {n_objects}")
         
-        ax.set_title(title + ", ".join(counts)) 
+        ax.set_title(title + ", ".join(counts))
+        
+        # Set the view angle for better perspective
+        ax.view_init(elev=20, azim=45)
+        
+        if save:
+            output_file = filename or f'{self.name}_3d.png'
+            plt.savefig(output_file, dpi=300, bbox_inches='tight')
+            print(f"\nPlot saved as '{output_file}'")
+        
+        if show:
+            plt.show()
+        
+        return fig, ax 
