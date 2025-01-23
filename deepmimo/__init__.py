@@ -47,13 +47,6 @@ from .buildings import (
     VegetationGroup
 )
 
-# Wireless InSite specific
-from .converter.wireless_insite.city_parser import (
-    PhysicalObjectParser,
-    WirelessInsiteScene,
-    create_scene_from_files
-)
-
 __all__ = [
     # Core functionality
     'generate',
@@ -85,8 +78,4 @@ __all__ = [
     'TerrainGroup',
     'VegetationGroup',
     
-    # Wireless InSite specific
-    'PhysicalObjectParser',
-    'WirelessInsiteScene',
-    'create_scene_from_files'
 ]
