@@ -5,38 +5,52 @@ from Wireless InSite into DeepMIMO's physical object representation.
 """
 
 import re
-from typing import List, Set, Tuple, Dict
+from typing import List, Set, Tuple
 from pathlib import Path
 from ...buildings import Building, Terrain, Vegetation, Face, PhysicalObject, Scene
+from .insite_buildings import extract_buildings2, get_building_shape
 
-def create_scene_from_files(files: List[str], name: str = "unnamed_scene") -> Scene:
-    """Create a Scene from Wireless InSite files.
+# Map file extensions to object types
+FILE_TYPES = {
+    '.city': ('buildings', Building),
+    '.ter': ('terrain', Terrain),
+    '.veg': ('vegetation', Vegetation)
+}
+
+def create_scene_from_folder(folder_path: str | Path) -> Scene:
+    """Create a Scene from a folder containing Wireless InSite files.
     
-    This is a factory function that creates a Scene by parsing multiple physical object files.
+    This function searches the given folder for .city, .ter, and .veg files
+    and creates a Scene containing all the objects defined in those files.
     
     Args:
-        files: List of file paths (.city, .ter, .veg)
-        name: Name for the scene
+        folder_path: Path to folder containing Wireless InSite files
         
     Returns:
         Scene containing all objects from the files
+        
+    Raises:
+        ValueError: If folder doesn't exist or no valid files found
     """
-    scene = Scene(name=name)
+    folder = Path(folder_path)
+    if not folder.exists():
+        raise ValueError(f"Folder does not exist: {folder}")
     
-    # Group files by type
-    file_types: Dict[str, List[str]] = {
-        '.city': [],
-        '.ter': [],
-        '.veg': []
-    }
+    scene = Scene(name='WirelessInsiteScene')
     
-    for file in files:
-        suffix = Path(file).suffix
-        if suffix in file_types:
-            file_types[suffix].append(file)
+    # Find all files with matching extensions
+    found_files = {ext: [] for ext in FILE_TYPES}
+    for file in folder.glob("*"):
+        suffix = file.suffix.lower()
+        if suffix in FILE_TYPES:
+            found_files[suffix].append(str(file))
+    
+    # Check if any valid files were found
+    if not any(files for files in found_files.values()):
+        raise ValueError(f"No valid files (.city, .ter, .veg) found in {folder}")
     
     # Parse each type of file and add to scene
-    for suffix, type_files in file_types.items():
+    for suffix, type_files in found_files.items():
         if not type_files:
             continue
             
@@ -47,104 +61,14 @@ def create_scene_from_files(files: List[str], name: str = "unnamed_scene") -> Sc
             objects = parser.parse()
             all_objects.extend(objects)
         
-        # Add to scene with appropriate type name
-        object_type = suffix[1:]  # Remove dot
-        scene.add_objects(object_type, all_objects)
+        # Get group name for this file type
+        group_name = FILE_TYPES[suffix][0]
+            
+        # Add to scene with appropriate group name
+        scene.add_objects(group_name, all_objects)
     
     return scene
 
-
-class WirelessInsiteScene(Scene):
-    """Scene subclass specifically for Wireless InSite files.
-    
-    This class extends Scene with methods to load directly from Wireless InSite files.
-    """
-    
-    @classmethod
-    def from_files(cls, files: List[str], name: str = "unnamed_scene") -> 'WirelessInsiteScene':
-        """Create scene from Wireless InSite files.
-        
-        Args:
-            files: List of file paths (.city, .ter, .veg)
-            name: Name for the scene
-            
-        Returns:
-            WirelessInsiteScene containing all objects from the files
-        """
-        scene = cls(name=name)
-        
-        # Group files by type
-        file_types: Dict[str, List[str]] = {
-            '.city': [],
-            '.ter': [],
-            '.veg': []
-        }
-        
-        for file in files:
-            suffix = Path(file).suffix
-            if suffix in file_types:
-                file_types[suffix].append(file)
-        
-        # Parse each type of file and add to scene
-        for suffix, type_files in file_types.items():
-            if not type_files:
-                continue
-                
-            # Parse all files of this type
-            all_objects = []
-            for file in type_files:
-                parser = PhysicalObjectParser(file)
-                objects = parser.parse()
-                all_objects.extend(objects)
-            
-            # Add to scene with appropriate type name
-            object_type = suffix[1:]  # Remove dot
-            scene.add_objects(object_type, all_objects)
-        
-        return scene
-    
-    def load_files(self, files: List[str]) -> None:
-        """Load additional files into the scene.
-        
-        Args:
-            files: List of file paths (.city, .ter, .veg)
-        """
-        # Group files by type
-        file_types: Dict[str, List[str]] = {
-            '.city': [],
-            '.ter': [],
-            '.veg': []
-        }
-        
-        for file in files:
-            suffix = Path(file).suffix
-            if suffix in file_types:
-                file_types[suffix].append(file)
-        
-        # Parse each type of file and add to scene
-        for suffix, type_files in file_types.items():
-            if not type_files:
-                continue
-                
-            # Parse all files of this type
-            all_objects = []
-            for file in type_files:
-                parser = PhysicalObjectParser(file)
-                objects = parser.parse()
-                all_objects.extend(objects)
-            
-            # Add to scene with appropriate type name
-            object_type = suffix[1:]  # Remove dot
-            
-            # If group already exists, extend it
-            if object_type in self.groups:
-                self.groups[object_type].objects.extend(all_objects)
-            else:
-                # Otherwise create new group
-                self.add_objects(object_type, all_objects)
-        
-        # Reset cached bounding box
-        self._bounding_box = None
 
 class PhysicalObjectParser:
     """Parser for Wireless InSite physical object files (.city, .ter, .veg)."""
@@ -167,186 +91,41 @@ class PhysicalObjectParser:
             raise ValueError(f"Unsupported file type: {self.file_path.suffix}")
         
         self.object_class = self.OBJECT_TYPES[self.file_path.suffix]
-        self._faces: List[str] = []
-        self._vertex_pattern = r"(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+(-?\d+\.?\d*)"
-        self._read_file()
-    
-    def _read_file(self) -> None:
-        """Read and preprocess the input file."""
-        with open(self.file_path, 'r') as f:
-            content = f.read()
-        
-        # Extract all face definitions
-        face_pattern = r"begin_<face>(.*?)end_<face>"
-        self._faces = re.findall(face_pattern, content, re.DOTALL)
-    
-    def _extract_connected_faces(self, start_idx: int, faces: List[str], 
-                               processed_faces: Set[int]) -> Set[Tuple[float, float, float]]:
-        """Extract all faces connected to the starting face.
-        
-        Args:
-            start_idx: Index of the starting face
-            faces: List of all face definitions
-            processed_faces: Set of already processed face indices
-            
-        Returns:
-            Set of vertices forming a connected object
-        """
-        object_vertices = set()
-        face_stack = [start_idx]
-        
-        while face_stack:
-            current_face_idx = face_stack.pop()
-            if current_face_idx in processed_faces:
-                continue
-                
-            current_face = faces[current_face_idx]
-            processed_faces.add(current_face_idx)
-            
-            # Extract vertices from current face
-            current_vertices = [(float(x), float(y), float(z)) 
-                              for x, y, z in re.findall(self._vertex_pattern, current_face)]
-            
-            # Add vertices to object
-            object_vertices.update(current_vertices)
-            
-            # Find connected faces
-            for j, other_face in enumerate(faces):
-                if j not in processed_faces:
-                    other_vertices = [(float(x), float(y), float(z)) 
-                                    for x, y, z in re.findall(self._vertex_pattern, other_face)]
-                    
-                    # If faces share any vertices, add to stack
-                    if any(v in current_vertices for v in other_vertices):
-                        face_stack.append(j)
-        
-        return object_vertices
-    
-    def _create_face(self, face_str: str) -> Face:
-        """Create a Face object from face string.
-        
-        Args:
-            face_str: String containing face definition
-            
-        Returns:
-            Face object
-        """
-        # Extract material index
-        material_match = re.search(r"material\s+(\d+)", face_str)
-        material_idx = int(material_match.group(1)) if material_match else 0
-        
-        # Extract vertices
-        vertices = [(float(x), float(y), float(z)) 
-                   for x, y, z in re.findall(self._vertex_pattern, face_str)]
-        
-        return Face(vertices=vertices, material_idx=material_idx)
-    
-    def _get_object_faces(self, vertices: Set[Tuple[float, float, float]]) -> List[Face]:
-        """Get all faces that contain only vertices from the given set.
-        
-        Args:
-            vertices: Set of vertices that belong to the object
-            
-        Returns:
-            List of Face objects
-        """
-        object_faces = []
-        for face_str in self._faces:
-            face_vertices = [(float(x), float(y), float(z)) 
-                           for x, y, z in re.findall(self._vertex_pattern, face_str)]
-            if all(v in vertices for v in face_vertices):
-                object_faces.append(self._create_face(face_str))
-        return object_faces
     
     def parse(self) -> List[PhysicalObject]:
-        """Parse the file and return list of physical objects.
+        """Parse the file and return a list of physical objects.
         
         Returns:
             List of physical objects (Building, Terrain, or Vegetation)
         """
-        processed_faces = set()
+        # Read file content
+        with open(self.file_path, 'r') as f:
+            content = f.read()
+            
+        # Extract buildings using extract_buildings2
+        building_vertices = extract_buildings2(content)
+        
+        # Convert each set of vertices into a Building object
         objects = []
-        
-        # Process each unprocessed face
-        for i in range(len(self._faces)):
-            if i not in processed_faces:
-                # Get all faces connected to this one
-                object_vertices = self._extract_connected_faces(i, self._faces, processed_faces)
-                
-                # Get all faces for this object
-                object_faces = self._get_object_faces(object_vertices)
-                
-                # Create object
-                obj = self.object_class(faces=object_faces)
-                objects.append(obj)
-        
+        for i, vertices in enumerate(building_vertices):
+            # Get faces for this building
+            building_faces, _ = get_building_shape(vertices)
+            
+            # Convert faces to Face objects
+            faces = [Face(vertices=face) for face in building_faces]
+            
+            # Create Building object
+            building = self.object_class(faces=faces, object_id=i)
+            objects.append(building)
+            
         return objects
 
 if __name__ == "__main__":
     # Test parsing and matrix export
-    import os
-    from pathlib import Path
+    test_dir = r"./P2Ms/simple_street_canyon_test/"
     
-    # Get test file paths
-    test_dir = Path(__file__).parent.parent.parent.parent / "test_data"
-    test_dir.mkdir(exist_ok=True)
-    
-    # Create test files if they don't exist
-    test_files = {
-        'city': test_dir / "test.city",
-        'terrain': test_dir / "test.ter",
-        'vegetation': test_dir / "test.veg"
-    }
-    
-    # Create simple test files if they don't exist
-    for file_type, file_path in test_files.items():
-        if not file_path.exists():
-            with open(file_path, "w") as f:
-                f.write("""begin_<face>
-material 1
-0.0 0.0 0.0
-10.0 0.0 0.0
-10.0 10.0 0.0
-0.0 10.0 0.0
-end_<face>
-begin_<face>
-material 1
-0.0 0.0 10.0
-10.0 0.0 10.0
-10.0 10.0 10.0
-0.0 10.0 10.0
-end_<face>""")
-    
-    # Test both approaches:
-    
-    # 1. Using factory function
-    print("\nTesting factory function:")
-    scene1 = create_scene_from_files(list(test_files.values()), name="test_scene1")
-    print("Created scene with:")
-    for group_type, group in scene1.groups.items():
-        print(f"  {len(group.objects)} {group_type}")
-    
-    # 2. Using WirelessInsiteScene
-    print("\nTesting WirelessInsiteScene:")
-    scene2 = WirelessInsiteScene.from_files(list(test_files.values()), name="test_scene2")
-    print("Created scene with:")
-    for group_type, group in scene2.groups.items():
-        print(f"  {len(group.objects)} {group_type}")
-    
-    # Test loading additional files
-    print("\nTesting loading additional files:")
-    scene2.load_files([test_files['city']])  # Add another building
-    print("Updated scene with:")
-    for group_type, group in scene2.groups.items():
-        print(f"  {len(group.objects)} {group_type}")
-    
-    # Export and visualize
-    output_dir = test_dir / "output"
-    output_dir.mkdir(exist_ok=True)
-    
-    metadata = scene2.export_data(str(output_dir))
-    print("\nExported metadata:", metadata)
-    
+    # Create scene from test directory
+    scene = create_scene_from_folder(test_dir)
+
     # Visualize
-    scene2.plot_3d(show=True, save=True, 
-                  filename=str(output_dir / "scene_3d.png")) 
+    scene.plot_3d(show=True) 
