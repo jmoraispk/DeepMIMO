@@ -150,4 +150,26 @@ def read_materials(files_in_sim_folder: List[str], verbose: bool = False) -> Dic
         from pprint import pprint
         pprint(material_list.get_materials_dict())
         
-    return material_list.get_materials_dict() 
+    return material_list.get_materials_dict()
+
+
+if __name__ == "__main__":
+    # Test directory with material files
+    test_dir = r"./P2Ms/simple_street_canyon_test/"
+    
+    # Get all files in test directory
+    files = []
+    for root, _, filenames in os.walk(test_dir):
+        for filename in filenames:
+            files.append(os.path.join(root, filename))
+    
+    print(f"\nTesting materials extraction from: {test_dir}")
+    print("-" * 50)
+    
+    # Basic test
+    materials_dict = read_materials(files, verbose=True)
+    print("\nCategories found:")
+    for category, materials in materials_dict.items():
+        if materials:
+            print(f"{category}: {len(materials)} materials")
+            

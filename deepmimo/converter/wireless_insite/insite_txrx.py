@@ -50,7 +50,7 @@ def update_txrx_points(txrx_dict: Dict, rx_set_idx: int, rx_pos: np.ndarray, pat
     txrx_dict[f'txrx_set_{rx_set_idx}']['num_active_points'] = n_points - len(inactive_idxs)
 
 
-def read_txrx(txrx_file, verbose: bool) -> Tuple[List[int], List[int], Dict]:
+def read_txrx(txrx_file) -> Tuple[List[int], List[int], Dict]:
     print(f'Reading txrx file: {os.path.basename(txrx_file)}')
     document = parse_file(txrx_file)
     tx_ids, rx_ids = [], []
@@ -104,4 +104,50 @@ def read_txrx(txrx_file, verbose: bool) -> Tuple[List[int], List[int], Dict]:
 def get_id_to_idx_map(txrx_dict: Dict):
     ids = [txrx_dict[key]['id_orig'] for key in txrx_dict.keys()]
     idxs = [i + 1 for i in range(len(ids))]
-    return {key:val for key, val in zip(ids, idxs)} 
+    return {key:val for key, val in zip(ids, idxs)}
+
+
+if __name__ == "__main__":
+    # Test directory with TX/RX files
+    test_dir = r"./P2Ms/simple_street_canyon_test/"
+    
+    # Find .txrx file in test directory
+    txrx_file = None
+    for root, _, filenames in os.walk(test_dir):
+        for filename in filenames:
+            if filename.endswith('.txrx'):
+                txrx_file = os.path.join(root, filename)
+                break
+        if txrx_file:
+            break
+            
+    if not txrx_file:
+        print(f"No .txrx file found in {test_dir}")
+        exit(1)
+        
+    print(f"\nTesting TX/RX set extraction from: {txrx_file}")
+    print("-" * 50)
+    
+    # Extract TX/RX information
+    tx_ids, rx_ids, txrx_sets = read_txrx(txrx_file)
+    
+    # Print summary
+    print("\nSummary:")
+    print(f"Found {len(tx_ids)} transmitter sets: {tx_ids}")
+    print(f"Found {len(rx_ids)} receiver sets: {rx_ids}")
+    print("\nTX/RX Sets Details:")
+    for set_key, set_info in txrx_sets.items():
+        print(f"\n{set_key}:")
+        print(f"  Original ID: {set_info['id_orig']}")
+        print(f"  Index: {set_info['idx']}")
+        print(f"  Is TX: {set_info.get('is_tx', False)}")
+        print(f"  Is RX: {set_info.get('is_rx', False)}")
+        if 'tx_num_ant' in set_info:
+            print(f"  TX antennas: {set_info['tx_num_ant']}")
+        if 'rx_num_ant' in set_info:
+            print(f"  RX antennas: {set_info['rx_num_ant']}")
+            
+    # Test ID to index mapping
+    id_idx_map = get_id_to_idx_map(txrx_sets)
+    print("\nID to Index mapping:")
+    print(id_idx_map) 

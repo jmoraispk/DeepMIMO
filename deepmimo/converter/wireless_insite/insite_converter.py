@@ -148,20 +148,17 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     
     # Read setup (.setup)
     setup_file = cu.ext_in_list('.setup', files_in_sim_folder)[0]
-    setup_dict = read_setup(setup_file, verbose=False)
+    setup_dict = read_setup(setup_file)
 
     # Read TXRX (.txrx)
     txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
-    avail_tx_set_ids, avail_rx_set_ids, txrx_dict = read_txrx(txrx_file, verbose)
+    avail_tx_set_ids, avail_rx_set_ids, txrx_dict = read_txrx(txrx_file)
     
     tx_set_ids = tx_set_ids if tx_set_ids else avail_tx_set_ids
     rx_set_ids = rx_set_ids if rx_set_ids else avail_rx_set_ids
     
     # Instead of Wireless Insite TX/RX SET IDs, we save and use only indices
     id_to_idx_map = get_id_to_idx_map(txrx_dict)
-    
-    # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
-    materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
     # Save Position Matrices and Populate Number of Points in Each TxRxSet
     for tx_set_id in tx_set_ids: 
@@ -197,6 +194,9 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
                 # (can be done in many ways, but this is easiest on code & user requirements)
                 tx_pos = extract_tx_pos(paths_p2m_file)
                 save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
+    
+    # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
+    materials_dict = read_materials(files_in_sim_folder, verbose=False)
     
     if convert_buildings:
         

@@ -5,17 +5,20 @@ from Wireless InSite into DeepMIMO's physical object representation.
 """
 
 import re
-from typing import List, Set, Tuple
+import numpy as np
+from typing import List, Dict, Tuple
 from pathlib import Path
-from ...buildings import Building, Terrain, Vegetation, Face, PhysicalObject, Scene
-from .insite_buildings import extract_buildings2, get_building_shape
+from scipy.spatial import ConvexHull
 
-# Map file extensions to object types
-FILE_TYPES = {
+from ...buildings import Building, Terrain, Vegetation, Face, PhysicalObject, Scene
+
+# Map file extensions to object types and their group names
+OBJECT_TYPES: Dict[str, Tuple[str, type[PhysicalObject]]] = {
     '.city': ('buildings', Building),
     '.ter': ('terrain', Terrain),
     '.veg': ('vegetation', Vegetation)
 }
+
 
 def create_scene_from_folder(folder_path: str | Path) -> Scene:
     """Create a Scene from a folder containing Wireless InSite files.
@@ -39,10 +42,10 @@ def create_scene_from_folder(folder_path: str | Path) -> Scene:
     scene = Scene(name='WirelessInsiteScene')
     
     # Find all files with matching extensions
-    found_files = {ext: [] for ext in FILE_TYPES}
+    found_files = {ext: [] for ext in OBJECT_TYPES}
     for file in folder.glob("*"):
         suffix = file.suffix.lower()
-        if suffix in FILE_TYPES:
+        if suffix in OBJECT_TYPES:
             found_files[suffix].append(str(file))
     
     # Check if any valid files were found
@@ -62,7 +65,7 @@ def create_scene_from_folder(folder_path: str | Path) -> Scene:
             all_objects.extend(objects)
         
         # Get group name for this file type
-        group_name = FILE_TYPES[suffix][0]
+        group_name = OBJECT_TYPES[suffix][0]
             
         # Add to scene with appropriate group name
         scene.add_objects(group_name, all_objects)
@@ -73,13 +76,6 @@ def create_scene_from_folder(folder_path: str | Path) -> Scene:
 class PhysicalObjectParser:
     """Parser for Wireless InSite physical object files (.city, .ter, .veg)."""
     
-    # Map file extensions to object types
-    OBJECT_TYPES = {
-        '.city': Building,
-        '.ter': Terrain,
-        '.veg': Vegetation
-    }
-    
     def __init__(self, file_path: str):
         """Initialize parser with file path.
         
@@ -87,10 +83,10 @@ class PhysicalObjectParser:
             file_path: Path to the physical object file (.city, .ter, .veg)
         """
         self.file_path = Path(file_path)
-        if self.file_path.suffix not in self.OBJECT_TYPES:
+        if self.file_path.suffix not in OBJECT_TYPES:
             raise ValueError(f"Unsupported file type: {self.file_path.suffix}")
         
-        self.object_class = self.OBJECT_TYPES[self.file_path.suffix]
+        self.object_class = OBJECT_TYPES[self.file_path.suffix][1]
     
     def parse(self) -> List[PhysicalObject]:
         """Parse the file and return a list of physical objects.
@@ -119,6 +115,106 @@ class PhysicalObjectParser:
             objects.append(building)
             
         return objects
+
+
+
+def extract_buildings2(content):
+    # Split content into faces
+    face_pattern = r'begin_<face>(.*?)end_<face>'
+    faces = re.findall(face_pattern, content, re.DOTALL)
+    
+    # Pattern to match coordinates in face definitions
+    vertex_pattern = r'-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+'
+    
+    # Pre-process all vertices for all faces
+    face_vertices = []
+    vertex_to_faces = {}  # Map vertices to the faces they belong to
+    
+    for i, face in enumerate(faces):
+        # Extract and convert vertices once
+        vertices = []
+        for v in re.findall(vertex_pattern, face):
+            x, y, z = map(float, v.split())
+            vertex = (x, y, z)
+            vertices.append(vertex)
+            # Build reverse mapping of vertex -> faces
+            if vertex not in vertex_to_faces:
+                vertex_to_faces[vertex] = {i}
+            else:
+                vertex_to_faces[vertex].add(i)
+        face_vertices.append(vertices)
+    
+    # Group faces that share vertices to form buildings
+    buildings = []
+    processed_faces = set()
+    
+    for i in range(len(faces)):
+        if i in processed_faces:
+            continue
+            
+        # Start a new building with this face
+        building_vertices = set()
+        face_stack = [i]
+        
+        while face_stack:
+            current_face_idx = face_stack.pop()
+            if current_face_idx in processed_faces:
+                continue
+                
+            current_vertices = face_vertices[current_face_idx]
+            processed_faces.add(current_face_idx)
+            
+            # Add vertices to building
+            building_vertices.update(current_vertices)
+            
+            # Find connected faces using vertex_to_faces mapping
+            connected_faces = set()
+            for vertex in current_vertices:
+                connected_faces.update(vertex_to_faces[vertex])
+            
+            # Add unprocessed connected faces to stack
+            face_stack.extend(f for f in connected_faces if f not in processed_faces)
+        
+        if building_vertices:
+            buildings.append(list(building_vertices))
+    
+    return buildings
+
+
+def get_building_shape(vertices):
+    # Extract footprint points (x,y coordinates)
+    points_2d = np.array([(x, y) for x, y, z in vertices])
+    
+    # Get building height (assuming constant height)
+    heights = [z for _, _, z in vertices]
+    building_height = max(heights) - min(heights)
+    base_height = min(heights)
+    
+    # Create convex hull for footprint
+    hull = ConvexHull(points_2d)
+    footprint = points_2d[hull.vertices]
+    
+    # Create top and bottom faces
+    bottom_face = [(x, y, base_height) for x, y in footprint]
+    top_face = [(x, y, base_height + building_height) for x, y in footprint]
+    
+    # Create walls (side faces)
+    walls = []
+    for i in range(len(footprint)):
+        j = (i + 1) % len(footprint)
+        wall = [
+            bottom_face[i],
+            bottom_face[j],
+            top_face[j],
+            top_face[i]
+        ]
+        walls.append(wall)
+    
+    # Combine all faces
+    faces = [bottom_face, top_face] + walls
+    
+    return faces, building_height
+
 
 if __name__ == "__main__":
     # Test parsing and matrix export

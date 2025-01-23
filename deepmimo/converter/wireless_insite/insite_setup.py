@@ -1,14 +1,34 @@
 """
 Setup file handling for Wireless Insite conversion.
+
+This module provides functionality for parsing setup files (.setup) from Wireless Insite
+into a dictionary format containing all simulation parameters and settings.
 """
 import os
-import shutil
 from typing import Dict
 
-from .. import converter_utils as cu
 from .setup_parser import parse_file
 
-def read_setup(setup_file: str, verbose: bool) -> Dict:
+def read_setup(setup_file: str) -> Dict:
+    """Parse a Wireless Insite setup file and extract all configuration parameters.
+    
+    This function reads a .setup file and extracts all relevant simulation parameters including:
+    - Antenna settings (type, polarization, power threshold)
+    - Waveform settings (carrier frequency, bandwidth)
+    - Study area settings (ray tracing parameters)
+    - APG acceleration settings
+    - Diffuse scattering settings
+    - Boundary settings
+    
+    Args:
+        setup_file: Path to the .setup file to parse
+        
+    Returns:
+        Dictionary containing all extracted setup parameters
+        
+    Raises:
+        Exception: If required output files are not enabled in the setup
+    """
     document = parse_file(setup_file)
     
     # Select study area 
@@ -81,3 +101,61 @@ def read_setup(setup_file: str, verbose: bool) -> Dict:
     setup_dict['boundary_ymax'] = studyarea_vals['boundary'].data[2][1]
     
     return setup_dict
+
+
+if __name__ == "__main__":
+    # Test directory with setup files
+    test_dir = r"./P2Ms/simple_street_canyon_test/"
+    
+    # Find .setup file in test directory
+    setup_file = None
+    for root, _, filenames in os.walk(test_dir):
+        for filename in filenames:
+            if filename.endswith('.setup'):
+                setup_file = os.path.join(root, filename)
+                break
+        if setup_file:
+            break
+            
+    if not setup_file:
+        print(f"No .setup file found in {test_dir}")
+        exit(1)
+        
+    print(f"\nTesting setup extraction from: {setup_file}")
+    print("-" * 50)
+    
+    # Extract setup information
+    setup_dict = read_setup(setup_file)
+    
+    # Print summary by categories
+    print("\nAntenna Settings:")
+    print(f"  Type: {setup_dict['antenna']}")
+    print(f"  Polarization: {setup_dict['polarization']}")
+    print(f"  Power Threshold: {setup_dict['power_threshold']}")
+    
+    print("\nWaveform Settings:")
+    print(f"  Frequency: {setup_dict['frequency']} Hz")
+    print(f"  Bandwidth: {setup_dict['bandwidth']} Hz")
+    
+    print("\nStudy Area Settings:")
+    print(f"  Ray Spacing: {setup_dict['ray_spacing']}")
+    print(f"  Max Reflections: {setup_dict['max_reflections']}")
+    print(f"  Initial Ray Mode: {setup_dict['initial_ray_mode']}")
+    
+    print("\nAPG Settings:")
+    print(f"  Enabled: {setup_dict['apg_acceleration']}")
+    print(f"  Workflow Mode: {setup_dict['workflow_mode']}")
+    print(f"  Path Depth: {setup_dict['path_depth']}")
+    print(f"  Adjacency Distance: {setup_dict['adjacency_distance']}")
+    
+    print("\nDiffuse Scattering Settings:")
+    print(f"  Enabled: {setup_dict['diffuse_scattering']}")
+    print(f"  Reflections: {setup_dict['diffuse_reflections']}")
+    print(f"  Diffractions: {setup_dict['diffuse_diffractions']}")
+    print(f"  Transmissions: {setup_dict['diffuse_transmissions']}")
+    print(f"  Final Interaction Only: {setup_dict['final_interaction_only']}")
+    
+    print("\nBoundary Settings:")
+    print(f"  X: [{setup_dict['boundary_xmin']}, {setup_dict['boundary_xmax']}]")
+    print(f"  Y: [{setup_dict['boundary_ymin']}, {setup_dict['boundary_ymax']}]")
+    print(f"  Z: [{setup_dict['boundary_zmin']}, {setup_dict['boundary_zmax']}]")
