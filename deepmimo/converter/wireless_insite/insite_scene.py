@@ -10,7 +10,7 @@ from typing import List, Dict, Tuple
 from pathlib import Path
 from scipy.spatial import ConvexHull
 
-from ...buildings import Building, Terrain, Vegetation, Face, PhysicalObject, Scene
+from ...scene import Building, Terrain, Vegetation, Face, PhysicalObject, Scene
 
 # Map file extensions to object types and their group names
 OBJECT_TYPES: Dict[str, Tuple[str, type[PhysicalObject]]] = {

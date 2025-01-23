@@ -35,7 +35,7 @@ from .converter.converter import create_scenario
 from .info import info
 
 # Physical world representation
-from .buildings import (
+from .scene import (
     Building,
     Face,
     Terrain,

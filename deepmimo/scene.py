@@ -342,7 +342,7 @@ class ObjectGroup:
                 face_indices = self._add_face(face)
                 obj_indices.append(face_indices)
             self.face_indices.append(obj_indices)
-    
+
     def _add_face(self, face: Face) -> List[int]:
         """Add a face and return indices of its triangular faces.
         
@@ -369,10 +369,9 @@ class ObjectGroup:
         # Export face and material matrices
         faces = []
         materials = []
-        
-        for obj, obj_indices in zip(self.objects, self.face_indices):
-            for face, face_indices in zip(obj.faces, obj_indices):
-                for i, triangle in enumerate(face.triangular_faces):
+        for obj in self.objects:
+            for face in obj.faces:
+                for triangle in face.triangular_faces:
                     faces.append(triangle.reshape(-1))
                     materials.append(face.material_idx)
         
@@ -444,6 +443,30 @@ class ObjectGroup:
         
         return cls(objects=objects, prefix=metadata['type'])
 
+    def print_metadata(self) -> None:
+        """Print metadata about the object group."""
+    
+        objects_metadata = []
+        for obj, obj_indices in zip(self.objects, self.face_indices):
+            n_tri_faces = [len(indices) for indices in obj_indices]
+            objects_metadata.append({
+                'id': obj.object_id,
+                'n_faces': len(obj.faces), 
+                'n_tri_faces': sum(n_tri_faces),
+                # Add physical properties
+                'height': obj.height,
+                'footprint_area': obj.footprint_area,
+                'volume': obj.volume,
+                'bounds': {
+                    'x_min': obj.bounding_box.x_min,
+                    'x_max': obj.bounding_box.x_max,
+                    'y_min': obj.bounding_box.y_min,
+                    'y_max': obj.bounding_box.y_max,
+                    'z_min': obj.bounding_box.z_min,
+                    'z_max': obj.bounding_box.z_max,
+                }
+            })
+        
 class BuildingsGroup(ObjectGroup):
     """Group of buildings that share matrix storage."""
     
