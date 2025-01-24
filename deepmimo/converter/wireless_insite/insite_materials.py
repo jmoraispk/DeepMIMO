@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from .setup_parser import parse_file
 from .. import converter_utils as cu
-from ...materials import (
+from ...material import (
     Material,
     MaterialList,
     CATEGORY_BUILDINGS,
