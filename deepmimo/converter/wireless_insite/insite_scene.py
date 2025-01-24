@@ -1,4 +1,5 @@
-"""Parser for Wireless InSite physical object files.
+"""
+Parser for Wireless InSite physical object files.
 
 This module provides functionality to parse physical object files (.city, .ter, .veg)
 from Wireless InSite into DeepMIMO's physical object representation.
@@ -99,13 +100,13 @@ class PhysicalObjectParser:
             content = f.read()
             
         # Extract buildings using extract_buildings2
-        building_vertices = extract_buildings2(content)
+        building_vertices = extract_objects(content)
         
         # Convert each set of vertices into a Building object
         objects = []
         for i, vertices in enumerate(building_vertices):
             # Get faces for this building
-            building_faces, _ = get_building_shape(vertices)
+            building_faces = get_object_faces(vertices)
             
             # Convert faces to Face objects
             faces = [Face(vertices=face) for face in building_faces]
@@ -117,8 +118,20 @@ class PhysicalObjectParser:
         return objects
 
 
+def extract_objects(content: str) -> List[List[Tuple[float, float, float]]]:
+    """Extract physical objects from Wireless InSite file content.
+    
+    This function parses the file content to extract and group vertices that form 
+    complete physical objects (buildings, terrain, etc). It uses face connectivity
+    to determine which vertices belong to the same object.
 
-def extract_buildings2(content):
+    Args:
+        content (str): Raw file content from Wireless InSite object file
+
+    Returns:
+        list of list of tuple: List of objects, where each object is a list of 
+            (x,y,z) vertex coordinate tuples
+    """
     # Split content into faces
     face_pattern = r'begin_<face>(.*?)end_<face>'
     faces = re.findall(face_pattern, content, re.DOTALL)
@@ -144,16 +157,16 @@ def extract_buildings2(content):
                 vertex_to_faces[vertex].add(i)
         face_vertices.append(vertices)
     
-    # Group faces that share vertices to form buildings
-    buildings = []
+    # Group faces that share vertices to form objects
+    objects = []
     processed_faces = set()
     
     for i in range(len(faces)):
         if i in processed_faces:
             continue
             
-        # Start a new building with this face
-        building_vertices = set()
+        # Start a new object with this face
+        object_vertices = set()
         face_stack = [i]
         
         while face_stack:
@@ -164,8 +177,8 @@ def extract_buildings2(content):
             current_vertices = face_vertices[current_face_idx]
             processed_faces.add(current_face_idx)
             
-            # Add vertices to building
-            building_vertices.update(current_vertices)
+            # Add vertices to object
+            object_vertices.update(current_vertices)
             
             # Find connected faces using vertex_to_faces mapping
             connected_faces = set()
@@ -175,45 +188,58 @@ def extract_buildings2(content):
             # Add unprocessed connected faces to stack
             face_stack.extend(f for f in connected_faces if f not in processed_faces)
         
-        if building_vertices:
-            buildings.append(list(building_vertices))
+        if object_vertices:
+            objects.append(list(object_vertices))
     
-    return buildings
+    return objects
 
 
-def get_building_shape(vertices):
-    # Extract footprint points (x,y coordinates)
+def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces for a physical object from its vertices.
+    
+    This function takes a list of vertices and generates faces to form a complete 
+    3D object. It creates a convex hull from the base points and generates top, 
+    bottom and side faces.
+
+    Args:
+        vertices (list of tuple): List of (x,y,z) vertex coordinates for the object
+
+    Returns:
+        list of list of tuple: List of faces, where each face is a list of (x,y,z) 
+            vertex coordinates defining the face polygon
+    """
+    # Extract base points (x,y coordinates)
     points_2d = np.array([(x, y) for x, y, z in vertices])
     
-    # Get building height (assuming constant height)
+    # Get object height (assuming constant height)
     heights = [z for _, _, z in vertices]
-    building_height = max(heights) - min(heights)
+    object_height = max(heights) - min(heights)
     base_height = min(heights)
     
-    # Create convex hull for footprint
+    # Create convex hull for base shape
     hull = ConvexHull(points_2d)
-    footprint = points_2d[hull.vertices]
+    base_shape = points_2d[hull.vertices]
     
     # Create top and bottom faces
-    bottom_face = [(x, y, base_height) for x, y in footprint]
-    top_face = [(x, y, base_height + building_height) for x, y in footprint]
+    bottom_face = [(x, y, base_height) for x, y in base_shape]
+    top_face = [(x, y, base_height + object_height) for x, y in base_shape]
     
-    # Create walls (side faces)
-    walls = []
-    for i in range(len(footprint)):
-        j = (i + 1) % len(footprint)
-        wall = [
+    # Create side faces
+    side_faces = []
+    for i in range(len(base_shape)):
+        j = (i + 1) % len(base_shape)
+        side = [
             bottom_face[i],
             bottom_face[j],
             top_face[j],
             top_face[i]
         ]
-        walls.append(wall)
+        side_faces.append(side)
     
     # Combine all faces
-    faces = [bottom_face, top_face] + walls
+    faces = [bottom_face, top_face] + side_faces
     
-    return faces, building_height
+    return faces
 
 
 if __name__ == "__main__":
