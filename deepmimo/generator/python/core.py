@@ -25,7 +25,7 @@ from .channel import generate_MIMO_channel, ChannelGenParameters
 from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ..python.downloader import download_scenario_handler, extract_scenario
-
+from ...scene import Scene
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
             ch_gen_params: Dict[str, Any] = {}) -> Dict[str, Any] | List[Dict[str, Any]]:
@@ -94,18 +94,21 @@ def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[s
     rt_params = load_mat_file_as_dict(params_mat_file) # should be appended in upper level
     
     # Load scenario data
-    n_scenes = rt_params[c.PARAMSET_DYNAMIC_SCENES]
-    if n_scenes > 1: # dynamic
+    n_snapshots = rt_params[c.PARAMSET_DYNAMIC_SCENES]
+    if n_snapshots > 1: # dynamic
         dataset = []
-        for scene_i in range(n_scenes):
-            scene_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
-                                      f'scene_{scene_i}')
-            print(f'Scene {scene_i + 1}/{n_scenes}')
-            dataset.append(load_raytracing_scene(scene_folder, rt_params, **load_params))
+        for snapshot_i in range(n_snapshots):
+            snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
+                                           f'scene_{snapshot_i}')
+            print(f'Scene {snapshot_i + 1}/{n_snapshots}')
+            dataset.append(load_raytracing_scene(snapshot_folder, rt_params, **load_params))
     else: # static 
         dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
 
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
+    
+    dataset['scene'] = Scene.from_data(rt_params, scen_folder)
+
     return dataset
 
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,

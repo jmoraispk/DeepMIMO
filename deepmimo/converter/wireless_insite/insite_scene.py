@@ -39,7 +39,7 @@ def create_scene_from_folder(folder_path: str | Path) -> Scene:
     if not folder.exists():
         raise ValueError(f"Folder does not exist: {folder}")
     
-    scene = Scene(name='WirelessInsiteScene')
+    scene = Scene()
     
     # Find all files with matching extensions
     found_files = {ext: [] for ext in OBJECT_TYPES}

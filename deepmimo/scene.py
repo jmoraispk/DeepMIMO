@@ -416,19 +416,24 @@ class ObjectGroup:
         objects = []
         current_index = 0
         
-        for object_data in metadata['objects']:
+        # Handle both list and single dictionary cases
+        object_data_list = metadata['objects']
+        if isinstance(object_data_list, dict):
+            object_data_list = [object_data_list]  # Convert single dict to list
+        
+        for object_data in object_data_list:
             object_faces = []
             n_tri_faces = object_data['n_tri_faces_per_face']
             
             for n_triangles in n_tri_faces:
                 # Get triangles for this face
                 triangles = faces[current_index:current_index + n_triangles]
-
+                
                 # Get material index for this face and verify all triangles have same material
                 material_idx = materials[current_index]
                 if not np.all(materials[current_index:current_index + n_triangles] == material_idx):
-                    # One may want to silence this if mixed materials are okay
-                    raise ValueError(f"All triangles in a face must have the same material index")
+                    # Silence this if mixed materials are okay
+                    raise ValueError("All triangles in a face must have the same material index")
                 
                 # Create face from triangles
                 vertices = triangles.reshape(-1, 3)  # Reshape to (N*3, 3)
@@ -441,7 +446,7 @@ class ObjectGroup:
             obj = object_class(faces=object_faces, object_id=object_data['id'])
             objects.append(obj)
         
-        return cls(objects=objects, prefix=metadata['type'])
+        return cls(objects)
 
     def print_metadata(self) -> None:
         """Print metadata about the object group."""
@@ -532,13 +537,8 @@ class Scene:
         'buildings': {'z_order': 3, 'alpha': 0.8, 'color': None}  # None = use rainbow colors
     }
     
-    def __init__(self, name: str = "unnamed_scene"):
-        """Initialize an empty scene.
-        
-        Args:
-            name: Name identifier for the scene
-        """
-        self.name = name
+    def __init__(self):
+        """Initialize an empty scene."""
         self.groups: Dict[str, ObjectGroup] = {}
         self._bounding_box: BoundingBox | None = None
     
@@ -596,7 +596,7 @@ class Scene:
         # Create base folder if it doesn't exist
         Path(base_folder).mkdir(parents=True, exist_ok=True)
         
-        metadata = {'name': self.name}
+        metadata = {}
         
         # Export data for each group
         for object_type, group in self.groups.items():
@@ -612,14 +612,19 @@ class Scene:
             metadata: Dictionary containing metadata about the scene
             base_folder: Base folder containing matrix files
         """
-        scene = cls(name=metadata['name'])
+        scene = cls()
         
         # Load each group
-        for object_type, group_data in metadata.items():
-            if object_type == 'name' or object_type not in cls.GROUP_TYPES:
+        for group_type, group_data in metadata.items():
+            # Skip if not a physical object group or no data
+            if not isinstance(group_data, dict) or 'type' not in group_data:
                 continue
-            group_class = cls.GROUP_TYPES[object_type][0]
-            scene.groups[object_type] = group_class.from_data(group_data, base_folder)
+                
+            # Get the appropriate group class based on object type
+            group_class = cls.GROUP_TYPES.get(group_type)
+            
+            if group_class:
+                scene.groups[group_type] = group_class.from_data(group_data, base_folder)
         
         return scene
     
@@ -671,7 +676,7 @@ class Scene:
         ax.view_init(elev=40, azim=-45)
         
         if save:
-            output_file = filename or f'{self.name}_3d.png'
+            output_file = filename or '3d_scene.png'
             plt.savefig(output_file, dpi=300, bbox_inches='tight')
             print(f"\nPlot saved as '{output_file}'")
         
@@ -709,9 +714,8 @@ class Scene:
         """Generate a title string with object counts for each group.
         
         Returns:
-            Title string with scene name and object counts
+            Title string with object counts
         """
-        title = f"{self.name}\n"
         counts = []
         for object_type, group in self.groups.items():
             n_objects = len(group.objects)
@@ -721,4 +725,4 @@ class Scene:
                     type_name = type_name[:-1]
                 counts.append(f"{type_name}: {n_objects}")
         
-        return title + ", ".join(counts)
+        return ", ".join(counts)
