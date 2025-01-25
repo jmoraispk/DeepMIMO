@@ -114,7 +114,7 @@ def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[s
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
                          tx_sets: Dict[int, list | str] | list | str = 'all',
                          rx_sets: Dict[int, list | str] | list | str = 'all',
-                         matrices: List[str] = None) -> Dict[str, Any]:
+                         matrices: List[str] | str = 'all') -> Dict[str, Any]:
     """Load raytracing data for a scene.
 
     Args:
@@ -489,7 +489,7 @@ def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
 
 def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx: int, 
                         rx_idxs: np.ndarray | List, max_paths: int, 
-                        matrices_to_load: Optional[List[str]] = None) -> Dict[str, Any]:
+                        matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
     """Load raytracing data for a transmitter-receiver pair.
 
     This function loads raytracing data files containing path information
@@ -522,7 +522,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
                c.INTERACTIONS_PARAM_NAME: None,
                c.INTERACTIONS_POS_PARAM_NAME: None}
     
-    if matrices_to_load is None:
+    if matrices_to_load == 'all':
         matrices_to_load = tx_dict.keys()
     else:
         valid_matrices = set(tx_dict.keys())

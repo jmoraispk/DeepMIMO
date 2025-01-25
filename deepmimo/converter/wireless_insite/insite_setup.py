@@ -1,18 +1,21 @@
 """
-Setup file handling for Wireless Insite conversion.
+Setup handling for Wireless Insite conversion.
 
 This module provides functionality for parsing setup files (.setup) from Wireless Insite
 into a dictionary format containing all simulation parameters and settings.
 """
+
 import os
+from pathlib import Path
 from typing import Dict
 
 from .setup_parser import parse_file
 
-def read_setup(setup_file: str) -> Dict:
-    """Parse a Wireless Insite setup file and extract all configuration parameters.
+
+def read_setup(sim_folder: str | Path) -> Dict:
+    """Read a Wireless Insite setup file and extract all configuration parameters.
     
-    This function reads a .setup file and extracts all relevant simulation parameters including:
+    Simulation parameter include:
     - Antenna settings (type, polarization, power threshold)
     - Waveform settings (carrier frequency, bandwidth)
     - Study area settings (ray tracing parameters)
@@ -21,16 +24,29 @@ def read_setup(setup_file: str) -> Dict:
     - Boundary settings
     
     Args:
-        setup_file: Path to the .setup file to parse
+        sim_folder: Path to simulation folder containing .setup file
         
     Returns:
         Dictionary containing all extracted setup parameters
         
     Raises:
-        Exception: If required output files are not enabled in the setup
+        ValueError: If no .setup file found or multiple .setup files found
     """
-    document = parse_file(setup_file)
+    sim_folder = Path(sim_folder)
+    if not sim_folder.exists():
+        raise ValueError(f"Simulation folder does not exist: {sim_folder}")
     
+    # Find .setup file
+    setup_files = list(sim_folder.glob("*.setup"))
+    if not setup_files:
+        raise ValueError(f"No .setup file found in {sim_folder}")
+    if len(setup_files) > 1:
+        raise ValueError(f"Multiple .setup files found in {sim_folder}")
+    
+    # Parse setup file
+    setup_file = str(setup_files[0])
+    document = parse_file(setup_file)
+
     # Select study area 
     prim = list(document.keys())[0]
       

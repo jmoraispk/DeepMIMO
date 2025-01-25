@@ -8,6 +8,7 @@ and converting them to the base Material format.
 import os
 from typing import List, Dict
 from dataclasses import dataclass
+from pathlib import Path
 
 from .setup_parser import parse_file
 from .. import converter_utils as cu
@@ -80,7 +81,7 @@ class InsiteMaterial:
         )
 
 
-def parse_materials_from_file(file: str) -> List[Material]:
+def parse_materials_from_file(file: Path) -> List[Material]:
     """Parse materials from a single Wireless Insite file.
     
     Args:
@@ -118,26 +119,30 @@ def parse_materials_from_file(file: str) -> List[Material]:
     return materials
 
 
-def read_materials(files_in_sim_folder: List[str], verbose: bool = False) -> Dict:
-    """Read materials from Wireless Insite files.
+def read_materials(sim_folder: str, verbose: bool = False) -> Dict:
+    """Read materials from a Wireless Insite simulation folder.
     
     Args:
-        files_in_sim_folder: List of files in simulation folder
+        sim_folder: Path to simulation folder containing material files (.city, .ter, .veg)
         verbose: Whether to print debug information
         
     Returns:
         Dict containing materials and their categorization
     """
+    sim_folder = Path(sim_folder)
+    if not sim_folder.exists():
+        raise ValueError(f"Simulation folder does not exist: {sim_folder}")
+    
     # Initialize material list
     material_list = MaterialList()
     
     # Get files by type
     file_types = {
-        CATEGORY_BUILDINGS: cu.ext_in_list('.city', files_in_sim_folder),
-        CATEGORY_TERRAIN: cu.ext_in_list('.ter', files_in_sim_folder),
-        CATEGORY_VEGETATION: cu.ext_in_list('.veg', files_in_sim_folder),
-        CATEGORY_FLOORPLANS: cu.ext_in_list('.flp', files_in_sim_folder),
-        CATEGORY_OBJECTS: cu.ext_in_list('.obj', files_in_sim_folder)
+        CATEGORY_BUILDINGS: list(sim_folder.glob("*.city")),
+        CATEGORY_TERRAIN: list(sim_folder.glob("*.ter")),
+        CATEGORY_VEGETATION: list(sim_folder.glob("*.veg")),
+        CATEGORY_FLOORPLANS: list(sim_folder.glob("*.flp")),
+        CATEGORY_OBJECTS: list(sim_folder.glob("*.obj"))
     }
     
     # Parse materials from each file type
@@ -167,7 +172,7 @@ if __name__ == "__main__":
     print("-" * 50)
     
     # Basic test
-    materials_dict = read_materials(files, verbose=True)
+    materials_dict = read_materials(test_dir, verbose=True)
     print("\nCategories found:")
     for category, materials in materials_dict.items():
         if materials:

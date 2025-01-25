@@ -24,16 +24,17 @@ import scipy.io
 
 # Local imports
 from .. import converter_utils as cu
-from ...general_utilities import PrintIfVerbose, get_mat_filename
+from ...general_utilities import PrintIfVerbose
 from ... import consts as c
-from .paths_parser import paths_parser, extract_tx_pos
 from .insite_materials import read_materials
 from .insite_setup import read_setup
-from .insite_txrx import read_txrx, get_id_to_idx_map, update_txrx_points
 from .insite_scene import create_scene_from_folder
+
 # v3 (old)
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
+from .insite_txrx import create_txrx_from_folder
+from .insite_paths import create_paths_from_folder
 
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
@@ -143,60 +144,17 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     if copy_source:
         copy_rt_source_files(insite_sim_folder, verbose)
     
-    files_in_sim_folder = [os.path.join(insite_sim_folder, file) 
-                           for file in os.listdir(insite_sim_folder)]
-    
     # Read setup (.setup)
-    setup_file = cu.ext_in_list('.setup', files_in_sim_folder)[0]
-    setup_dict = read_setup(setup_file)
+    setup_dict = read_setup(insite_sim_folder)
 
     # Read TXRX (.txrx)
-    txrx_file = cu.ext_in_list('.txrx', files_in_sim_folder)[0]
-    avail_tx_set_ids, avail_rx_set_ids, txrx_dict = read_txrx(txrx_file)
+    txrx_dict = create_txrx_from_folder(insite_sim_folder, p2m_folder, output_folder)
     
-    tx_set_ids = tx_set_ids if tx_set_ids else avail_tx_set_ids
-    rx_set_ids = rx_set_ids if rx_set_ids else avail_rx_set_ids
-    
-    # Instead of Wireless Insite TX/RX SET IDs, we save and use only indices
-    id_to_idx_map = get_id_to_idx_map(txrx_dict)
-    
-    # Save Position Matrices and Populate Number of Points in Each TxRxSet
-    for tx_set_id in tx_set_ids: 
-        for rx_set_id in rx_set_ids:
-            # <Project name>.pl.t<tx number> <tx set number>.r<rx set number>.p2m
-            proj_name = os.path.basename(insite_sim_folder)
-            for tx_idx, tx_id in enumerate([1]): # We assume each TX/RX SET only has one BS    
-                # 1- generate file names based on active txrx sets    
-                base_filename = f'{proj_name}.pl.t{tx_id:03}_{tx_set_id:02}.r{rx_set_id:03}.p2m'
-                pl_p2m_file = os.path.join(p2m_folder, base_filename)
-                
-                # 2- extract all rx positions from pathloss.p2m
-                # NOTE: only necessary for the inactive positions. Active pos exist in .paths
-                rx_pos, _, path_loss = read_pl_p2m_file(pl_p2m_file)
-                
-                rx_set_idx = id_to_idx_map[rx_set_id]
-                tx_set_idx = id_to_idx_map[tx_set_id]
-                
-                save_mat(rx_pos, c.RX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
-                
-                # 3- update number of (active/inactive) points in txrx sets
-                update_txrx_points(txrx_dict, rx_set_idx, rx_pos, path_loss)
-                
-                # 4- save all path information
-                # Paths P2M (.paths[.t{tx_id}_{tx_idx}.r{rx_id}.p2m] e.g. .t001_01.r001.p2m)
-                paths_p2m_file = pl_p2m_file.replace('.pl.', '.paths.')
-                data = paths_parser(paths_p2m_file)
-                
-                for key in data.keys():
-                    save_mat(data[key], key, output_folder, tx_set_idx, tx_idx, rx_set_idx)
-                
-                # 5- also read tx position from path files
-                # (can be done in many ways, but this is easiest on code & user requirements)
-                tx_pos = extract_tx_pos(paths_p2m_file)
-                save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
+    # Read and save path data
+    create_paths_from_folder(insite_sim_folder, p2m_folder, txrx_dict, output_folder)
     
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
-    materials_dict = read_materials(files_in_sim_folder, verbose=False)
+    materials_dict = read_materials(insite_sim_folder, verbose=False)
     
     if convert_buildings:
         
@@ -220,69 +178,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     cu.zip_folder(output_folder) # ready for upload
     
     return scen_name
-
-
-def save_mat(data: np.ndarray, data_key: str, output_folder: str, tx_set_idx: int,
-             tx_idx: int, rx_set_idx: int) -> None:
-    """Save data to a .mat file with standardized naming.
-    
-    Args:
-        data (np.ndarray): Data array to save.
-        data_key (str): Key identifier for the data type.
-        output_folder (str): Output directory path.
-        tx_set_idx (int): Transmitter set index.
-        tx_idx (int): Transmitter index within set.
-        rx_set_idx (int): Receiver set index.
-    """
-    mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
-    file_path = output_folder + '/' + mat_file_name
-    scipy.io.savemat(file_path, {data_key: data})
-    
-
-def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Read position and path loss data from a .p2m file.
-    
-    Args:
-        filename (str): Path to the .p2m file to read.
-        
-    Returns:
-        Tuple containing:
-        - xyz (np.ndarray): Array of positions with shape (n_points, 3)
-        - dist (np.ndarray): Array of distances with shape (n_points, 1)
-        - path_loss (np.ndarray): Array of path losses with shape (n_points, 1)
-        
-    Raises:
-        AssertionError: If file extension or format is invalid
-    """
-    assert filename.endswith('.p2m') # should be a .p2m file
-    assert '.pl.' in filename        # should be the pathloss p2m
-
-    # Initialize empty lists for matrices
-    xyz_list = []
-    dist_list = []
-    path_loss_list = []
-
-    # Define (regex) patterns to match numbers (optionally signed floats)
-    re_data = r"-?\d+\.?\d*"
-    
-    # To preallocate matrices, count lines: sum(1 for _ in open(filename, 'rb'))
-    
-    with open(filename, 'r') as fp:
-        lines = fp.readlines()
-    
-    for line in lines:
-        if line[0] != '#':
-            data = re.findall(re_data, line)
-            xyz_list.append([float(data[1]), float(data[2]), float(data[3])]) # XYZ (m)
-            dist_list.append([float(data[4])])       # distance (m)
-            path_loss_list.append([float(data[5])])  # path loss (dB)
-
-    # Convert lists to numpy arrays
-    xyz_matrix = np.array(xyz_list, dtype=np.float32)
-    dist_matrix = np.array(dist_list, dtype=np.float32)
-    path_loss_matrix = np.array(path_loss_list, dtype=np.float32)
-
-    return xyz_matrix, dist_matrix, path_loss_matrix
 
 
 def verify_sim_folder(sim_folder: str, verbose: bool) -> None:
