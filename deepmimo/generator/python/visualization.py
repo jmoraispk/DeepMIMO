@@ -23,7 +23,7 @@ from matplotlib.colorbar import Colorbar
 
 
 def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np.ndarray,
-                 dpi: int = 300, figsize: tuple = (6,4), cbar_title: Optional[str] = None,
+                 dpi: int = 300, figsize: tuple = (6,4), cbar_title: str = '',
                  title: bool | str = False, scat_sz: float = 0.5,
                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
@@ -39,7 +39,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         cov_map (tuple[float, ...] | list[float] | np.ndarray): Coverage map values for coloring
         dpi (int): Plot resolution in dots per inch. Defaults to 300.
         figsize (Tuple[int, int]): Figure dimensions (width, height) in inches. Defaults to (6,4).
-        cbar_title (Optional[str]): Title for the colorbar. Defaults to None.
+        cbar_title (str): Title for the colorbar. Defaults to ''.
         title (bool | str): Plot title. Defaults to False.
         scat_sz (float): Size of scatter markers. Defaults to 0.5.
         bs_pos (Optional[np.ndarray]): Base station position coordinates. Defaults to None.
@@ -70,7 +70,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
     
     im = plt.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
 
-    cbar = plt.colorbar(im, label='Received Power [dBm]' if not cbar_title else cbar_title)
+    cbar = plt.colorbar(im, label=cbar_title)
     
     plt.xlabel('x (m)')
     plt.ylabel('y (m)')
