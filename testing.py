@@ -20,8 +20,8 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
 
 #%% V4 
 import deepmimo as dm
-scen_name = 'simple_street_canyon_test'
-# scen_name = 'asu_campus'
+# scen_name = 'simple_street_canyon_test'
+scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
@@ -78,8 +78,8 @@ dataset2 = dm.generate_old(params)
 chs2 = dataset2[0]['user']['channel']
 
 # Verification
-# dataset['ch'][10]
-# chs2[10]
+a = dataset['ch'][10]
+b = chs2[10]
 
 #%% Demo
 
@@ -96,7 +96,6 @@ dataset = dm.load_scenario(scen_name, **load_params)
 
 #%% Visualization check
 
-import deepmimo as dm
 import matplotlib.pyplot as plt
 
 dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
