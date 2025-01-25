@@ -103,22 +103,3 @@ dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
                                bs_pos=dataset['tx_pos'].T) # TODO: fix cbar label
 
 plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=20)
-
-#%% Dream
-
-# 15- Enable generating the channel only for R/D/ paths
-
-# 16- Enable generating only up to a given number of interactions
-
-# 17- Add more LinearPath functions
-# - To append paths use, for example: linpath3.append(linpath1, linpath2)
-# - To repeat back and forth: linpath3.append(linpath3.flip())
-# - Supposing the last position of linpath3 coincides with the first, it can be looped like:
-# linpath3.append(linpath3, linpath3, linpath3) or linpath3.repeat(3)
-
-# 19 - If anyone asks for aoa or aod, ask if they would like to concatenate them. 
-#      np.concatenate(dataset['aoa_az'], dataset['aoa_el'] )
-# dataset['aoa'] # N x PATHS x 2 (azimuth / elevation)
-# dataset['aoa'] = # concat...aoa_el / aoa_az
-
-# 20 - Add space requirements to auto downloader information
