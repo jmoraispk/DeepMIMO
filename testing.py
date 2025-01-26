@@ -99,6 +99,6 @@ dataset = dm.load_scenario(scen_name, **load_params)
 import matplotlib.pyplot as plt
 
 dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
-                               bs_pos=dataset['tx_pos'].T) # TODO: fix cbar label
+                               bs_pos=dataset['tx_pos'].T)
 
 plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=20)
