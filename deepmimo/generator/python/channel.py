@@ -16,7 +16,7 @@ from pprint import pformat
 from tqdm import tqdm
 from typing import Dict
 from ... import consts as c
-from .geometry import array_response, ant_indices, rotate_angles, apply_FoV
+from .geometry import array_response, ant_indices, rotate_angles, apply_FoV, rotate_angles_batch
 from .ant_patterns import AntennaPattern
 
 class ChannelGenParameters:
@@ -261,7 +261,7 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     subcarriers = ofdm_params[c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(ofdm_params, subcarriers)
     antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
-                                   rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
+                                    rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
 
     M_tx = np.prod(tx_ant_params[c.PARAMSET_ANT_SHAPE])
     M_rx = np.prod(rx_ant_params[c.PARAMSET_ANT_SHAPE])
@@ -274,28 +274,31 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     last_ch_dim = len(subcarriers) if freq_domain else max_paths
     channel = np.zeros((n_ues, M_rx, M_tx, last_ch_dim), dtype=np.csingle)
     
+    # Rotate angles for all users at once
+    dod_theta_all, dod_phi_all = rotate_angles_batch(
+        rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
+        theta=dataset[c.AOD_EL_PARAM_NAME],
+        phi=dataset[c.AOD_AZ_PARAM_NAME])
+    
+    doa_theta_all, doa_phi_all = rotate_angles_batch(
+        rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION],
+        theta=dataset[c.AOA_EL_PARAM_NAME],
+        phi=dataset[c.AOA_AZ_PARAM_NAME])
+    
     for i in tqdm(range(n_ues), desc='Generating channels'):
         if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
             continue
             
-        dod_theta, dod_phi = rotate_angles(rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
-                                         theta=dataset[c.AOD_EL_PARAM_NAME][i],
-                                         phi=dataset[c.AOD_AZ_PARAM_NAME][i])
-        
-        doa_theta, doa_phi = rotate_angles(rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION][i],
-                                         theta=dataset[c.AOA_EL_PARAM_NAME][i],
-                                         phi=dataset[c.AOA_AZ_PARAM_NAME][i])
-        
         # Compute and apply FoV (field of view) - selects allowed angles
-        FoV_tx = apply_FoV(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta, dod_phi)
-        FoV_rx = apply_FoV(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta, doa_phi)
+        FoV_tx = apply_FoV(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta_all[i], dod_phi_all[i])
+        FoV_rx = apply_FoV(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta_all[i], doa_phi_all[i])
         FoV = np.logical_and(FoV_tx, FoV_rx)
         
         # Apply FoV filtering
-        dod_theta = dod_theta[FoV]
-        dod_phi = dod_phi[FoV]
-        doa_theta = doa_theta[FoV]
-        doa_phi = doa_phi[FoV]
+        dod_theta = dod_theta_all[i][FoV]
+        dod_phi = dod_phi_all[i][FoV]
+        doa_theta = doa_theta_all[i][FoV]
+        doa_phi = doa_phi_all[i][FoV]
         
         array_response_TX = array_response(ant_ind=ant_tx_ind, 
                                          theta=dod_theta, 
@@ -317,7 +320,7 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
             path_const = path_gen.generate(pwr=power,
                                          toa=dataset[c.TOA_PARAM_NAME][i],
                                          phs=dataset[c.PHASE_PARAM_NAME][i],
-                                         Ts=Ts)[:dataset['num_paths'][i]]
+                                         Ts=Ts)[:dataset[c.NUM_PATHS_PARAM_NAME][i]]
             
             channel[i] = np.sum(array_response_RX[:, None, None, :] * 
                         array_response_TX[None, :, None, :] * 

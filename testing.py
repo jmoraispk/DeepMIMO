@@ -25,7 +25,7 @@ scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {2: 'all'}#[0,1,2,3,4,5,6,7,8,9,10]}
+rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -49,6 +49,11 @@ ch_params = dm.ChannelGenParameters()
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
 # Note: *1000  is needed to match old DM
 dataset['power_linear'] = dm.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
+
+# Compute rotated angles
+dataset = dm.compute_rotated_angles(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
+# unlocks dataset['aoa_az_rot' / 'aoa_el_rot' / 'aod_az_rot' / 'aod_el_rot']
+
 dataset['channel'] = dm.compute_channels(dataset, ch_params)     # c.CHANNEL_PARAM_NAME
 dataset['pathloss'] = dm.compute_pathloss(dataset['power'], dataset['phase']) # c.PATHLOSS_PARAM_NAME
 dataset['distances'] = dm.compute_distances(dataset['rx_pos'], 
@@ -80,6 +85,10 @@ chs2 = dataset2[0]['user']['channel']
 # Verification
 a = dataset['ch'][10]
 b = chs2[10]
+
+from pprint import pprint
+pprint(a.flatten()[-10:])
+pprint(b.flatten()[-10:])
 
 #%% Demo
 

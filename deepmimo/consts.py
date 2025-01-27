@@ -24,6 +24,7 @@ AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
 AOD_AZ_PARAM_NAME = 'aod_az'
 AOD_EL_PARAM_NAME = 'aod_el'
+
 TOA_PARAM_NAME = 'toa'
 PWR_PARAM_NAME = 'power'
 PHASE_PARAM_NAME = 'phase'
@@ -40,6 +41,12 @@ NUM_PATHS_PARAM_NAME = 'num_paths'
 PWR_LINEAR_PARAM_NAME = 'power_linear'
 PATHLOSS_PARAM_NAME = 'pathloss'
 DIST_PARAM_NAME = 'distance'
+
+# Rotated angles parameters (after antenna rotation)
+AOA_AZ_ROT_PARAM_NAME = 'aoa_az_rot'
+AOA_EL_ROT_PARAM_NAME = 'aoa_el_rot'
+AOD_AZ_ROT_PARAM_NAME = 'aod_az_rot'
+AOD_EL_ROT_PARAM_NAME = 'aod_el_rot'
 
 # Aliases
 # Channel aliases

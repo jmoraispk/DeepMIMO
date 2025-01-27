@@ -26,6 +26,7 @@ from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ..python.downloader import download_scenario_handler, extract_scenario
 from ...scene import Scene
+from .geometry import apply_FoV, rotate_angles_batch
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
             ch_gen_params: Dict[str, Any] = {}) -> Dict[str, Any] | List[Dict[str, Any]]:
@@ -268,6 +269,37 @@ def compute_los(interactions: np.ndarray) -> np.ndarray:
     result[los_mask & has_paths] = 1
     
     return result
+
+def compute_rotated_angles(dataset: dict, tx_ant_params: dict, rx_ant_params: dict) -> dict:
+    """Compute rotated angles for all users in batch.
+    
+    Args:
+        dataset: Dictionary containing the dataset information
+        tx_ant_params: Dictionary containing transmitter antenna parameters
+        rx_ant_params: Dictionary containing receiver antenna parameters
+        
+    Returns:
+        Dictionary containing the rotated angles for all users
+    """
+    
+    # Rotate angles for all users at once
+    dod_theta_rot, dod_phi_rot = rotate_angles_batch(
+        rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
+        theta=dataset[c.AOD_EL_PARAM_NAME],
+        phi=dataset[c.AOD_AZ_PARAM_NAME])
+    
+    doa_theta_rot, doa_phi_rot = rotate_angles_batch(
+        rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION],
+        theta=dataset[c.AOA_EL_PARAM_NAME],
+        phi=dataset[c.AOA_AZ_PARAM_NAME])
+    
+    # Store rotated angles in dataset
+    dataset[c.AOD_EL_ROT_PARAM_NAME] = dod_theta_rot
+    dataset[c.AOD_AZ_ROT_PARAM_NAME] = dod_phi_rot
+    dataset[c.AOA_EL_ROT_PARAM_NAME] = doa_theta_rot
+    dataset[c.AOA_AZ_ROT_PARAM_NAME] = doa_phi_rot
+    
+    return dataset
 
 # Helper functions
 def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
@@ -554,3 +586,56 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         
         print(f'shape = {tx_dict[key].shape}')
     return tx_dict 
+
+def compute_fov(dataset: Dict, tx_fov: np.ndarray, rx_fov: np.ndarray):
+    """Compute field of view masks for all users.
+    
+    This function applies field of view constraints to all users in the dataset,
+    filtering angles based on transmitter and receiver field of view limits.
+    
+    Args:
+        dataset: DeepMIMO dataset containing path information
+        tx_fov: Transmitter field of view limits [horizontal_fov, vertical_fov]
+        rx_fov: Receiver field of view limits [horizontal_fov, vertical_fov]
+        
+    Returns:
+        Tuple containing:
+            - valid_paths: Boolean mask of valid paths for each user [n_users, max_paths]
+            - n_valid_paths: Number of valid paths per user [n_users]
+    """
+    n_users = dataset[c.RX_POS_PARAM_NAME].shape[0]
+    max_paths = dataset[c.LOAD_PARAMS_PARAM_NAME][c.LOAD_PARAM_MAX_PATH]
+    
+    # Initialize output arrays
+    valid_paths = np.zeros((n_users, max_paths), dtype=bool)
+    n_valid_paths = np.zeros(n_users, dtype=int)
+    
+    # Process each user
+    for i in range(n_users):
+        if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
+            continue
+        
+        usr_n_paths = dataset[c.NUM_PATHS_PARAM_NAME][i]
+        
+        # Get angles for current user
+        aod_theta = dataset[c.AOD_EL_PARAM_NAME][i, :usr_n_paths]
+        aod_phi = dataset[c.AOD_AZ_PARAM_NAME][i, :usr_n_paths]
+        aoa_theta = dataset[c.AOA_EL_PARAM_NAME][i, :usr_n_paths]
+        aoa_phi = dataset[c.AOA_AZ_PARAM_NAME][i, :usr_n_paths]
+        
+        # Apply FoV constraints
+        FoV_tx = apply_FoV(tx_fov, aod_theta, aod_phi)
+        FoV_rx = apply_FoV(rx_fov, aoa_theta, aoa_phi)
+        FoV = np.logical_and(FoV_tx, FoV_rx)
+        
+        # Store results
+        valid_paths[i, :len(FoV)] = FoV
+        n_valid_paths[i] = np.sum(FoV)
+        
+        # Add to the dataset aoa_az_fov and aoa_el_fov
+        dataset[c.AOA_AZ_FOV_PARAM_NAME][i] = aoa_phi[FoV]
+        dataset[c.AOA_EL_FOV_PARAM_NAME][i] = aoa_theta[FoV]
+        dataset[c.AOD_AZ_FOV_PARAM_NAME][i] = aod_phi[FoV]
+        dataset[c.AOD_EL_FOV_PARAM_NAME][i] = aod_theta[FoV]
+
+    return
