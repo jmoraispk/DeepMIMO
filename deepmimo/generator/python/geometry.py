@@ -73,26 +73,85 @@ def ant_indices(panel_size: Tuple[int, int, int]) -> NDArray:
     return np.vstack([gamma_x, gamma_y, gamma_z]).T
 
 
-def apply_FoV(FoV: Tuple[float, float, float, float], theta: float, phi: float) -> NDArray:
+def apply_FoV(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     """Apply field of view constraints to angles.
     
     This function filters angles based on specified field of view limits
     in both elevation and azimuth directions.
     
     Args:
-        FoV (Tuple[float, float, float, float]): Field of view limits (theta_min, theta_max, phi_min, phi_max) in degrees
-        theta (float): Elevation angle in degrees
-        phi (float): Azimuth angle in degrees
+        FoV (Tuple[float, float]): Field of view limits [horizontal, vertical] in degrees
+        theta (numpy.ndarray): Elevation angles in radians
+        phi (numpy.ndarray): Azimuth angles in radians
         
     Returns:
         NDArray: Boolean mask indicating which angles are within the field of view
     """
+    # Convert angles to [0, 2π] range
     theta = np.mod(theta, 2*np.pi)
     phi = np.mod(phi, 2*np.pi)
-    FoV = np.deg2rad(FoV)
-    path_inclusion_phi = np.logical_or(phi <= 0+FoV[0]/2, phi >= 2*np.pi-FoV[0]/2)
-    path_inclusion_theta = np.logical_and(theta <= np.pi/2+FoV[1]/2, theta >= np.pi/2-FoV[1]/2)
-    return np.logical_and(path_inclusion_phi, path_inclusion_theta)
+
+    # Convert FoV from degrees to radians
+    fov = np.deg2rad(fov)
+
+    # Check if azimuth angle is within horizontal FoV
+    path_inclusion_phi = np.logical_or(
+        phi <= 0 + fov[0]/2,
+        phi >= 2*np.pi - fov[0]/2
+    )
+
+    # Check if elevation angle is within vertical FoV
+    path_inclusion_theta = np.logical_and(
+        theta <= np.pi/2 + fov[1]/2,
+        theta >= np.pi/2 - fov[1]/2
+    )
+
+    # Combine horizontal and vertical masks
+    path_inclusion = np.logical_and(path_inclusion_phi, path_inclusion_theta)
+
+    return path_inclusion
+
+
+def apply_FoV_batch(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+    """Apply field of view constraints to angles in batch.
+    
+    This function filters angles based on specified field of view limits
+    in both elevation and azimuth directions for multiple users at once.
+    Uses the same FoV for all users.
+    
+    Args:
+        fov (Tuple[float, float]): Field of view limits [horizontal_fov, vertical_fov] in degrees.
+            Single FoV applied to all users.
+        theta (numpy.ndarray): Elevation angles [batch_size, n_paths] in radians
+        phi (numpy.ndarray): Azimuth angles [batch_size, n_paths] in radians
+        
+    Returns:
+        numpy.ndarray: Boolean mask indicating which angles are within the field of view
+            Shape: [batch_size, n_paths]
+    """
+    # Convert angles to [0, 2π] range - exactly matching original function
+    theta = np.mod(theta, 2*np.pi)  # [batch_size, n_paths]
+    phi = np.mod(phi, 2*np.pi)      # [batch_size, n_paths]
+    
+    # Convert FoV from degrees to radians
+    fov = np.deg2rad(fov)      # [2,]
+    
+    # Check if azimuth angle is within horizontal FoV - exactly matching original function
+    path_inclusion_phi = np.logical_or(
+        phi <= 0 + fov[0]/2,
+        phi >= 2*np.pi - fov[0]/2
+    )  # [batch_size, n_paths]
+    
+    # Check if elevation angle is within vertical FoV - exactly matching original function
+    path_inclusion_theta = np.logical_and(
+        theta <= np.pi/2 + fov[1]/2,
+        theta >= np.pi/2 - fov[1]/2
+    )  # [batch_size, n_paths]
+    
+    # Combine horizontal and vertical masks - exactly matching original function
+    path_inclusion = np.logical_and(path_inclusion_phi, path_inclusion_theta)
+    
+    return path_inclusion  # [batch_size, n_paths]
 
 
 def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float, 
