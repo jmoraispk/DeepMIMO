@@ -11,9 +11,6 @@ The module provides a unified interface for applying antenna patterns to signal 
 calculations in MIMO channel generation.
 """
 
-# Standard library imports
-from typing import Optional, Callable
-
 # Third-party imports
 import numpy as np
 
