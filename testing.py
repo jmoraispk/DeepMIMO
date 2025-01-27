@@ -59,7 +59,6 @@ dataset['pathloss'] = dm.compute_pathloss(dataset['power'], dataset['phase']) # 
 dataset['distances'] = dm.compute_distances(dataset['rx_pos'], 
                                             dataset['tx_pos'])  # c.DIST_PARAM_NAME
 
-
 # Aliases for convenience
 dataset['pwr'] = dataset['power']
 dataset['pwr_lin'] = dataset['power_linear']
@@ -83,8 +82,9 @@ dataset2 = dm.generate_old(params)
 chs2 = dataset2[0]['user']['channel']
 
 # Verification
-a = dataset['ch'][10]
-b = chs2[10]
+i = 10
+a = dataset['ch'][i]
+b = chs2[i]
 
 from pprint import pprint
 pprint(a.flatten()[-10:])

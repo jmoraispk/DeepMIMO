@@ -16,7 +16,7 @@ from pprint import pformat
 from tqdm import tqdm
 from typing import Dict
 from ... import consts as c
-from .geometry import array_response, ant_indices, rotate_angles, apply_FoV, rotate_angles_batch
+from .geometry import array_response, ant_indices, rotate_angles, apply_FoV, rotate_angles_batch, apply_FoV_batch
 from .ant_patterns import AntennaPattern
 
 class ChannelGenParameters:
@@ -280,20 +280,21 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     doa_theta_all = dataset[c.AOA_EL_ROT_PARAM_NAME]
     doa_phi_all = dataset[c.AOA_AZ_ROT_PARAM_NAME]
     
+    # Compute and apply FoV (field of view) - selects allowed angles for all users at once
+    FoV_tx = apply_FoV_batch(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta_all, dod_phi_all)
+    FoV_rx = apply_FoV_batch(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta_all, doa_phi_all)
+    FoV = np.logical_and(FoV_tx, FoV_rx)
+    
+    # Apply FoV filtering for each user
     for i in tqdm(range(n_ues), desc='Generating channels'):
         if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
             continue
             
-        # Compute and apply FoV (field of view) - selects allowed angles
-        FoV_tx = apply_FoV(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta_all[i], dod_phi_all[i])
-        FoV_rx = apply_FoV(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta_all[i], doa_phi_all[i])
-        FoV = np.logical_and(FoV_tx, FoV_rx)
-        
-        # Apply FoV filtering
-        dod_theta = dod_theta_all[i][FoV]
-        dod_phi = dod_phi_all[i][FoV]
-        doa_theta = doa_theta_all[i][FoV]
-        doa_phi = doa_phi_all[i][FoV]
+        # Get angles for current user with FoV filtering
+        dod_theta = dod_theta_all[i][FoV[i]]
+        dod_phi = dod_phi_all[i][FoV[i]]
+        doa_theta = doa_theta_all[i][FoV[i]]
+        doa_phi = doa_phi_all[i][FoV[i]]
         
         array_response_TX = array_response(ant_ind=ant_tx_ind, 
                                          theta=dod_theta, 
