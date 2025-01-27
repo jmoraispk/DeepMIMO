@@ -38,6 +38,7 @@ LOAD_PARAMS_PARAM_NAME = 'load_params'
 # DEEPMIMOv4 Computed Parameters
 CHANNEL_PARAM_NAME = 'channel'
 NUM_PATHS_PARAM_NAME = 'num_paths'
+NUM_PATHS_FOV_PARAM_NAME = 'num_paths_fov'  # Number of paths within FoV for each user
 PWR_LINEAR_PARAM_NAME = 'power_linear'
 PATHLOSS_PARAM_NAME = 'pathloss'
 DIST_PARAM_NAME = 'distance'
@@ -47,6 +48,13 @@ AOA_AZ_ROT_PARAM_NAME = 'aoa_az_rot'
 AOA_EL_ROT_PARAM_NAME = 'aoa_el_rot'
 AOD_AZ_ROT_PARAM_NAME = 'aod_az_rot'
 AOD_EL_ROT_PARAM_NAME = 'aod_el_rot'
+
+# Field of view filtered angles
+AOD_EL_FOV_PARAM_NAME = 'aod_el_fov'  # Elevation angles after FoV filtering
+AOD_AZ_FOV_PARAM_NAME = 'aod_az_fov'  # Azimuth angles after FoV filtering
+AOA_EL_FOV_PARAM_NAME = 'aoa_el_fov'  # Elevation angles after FoV filtering
+AOA_AZ_FOV_PARAM_NAME = 'aoa_az_fov'  # Azimuth angles after FoV filtering
+FOV_MASK_PARAM_NAME = 'fov_mask'      # Boolean mask for FoV filtering
 
 # Aliases
 # Channel aliases

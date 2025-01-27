@@ -1,6 +1,14 @@
+#%% Imports
+
+import numpy as np
+import deepmimo as dm
+
+from pprint import pprint
+
+import matplotlib.pyplot as plt
+
 #%% V3 & V4 Conversion
 
-import deepmimo as dm
 # path_to_p2m_outputs = r'.\P2Ms\asu_campus\study_area_asu5'
 path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
 
@@ -19,7 +27,7 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
                                convert_buildings=True, vis_buildings=True)
 
 #%% V4 
-import deepmimo as dm
+
 # scen_name = 'simple_street_canyon_test'
 scen_name = 'asu_campus'
 
@@ -50,14 +58,22 @@ dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARA
 # Note: *1000  is needed to match old DM
 dataset['power_linear'] = dm.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
 
+ch_params['bs_antenna']['FoV'] = np.array([360, 180])
+ch_params['ue_antenna']['FoV'] = np.array([120, 180])
+ch_params['OFDM_channels'] = True
+
 # Compute rotated angles
 dataset = dm.compute_rotated_angles(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
 # unlocks dataset['aoa_az_rot' / 'aoa_el_rot' / 'aod_az_rot' / 'aod_el_rot']
 
+# Compute FoV filtered angles
+dataset = dm.compute_fov(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
+# unlocks dataset['aoa_az_fov' / 'aoa_el_fov' / 'aod_az_fov' / 'aod_el_fov' / 'fov_mask']
+pprint(dataset['aoa_az_fov'])
+
 dataset['channel'] = dm.compute_channels(dataset, ch_params)     # c.CHANNEL_PARAM_NAME
 dataset['pathloss'] = dm.compute_pathloss(dataset['power'], dataset['phase']) # c.PATHLOSS_PARAM_NAME
-dataset['distances'] = dm.compute_distances(dataset['rx_pos'], 
-                                            dataset['tx_pos'])  # c.DIST_PARAM_NAME
+dataset['distances'] = dm.compute_distances(dataset['rx_pos'], dataset['tx_pos'])  # c.DIST_PARAM_NAME
 
 # Aliases for convenience
 dataset['pwr'] = dataset['power']
@@ -70,11 +86,13 @@ dataset['dist'] = dataset['distances']
 
 #%% V3 Generation
 
-import deepmimo as dm
 # scen_name = 'simple_street_canyon_test_old'
 scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
-import numpy as np
+
+params['bs_antenna']['FoV'] = np.array([360, 180])
+params['ue_antenna']['FoV'] = np.array([120, 180])
+params['OFDM_channels'] = True
 
 params['user_rows'] = np.arange(1)
 dataset2 = dm.generate_old(params)
@@ -86,13 +104,11 @@ i = 10
 a = dataset['ch'][i]
 b = chs2[i]
 
-from pprint import pprint
 pprint(a.flatten()[-10:])
 pprint(b.flatten()[-10:])
 
 #%% Demo
 
-import deepmimo as dm
 scen_name = dm.create_scenario(r'.\P2Ms\asu_campus\study_area_asu5')
 dataset = dm.generate(scen_name)
 
@@ -104,8 +120,6 @@ dataset = dm.load_scenario(scen_name, **load_params)
 # dataset = dm.load_scenario('city_10_austin')
 
 #%% Visualization check
-
-import matplotlib.pyplot as plt
 
 dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
                                bs_pos=dataset['tx_pos'].T)

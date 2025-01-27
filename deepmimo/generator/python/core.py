@@ -26,7 +26,7 @@ from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ..python.downloader import download_scenario_handler, extract_scenario
 from ...scene import Scene
-from .geometry import apply_FoV, rotate_angles_batch
+from .geometry import rotate_angles_batch, apply_FoV_batch
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
             ch_gen_params: Dict[str, Any] = {}) -> Dict[str, Any] | List[Dict[str, Any]]:
@@ -587,55 +587,65 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         print(f'shape = {tx_dict[key].shape}')
     return tx_dict 
 
-def compute_fov(dataset: Dict, tx_fov: np.ndarray, rx_fov: np.ndarray):
-    """Compute field of view masks for all users.
+
+def compute_fov(dataset: Dict, bs_params: Dict, ue_params: Dict) -> Dict:
+    """Compute field of view filtered angles for all users.
     
-    This function applies field of view constraints to all users in the dataset,
-    filtering angles based on transmitter and receiver field of view limits.
+    This function applies field of view constraints to the rotated angles
+    and stores both the filtered angles and the mask in the dataset.
+    Optimizes computation by skipping mask generation when FoV is full.
     
     Args:
-        dataset: DeepMIMO dataset containing path information
-        tx_fov: Transmitter field of view limits [horizontal_fov, vertical_fov]
-        rx_fov: Receiver field of view limits [horizontal_fov, vertical_fov]
+        dataset: Dataset dictionary containing rotated angles
+        bs_params: Base station antenna parameters including FoV
+        ue_params: User equipment antenna parameters including FoV
         
     Returns:
-        Tuple containing:
-            - valid_paths: Boolean mask of valid paths for each user [n_users, max_paths]
-            - n_valid_paths: Number of valid paths per user [n_users]
+        Dict: Updated dataset with FoV filtered angles and mask
     """
-    n_users = dataset[c.RX_POS_PARAM_NAME].shape[0]
-    max_paths = dataset[c.LOAD_PARAMS_PARAM_NAME][c.LOAD_PARAM_MAX_PATH]
+    # Get rotated angles from dataset
+    aod_theta = dataset[c.AOD_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
+    aod_phi = dataset[c.AOD_AZ_ROT_PARAM_NAME]    # [n_users, n_paths]
+    aoa_theta = dataset[c.AOA_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
+    aoa_phi = dataset[c.AOA_AZ_ROT_PARAM_NAME]    # [n_users, n_paths]
     
-    # Initialize output arrays
-    valid_paths = np.zeros((n_users, max_paths), dtype=bool)
-    n_valid_paths = np.zeros(n_users, dtype=int)
+    # Get FoV parameters
+    tx_fov = bs_params[c.PARAMSET_ANT_FOV]  # [horizontal, vertical]
+    rx_fov = ue_params[c.PARAMSET_ANT_FOV]  # [horizontal, vertical]
     
-    # Process each user
-    for i in range(n_users):
-        if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
-            continue
-        
-        usr_n_paths = dataset[c.NUM_PATHS_PARAM_NAME][i]
-        
-        # Get angles for current user
-        aod_theta = dataset[c.AOD_EL_PARAM_NAME][i, :usr_n_paths]
-        aod_phi = dataset[c.AOD_AZ_PARAM_NAME][i, :usr_n_paths]
-        aoa_theta = dataset[c.AOA_EL_PARAM_NAME][i, :usr_n_paths]
-        aoa_phi = dataset[c.AOA_AZ_PARAM_NAME][i, :usr_n_paths]
-        
-        # Apply FoV constraints
-        FoV_tx = apply_FoV(tx_fov, aod_theta, aod_phi)
-        FoV_rx = apply_FoV(rx_fov, aoa_theta, aoa_phi)
-        FoV = np.logical_and(FoV_tx, FoV_rx)
-        
-        # Store results
-        valid_paths[i, :len(FoV)] = FoV
-        n_valid_paths[i] = np.sum(FoV)
-        
-        # Add to the dataset aoa_az_fov and aoa_el_fov
-        dataset[c.AOA_AZ_FOV_PARAM_NAME][i] = aoa_phi[FoV]
-        dataset[c.AOA_EL_FOV_PARAM_NAME][i] = aoa_theta[FoV]
-        dataset[c.AOD_AZ_FOV_PARAM_NAME][i] = aod_phi[FoV]
-        dataset[c.AOD_EL_FOV_PARAM_NAME][i] = aod_theta[FoV]
+    # Skip operations if fov is full
+    bs_full_fov = (tx_fov[0] >= 360 and tx_fov[1] >= 180)
+    ue_full_fov = (rx_fov[0] >= 360 and rx_fov[1] >= 180)
+    if bs_full_fov and ue_full_fov:
 
-    return
+        # Return original angles
+        dataset[c.FOV_MASK_PARAM_NAME] = None
+        dataset[c.AOD_EL_FOV_PARAM_NAME] = aod_theta
+        dataset[c.AOD_AZ_FOV_PARAM_NAME] = aod_phi
+        dataset[c.AOA_EL_FOV_PARAM_NAME] = aoa_theta
+        dataset[c.AOA_AZ_FOV_PARAM_NAME] = aoa_phi
+        
+    else:
+        # Initialize mask as all True
+        fov_mask = np.ones_like(aod_theta, dtype=bool)
+        
+        # Check if BS FoV is limited
+        if not bs_full_fov:
+            tx_mask = apply_FoV_batch(tx_fov, aod_theta, aod_phi)  # [n_users, n_paths]
+            fov_mask = np.logical_and(fov_mask, tx_mask)
+    
+        # Check if UE FoV is limited
+        if not ue_full_fov:
+            rx_mask = apply_FoV_batch(rx_fov, aoa_theta, aoa_phi)  # [n_users, n_paths]
+            fov_mask = np.logical_and(fov_mask, rx_mask)
+        
+        # Store mask in dataset
+        dataset[c.FOV_MASK_PARAM_NAME] = fov_mask
+        
+        # Store masked angles
+        dataset[c.AOD_EL_FOV_PARAM_NAME] = np.where(fov_mask, aod_theta, np.nan)
+        dataset[c.AOD_AZ_FOV_PARAM_NAME] = np.where(fov_mask, aod_phi, np.nan)
+        dataset[c.AOA_EL_FOV_PARAM_NAME] = np.where(fov_mask, aoa_theta, np.nan)
+        dataset[c.AOA_AZ_FOV_PARAM_NAME] = np.where(fov_mask, aoa_phi, np.nan)
+    
+    return dataset

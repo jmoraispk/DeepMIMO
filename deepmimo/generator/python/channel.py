@@ -233,8 +233,7 @@ class OFDM_PathGenerator:
         return path_const
 
 def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
-                         rx_ant_params: Dict, freq_domain: bool = True, 
-                         carrier_freq: float = 3e9) -> np.ndarray:
+                         rx_ant_params: Dict, freq_domain: bool = True) -> np.ndarray:
     """Generate MIMO channel matrices.
     
     This function generates MIMO channel matrices based on path information from
@@ -248,7 +247,6 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
         rx_ant_params (dict): Receiver antenna parameters
         freq_domain (bool, optional): Whether to generate frequency domain channel.
             Defaults to True.
-        carrier_freq (float, optional): Carrier frequency in Hz. Defaults to 3GHz.
         
     Returns:
         numpy.ndarray: MIMO channel matrices with shape (n_users, n_rx_ant, n_tx_ant, n_paths/subcarriers)
@@ -274,57 +272,60 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     last_ch_dim = len(subcarriers) if freq_domain else max_paths
     channel = np.zeros((n_ues, M_rx, M_tx, last_ch_dim), dtype=np.csingle)
     
-    # Get rotated angles from dataset
-    dod_theta_all = dataset[c.AOD_EL_ROT_PARAM_NAME]
-    dod_phi_all = dataset[c.AOD_AZ_ROT_PARAM_NAME]
-    doa_theta_all = dataset[c.AOA_EL_ROT_PARAM_NAME]
-    doa_phi_all = dataset[c.AOA_AZ_ROT_PARAM_NAME]
-    
-    # Compute and apply FoV (field of view) - selects allowed angles for all users at once
-    FoV_tx = apply_FoV_batch(tx_ant_params[c.PARAMSET_ANT_FOV], dod_theta_all, dod_phi_all)
-    FoV_rx = apply_FoV_batch(rx_ant_params[c.PARAMSET_ANT_FOV], doa_theta_all, doa_phi_all)
-    FoV = np.logical_and(FoV_tx, FoV_rx)
-    
-    # Apply FoV filtering for each user
+    # Get FoV filtered angles from dataset
+    aod_theta_all = dataset[c.AOD_EL_FOV_PARAM_NAME]
+    aod_phi_all = dataset[c.AOD_AZ_FOV_PARAM_NAME]
+    aoa_theta_all = dataset[c.AOA_EL_FOV_PARAM_NAME]
+    aoa_phi_all = dataset[c.AOA_AZ_FOV_PARAM_NAME]
+
+    # Generate channels for each user
     for i in tqdm(range(n_ues), desc='Generating channels'):
+        n_paths = dataset[c.NUM_PATHS_PARAM_NAME][i]
         if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
             continue
             
-        # Get angles for current user with FoV filtering
-        dod_theta = dod_theta_all[i][FoV[i]]
-        dod_phi = dod_phi_all[i][FoV[i]]
-        doa_theta = doa_theta_all[i][FoV[i]]
-        doa_phi = doa_phi_all[i][FoV[i]]
+        # Get angles for current user (already FoV filtered)
+        aod_theta = aod_theta_all[i]
+        aod_phi = aod_phi_all[i]
+        aoa_theta = aoa_theta_all[i]
+        aoa_phi = aoa_phi_all[i]
         
+        # aod_theta = aod_theta[~np.isnan(aod_theta)]
+        # aod_phi = aod_phi[~np.isnan(aod_phi)]
+        # aoa_theta = aoa_theta[~np.isnan(aoa_theta)]
+        # aoa_phi = aoa_phi[~np.isnan(aoa_phi)]
+        # n_paths = len(aod_theta)
+
         array_response_TX = array_response(ant_ind=ant_tx_ind, 
-                                         theta=dod_theta, 
-                                         phi=dod_phi, 
+                                         theta=aod_theta, 
+                                         phi=aod_phi, 
                                          kd=kd_tx)
         
         array_response_RX = array_response(ant_ind=ant_rx_ind, 
-                                         theta=doa_theta, 
-                                         phi=doa_phi,
+                                         theta=aoa_theta, 
+                                         phi=aoa_phi,
                                          kd=kd_rx)
         
         power = antennapattern.apply(power=dataset[c.PWR_LINEAR_PARAM_NAME][i], 
-                                   doa_theta=doa_theta, 
-                                   doa_phi=doa_phi, 
-                                   dod_theta=dod_theta, 
-                                   dod_phi=dod_phi)
+                                   doa_theta=aoa_theta, 
+                                   doa_phi=aoa_phi, 
+                                   dod_theta=aod_theta, 
+                                   dod_phi=aod_phi)
         
         if freq_domain: # OFDM
-            path_const = path_gen.generate(pwr=power,
-                                         toa=dataset[c.TOA_PARAM_NAME][i],
-                                         phs=dataset[c.PHASE_PARAM_NAME][i],
-                                         Ts=Ts)[:dataset[c.NUM_PATHS_PARAM_NAME][i]]
+            path_gains = path_gen.generate(pwr=power,
+                                          toa=dataset[c.TOA_PARAM_NAME][i],
+                                          phs=dataset[c.PHASE_PARAM_NAME][i],
+                                          Ts=Ts)[:n_paths]
             
-            channel[i] = np.sum(array_response_RX[:, None, None, :] * 
-                        array_response_TX[None, :, None, :] * 
-                        path_const.T[None, None, :, :], axis=3)
+            channel[i] = np.nansum(array_response_RX[:, None, None, :] * 
+                                   array_response_TX[None, :, None, :] * 
+                                   path_gains.T[None, None, :, :], axis=3)
             
         else: # TD channel
-            channel[i, :, :, :dataset[c.NUM_PATHS_PARAM_NAME][i]] = \
-                (array_response_RX[:, None, :] * array_response_TX[None, :, :] *
-                 (np.sqrt(power) * np.exp(1j*np.deg2rad(dataset[c.PHASE_PARAM_NAME][i])))[None, None, :])
+            path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(dataset[c.PHASE_PARAM_NAME][i]))
+            channel[i] = (array_response_RX[:, None, :] * 
+                          array_response_TX[None, :, :] * 
+                          path_gains[None, None, :n_paths])
 
     return channel 
