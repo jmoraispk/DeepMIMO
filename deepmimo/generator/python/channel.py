@@ -274,16 +274,11 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     last_ch_dim = len(subcarriers) if freq_domain else max_paths
     channel = np.zeros((n_ues, M_rx, M_tx, last_ch_dim), dtype=np.csingle)
     
-    # Rotate angles for all users at once
-    dod_theta_all, dod_phi_all = rotate_angles_batch(
-        rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
-        theta=dataset[c.AOD_EL_PARAM_NAME],
-        phi=dataset[c.AOD_AZ_PARAM_NAME])
-    
-    doa_theta_all, doa_phi_all = rotate_angles_batch(
-        rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION],
-        theta=dataset[c.AOA_EL_PARAM_NAME],
-        phi=dataset[c.AOA_AZ_PARAM_NAME])
+    # Get rotated angles from dataset
+    dod_theta_all = dataset[c.AOD_EL_ROT_PARAM_NAME]
+    dod_phi_all = dataset[c.AOD_AZ_ROT_PARAM_NAME]
+    doa_theta_all = dataset[c.AOA_EL_ROT_PARAM_NAME]
+    doa_phi_all = dataset[c.AOA_AZ_ROT_PARAM_NAME]
     
     for i in tqdm(range(n_ues), desc='Generating channels'):
         if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
