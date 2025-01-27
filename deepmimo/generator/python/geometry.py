@@ -100,15 +100,31 @@ def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float,
     """Rotate angles according to specified rotation angles.
     
     This function applies 3D rotation to direction angles using rotation matrix
-    decomposition with Euler angles.
+    decomposition with Euler angles. The rotation sequence is:
+    1. First rotation (gamma) around z-axis
+    2. Second rotation (beta) around y-axis
+    3. Third rotation (alpha) around x-axis
+    
+    The rotation is applied as: R = R_x(alpha) * R_y(beta) * R_z(gamma)
     
     Args:
-        rotation (Optional[Tuple[float, float, float]]): Rotation angles around x, y, z axes in degrees
+        rotation (Optional[Tuple[float, float, float]]): Rotation angles [alpha, beta, gamma] 
+            around x, y, z axes in degrees. If None, no rotation is applied.
         theta (float): Elevation angle in degrees
         phi (float): Azimuth angle in degrees
         
     Returns:
         Tuple[float, float]: Tuple of rotated angles (theta, phi) in radians
+        
+    Note:
+        The function uses a specific formulation for rotation that directly computes
+        the final angles without intermediate Cartesian coordinate transformations.
+        The formulation is:
+        theta_rot = arccos(cos_beta*cos_gamma*cos_theta + 
+                         sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha))
+        phi_rot = angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta +
+                       1j*(cos_beta*sin_gamma*cos_theta + 
+                           sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
     """
     theta = np.deg2rad(theta)
     phi = np.deg2rad(phi)
@@ -132,6 +148,101 @@ def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float,
                       1j*(cos_beta*sin_gamma*cos_theta + 
                           sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
     return theta, phi
+
+
+def rotate_angles_batch(rotation: np.ndarray, theta: np.ndarray, phi: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Rotate angles for batched inputs.
+    
+    This is a vectorized version of rotate_angles() that can process multiple users
+    and paths simultaneously. It uses the same rotation sequence and mathematical
+    formulation as rotate_angles():
+    1. First rotation (gamma) around z-axis
+    2. Second rotation (beta) around y-axis
+    3. Third rotation (alpha) around x-axis
+    
+    The rotation is applied as: R = R_x(alpha) * R_y(beta) * R_z(gamma)
+    
+    Args:
+        rotation: Rotation angles [alpha, beta, gamma] with shape [3] for single rotation
+            or [batch_size, 3] for per-user rotations. Angles in degrees.
+        theta: Elevation angles with shape [n_paths] for single user or 
+            [batch_size, n_paths] for multiple users. Angles in degrees.
+        phi: Azimuth angles with shape [n_paths] for single user or
+            [batch_size, n_paths] for multiple users. Angles in degrees.
+        
+    Returns:
+        Tuple of rotated angles (theta, phi) with same shape as input in radians:
+        - If input is [n_paths]: output is [n_paths]
+        - If input is [batch_size, n_paths]: output is [batch_size, n_paths]
+        
+    Note:
+        The function uses the same direct angle computation as rotate_angles():
+        theta_rot = arccos(cos_beta*cos_gamma*cos_theta + 
+                         sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha))
+        phi_rot = angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta +
+                       1j*(cos_beta*sin_gamma*cos_theta + 
+                           sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
+                           
+        Broadcasting is used to handle both single rotations applied to all users
+        and per-user rotations efficiently.
+    """
+    is_batched = theta.ndim == 2
+    if not is_batched:
+        theta = theta[None, :]  # [1, n_paths]
+        phi = phi[None, :]      # [1, n_paths]
+    
+    # Ensure rotation is 2D with shape [batch_size, 3] or [1, 3]
+    if rotation.ndim == 1:
+        rotation = rotation[None, :]  # [1, 3]
+    elif rotation.ndim == 3:
+        # Handle case where rotation is [batch_size, 0, 3]
+        rotation = rotation.reshape(-1, 3)
+    
+    # Get batch sizes
+    batch_size = theta.shape[0]
+    rot_batch_size = rotation.shape[0]
+    
+    # Broadcast rotation if needed
+    if rot_batch_size == 1 and batch_size > 1:
+        rotation = np.broadcast_to(rotation, (batch_size, 3))
+    
+    # Convert to radians
+    theta = np.deg2rad(theta)  # [batch_size, n_paths] 
+    phi = np.deg2rad(phi)      # [batch_size, n_paths]
+    rotation = np.deg2rad(rotation)  # [batch_size, 3]
+    
+    # Extract rotation angles
+    alpha = rotation[:, 0:1]  # [batch_size, 1]
+    beta = rotation[:, 1:2]   # [batch_size, 1]
+    gamma = rotation[:, 2:3]  # [batch_size, 1]
+    
+    # Compute trigonometric functions - exactly matching original function
+    sin_alpha = np.sin(phi - gamma)    # phi - gamma, matches original
+    sin_beta = np.sin(beta)            # beta, matches original
+    sin_gamma = np.sin(alpha)          # alpha, matches original
+    cos_alpha = np.cos(phi - gamma)    # phi - gamma, matches original
+    cos_beta = np.cos(beta)            # beta, matches original
+    cos_gamma = np.cos(alpha)          # alpha, matches original
+    
+    sin_theta = np.sin(theta)  # [batch_size, n_paths]
+    cos_theta = np.cos(theta)  # [batch_size, n_paths]
+    
+    # Compute rotated angles using the same formulation as original function
+    theta_rot = np.arccos(cos_beta*cos_gamma*cos_theta +
+                         sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha))
+    
+    phi_rot = np.angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta +
+                      1j*(cos_beta*sin_gamma*cos_theta + 
+                          sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
+    
+    # Convert back to degrees (not needed)
+    # theta_rot = np.rad2deg(theta_rot)  # [batch_size, n_paths]
+    # phi_rot = np.rad2deg(phi_rot)      # [batch_size, n_paths]
+    # phi_rot = np.mod(phi_rot, 360)     # [batch_size, n_paths]
+
+    # Return angles in radians to match original function
+    return (theta_rot[0] if not is_batched else theta_rot,
+            phi_rot[0] if not is_batched else phi_rot)
 
 
 def steering_vec(array: NDArray, phi: float = 0, theta: float = 0, spacing: float = 0.5) -> NDArray:
