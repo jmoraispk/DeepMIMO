@@ -32,7 +32,54 @@ def array_response(ant_ind: NDArray, theta: float, phi: float, kd: float) -> NDA
         NDArray: Complex array response vector with shape matching ant_ind
     """
     gamma = array_response_phase(theta, phi, kd)
-    return np.exp(ant_ind@gamma.T)
+    return np.exp(ant_ind @ gamma.T)
+
+
+def array_response_batch(ant_ind: NDArray, theta: NDArray, phi: NDArray, kd: float) -> NDArray:
+    """Calculate array response vectors for multiple users/paths simultaneously.
+    
+    This is a vectorized version of array_response() that can process multiple users
+    and paths at once. It handles NaN values in the angle arrays by masking them out.
+    
+    Args:
+        ant_ind (NDArray): Array of antenna indices with shape (N,3) containing [x,y,z] positions
+        theta (NDArray): Elevation angles with shape [batch_size, n_paths] in radians
+        phi (NDArray): Azimuth angles with shape [batch_size, n_paths] in radians
+        kd (float): Product of wavenumber k and antenna spacing d
+        
+    Returns:
+        NDArray: Complex array response matrix with shape [batch_size, N, n_paths]
+            where N is number of antenna elements
+            
+    Note:
+        - NaN values in theta/phi are handled by masking - the corresponding output
+          elements will be set to 0
+        - The function is optimized for batch processing by avoiding loops
+        - Output shape allows easy multiplication with path gains in channel generation
+    """
+    # Get dimensions
+    batch_size, n_paths = theta.shape
+    n_ant = len(ant_ind)
+    
+    # Create mask for valid (non-NaN) angles
+    valid_mask = ~np.isnan(theta)  # [batch_size, n_paths]
+    
+    # Calculate phase components for all valid angles
+    gamma = array_response_phase(theta[valid_mask], phi[valid_mask], kd)  # [n_valid_paths, 3]
+    
+    # Initialize output array
+    result = np.zeros((batch_size, n_ant, n_paths), dtype=np.complex128)
+    
+    # Create index arrays for valid paths
+    batch_idx, path_idx = np.nonzero(valid_mask)
+    
+    # Calculate array response for valid paths
+    valid_responses = np.exp(ant_ind @ gamma.T)  # [N, n_valid_paths]
+    
+    # Assign valid responses to correct positions in output array
+    result[batch_idx, :, path_idx] = valid_responses.T
+    
+    return result
 
 
 def array_response_phase(theta: float, phi: float, kd: float) -> NDArray:
