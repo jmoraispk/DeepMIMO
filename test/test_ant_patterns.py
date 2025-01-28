@@ -5,9 +5,10 @@ import time
 from deepmimo.generator.python.ant_patterns import AntennaPattern
 
 class TestAntennaPatterns:
-    def __init__(self):
+    def __init__(self, verbose=False):
         self.passed = 0
         self.failed = 0
+        self.verbose = verbose
         
     def assert_array_almost_equal(self, a, b, decimal=7):
         try:
@@ -97,11 +98,12 @@ class TestAntennaPatterns:
                                          dod_theta=np.array([np.pi/2]),
                                          dod_phi=np.array([0.0]))
                 relative_gain = result[0] / max_result[0]
-                print(f"\nDebug - Angle: {theta_val}°")
-                print(f"Absolute gain: {result[0]:.6f}")
-                print(f"Max gain: {max_result[0]:.6f}")
-                print(f"Relative gain: {relative_gain:.6f}")
-                print(f"Expected relative gain: {expected_rel_gain}")
+                if self.verbose:
+                    print(f"\nDebug - Angle: {theta_val}°")
+                    print(f"Absolute gain: {result[0]:.6f}")
+                    print(f"Max gain: {max_result[0]:.6f}")
+                    print(f"Relative gain: {relative_gain:.6f}")
+                    print(f"Expected relative gain: {expected_rel_gain}")
                 
                 assert abs(relative_gain - expected_rel_gain) < 0.01, \
                     f"Unexpected gain at {theta_val} degrees. Got {relative_gain:.4f}, expected {expected_rel_gain}"
@@ -151,6 +153,9 @@ class TestAntennaPatterns:
         pattern = AntennaPattern(tx_pattern='halfwave-dipole', rx_pattern='halfwave-dipole')
         n_samples = 10000
         
+        if self.verbose:
+            print(f"\nTesting performance with {n_samples} users...")
+        
         # Generate test data
         power = np.random.rand(n_samples)
         angles = np.random.rand(n_samples) * 180  # Random angles between 0 and 180
@@ -173,16 +178,20 @@ class TestAntennaPatterns:
                               dod_phi=angles)
         batch_time = time.time() - start_time
         
-        print(f"\nPerformance Test Results:")
+        print(f"\nPerformance Test Results ({n_samples} users):")
         print(f"Single processing time: {single_time:.4f} seconds")
         print(f"Batch processing time: {batch_time:.4f} seconds")
         print(f"Speedup factor: {single_time/batch_time:.2f}x")
         
         assert batch_time <= single_time, "Batch processing should be faster than single processing"
 
-def run_tests():
-    """Run all tests and print summary."""
-    test_suite = TestAntennaPatterns()
+def run_tests(verbose=False):
+    """Run all tests and print summary.
+    
+    Args:
+        verbose (bool): If True, print detailed debug information.
+    """
+    test_suite = TestAntennaPatterns(verbose=verbose)
     
     # Run functional tests
     print("\nRunning functional tests...")
@@ -205,5 +214,5 @@ def run_tests():
     return test_suite.failed == 0
 
 if __name__ == '__main__':
-    success = run_tests()
+    success = run_tests(verbose=False)  # Set to True for detailed debug output
 
