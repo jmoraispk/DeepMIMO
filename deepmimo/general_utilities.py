@@ -6,9 +6,13 @@ file naming, string ID generation, and dictionary utilities used across
 the DeepMIMO toolkit.
 """
 
-from typing import Dict, Any
+from pprint import pformat
+from typing import Dict, Any, Iterator, TypeVar, Mapping
 
-class DotDict:
+K = TypeVar('K', bound=str)
+V = TypeVar('V')
+
+class DotDict(Mapping[K, V]):
     """A dictionary subclass that supports dot notation access to nested dictionaries.
     
     This class allows accessing dictionary items using both dictionary notation (d['key'])
@@ -23,6 +27,8 @@ class DotDict:
         2
         >>> d['b']['c']
         2
+        >>> list(d.keys())
+        ['a', 'b']
     """
     def __init__(self, dictionary: Dict[str, Any]):
         """Initialize DotDict with a dictionary.
@@ -37,13 +43,13 @@ class DotDict:
             else:
                 self._data[key] = value
                 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Any:
         try:
             return self._data[key]
         except KeyError:
             raise AttributeError(key)
     
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Any) -> None:
         if key == '_data':
             super().__setattr__(key, value)
         else:
@@ -52,14 +58,38 @@ class DotDict:
             else:
                 self._data[key] = value
                 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return self._data[key]
     
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         if isinstance(value, dict):
             self._data[key] = DotDict(value)
         else:
             self._data[key] = value
+            
+    def __iter__(self) -> Iterator[str]:
+        """Iterate over dictionary keys."""
+        return iter(self._data)
+    
+    def __len__(self) -> int:
+        """Return number of items in dictionary."""
+        return len(self._data)
+            
+    def keys(self):
+        """Return dictionary keys."""
+        return self._data.keys()
+    
+    def values(self):
+        """Return dictionary values."""
+        return self._data.values()
+    
+    def items(self):
+        """Return dictionary items as (key, value) pairs."""
+        return self._data.items()
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get value for key, returning default if key doesn't exist."""
+        return self._data.get(key, default)
             
     def to_dict(self) -> Dict:
         """Convert DotDict back to a regular dictionary.
@@ -74,6 +104,10 @@ class DotDict:
             else:
                 result[key] = value
         return result
+    
+    def __repr__(self) -> str:
+        """Return string representation of dictionary."""
+        return pformat(self._data)
 
 class PrintIfVerbose:
     """A callable class that conditionally prints messages based on verbosity setting.

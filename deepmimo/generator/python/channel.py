@@ -18,7 +18,7 @@ from ... import consts as c
 from ...general_utilities import DotDict
 from .geometry import ant_indices, array_response_batch
 
-class ChannelGenParameters:
+class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.
     
     This class provides an interface for setting and accessing various parameters
@@ -32,7 +32,7 @@ class ChannelGenParameters:
     """
     def __init__(self):
         """Initialize channel generation parameters with default values."""
-        self._params = DotDict({
+        super().__init__({
             # BS Antenna Parameters
             c.PARAMSET_ANT_BS: {
                 c.PARAMSET_ANT_SHAPE: np.array([8, 4]), # Antenna dimensions in X - Y - Z
@@ -65,47 +65,6 @@ class ChannelGenParameters:
             }
         })
     
-    def __getattr__(self, key):
-        """Enable dot notation access to parameters."""
-        return getattr(self._params, key)
-    
-    def __setattr__(self, key, value):
-        """Enable dot notation setting of parameters."""
-        if key == '_params':
-            super().__setattr__(key, value)
-        else:
-            setattr(self._params, key, value)
-    
-    def get_params_dict(self) -> Dict:
-        """Get dictionary of all parameters.
-        
-        Returns:
-            dict: Dictionary containing all channel generation parameters
-        """
-        return self._params.to_dict()
-    
-    def __repr__(self) -> str:
-        return pformat(self.get_params_dict())
-        
-    def __getitem__(self, key):
-        """Enable dictionary-style access to parameters.
-        
-        Args:
-            key: Parameter key to access
-            
-        Returns:
-            Parameter value
-        """
-        return self._params[key]
-        
-    def __setitem__(self, key, value):
-        """Enable dictionary-style setting of parameters.
-        
-        Args:
-            key: Parameter key to set
-            value: Value to set parameter to
-        """
-        self._params[key] = value
 
 class PathVerifier:
     """Class for verifying and validating paths based on configuration parameters.

@@ -235,14 +235,11 @@ def compute_channels(dataset: Dict[str, Any],
         numpy.ndarray: MIMO channel matrix
     """
     if params is None:
-        params_obj = ChannelGenParameters()
+        params = ChannelGenParameters()
     elif type(params) is str:
-        params_obj = ChannelGenParameters(params)
-    else:
-        params_obj = params
-        
+        params = ChannelGenParameters(params)
+    
     np.random.seed(1001)
-    params = params_obj.get_params_dict()
     
     dataset['num_ues'] = dataset[c.RX_POS_PARAM_NAME].shape[0]
     validate_ch_gen_params(params, n_active_ues=dataset['num_ues'])
@@ -436,7 +433,7 @@ def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
         ValueError: If parameters are invalid or inconsistent
     """
     # Notify the user if some keyword is not used (likely set incorrectly)
-    additional_keys = compare_two_dicts(params, ChannelGenParameters().get_params_dict())
+    additional_keys = compare_two_dicts(params, ChannelGenParameters())
     if len(additional_keys):
         print('The following parameters seem unnecessary:')
         print(additional_keys)
