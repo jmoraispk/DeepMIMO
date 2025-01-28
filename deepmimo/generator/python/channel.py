@@ -10,7 +10,6 @@ The main function is generate_MIMO_channel() which generates MIMO channel matric
 based on path information from ray-tracing and antenna configurations.
 """
 
-import os
 import numpy as np
 from pprint import pformat
 from tqdm import tqdm
