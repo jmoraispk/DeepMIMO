@@ -15,65 +15,8 @@ from pprint import pformat
 from tqdm import tqdm
 from typing import Dict, Any
 from ... import consts as c
+from ...general_utilities import DotDict
 from .geometry import ant_indices, array_response_batch
-
-class DotDict:
-    """A dictionary subclass that supports dot notation access to nested dictionaries.
-    
-    This class allows accessing dictionary items using both dictionary notation (d['key'])
-    and dot notation (d.key). It automatically converts nested dictionaries to DotDict
-    instances to maintain dot notation access at all levels.
-    """
-    def __init__(self, dictionary: Dict[str, Any]):
-        """Initialize DotDict with a dictionary.
-        
-        Args:
-            dictionary: Dictionary to convert to DotDict
-        """
-        self._data = {}
-        for key, value in dictionary.items():
-            if isinstance(value, dict):
-                self._data[key] = DotDict(value)
-            else:
-                self._data[key] = value
-                
-    def __getattr__(self, key):
-        try:
-            return self._data[key]
-        except KeyError:
-            raise AttributeError(key)
-    
-    def __setattr__(self, key, value):
-        if key == '_data':
-            super().__setattr__(key, value)
-        else:
-            if isinstance(value, dict):
-                self._data[key] = DotDict(value)
-            else:
-                self._data[key] = value
-                
-    def __getitem__(self, key):
-        return self._data[key]
-    
-    def __setitem__(self, key, value):
-        if isinstance(value, dict):
-            self._data[key] = DotDict(value)
-        else:
-            self._data[key] = value
-            
-    def to_dict(self) -> Dict:
-        """Convert DotDict back to a regular dictionary.
-        
-        Returns:
-            dict: Regular dictionary representation
-        """
-        result = {}
-        for key, value in self._data.items():
-            if isinstance(value, DotDict):
-                result[key] = value.to_dict()
-            else:
-                result[key] = value
-        return result
 
 class ChannelGenParameters:
     """Class for managing channel generation parameters.
