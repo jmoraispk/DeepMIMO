@@ -14,9 +14,67 @@ import os
 import numpy as np
 from pprint import pformat
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, Any
 from ... import consts as c
 from .geometry import ant_indices, array_response_batch
+
+class DotDict:
+    """A dictionary subclass that supports dot notation access to nested dictionaries.
+    
+    This class allows accessing dictionary items using both dictionary notation (d['key'])
+    and dot notation (d.key). It automatically converts nested dictionaries to DotDict
+    instances to maintain dot notation access at all levels.
+    """
+    def __init__(self, dictionary: Dict[str, Any]):
+        """Initialize DotDict with a dictionary.
+        
+        Args:
+            dictionary: Dictionary to convert to DotDict
+        """
+        self._data = {}
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                self._data[key] = DotDict(value)
+            else:
+                self._data[key] = value
+                
+    def __getattr__(self, key):
+        try:
+            return self._data[key]
+        except KeyError:
+            raise AttributeError(key)
+    
+    def __setattr__(self, key, value):
+        if key == '_data':
+            super().__setattr__(key, value)
+        else:
+            if isinstance(value, dict):
+                self._data[key] = DotDict(value)
+            else:
+                self._data[key] = value
+                
+    def __getitem__(self, key):
+        return self._data[key]
+    
+    def __setitem__(self, key, value):
+        if isinstance(value, dict):
+            self._data[key] = DotDict(value)
+        else:
+            self._data[key] = value
+            
+    def to_dict(self) -> Dict:
+        """Convert DotDict back to a regular dictionary.
+        
+        Returns:
+            dict: Regular dictionary representation
+        """
+        result = {}
+        for key, value in self._data.items():
+            if isinstance(value, DotDict):
+                result[key] = value.to_dict()
+            else:
+                result[key] = value
+        return result
 
 class ChannelGenParameters:
     """Class for managing channel generation parameters.
@@ -27,12 +85,12 @@ class ChannelGenParameters:
     - OFDM parameters
     - Channel domain settings (time/frequency)
     
-    Attributes:
-        params (dict): Dictionary containing all channel generation parameters
+    The parameters can be accessed directly using dot notation (e.g. params.bs_antenna.shape)
+    or using dictionary notation (e.g. params['bs_antenna']['shape']).
     """
     def __init__(self):
         """Initialize channel generation parameters with default values."""
-        self.params = {
+        self._params = DotDict({
             # BS Antenna Parameters
             c.PARAMSET_ANT_BS: {
                 c.PARAMSET_ANT_SHAPE: np.array([8, 4]), # Antenna dimensions in X - Y - Z
@@ -63,7 +121,18 @@ class ChannelGenParameters:
                 c.PARAMSET_OFDM_BW: 0.05, # GHz
                 c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
             }
-        }
+        })
+    
+    def __getattr__(self, key):
+        """Enable dot notation access to parameters."""
+        return getattr(self._params, key)
+    
+    def __setattr__(self, key, value):
+        """Enable dot notation setting of parameters."""
+        if key == '_params':
+            super().__setattr__(key, value)
+        else:
+            setattr(self._params, key, value)
     
     def get_params_dict(self) -> Dict:
         """Get dictionary of all parameters.
@@ -71,31 +140,7 @@ class ChannelGenParameters:
         Returns:
             dict: Dictionary containing all channel generation parameters
         """
-        return self.params
-    
-    def get_name(self) -> str:
-        """Get scenario name.
-        
-        Returns:
-            str: Name of scenario
-        """
-        return self.params[c.PARAMSET_SCENARIO]
-    
-    def get_folder(self) -> str:
-        """Get absolute path to dataset folder.
-        
-        Returns:
-            str: Absolute path to dataset folder
-        """
-        return os.path.abspath(self.params[c.PARAMSET_DATASET_FOLDER])
-    
-    def get_path(self) -> str:
-        """Get full path to scenario folder.
-        
-        Returns:
-            str: Full path to scenario folder
-        """
-        return os.path.join(self.get_folder(), self.params[c.PARAMSET_SCENARIO])
+        return self._params.to_dict()
     
     def __repr__(self) -> str:
         return pformat(self.get_params_dict())
@@ -109,7 +154,7 @@ class ChannelGenParameters:
         Returns:
             Parameter value
         """
-        return self.params[key]
+        return self._params[key]
         
     def __setitem__(self, key, value):
         """Enable dictionary-style setting of parameters.
@@ -118,7 +163,7 @@ class ChannelGenParameters:
             key: Parameter key to set
             value: Value to set parameter to
         """
-        self.params[key] = value
+        self._params[key] = value
 
 class PathVerifier:
     """Class for verifying and validating paths based on configuration parameters.
