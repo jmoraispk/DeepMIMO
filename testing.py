@@ -1,6 +1,7 @@
 #%% Imports
 
 import numpy as np
+import time
 import deepmimo as dm
 
 from pprint import pprint
@@ -52,28 +53,29 @@ dataset = dm.load_scenario(scen_name, **load_params)
 
 #%%
 ch_params = dm.ChannelGenParameters()
-
+t = time.time()
 # num_paths and power_linear are necessary for channel
 dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
 # Note: *1000  is needed to match old DM
 dataset['power_linear'] = dm.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
 
-ch_params['bs_antenna']['FoV'] = np.array([360, 180])
-ch_params['ue_antenna']['FoV'] = np.array([120, 180])
-ch_params['OFDM_channels'] = True
+# Using direct dot notation for parameters
+ch_params.bs_antenna.FoV = np.array([360, 180])
+ch_params.ue_antenna.FoV = np.array([120, 180])
+ch_params.OFDM_channels = True
 
 # Compute rotated angles
-dataset = dm.compute_rotated_angles(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
+dataset = dm.compute_rotated_angles(dataset, ch_params.bs_antenna, ch_params.ue_antenna)
 # unlocks dataset['aoa_az_rot' / 'aoa_el_rot' / 'aod_az_rot' / 'aod_el_rot']
 
 # Compute FoV filtered angles
-dataset = dm.compute_fov(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
+dataset = dm.compute_fov(dataset, ch_params.bs_antenna, ch_params.ue_antenna)
 # unlocks dataset['aoa_az_fov' / 'aoa_el_fov' / 'aod_az_fov' / 'aod_el_fov' / 'fov_mask']
-
+# pprint(dataset['aoa_az_fov'])
 
 # Compute received power with antenna pattern
 dataset['power_linear_ant_gain'] = \
-    dm.compute_received_power(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
+    dm.compute_received_power(dataset, ch_params.bs_antenna, ch_params.ue_antenna)
 
 # Compute channels
 dataset['channel'] = dm.compute_channels(dataset, ch_params)     # c.CHANNEL_PARAM_NAME
@@ -88,6 +90,8 @@ dataset['pl'] = dataset['pathloss']
 dataset['rx_loc'] = dataset['rx_pos']
 dataset['tx_loc'] = dataset['tx_pos']
 dataset['dist'] = dataset['distances']
+
+print(f"Time taken: {time.time() - t} seconds")
 
 #%% V3 Generation
 
