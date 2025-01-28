@@ -69,8 +69,13 @@ dataset = dm.compute_rotated_angles(dataset, ch_params['bs_antenna'], ch_params[
 # Compute FoV filtered angles
 dataset = dm.compute_fov(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
 # unlocks dataset['aoa_az_fov' / 'aoa_el_fov' / 'aod_az_fov' / 'aod_el_fov' / 'fov_mask']
-pprint(dataset['aoa_az_fov'])
 
+
+# Compute received power with antenna pattern
+dataset['power_linear_ant_gain'] = \
+    dm.compute_received_power(dataset, ch_params['bs_antenna'], ch_params['ue_antenna'])
+
+# Compute channels
 dataset['channel'] = dm.compute_channels(dataset, ch_params)     # c.CHANNEL_PARAM_NAME
 dataset['pathloss'] = dm.compute_pathloss(dataset['power'], dataset['phase']) # c.PATHLOSS_PARAM_NAME
 dataset['distances'] = dm.compute_distances(dataset['rx_pos'], dataset['tx_pos'])  # c.DIST_PARAM_NAME

@@ -20,13 +20,20 @@ import numpy as np
 import scipy.io
 
 # Local imports
-from .utils import dbm2watt
-from .channel import generate_MIMO_channel, ChannelGenParameters
 from ... import consts as c
 from ...general_utilities import get_mat_filename
-from ..python.downloader import download_scenario_handler, extract_scenario
 from ...scene import Scene
+
+# Channel generation
+from .channel import generate_MIMO_channel, ChannelGenParameters
+from .ant_patterns import AntennaPattern
+
+# Geometry and utilities 
 from .geometry import rotate_angles_batch, apply_FoV_batch
+from .utils import dbm2watt
+
+# Scenario management
+from .downloader import download_scenario_handler, extract_scenario
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
             ch_gen_params: Dict[str, Any] = {}) -> Dict[str, Any] | List[Dict[str, Any]]:
@@ -269,6 +276,31 @@ def compute_los(interactions: np.ndarray) -> np.ndarray:
     result[los_mask & has_paths] = 1
     
     return result
+
+def compute_received_power(dataset: Dict[str, Any], tx_ant_params: Dict[str, Any], rx_ant_params: Dict[str, Any]) -> np.ndarray:
+    """Compute received power with antenna patterns applied.
+    
+    This function applies the antenna radiation patterns to the path powers
+    using batch processing for efficiency.
+    
+    Args:
+        dataset (Dict[str, Any]): DeepMIMO dataset containing path information
+        tx_ant_params (Dict[str, Any]): Transmitter antenna parameters
+        rx_ant_params (Dict[str, Any]): Receiver antenna parameters
+        
+    Returns:
+        np.ndarray: Powers with antenna pattern applied, shape [n_users, n_paths]
+    """
+    # Create antenna pattern object
+    antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
+                                   rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
+    
+    # Get FoV filtered angles and apply antenna patterns in batch
+    return antennapattern.apply_batch(power=dataset[c.PWR_LINEAR_PARAM_NAME],
+                                     doa_theta=dataset[c.AOA_EL_FOV_PARAM_NAME],
+                                     doa_phi=dataset[c.AOA_AZ_FOV_PARAM_NAME], 
+                                     dod_theta=dataset[c.AOD_EL_FOV_PARAM_NAME],
+                                     dod_phi=dataset[c.AOD_AZ_FOV_PARAM_NAME])
 
 def compute_rotated_angles(dataset: dict, tx_ant_params: dict, rx_ant_params: dict) -> dict:
     """Compute rotated angles for all users in batch.

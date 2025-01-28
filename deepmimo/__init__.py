@@ -16,7 +16,8 @@ from .generator.python.core import (
     compute_distances,
     compute_los,
     compute_rotated_angles,
-    compute_fov
+    compute_fov,
+    compute_received_power
 )
 
 # Visualization
@@ -63,6 +64,7 @@ __all__ = [
     'compute_los',
     'compute_rotated_angles',
     'compute_fov',
+    'compute_received_power',
     'ChannelGenParameters',
     
     # Utilities

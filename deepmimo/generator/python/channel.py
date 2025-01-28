@@ -258,8 +258,6 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     Ts = 1 / bandwidth
     subcarriers = ofdm_params[c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(ofdm_params, subcarriers)
-    antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
-                                    rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
 
     M_tx = np.prod(tx_ant_params[c.PARAMSET_ANT_SHAPE])
     M_rx = np.prod(rx_ant_params[c.PARAMSET_ANT_SHAPE])
@@ -280,7 +278,6 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
 
     # Generate channels for each user
     for i in tqdm(range(n_ues), desc='Generating channels'):
-        n_paths = dataset[c.NUM_PATHS_PARAM_NAME][i]
         if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
             continue
             
@@ -290,13 +287,14 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
         aoa_theta = aoa_theta_all[i]
         aoa_phi = aoa_phi_all[i]
         
-        non_nan_idxs = np.where(~np.isnan(aod_theta))
-        aod_theta = aod_theta[non_nan_idxs]
-        aod_phi = aod_phi[non_nan_idxs]
-        aoa_theta = aoa_theta[non_nan_idxs]
-        aoa_phi = aoa_phi[non_nan_idxs]
+        # Filter out NaN values
+        non_nan_mask = ~np.isnan(aod_theta)
+        aod_theta = aod_theta[non_nan_mask]
+        aod_phi = aod_phi[non_nan_mask]
+        aoa_theta = aoa_theta[non_nan_mask]
+        aoa_phi = aoa_phi[non_nan_mask]
         n_paths = len(aod_theta)
-
+        
         array_response_TX = array_response(ant_ind=ant_tx_ind, 
                                          theta=aod_theta, 
                                          phi=aod_phi, 
@@ -307,17 +305,13 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
                                          phi=aoa_phi,
                                          kd=kd_rx)
         
-        power = antennapattern.apply(power=dataset[c.PWR_LINEAR_PARAM_NAME][i][non_nan_idxs], 
-                                   doa_theta=aoa_theta, 
-                                   doa_phi=aoa_phi, 
-                                   dod_theta=aod_theta, 
-                                   dod_phi=aod_phi)
-        
-        toas = dataset[c.TOA_PARAM_NAME][i][non_nan_idxs]
-        phases = dataset[c.PHASE_PARAM_NAME][i][non_nan_idxs]
-        
         # Pre-compute array responses product for both TD and FD cases
         array_product = array_response_RX[:, None, :] * array_response_TX[None, :, :]
+        
+        # Get pre-computed powers with antenna gains for this user
+        power = dataset[c.PWR_LINEAR_ANT_GAIN_PARAM_NAME][i][non_nan_mask]
+        toas = dataset[c.TOA_PARAM_NAME][i][non_nan_mask]
+        phases = dataset[c.PHASE_PARAM_NAME][i][non_nan_mask]
         
         if freq_domain: # OFDM
             path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts)[:n_paths]

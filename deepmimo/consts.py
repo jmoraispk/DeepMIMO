@@ -56,6 +56,9 @@ AOA_EL_FOV_PARAM_NAME = 'aoa_el_fov'  # Elevation angles after FoV filtering
 AOA_AZ_FOV_PARAM_NAME = 'aoa_az_fov'  # Azimuth angles after FoV filtering
 FOV_MASK_PARAM_NAME = 'fov_mask'      # Boolean mask for FoV filtering
 
+# Power parameters
+PWR_LINEAR_ANT_GAIN_PARAM_NAME = 'power_linear_ant_gain'
+
 # Aliases
 # Channel aliases
 CHANNEL_PARAM_NAME_2 = 'channels'
