@@ -285,32 +285,42 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
                                                theta=aoa_theta_all,
                                                phi=aoa_phi_all,
                                                kd=kd_rx)  # [n_users, M_rx, n_paths]
+    
+    # Pre-compute array response products for all users
+    # Reshape for broadcasting: [n_users, M_rx, M_tx, n_paths]
+    array_products_all = array_response_RX_all[:, :, None, :] * array_response_TX_all[:, None, :, :]
+    
+    # Pre-compute NaN masks for all users
+    nan_masks = ~np.isnan(aod_theta_all)  # [n_users, n_paths]
+    valid_path_counts = np.sum(nan_masks, axis=1)  # [n_users]
+    
+    # Get all powers, toas, and phases at once
+    powers_all = dataset[c.PWR_LINEAR_ANT_GAIN_PARAM_NAME]  # [n_users, n_paths]
+    toas_all = dataset[c.TOA_PARAM_NAME]  # [n_users, n_paths]
+    phases_all = dataset[c.PHASE_PARAM_NAME]  # [n_users, n_paths]
 
     # Generate channels for each user
     for i in tqdm(range(n_ues), desc='Generating channels'):
-        if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
+        # Get valid paths for this user
+        non_nan_mask = nan_masks[i]
+        n_paths = valid_path_counts[i]
+        
+        # Skip users with no valid paths
+        if n_paths == 0:
             continue
             
-        # Get valid paths mask for this user
-        non_nan_mask = ~np.isnan(aod_theta_all[i])
-        n_paths = np.sum(non_nan_mask)
+        # Get pre-computed array product for this user (with NaN handling)
+        array_product = array_products_all[i][..., non_nan_mask]  # [M_rx, M_tx, n_valid_paths]
         
-        # Get array responses for current user (NaN handling is done in array_response_batch)
-        array_response_TX = array_response_TX_all[i][:, non_nan_mask]  # [M_tx, n_valid_paths]
-        array_response_RX = array_response_RX_all[i][:, non_nan_mask]  # [M_rx, n_valid_paths]
-        
-        # Pre-compute array responses product for both TD and FD cases
-        array_product = array_response_RX[:, None, :] * array_response_TX[None, :, :]  # [M_rx, M_tx, n_valid_paths]
-        
-        # Get pre-computed powers with antenna gains for this user
-        power = dataset[c.PWR_LINEAR_ANT_GAIN_PARAM_NAME][i][non_nan_mask]
-        toas = dataset[c.TOA_PARAM_NAME][i][non_nan_mask]
-        phases = dataset[c.PHASE_PARAM_NAME][i][non_nan_mask]
+        # Get pre-computed values for this user
+        power = powers_all[i, non_nan_mask]
+        toas = toas_all[i, non_nan_mask]
+        phases = phases_all[i, non_nan_mask]
         
         if freq_domain: # OFDM
-            path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts)  # [n_subcarriers, n_valid_paths]
-            # Reshape for broadcasting: [M_rx, M_tx, n_subcarriers, n_valid_paths]
-            channel[i] = np.nansum(array_product[..., None, :] * path_gains.T[None, None, :, :], axis=-1)
+            path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts).T
+            channel[i] = np.nansum(array_product[..., None, :] * 
+                                   path_gains[None, None, :, :], axis=-1)
         else: # TD channel
             path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(phases))
             channel[i, ..., :n_paths] = array_product * path_gains[None, None, :]
