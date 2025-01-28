@@ -16,7 +16,7 @@ from pprint import pformat
 from tqdm import tqdm
 from typing import Dict
 from ... import consts as c
-from .geometry import array_response, ant_indices, rotate_angles, apply_FoV, rotate_angles_batch, apply_FoV_batch
+from .geometry import array_response, ant_indices
 from .ant_patterns import AntennaPattern
 
 class ChannelGenParameters:
@@ -290,11 +290,12 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
         aoa_theta = aoa_theta_all[i]
         aoa_phi = aoa_phi_all[i]
         
-        # aod_theta = aod_theta[~np.isnan(aod_theta)]
-        # aod_phi = aod_phi[~np.isnan(aod_phi)]
-        # aoa_theta = aoa_theta[~np.isnan(aoa_theta)]
-        # aoa_phi = aoa_phi[~np.isnan(aoa_phi)]
-        # n_paths = len(aod_theta)
+        non_nan_idxs = np.where(~np.isnan(aod_theta))
+        aod_theta = aod_theta[non_nan_idxs]
+        aod_phi = aod_phi[non_nan_idxs]
+        aoa_theta = aoa_theta[non_nan_idxs]
+        aoa_phi = aoa_phi[non_nan_idxs]
+        n_paths = len(aod_theta)
 
         array_response_TX = array_response(ant_ind=ant_tx_ind, 
                                          theta=aod_theta, 
@@ -306,26 +307,23 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
                                          phi=aoa_phi,
                                          kd=kd_rx)
         
-        power = antennapattern.apply(power=dataset[c.PWR_LINEAR_PARAM_NAME][i], 
+        power = antennapattern.apply(power=dataset[c.PWR_LINEAR_PARAM_NAME][i][non_nan_idxs], 
                                    doa_theta=aoa_theta, 
                                    doa_phi=aoa_phi, 
                                    dod_theta=aod_theta, 
                                    dod_phi=aod_phi)
         
+        toas = dataset[c.TOA_PARAM_NAME][i][non_nan_idxs]
+        phases = dataset[c.PHASE_PARAM_NAME][i][non_nan_idxs]
+        
+        # Pre-compute array responses product for both TD and FD cases
+        array_product = array_response_RX[:, None, :] * array_response_TX[None, :, :]
+        
         if freq_domain: # OFDM
-            path_gains = path_gen.generate(pwr=power,
-                                          toa=dataset[c.TOA_PARAM_NAME][i],
-                                          phs=dataset[c.PHASE_PARAM_NAME][i],
-                                          Ts=Ts)[:n_paths]
-            
-            channel[i] = np.nansum(array_response_RX[:, None, None, :] * 
-                                   array_response_TX[None, :, None, :] * 
-                                   path_gains.T[None, None, :, :], axis=3)
-            
+            path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts)[:n_paths]
+            channel[i] = np.nansum(array_product[..., None, :] * path_gains.T[None, None, :, :], axis=3)
         else: # TD channel
-            path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(dataset[c.PHASE_PARAM_NAME][i]))
-            channel[i] = (array_response_RX[:, None, :] * 
-                          array_response_TX[None, :, :] * 
-                          path_gains[None, None, :n_paths])
+            path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(phases))
+            channel[i, ..., :n_paths] = array_product * path_gains[None, None, :]
 
     return channel 
