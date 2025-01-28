@@ -16,8 +16,7 @@ from pprint import pformat
 from tqdm import tqdm
 from typing import Dict
 from ... import consts as c
-from .geometry import array_response, ant_indices
-from .ant_patterns import AntennaPattern
+from .geometry import ant_indices, array_response_batch
 
 class ChannelGenParameters:
     """Class for managing channel generation parameters.
@@ -276,37 +275,32 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
     aoa_theta_all = dataset[c.AOA_EL_FOV_PARAM_NAME]
     aoa_phi_all = dataset[c.AOA_AZ_FOV_PARAM_NAME]
 
+    # Pre-compute array responses for all users at once using batch function
+    array_response_TX_all = array_response_batch(ant_ind=ant_tx_ind,
+                                               theta=aod_theta_all,
+                                               phi=aod_phi_all,
+                                               kd=kd_tx)  # [n_users, M_tx, n_paths]
+    
+    array_response_RX_all = array_response_batch(ant_ind=ant_rx_ind,
+                                               theta=aoa_theta_all,
+                                               phi=aoa_phi_all,
+                                               kd=kd_rx)  # [n_users, M_rx, n_paths]
+
     # Generate channels for each user
     for i in tqdm(range(n_ues), desc='Generating channels'):
         if dataset[c.NUM_PATHS_PARAM_NAME][i] == 0:
             continue
             
-        # Get angles for current user (already FoV filtered)
-        aod_theta = aod_theta_all[i]
-        aod_phi = aod_phi_all[i]
-        aoa_theta = aoa_theta_all[i]
-        aoa_phi = aoa_phi_all[i]
+        # Get valid paths mask for this user
+        non_nan_mask = ~np.isnan(aod_theta_all[i])
+        n_paths = np.sum(non_nan_mask)
         
-        # Filter out NaN values
-        non_nan_mask = ~np.isnan(aod_theta)
-        aod_theta = aod_theta[non_nan_mask]
-        aod_phi = aod_phi[non_nan_mask]
-        aoa_theta = aoa_theta[non_nan_mask]
-        aoa_phi = aoa_phi[non_nan_mask]
-        n_paths = len(aod_theta)
-        
-        array_response_TX = array_response(ant_ind=ant_tx_ind, 
-                                         theta=aod_theta, 
-                                         phi=aod_phi, 
-                                         kd=kd_tx)
-        
-        array_response_RX = array_response(ant_ind=ant_rx_ind, 
-                                         theta=aoa_theta, 
-                                         phi=aoa_phi,
-                                         kd=kd_rx)
+        # Get array responses for current user (NaN handling is done in array_response_batch)
+        array_response_TX = array_response_TX_all[i][:, non_nan_mask]  # [M_tx, n_valid_paths]
+        array_response_RX = array_response_RX_all[i][:, non_nan_mask]  # [M_rx, n_valid_paths]
         
         # Pre-compute array responses product for both TD and FD cases
-        array_product = array_response_RX[:, None, :] * array_response_TX[None, :, :]
+        array_product = array_response_RX[:, None, :] * array_response_TX[None, :, :]  # [M_rx, M_tx, n_valid_paths]
         
         # Get pre-computed powers with antenna gains for this user
         power = dataset[c.PWR_LINEAR_ANT_GAIN_PARAM_NAME][i][non_nan_mask]
@@ -314,8 +308,9 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
         phases = dataset[c.PHASE_PARAM_NAME][i][non_nan_mask]
         
         if freq_domain: # OFDM
-            path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts)[:n_paths]
-            channel[i] = np.nansum(array_product[..., None, :] * path_gains.T[None, None, :, :], axis=3)
+            path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts)  # [n_subcarriers, n_valid_paths]
+            # Reshape for broadcasting: [M_rx, M_tx, n_subcarriers, n_valid_paths]
+            channel[i] = np.nansum(array_product[..., None, :] * path_gains.T[None, None, :, :], axis=-1)
         else: # TD channel
             path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(phases))
             channel[i, ..., :n_paths] = array_product * path_gains[None, None, :]
