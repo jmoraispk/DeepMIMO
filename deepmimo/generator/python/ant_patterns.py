@@ -87,12 +87,50 @@ class AntennaPattern:
             
         return power * pattern
 
+    def apply_batch(self, power: np.ndarray, doa_theta: np.ndarray, doa_phi: np.ndarray,
+                   dod_theta: np.ndarray, dod_phi: np.ndarray) -> np.ndarray:
+        """Apply antenna patterns to powers in batch.
+        
+        Args:
+            power (np.ndarray): Powers array with shape (n_users, n_paths)
+            doa_theta (np.ndarray): Direction of arrival elevation angles (n_users, n_paths)
+            doa_phi (np.ndarray): Direction of arrival azimuth angles (n_users, n_paths)
+            dod_theta (np.ndarray): Direction of departure elevation angles (n_users, n_paths)
+            dod_phi (np.ndarray): Direction of departure azimuth angles (n_users, n_paths)
+            
+        Returns:
+            np.ndarray: Modified powers with antenna patterns applied (n_users, n_paths)
+        """
+        # Reshape inputs to 2D if they're 1D
+        if power.ndim == 1:
+            power = power.reshape(1, -1)
+            doa_theta = doa_theta.reshape(1, -1)
+            doa_phi = doa_phi.reshape(1, -1)
+            dod_theta = dod_theta.reshape(1, -1)
+            dod_phi = dod_phi.reshape(1, -1)
+            
+        # Pre-compute patterns for better performance
+        pattern = np.ones_like(power)
+        if self.rx_pattern_fn is not None:
+            rx_gain = self.rx_pattern_fn(doa_theta, doa_phi)
+            pattern *= rx_gain
+            
+        if self.tx_pattern_fn is not None:
+            tx_gain = self.tx_pattern_fn(dod_theta, dod_phi)
+            pattern *= tx_gain
+            
+        return power * pattern
+
 
 def pattern_halfwave_dipole(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     """Calculate half-wave dipole antenna pattern.
     
     This function implements the theoretical radiation pattern of a half-wave
     dipole antenna, including its characteristic figure-8 shape.
+    The pattern follows the formula: G(θ) = 1.643 * [cos(π/2 * cos(θ))]²/sin(θ)
+    where θ is measured from the dipole axis.
+    
+    Reference: Balanis, C.A. "Antenna Theory: Analysis and Design", 4th Edition
     
     Args:
         theta (np.ndarray): Theta angles in radians.
@@ -101,6 +139,31 @@ def pattern_halfwave_dipole(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: Antenna gain pattern for given angles.
     """
+    max_gain = 1.643  # Half-wave dipole maximum directivity
+    
+    # Convert to numpy array if not already
+    theta = np.asarray(theta)
+    
+    # Initialize pattern array
+    pattern = np.zeros_like(theta, dtype=np.float64)
+    
+    # Handle valid angles (not near 0 or π)
+    valid_angles = (np.abs(np.sin(theta)) > 1e-10)
+    
+    # Calculate the pattern using the standard dipole formula
+    # Pre-compute terms for better performance
+    theta_valid = theta[valid_angles]
+    sin_theta = np.sin(theta_valid)
+    cos_term = np.cos(np.pi/2 * np.cos(theta_valid))
+    
+    # Apply the formula: G(θ) = max_gain * [cos(π/2 * cos(θ))]²/sin²(θ)
+    pattern[valid_angles] = max_gain * (cos_term**2 / sin_theta)
+    
+    return pattern
+
+
+def pattern_halfwave_dipole_old(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+
     max_gain = 1.6409223769  # Half-wave dipole maximum directivity
     theta_nonzero = theta.copy()
     zero_idx = theta_nonzero == 0
@@ -108,4 +171,3 @@ def pattern_halfwave_dipole(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     pattern = max_gain * np.cos((np.pi/2)*np.cos(theta))**2 / np.sin(theta)**2
     pattern[zero_idx] = 0
     return pattern
-
