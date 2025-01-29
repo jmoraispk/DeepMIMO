@@ -27,7 +27,7 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
                                scenario_name=scen_name,
                                convert_buildings=True, vis_buildings=True)
 
-#%% V4 
+#%% V4 Generation
 
 # scen_name = 'simple_street_canyon_test'
 scen_name = 'asu_campus'
@@ -51,7 +51,7 @@ dataset = dm.load_scenario(scen_name, **load_params)
 # from pprint import pprint
 # pprint(dataset)
 
-#%%
+#%% V4 Channel Generation
 ch_params = dm.ChannelGenParameters()
 t = time.time()
 # num_paths and power_linear are necessary for channel

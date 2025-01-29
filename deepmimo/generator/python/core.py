@@ -23,6 +23,7 @@ import scipy.io
 from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ...scene import Scene
+from ...dataset import Dataset
 
 # Channel generation
 from .channel import generate_MIMO_channel, ChannelGenParameters
@@ -36,7 +37,7 @@ from .utils import dbm2watt
 from .downloader import download_scenario_handler, extract_scenario
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
-            ch_gen_params: Dict[str, Any] = {}) -> Dict[str, Any] | List[Dict[str, Any]]:
+            ch_gen_params: Dict[str, Any] = {}) -> Dataset:
     """Generate a DeepMIMO dataset for a given scenario.
     
     This function wraps loading scenario data, computing channels, and organizing results.
@@ -47,7 +48,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
         ch_gen_params (dict): Parameters for channel generation. Defaults to {}.
 
     Returns:
-        dict or list: Generated DeepMIMO dataset containing channel matrices and metadata
+        Dataset: Generated DeepMIMO dataset containing channel matrices and metadata
         
     Raises:
         ValueError: If scenario name is invalid or required files are missing
@@ -68,7 +69,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     
     return dataset
 
-def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[str, Any]]:
+def load_scenario(scen_name: str, **load_params) -> Dataset:
     """Load a DeepMIMO scenario from disk or download if not available.
     
     This function handles scenario data loading, including automatic downloading
@@ -79,7 +80,7 @@ def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[s
         **load_params (dict): Additional loading parameters including tx_sets, rx_sets, max_paths
 
     Returns:
-        dict or list: Loaded scenario data including ray-tracing results and parameters
+        Dataset: Loaded scenario data including ray-tracing results and parameters
         
     Raises:
         ValueError: If scenario files cannot be loaded
@@ -117,12 +118,18 @@ def load_scenario(scen_name: str, **load_params) -> Dict[str, Any] | List[Dict[s
     
     dataset['scene'] = Scene.from_data(rt_params, scen_folder)
 
+    # Convert dictionary to Dataset at the end
+    if n_snapshots > 1:
+        dataset = [Dataset(d) for d in dataset]
+    else:
+        dataset = Dataset(dataset)
+    
     return dataset
 
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
                          tx_sets: Dict[int, list | str] | list | str = 'all',
                          rx_sets: Dict[int, list | str] | list | str = 'all',
-                         matrices: List[str] | str = 'all') -> Dict[str, Any]:
+                         matrices: List[str] | str = 'all') -> Dataset:
     """Load raytracing data for a scene.
 
     Args:
@@ -134,7 +141,7 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
         matrices (list of str): List of matrix names to load. Defaults to None
 
     Returns:
-        dict: Dataset containing the requested matrices for each tx-rx pair
+        Dataset: Dataset containing the requested matrices for each tx-rx pair
     """
     tx_sets = validate_txrx_sets(tx_sets, rt_params, 'tx')
     rx_sets = validate_txrx_sets(rx_sets, rt_params, 'rx')
@@ -158,7 +165,10 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
                                                         max_paths, matrices)
                 dataset_dict[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
     
-    return dataset_dict if len(dataset_dict) != 1 else dataset_dict[0]
+    # Convert dictionary to Dataset at the end
+    if len(dataset_dict) != 1:
+        return {k: Dataset(v) for k, v in dataset_dict.items()}
+    return Dataset(dataset_dict[0])
 
 def compute_num_paths(dataset: Dict[str, Any]) -> np.ndarray:
     """Compute number of valid paths for each user.
