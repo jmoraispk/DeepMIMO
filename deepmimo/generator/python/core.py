@@ -50,19 +50,29 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     """
     if len(load_params) == 0:
         tx_sets = {1: [0]}
-        rx_sets = {2: 'active'}
+        rx_sets = {2: 'all'}
         load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
     
-    # dataset = load_scenario(scen_name, **load_params)
-    # dataset['load_params'] = load_params
+    dataset = load_scenario(scen_name, **load_params)
     
-    # dataset['num_paths'] = compute_num_paths(dataset)    
-    # dataset['power_linear'] = dbm2watt(dataset['power'])
+    # Create channel generation parameters
+    ch_params = ChannelGenParameters()
     
-    # channel_generation_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
-    # dataset['channel'] = compute_channels(dataset, channel_generation_params)
-    
-    return Dataset({})#dataset
+    dataset.power_linear  # Will be computed from dataset.power
+
+    dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
+
+    # TODO: NECESSARY FOR ANGLE ROTATION -> RAISE WARNING IN ANGLE ROTATION COMPUTATION
+    dataset.ch_params = ch_params
+
+    dataset.aoa_az_rot  # Triggers _compute_rotated_angles
+    # dataset.aoa_az_rot_fov  # Triggers _compute_fov
+    dataset.power_linear_ant_gain  # Triggers _compute_received_power
+
+    # Other computations
+    _ = dataset._compute_channels(ch_params)
+
+    return dataset
 
 def load_scenario(scen_name: str, **load_params) -> Dataset:
     """Load a DeepMIMO scenario from disk or download if not available.

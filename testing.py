@@ -1,7 +1,6 @@
 #%% Imports
 
 import numpy as np
-import time
 import deepmimo as dm
 
 from pprint import pprint
@@ -54,6 +53,7 @@ dataset = dm.load_scenario(scen_name, **load_params)
 #%% V4 from Dataset
 scen_name = 'asu_campus'
 dataset = dm.load_scenario(scen_name, **load_params)
+
 # Create channel generation parameters
 ch_params = dm.ChannelGenParameters()
 
@@ -63,17 +63,24 @@ ch_params.bs_antenna.FoV = np.array([360, 180])
 ch_params.ue_antenna.FoV = np.array([120, 180])
 ch_params.OFDM_channels = True
 
-# The compute_* methods will be called automatically when accessing attributes
-# Each access will trigger computation only if not already computed
-
 # Basic computations
-# dataset.num_paths  # Triggers _compute_num_paths
 p = dataset.power_linear  # Will be computed from dataset.power
 
 dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
 
 # TODO: NECESSARY FOR ANGLE ROTATION -> RAISE WARNING IN ANGLE ROTATION COMPUTATION
 dataset.ch_params = ch_params
+
+dataset.aoa_az_rot  # Triggers _compute_rotated_angles
+# dataset.aoa_az_rot_fov  # Triggers _compute_fov
+dataset.power_linear_ant_gain  # Triggers _compute_received_power
+
+# Other computations
+_ = dataset._compute_channels(ch_params)
+
+#%%
+
+# dataset.num_paths  # Triggers _compute_num_paths
 
 # # Rotated angles computation
 # # These will be computed when first accessed:
@@ -93,10 +100,6 @@ dataset.aoa_az_rot_fov  # Triggers _compute_fov
 # # Compute received power with antenna pattern
 dataset.power_linear_ant_gain  # Triggers _compute_received_power
 
-# Other computations
-_ = dataset._compute_channels(ch_params)
-
-#%%
 dataset.channel  # Triggers _compute_channels with ch_params
 dataset.pathloss  # Triggers _compute_pathloss
 dataset.distances  # Triggers _compute_distances
@@ -110,7 +113,6 @@ dataset.pl       # Alias for pathloss
 dataset.rx_loc   # Alias for rx_pos
 dataset.tx_loc   # Alias for tx_pos
 dataset.dist     # Alias for distances
-
 
 #%% V3 Generation
 
