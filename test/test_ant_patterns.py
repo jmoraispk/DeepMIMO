@@ -37,10 +37,10 @@ class TestAntennaPatterns:
         angles = np.array([30.0, 45.0, 60.0])
         
         result = pattern.apply(power=power, 
-                             doa_theta=angles, 
-                             doa_phi=angles,
-                             dod_theta=angles, 
-                             dod_phi=angles)
+                             aoa_theta=angles, 
+                             aoa_phi=angles,
+                             aod_theta=angles, 
+                             aod_phi=angles)
         
         assert self.assert_array_almost_equal(result, power), "Single isotropic pattern failed"
 
@@ -51,10 +51,10 @@ class TestAntennaPatterns:
         angles = np.array([[30.0, 45.0], [60.0, 90.0]])
         
         result = pattern.apply_batch(power=power,
-                                   doa_theta=angles,
-                                   doa_phi=angles,
-                                   dod_theta=angles,
-                                   dod_phi=angles)
+                                   aoa_theta=angles,
+                                   aoa_phi=angles,
+                                   aod_theta=angles,
+                                   aod_phi=angles)
         
         assert self.assert_array_almost_equal(result, power), "Batch isotropic pattern failed"
 
@@ -83,20 +83,20 @@ class TestAntennaPatterns:
             phi = np.array([0.0])
             
             result = pattern.apply(power=power,
-                                 doa_theta=theta,
-                                 doa_phi=phi,
-                                 dod_theta=theta,
-                                 dod_phi=phi)
+                                 aoa_theta=theta,
+                                 aoa_phi=phi,
+                                 aod_theta=theta,
+                                 aod_phi=phi)
             
             if expected_rel_gain == 0:
                 assert abs(result[0]) < 1e-10, f"Expected zero gain at {theta_val} degrees"
             else:
                 # Normalize result to maximum gain for comparison
                 max_result = pattern.apply(power=np.array([1.0]),
-                                         doa_theta=np.array([np.pi/2]),
-                                         doa_phi=np.array([0.0]),
-                                         dod_theta=np.array([np.pi/2]),
-                                         dod_phi=np.array([0.0]))
+                                         aoa_theta=np.array([np.pi/2]),
+                                         aoa_phi=np.array([0.0]),
+                                         aod_theta=np.array([np.pi/2]),
+                                         aod_phi=np.array([0.0]))
                 relative_gain = result[0] / max_result[0]
                 if self.verbose:
                     print(f"\nDebug - Angle: {theta_val}°")
@@ -118,10 +118,10 @@ class TestAntennaPatterns:
         phi = np.zeros_like(theta)
         
         result = pattern.apply_batch(power=power,
-                                   doa_theta=theta,
-                                   doa_phi=phi,
-                                   dod_theta=theta,
-                                   dod_phi=phi)
+                                   aoa_theta=theta,
+                                   aoa_phi=phi,
+                                   aod_theta=theta,
+                                   aod_phi=phi)
         
         # Normalize results
         max_val = result[0,0]  # Value at 90 degrees
@@ -140,10 +140,10 @@ class TestAntennaPatterns:
         angles = np.array([30.0, 45.0])
         
         result = pattern.apply_batch(power=power,
-                                   doa_theta=angles,
-                                   doa_phi=angles,
-                                   dod_theta=angles,
-                                   dod_phi=angles)
+                                   aoa_theta=angles,
+                                   aoa_phi=angles,
+                                   aod_theta=angles,
+                                   aod_phi=angles)
         
         assert result.shape == (1, 2), "1D to 2D shape conversion failed"
         assert self.assert_array_almost_equal(result[0], power), "1D to 2D value conversion failed"
@@ -163,19 +163,19 @@ class TestAntennaPatterns:
         # Time single processing
         start_time = time.time()
         _ = pattern.apply(power=power,
-                         doa_theta=angles,
-                         doa_phi=angles,
-                         dod_theta=angles,
-                         dod_phi=angles)
+                         aoa_theta=angles,
+                         aoa_phi=angles,
+                         aod_theta=angles,
+                         aod_phi=angles)
         single_time = time.time() - start_time
         
         # Time batch processing
         start_time = time.time()
         _ = pattern.apply_batch(power=power,
-                              doa_theta=angles,
-                              doa_phi=angles,
-                              dod_theta=angles,
-                              dod_phi=angles)
+                              aoa_theta=angles,
+                              aoa_phi=angles,
+                              aod_theta=angles,
+                              aod_phi=angles)
         batch_time = time.time() - start_time
         
         print(f"\nPerformance Test Results ({n_samples} users):")

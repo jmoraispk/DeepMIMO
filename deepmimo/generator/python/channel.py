@@ -11,12 +11,10 @@ based on path information from ray-tracing and antenna configurations.
 """
 
 import numpy as np
-from pprint import pformat
 from tqdm import tqdm
-from typing import Dict, Any
+from typing import Dict
 from ... import consts as c
 from ...general_utilities import DotDict
-from .geometry import ant_indices, array_response_batch
 
 class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.
@@ -64,7 +62,6 @@ class ChannelGenParameters(DotDict):
                 c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
             }
         })
-    
 
 class PathVerifier:
     """Class for verifying and validating paths based on configuration parameters.
@@ -177,73 +174,44 @@ class OFDM_PathGenerator:
                                np.outer(delay_n, self.subcarriers))
         return path_const
 
-def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
-                         rx_ant_params: Dict, freq_domain: bool = True) -> np.ndarray:
+def generate_MIMO_channel(array_response_product: np.ndarray,
+                         powers: np.ndarray,
+                         toas: np.ndarray,
+                         phases: np.ndarray,
+                         ofdm_params: Dict,
+                         freq_domain: bool = True) -> np.ndarray:
     """Generate MIMO channel matrices.
     
-    This function generates MIMO channel matrices based on path information from
-    ray-tracing and antenna configurations. It supports both time and frequency
-    domain channel generation.
+    This function generates MIMO channel matrices based on path information and
+    pre-computed array responses. It supports both time and frequency domain
+    channel generation.
     
     Args:
-        dataset (dict): DeepMIMO dataset containing path information
-        ofdm_params (dict): OFDM parameters
-        tx_ant_params (dict): Transmitter antenna parameters
-        rx_ant_params (dict): Receiver antenna parameters
-        freq_domain (bool, optional): Whether to generate frequency domain channel.
-            Defaults to True.
+        array_response_product: Product of TX and RX array responses [n_users, M_rx, M_tx, n_paths]
+        powers: Linear path powers [W] with antenna gains applied [n_users, n_paths]
+        toas: Times of arrival [n_users, n_paths]
+        phases: Path phases [n_users, n_paths]
+        ofdm_params: OFDM parameters
+        freq_domain: Whether to generate frequency domain channel. Defaults to True.
         
     Returns:
         numpy.ndarray: MIMO channel matrices with shape (n_users, n_rx_ant, n_tx_ant, n_paths/subcarriers)
     """
     bandwidth = ofdm_params[c.PARAMSET_OFDM_BW] * c.PARAMSET_OFDM_BW_MULT
-    
-    kd_tx = 2 * np.pi * tx_ant_params[c.PARAMSET_ANT_SPACING]
-    kd_rx = 2 * np.pi * rx_ant_params[c.PARAMSET_ANT_SPACING]
     Ts = 1 / bandwidth
     subcarriers = ofdm_params[c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(ofdm_params, subcarriers)
 
-    M_tx = np.prod(tx_ant_params[c.PARAMSET_ANT_SHAPE])
-    M_rx = np.prod(rx_ant_params[c.PARAMSET_ANT_SHAPE])
+    n_ues = powers.shape[0]
+    max_paths = powers.shape[1]
+    M_rx, M_tx = array_response_product.shape[1:3]
     
-    ant_tx_ind = ant_indices(tx_ant_params[c.PARAMSET_ANT_SHAPE])
-    ant_rx_ind = ant_indices(rx_ant_params[c.PARAMSET_ANT_SHAPE])
-    
-    n_ues = dataset[c.RX_POS_PARAM_NAME].shape[0]
-    max_paths = dataset[c.LOAD_PARAMS_PARAM_NAME][c.LOAD_PARAM_MAX_PATH]
     last_ch_dim = len(subcarriers) if freq_domain else max_paths
     channel = np.zeros((n_ues, M_rx, M_tx, last_ch_dim), dtype=np.csingle)
     
-    # Get FoV filtered angles from dataset
-    aod_theta_all = dataset[c.AOD_EL_FOV_PARAM_NAME]
-    aod_phi_all = dataset[c.AOD_AZ_FOV_PARAM_NAME]
-    aoa_theta_all = dataset[c.AOA_EL_FOV_PARAM_NAME]
-    aoa_phi_all = dataset[c.AOA_AZ_FOV_PARAM_NAME]
-
-    # Pre-compute array responses for all users at once using batch function
-    array_response_TX_all = array_response_batch(ant_ind=ant_tx_ind,
-                                               theta=aod_theta_all,
-                                               phi=aod_phi_all,
-                                               kd=kd_tx)  # [n_users, M_tx, n_paths]
-    
-    array_response_RX_all = array_response_batch(ant_ind=ant_rx_ind,
-                                               theta=aoa_theta_all,
-                                               phi=aoa_phi_all,
-                                               kd=kd_rx)  # [n_users, M_rx, n_paths]
-    
-    # Pre-compute array response products for all users
-    # Reshape for broadcasting: [n_users, M_rx, M_tx, n_paths]
-    array_products_all = array_response_RX_all[:, :, None, :] * array_response_TX_all[:, None, :, :]
-    
-    # Pre-compute NaN masks for all users
-    nan_masks = ~np.isnan(aod_theta_all)  # [n_users, n_paths]
+    # Pre-compute NaN masks for all users using powers
+    nan_masks = ~np.isnan(powers)  # [n_users, n_paths]
     valid_path_counts = np.sum(nan_masks, axis=1)  # [n_users]
-    
-    # Get all powers, toas, and phases at once
-    powers_all = dataset[c.PWR_LINEAR_ANT_GAIN_PARAM_NAME]  # [n_users, n_paths]
-    toas_all = dataset[c.TOA_PARAM_NAME]  # [n_users, n_paths]
-    phases_all = dataset[c.PHASE_PARAM_NAME]  # [n_users, n_paths]
 
     # Generate channels for each user
     for i in tqdm(range(n_ues), desc='Generating channels'):
@@ -256,19 +224,19 @@ def generate_MIMO_channel(dataset: Dict, ofdm_params: Dict, tx_ant_params: Dict,
             continue
             
         # Get pre-computed array product for this user (with NaN handling)
-        array_product = array_products_all[i][..., non_nan_mask]  # [M_rx, M_tx, n_valid_paths]
+        array_product = array_response_product[i][..., non_nan_mask]  # [M_rx, M_tx, n_valid_paths]
         
         # Get pre-computed values for this user
-        power = powers_all[i, non_nan_mask]
-        toas = toas_all[i, non_nan_mask]
-        phases = phases_all[i, non_nan_mask]
+        power = powers[i, non_nan_mask]
+        toas_user = toas[i, non_nan_mask]
+        phases_user = phases[i, non_nan_mask]
         
         if freq_domain: # OFDM
-            path_gains = path_gen.generate(pwr=power, toa=toas, phs=phases, Ts=Ts).T
+            path_gains = path_gen.generate(pwr=power, toa=toas_user, phs=phases_user, Ts=Ts).T
             channel[i] = np.nansum(array_product[..., None, :] * 
                                    path_gains[None, None, :, :], axis=-1)
         else: # TD channel
-            path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(phases))
+            path_gains = np.sqrt(power) * np.exp(1j*np.deg2rad(phases_user))
             channel[i, ..., :n_paths] = array_product * path_gains[None, None, :]
 
     return channel 

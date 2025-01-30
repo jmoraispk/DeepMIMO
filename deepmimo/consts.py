@@ -19,6 +19,17 @@ RAYTRACER_VERSION_WIRELESS_INSITE = 3.3
 RAYTRACER_NAME_SIONNA = 'Sionna Ray Tracing'           # not supported yet
 RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'  # not supported yet
 
+
+# Interaction Codes
+# The codes are read from left to right, starting from the transmitter end
+INTERACTION_LOS = 0         # Line-of-sight (direct path)
+INTERACTION_REFLECTION = 1  # Reflection
+INTERACTION_DIFFRACTION = 2 # Diffraction
+INTERACTION_TRANSMISSION = 3 # Transmission
+INTERACTION_SCATTERING = 4  # Scattering
+
+
+
 # DEEPMIMOv4 Fundamental Parameters
 AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
@@ -50,10 +61,10 @@ AOD_AZ_ROT_PARAM_NAME = 'aod_az_rot'
 AOD_EL_ROT_PARAM_NAME = 'aod_el_rot'
 
 # Field of view filtered angles
-AOD_EL_FOV_PARAM_NAME = 'aod_el_fov'  # Elevation angles after FoV filtering
-AOD_AZ_FOV_PARAM_NAME = 'aod_az_fov'  # Azimuth angles after FoV filtering
-AOA_EL_FOV_PARAM_NAME = 'aoa_el_fov'  # Elevation angles after FoV filtering
-AOA_AZ_FOV_PARAM_NAME = 'aoa_az_fov'  # Azimuth angles after FoV filtering
+AOD_EL_FOV_PARAM_NAME = 'aod_el_rot_fov'  # Elevation angles after rotation and FoV filtering
+AOD_AZ_FOV_PARAM_NAME = 'aod_az_rot_fov'  # Azimuth angles after rotation and FoV filtering
+AOA_EL_FOV_PARAM_NAME = 'aoa_el_rot_fov'  # Elevation angles after rotation and FoV filtering
+AOA_AZ_FOV_PARAM_NAME = 'aoa_az_rot_fov'  # Azimuth angles after rotation and FoV filtering
 FOV_MASK_PARAM_NAME = 'fov_mask'      # Boolean mask for FoV filtering
 
 # Power parameters

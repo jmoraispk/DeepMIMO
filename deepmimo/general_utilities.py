@@ -7,7 +7,7 @@ the DeepMIMO toolkit.
 """
 
 from pprint import pformat
-from typing import Dict, Any, Iterator, TypeVar, Mapping
+from typing import Dict, Any, Iterator, TypeVar, Mapping, Optional
 
 K = TypeVar('K', bound=str)
 V = TypeVar('V')
@@ -30,63 +30,97 @@ class DotDict(Mapping[K, V]):
         >>> list(d.keys())
         ['a', 'b']
     """
-    def __init__(self, dictionary: Dict[str, Any]):
+    def __init__(self, data: Optional[Dict[str, Any]] = None):
         """Initialize DotDict with a dictionary.
-        
+    
         Args:
             dictionary: Dictionary to convert to DotDict
         """
+        # Store protected attributes in a set
         self._data = {}
-        for key, value in dictionary.items():
-            if isinstance(value, dict):
-                self._data[key] = DotDict(value)
-            else:
-                self._data[key] = value
-                
+        if data:
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    self._data[key] = DotDict(value)
+                else:
+                    self._data[key] = value
+
     def __getattr__(self, key: str) -> Any:
+        """Enable dot notation access to dictionary items."""
         try:
             return self._data[key]
         except KeyError:
             raise AttributeError(key)
-    
+
     def __setattr__(self, key: str, value: Any) -> None:
+        """Enable dot notation assignment."""
         if key == '_data':
             super().__setattr__(key, value)
         else:
-            if isinstance(value, dict):
-                self._data[key] = DotDict(value)
-            else:
-                self._data[key] = value
-                
+            self[key] = value
+
     def __getitem__(self, key: str) -> Any:
+        """Enable dictionary-style access."""
         return self._data[key]
-    
+
     def __setitem__(self, key: str, value: Any) -> None:
-        if isinstance(value, dict):
-            self._data[key] = DotDict(value)
-        else:
-            self._data[key] = value
-            
-    def __iter__(self) -> Iterator[str]:
-        """Iterate over dictionary keys."""
-        return iter(self._data)
-    
+        """Enable dictionary-style assignment."""
+        if isinstance(value, dict) and not isinstance(value, DotDict):
+            value = DotDict(value)
+        self._data[key] = value
+
+    def update(self, other: Dict[str, Any]) -> None:
+        """Update the dictionary with elements from another dictionary."""
+        # Convert any nested dicts to DotDicts first
+        processed = {
+            k: DotDict(v) if isinstance(v, dict) and not isinstance(v, DotDict) else v 
+            for k, v in other.items()
+        }
+        self._data.update(processed)
+
     def __len__(self) -> int:
-        """Return number of items in dictionary."""
+        """Return the length of the underlying data dictionary."""
         return len(self._data)
-            
+        
+    def __iter__(self):
+        """Return an iterator over the data dictionary keys."""
+        return iter(self._data)
+        
+    def __dir__(self):
+        """Return list of valid attributes."""
+        return list(set(
+            list(super().__dir__()) + 
+            list(self._data.keys())
+        ))
+        
+    @property
+    def shape(self):
+        """Return shape of the first array-like value in the dictionary."""
+        for val in self._data.values():
+            if hasattr(val, 'shape'):
+                return val.shape
+        return None
+        
+    @property
+    def size(self):
+        """Return size of the first array-like value in the dictionary."""
+        for val in self._data.values():
+            if hasattr(val, 'size'):
+                return val.size
+        return None
+
     def keys(self):
         """Return dictionary keys."""
         return self._data.keys()
-    
+
     def values(self):
         """Return dictionary values."""
         return self._data.values()
-    
+
     def items(self):
         """Return dictionary items as (key, value) pairs."""
         return self._data.items()
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """Get value for key, returning default if key doesn't exist."""
         return self._data.get(key, default)

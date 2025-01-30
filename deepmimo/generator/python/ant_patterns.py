@@ -122,8 +122,8 @@ class AntennaPattern:
             raise NotImplementedError(f"The pattern '{pattern}' is defined but not implemented for {pattern_type}.")
         return PATTERN_REGISTRY[pattern]
 
-    def apply(self, power: np.ndarray, doa_theta: np.ndarray, doa_phi: np.ndarray,
-             dod_theta: np.ndarray, dod_phi: np.ndarray) -> np.ndarray:
+    def apply(self, power: np.ndarray, aoa_theta: np.ndarray, aoa_phi: np.ndarray,
+             aod_theta: np.ndarray, aod_phi: np.ndarray) -> np.ndarray:
         """Apply antenna patterns to input power.
         
         This function applies both TX and RX antenna patterns to modify the input
@@ -131,27 +131,27 @@ class AntennaPattern:
         
         Args:
             power (np.ndarray): Input power values.
-            doa_theta (np.ndarray): Direction of arrival theta angles in radians.
-            doa_phi (np.ndarray): Direction of arrival phi angles in radians.
-            dod_theta (np.ndarray): Direction of departure theta angles in radians.
-            dod_phi (np.ndarray): Direction of departure phi angles in radians.
+            aoa_theta (np.ndarray): Angle of arrival theta angles in radians.
+            aoa_phi (np.ndarray): Angle of arrival phi angles in radians.
+            aod_theta (np.ndarray): Angle of departure theta angles in radians.
+            aod_phi (np.ndarray): Angle of departure phi angles in radians.
             
         Returns:
             np.ndarray: Modified power values after applying antenna patterns.
         """
-        pattern = self.tx_pattern_fn(dod_theta, dod_phi) * self.rx_pattern_fn(doa_theta, doa_phi)
+        pattern = self.tx_pattern_fn(aod_theta, aod_phi) * self.rx_pattern_fn(aoa_theta, aoa_phi)
         return power * pattern
 
-    def apply_batch(self, power: np.ndarray, doa_theta: np.ndarray, doa_phi: np.ndarray,
-                   dod_theta: np.ndarray, dod_phi: np.ndarray) -> np.ndarray:
+    def apply_batch(self, power: np.ndarray, aoa_theta: np.ndarray, aoa_phi: np.ndarray,
+                   aod_theta: np.ndarray, aod_phi: np.ndarray) -> np.ndarray:
         """Apply antenna patterns to powers in batch.
         
         Args:
             power (np.ndarray): Powers array with shape (n_users, n_paths)
-            doa_theta (np.ndarray): Direction of arrival elevation angles (n_users, n_paths)
-            doa_phi (np.ndarray): Direction of arrival azimuth angles (n_users, n_paths)
-            dod_theta (np.ndarray): Direction of departure elevation angles (n_users, n_paths)
-            dod_phi (np.ndarray): Direction of departure azimuth angles (n_users, n_paths)
+            aoa_theta (np.ndarray): Angle of arrival elevation angles (n_users, n_paths)
+            aoa_phi (np.ndarray): Angle of arrival azimuth angles (n_users, n_paths)
+            aod_theta (np.ndarray): Angle of departure elevation angles (n_users, n_paths)
+            aod_phi (np.ndarray): Angle of departure azimuth angles (n_users, n_paths)
             
         Returns:
             np.ndarray: Modified powers with antenna patterns applied (n_users, n_paths)
@@ -159,10 +159,10 @@ class AntennaPattern:
         # Reshape inputs to 2D if they're 1D
         if power.ndim == 1:
             power = power.reshape(1, -1)
-            doa_theta = doa_theta.reshape(1, -1)
-            doa_phi = doa_phi.reshape(1, -1)
-            dod_theta = dod_theta.reshape(1, -1)
-            dod_phi = dod_phi.reshape(1, -1)
+            aoa_theta = aoa_theta.reshape(1, -1)
+            aoa_phi = aoa_phi.reshape(1, -1)
+            aod_theta = aod_theta.reshape(1, -1)
+            aod_phi = aod_phi.reshape(1, -1)
             
-        pattern = self.tx_pattern_fn(dod_theta, dod_phi) * self.rx_pattern_fn(doa_theta, doa_phi)
+        pattern = self.tx_pattern_fn(aod_theta, aod_phi) * self.rx_pattern_fn(aoa_theta, aoa_phi)
         return power * pattern

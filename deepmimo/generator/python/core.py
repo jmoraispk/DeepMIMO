@@ -13,7 +13,7 @@ The module serves as the main entry point for creating DeepMIMO datasets from ra
 
 # Standard library imports
 import os
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 
 # Third-party imports
 import numpy as np
@@ -23,15 +23,10 @@ import scipy.io
 from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ...scene import Scene
-from ...dataset import Dataset
+from .dataset import Dataset
 
 # Channel generation
-from .channel import generate_MIMO_channel, ChannelGenParameters
-from .ant_patterns import AntennaPattern
-
-# Geometry and utilities 
-from .geometry import rotate_angles_batch, apply_FoV_batch
-from .utils import dbm2watt
+from .channel import ChannelGenParameters
 
 # Scenario management
 from .downloader import download_scenario_handler, extract_scenario
@@ -58,27 +53,27 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
         rx_sets = {2: 'active'}
         load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
     
-    dataset = load_scenario(scen_name, **load_params)
-    dataset['load_params'] = load_params
+    # dataset = load_scenario(scen_name, **load_params)
+    # dataset['load_params'] = load_params
     
-    dataset['num_paths'] = compute_num_paths(dataset)    
-    dataset['power_linear'] = dbm2watt(dataset['power'])
+    # dataset['num_paths'] = compute_num_paths(dataset)    
+    # dataset['power_linear'] = dbm2watt(dataset['power'])
     
-    channel_generation_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
-    dataset['channel'] = compute_channels(dataset, channel_generation_params)
+    # channel_generation_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
+    # dataset['channel'] = compute_channels(dataset, channel_generation_params)
     
-    return dataset
+    return Dataset({})#dataset
 
 def load_scenario(scen_name: str, **load_params) -> Dataset:
     """Load a DeepMIMO scenario from disk or download if not available.
     
     This function handles scenario data loading, including automatic downloading
     if the scenario is not found locally.
-
+    
     Args:
         scen_name (str): Name of the scenario to load
         **load_params (dict): Additional loading parameters including tx_sets, rx_sets, max_paths
-
+            
     Returns:
         Dataset: Loaded scenario data including ray-tracing results and parameters
         
@@ -111,7 +106,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset:
                                            f'scene_{snapshot_i}')
             print(f'Scene {snapshot_i + 1}/{n_snapshots}')
             dataset.append(load_raytracing_scene(snapshot_folder, rt_params, **load_params))
-    else: # static 
+    else: # static
         dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
 
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
@@ -123,7 +118,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset:
         dataset = [Dataset(d) for d in dataset]
     else:
         dataset = Dataset(dataset)
-    
+        
     return dataset
 
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
@@ -170,175 +165,6 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
         return {k: Dataset(v) for k, v in dataset_dict.items()}
     return Dataset(dataset_dict[0])
 
-def compute_num_paths(dataset: Dict[str, Any]) -> np.ndarray:
-    """Compute number of valid paths for each user.
-    
-    Args:
-        dataset (dict): DeepMIMO dataset containing path information
-        
-    Returns:
-        numpy.ndarray: Array containing number of valid paths for each user
-    """
-    max_paths = dataset[c.AOA_AZ_PARAM_NAME].shape[-1]
-    nan_count_matrix = np.isnan(dataset[c.AOA_AZ_PARAM_NAME]).sum(axis=1)
-    return max_paths - nan_count_matrix
-
-def compute_num_interactions(dataset: Dict[str, Any]) -> np.ndarray:
-    """Compute number of interactions for each path.
-    
-    Args:
-        dataset (dict): DeepMIMO dataset containing interaction information
-        
-    Returns:
-        numpy.ndarray: Array containing number of interactions for each path
-    """
-    result = np.zeros_like(dataset['inter'], dtype=int)
-    non_zero = dataset['inter'] > 0
-    result[non_zero] = np.floor(np.log10(dataset['inter'][non_zero])).astype(int) + 1
-    return result
-
-def compute_distances(rx: np.ndarray, tx: np.ndarray) -> np.ndarray:
-    """Compute Euclidean distances between receivers and transmitter.
-    
-    Args:
-        rx (numpy.ndarray): Receiver positions array of shape (n_receivers, 3)
-        tx (numpy.ndarray): Transmitter position array of shape (3,)
-        
-    Returns:
-        numpy.ndarray: Array of distances between each receiver and the transmitter
-    """
-    return np.linalg.norm(rx - tx, axis=1)
-
-def compute_pathloss(received_powers_dbm: np.ndarray, phases_degrees: np.ndarray, 
-                    transmitted_power_dbm: float = 0, coherent: bool = True) -> float:
-    """Compute path loss from received powers and phases.
-
-    Args:
-        received_powers_dbm (numpy.ndarray): Received powers in dBm for each path
-        phases_degrees (numpy.ndarray): Phases in degrees for each path 
-        transmitted_power_dbm (float): Transmitted power in dBm. Defaults to 0
-        coherent (bool): Whether to use coherent sum. Defaults to True
-
-    Returns:
-        float: Path loss in dB
-    """
-    received_powers_linear = 10 ** (np.array(received_powers_dbm) / 10)
-
-    if coherent:
-        total_complex_power = np.sum(received_powers_linear * 
-                                     np.exp(1j * np.radians(phases_degrees)), axis=1)
-    else:
-        total_complex_power = np.sum(received_powers_linear, axis=1)
-
-    total_received_power_dbm = 10 * np.log10(np.abs(total_complex_power))
-    return transmitted_power_dbm - total_received_power_dbm
-
-def compute_channels(dataset: Dict[str, Any], 
-                    params: Optional[str | ChannelGenParameters] = None) -> np.ndarray:
-    """Compute MIMO channel matrices for all users.
-    
-    Args:
-        dataset (dict): DeepMIMO dataset containing path information
-        params (str or ChannelGenParameters, optional): Channel generation parameters. Defaults to None
-        
-    Returns:
-        numpy.ndarray: MIMO channel matrix
-    """
-    if params is None:
-        params = ChannelGenParameters()
-    elif type(params) is str:
-        params = ChannelGenParameters(params)
-    
-    np.random.seed(1001)
-    
-    dataset['num_ues'] = dataset[c.RX_POS_PARAM_NAME].shape[0]
-    validate_ch_gen_params(params, n_active_ues=dataset['num_ues'])
-    
-    return generate_MIMO_channel(dataset=dataset,
-                               ofdm_params=params[c.PARAMSET_OFDM],
-                               tx_ant_params=params[c.PARAMSET_ANT_BS], 
-                               rx_ant_params=params[c.PARAMSET_ANT_UE],
-                               freq_domain=params[c.PARAMSET_FD_CH])
-
-def compute_los(interactions: np.ndarray) -> np.ndarray:
-    """Calculate Line of Sight status for each receiver.
-
-    Args:
-        interactions (numpy.ndarray): Matrix containing interaction codes for each path.
-            The codes are read from left to right, starting from the transmitter end.
-            0: Line-of-sight (direct path)
-            1: Reflection 
-            2: Diffraction
-            3: Transmission
-            4: Scattering
-    Returns:
-        numpy.ndarray: LoS status for each receiver (1: LoS, 0: NLoS, -1: No paths)
-    """
-    result = np.full(interactions.shape[0], -1)
-    has_paths = np.any(interactions > 0, axis=1)
-    result[has_paths] = 0
-    
-    first_path = interactions[:, 0]
-    los_mask = first_path == 0
-    result[los_mask & has_paths] = 1
-    
-    return result
-
-def compute_received_power(dataset: Dict[str, Any], tx_ant_params: Dict[str, Any], rx_ant_params: Dict[str, Any]) -> np.ndarray:
-    """Compute received power with antenna patterns applied.
-    
-    This function applies the antenna radiation patterns to the path powers
-    using batch processing for efficiency.
-    
-    Args:
-        dataset (Dict[str, Any]): DeepMIMO dataset containing path information
-        tx_ant_params (Dict[str, Any]): Transmitter antenna parameters
-        rx_ant_params (Dict[str, Any]): Receiver antenna parameters
-        
-    Returns:
-        np.ndarray: Powers with antenna pattern applied, shape [n_users, n_paths]
-    """
-    # Create antenna pattern object
-    antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
-                                   rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
-    
-    # Get FoV filtered angles and apply antenna patterns in batch
-    return antennapattern.apply_batch(power=dataset[c.PWR_LINEAR_PARAM_NAME],
-                                     doa_theta=dataset[c.AOA_EL_FOV_PARAM_NAME],
-                                     doa_phi=dataset[c.AOA_AZ_FOV_PARAM_NAME], 
-                                     dod_theta=dataset[c.AOD_EL_FOV_PARAM_NAME],
-                                     dod_phi=dataset[c.AOD_AZ_FOV_PARAM_NAME])
-
-def compute_rotated_angles(dataset: dict, tx_ant_params: dict, rx_ant_params: dict) -> dict:
-    """Compute rotated angles for all users in batch.
-    
-    Args:
-        dataset: Dictionary containing the dataset information
-        tx_ant_params: Dictionary containing transmitter antenna parameters
-        rx_ant_params: Dictionary containing receiver antenna parameters
-        
-    Returns:
-        Dictionary containing the rotated angles for all users
-    """
-    
-    # Rotate angles for all users at once
-    dod_theta_rot, dod_phi_rot = rotate_angles_batch(
-        rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
-        theta=dataset[c.AOD_EL_PARAM_NAME],
-        phi=dataset[c.AOD_AZ_PARAM_NAME])
-    
-    doa_theta_rot, doa_phi_rot = rotate_angles_batch(
-        rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION],
-        theta=dataset[c.AOA_EL_PARAM_NAME],
-        phi=dataset[c.AOA_AZ_PARAM_NAME])
-    
-    # Store rotated angles in dataset
-    dataset[c.AOD_EL_ROT_PARAM_NAME] = dod_theta_rot
-    dataset[c.AOD_AZ_ROT_PARAM_NAME] = dod_phi_rot
-    dataset[c.AOA_EL_ROT_PARAM_NAME] = doa_theta_rot
-    dataset[c.AOA_AZ_ROT_PARAM_NAME] = doa_phi_rot
-    
-    return dataset
 
 # Helper functions
 def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
@@ -399,12 +225,12 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
                     raise Exception(f"String '{idxs}' not recognized for tx/rx indices " )
             else:
                 raise Exception('Only <list> of <np.ndarray> allowed as tx/rx indices')
-                
+            
             # check that the specific tx/rx indices inside the sets are valid
             if not set(sets[set_idx]).issubset(set(all_idxs_available.tolist())):
                 raise Exception(f'Some indices of {idxs} are not in {all_idxs_available}. '
                               + info_str)
-                
+            
         sets_dict = sets
     elif type(sets) is list:
         # Generate all user indices
@@ -413,7 +239,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             if set_idx not in valid_set_idxs:
                 raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
                               + info_str)
-            
+        
             sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
     elif type(sets) is str:
         if sets != 'all':
@@ -425,17 +251,17 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
         for set_idx in valid_set_idxs:
             sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
     return sets_dict
-
-def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
+        
+def validate_ch_gen_params(params: ChannelGenParameters, n_active_ues: int) -> ChannelGenParameters:
     """Validate channel generation parameters.
-    
+        
     This function checks that channel generation parameters are valid and
-    consistent with the dataset configuration.
-
+    consistent with the dataset configuration.s
+    
     Args:
         params (dict): Channel generation parameters to validate
         n_active_ues (int): Number of active users in the dataset
-
+        
     Returns:
         dict: Validated parameters
 
@@ -451,7 +277,7 @@ def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
     # BS Antenna Rotation
     if c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_BS].keys():
         rotation_shape = params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION].shape
-        assert  (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
+        assert (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
                 'The BS antenna rotation must be a 3D vector'
     else:
         params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None                                            
@@ -463,11 +289,11 @@ def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
         cond_1 = len(rotation_shape) == 1 and rotation_shape[0] == 3
         cond_2 = len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2
         cond_3 = rotation_shape[0] == n_active_ues
-        
+    
         assert_str = ('The UE antenna rotation must either be a 3D vector for ' +
                      'constant values or 3 x 2 matrix for random values')
         assert cond_1 or cond_2 or cond_3, assert_str
-                
+    
         if len(rotation_shape) == 1 and rotation_shape[0] == 3:
             rotation = np.zeros((n_active_ues, 3))
             rotation[:] = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
@@ -481,6 +307,7 @@ def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
             np.array([None] * n_active_ues) # List of None
     
+    # TODO: Remove the None option from here
     # BS Antenna Radiation Pattern
     if (c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys() and \
         params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] is not None):
@@ -489,7 +316,7 @@ def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
         assert params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
     else:
         params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
-                     
+        
     # UE Antenna Radiation Pattern
     if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_UE].keys():
         assert_str = ("The UE antenna radiation pattern must have one of the " + 
@@ -499,17 +326,17 @@ def validate_ch_gen_params(params: Dict[str, Any], n_active_ues: int) -> None:
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
                                              
     return params
-
+        
 def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
     """Compare two dictionaries for equality.
-    
+            
     This function performs a deep comparison of two dictionaries, handling
     nested dictionaries and numpy arrays.
-
+        
     Args:
         dict1 (dict): First dictionary to compare
         dict2 (dict): Second dictionary to compare
-        
+
     Returns:
         set: Set of keys in dict1 that are not in dict2
     """
@@ -562,7 +389,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
                         rx_idxs: np.ndarray | List, max_paths: int, 
                         matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
     """Load raytracing data for a transmitter-receiver pair.
-
+    
     This function loads raytracing data files containing path information
     between a transmitter and set of receivers.
 
@@ -577,7 +404,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
 
     Returns:
         dict: Dictionary containing loaded raytracing data
-        
+
     Raises:
         ValueError: If required data files are missing or invalid
     """
@@ -608,7 +435,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         
         mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
         mat_path = os.path.join(rayfolder, mat_filename)
-        
+    
         if os.path.exists(mat_path):
             print(f'Loading {mat_filename}..')
             tx_dict[key] = scipy.io.loadmat(mat_path)[key]
@@ -626,65 +453,3 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         print(f'shape = {tx_dict[key].shape}')
     return tx_dict 
 
-
-def compute_fov(dataset: Dict, bs_params: Dict, ue_params: Dict) -> Dict:
-    """Compute field of view filtered angles for all users.
-    
-    This function applies field of view constraints to the rotated angles
-    and stores both the filtered angles and the mask in the dataset.
-    Optimizes computation by skipping mask generation when FoV is full.
-    
-    Args:
-        dataset: Dataset dictionary containing rotated angles
-        bs_params: Base station antenna parameters including FoV
-        ue_params: User equipment antenna parameters including FoV
-        
-    Returns:
-        Dict: Updated dataset with FoV filtered angles and mask
-    """
-    # Get rotated angles from dataset
-    aod_theta = dataset[c.AOD_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
-    aod_phi = dataset[c.AOD_AZ_ROT_PARAM_NAME]    # [n_users, n_paths]
-    aoa_theta = dataset[c.AOA_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
-    aoa_phi = dataset[c.AOA_AZ_ROT_PARAM_NAME]    # [n_users, n_paths]
-    
-    # Get FoV parameters
-    tx_fov = bs_params[c.PARAMSET_ANT_FOV]  # [horizontal, vertical]
-    rx_fov = ue_params[c.PARAMSET_ANT_FOV]  # [horizontal, vertical]
-    
-    # Skip operations if fov is full
-    bs_full_fov = (tx_fov[0] >= 360 and tx_fov[1] >= 180)
-    ue_full_fov = (rx_fov[0] >= 360 and rx_fov[1] >= 180)
-    if bs_full_fov and ue_full_fov:
-
-        # Return original angles
-        dataset[c.FOV_MASK_PARAM_NAME] = None
-        dataset[c.AOD_EL_FOV_PARAM_NAME] = aod_theta
-        dataset[c.AOD_AZ_FOV_PARAM_NAME] = aod_phi
-        dataset[c.AOA_EL_FOV_PARAM_NAME] = aoa_theta
-        dataset[c.AOA_AZ_FOV_PARAM_NAME] = aoa_phi
-        
-    else:
-        # Initialize mask as all True
-        fov_mask = np.ones_like(aod_theta, dtype=bool)
-        
-        # Check if BS FoV is limited
-        if not bs_full_fov:
-            tx_mask = apply_FoV_batch(tx_fov, aod_theta, aod_phi)  # [n_users, n_paths]
-            fov_mask = np.logical_and(fov_mask, tx_mask)
-    
-        # Check if UE FoV is limited
-        if not ue_full_fov:
-            rx_mask = apply_FoV_batch(rx_fov, aoa_theta, aoa_phi)  # [n_users, n_paths]
-            fov_mask = np.logical_and(fov_mask, rx_mask)
-        
-        # Store mask in dataset
-        dataset[c.FOV_MASK_PARAM_NAME] = fov_mask
-        
-        # Store masked angles
-        dataset[c.AOD_EL_FOV_PARAM_NAME] = np.where(fov_mask, aod_theta, np.nan)
-        dataset[c.AOD_AZ_FOV_PARAM_NAME] = np.where(fov_mask, aod_phi, np.nan)
-        dataset[c.AOA_EL_FOV_PARAM_NAME] = np.where(fov_mask, aoa_theta, np.nan)
-        dataset[c.AOA_AZ_FOV_PARAM_NAME] = np.where(fov_mask, aoa_phi, np.nan)
-    
-    return dataset

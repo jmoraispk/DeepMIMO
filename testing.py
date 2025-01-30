@@ -51,54 +51,73 @@ dataset = dm.load_scenario(scen_name, **load_params)
 # from pprint import pprint
 # pprint(dataset)
 
-#%% V4 Channel Generation
+#%% V4 from Dataset
+scen_name = 'asu_campus'
+dataset = dm.load_scenario(scen_name, **load_params)
+# Create channel generation parameters
 ch_params = dm.ChannelGenParameters()
-t = time.time()
-# num_paths and power_linear are necessary for channel
-dataset['num_paths'] = dm.compute_num_paths(dataset)          # c.NUM_PATHS_PARAM_NAME
-# Note: *1000  is needed to match old DM
-dataset['power_linear'] = dm.dbm2watt(dataset['power'])*1000 # c.PWR_LINEAR_PARAM_NAME
 
 # Using direct dot notation for parameters
+# ch_params['bs_antenna']['rotation'] = np.array([30,40,30])
 ch_params.bs_antenna.FoV = np.array([360, 180])
 ch_params.ue_antenna.FoV = np.array([120, 180])
 ch_params.OFDM_channels = True
 
-# Compute rotated angles
-dataset = dm.compute_rotated_angles(dataset, ch_params.bs_antenna, ch_params.ue_antenna)
-# unlocks dataset['aoa_az_rot' / 'aoa_el_rot' / 'aod_az_rot' / 'aod_el_rot']
+# The compute_* methods will be called automatically when accessing attributes
+# Each access will trigger computation only if not already computed
 
-# Compute FoV filtered angles
-dataset = dm.compute_fov(dataset, ch_params.bs_antenna, ch_params.ue_antenna)
-# unlocks dataset['aoa_az_fov' / 'aoa_el_fov' / 'aod_az_fov' / 'aod_el_fov' / 'fov_mask']
-# pprint(dataset['aoa_az_fov'])
+# Basic computations
+# dataset.num_paths  # Triggers _compute_num_paths
+p = dataset.power_linear  # Will be computed from dataset.power
 
-# Compute received power with antenna pattern
-dataset['power_linear_ant_gain'] = \
-    dm.compute_received_power(dataset, ch_params.bs_antenna, ch_params.ue_antenna)
+dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
 
-# Compute channels
-dataset['channel'] = dm.compute_channels(dataset, ch_params)     # c.CHANNEL_PARAM_NAME
-dataset['pathloss'] = dm.compute_pathloss(dataset['power'], dataset['phase']) # c.PATHLOSS_PARAM_NAME
-dataset['distances'] = dm.compute_distances(dataset['rx_pos'], dataset['tx_pos'])  # c.DIST_PARAM_NAME
+# TODO: NECESSARY FOR ANGLE ROTATION -> RAISE WARNING IN ANGLE ROTATION COMPUTATION
+dataset.ch_params = ch_params
 
-# Aliases for convenience
-dataset['pwr'] = dataset['power']
-dataset['pwr_lin'] = dataset['power_linear']
-dataset['ch'] = dataset['channel']
-dataset['pl'] = dataset['pathloss']
-dataset['rx_loc'] = dataset['rx_pos']
-dataset['tx_loc'] = dataset['tx_pos']
-dataset['dist'] = dataset['distances']
+# # Rotated angles computation
+# # These will be computed when first accessed:
+dataset.aoa_az_rot  # Triggers _compute_rotated_angles
+# dataset.aoa_el_rot
+# dataset.aod_az_rot
+# dataset.aod_el_rot
 
-print(f"Time taken: {time.time() - t} seconds")
+# # FoV filtered angles computation
+# # These will be computed when first accessed:
+dataset.aoa_az_rot_fov  # Triggers _compute_fov
+# dataset.aoa_el_rot_fov
+# dataset.aod_az_rot_fov
+# dataset.aod_el_rot_fov
+# dataset.fov_mask
+
+# # Compute received power with antenna pattern
+dataset.power_linear_ant_gain  # Triggers _compute_received_power
+
+# Other computations
+_ = dataset._compute_channels(ch_params)
+
+#%%
+dataset.channel  # Triggers _compute_channels with ch_params
+dataset.pathloss  # Triggers _compute_pathloss
+dataset.distances  # Triggers _compute_distances
+
+# The aliases are already defined in the Dataset class
+# So these will work automatically:
+dataset.pwr      # Alias for power
+dataset.pwr_lin  # Alias for power_linear
+dataset.ch       # Alias for channel
+dataset.pl       # Alias for pathloss
+dataset.rx_loc   # Alias for rx_pos
+dataset.tx_loc   # Alias for tx_pos
+dataset.dist     # Alias for distances
+
 
 #%% V3 Generation
 
 # scen_name = 'simple_street_canyon_test_old'
 scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
-
+# params['bs_antenna']['rotation'] = np.array([30,40,30])
 params['bs_antenna']['FoV'] = np.array([360, 180])
 params['ue_antenna']['FoV'] = np.array([120, 180])
 params['OFDM_channels'] = True

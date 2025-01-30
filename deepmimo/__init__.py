@@ -9,16 +9,8 @@ from .generator.python_old.params import Parameters as Parameters_old
 from .generator.python.core import (
     generate,
     load_scenario,
-    compute_channels,
-    compute_num_paths,
-    compute_num_interactions,
-    compute_pathloss,
-    compute_distances,
-    compute_los,
-    compute_rotated_angles,
-    compute_fov,
-    compute_received_power
 )
+from .generator.python.dataset import Dataset
 
 # Visualization
 from .generator.python import visualization
@@ -56,15 +48,7 @@ __all__ = [
     'create_scenario', 
     'info',
     'load_scenario',
-    'compute_channels',
-    'compute_num_paths',
-    'compute_num_interactions',
-    'compute_pathloss',
-    'compute_distances',
-    'compute_los',
-    'compute_rotated_angles',
-    'compute_fov',
-    'compute_received_power',
+    'Dataset',
     'ChannelGenParameters',
     
     # Utilities
@@ -83,5 +67,4 @@ __all__ = [
     'BuildingsGroup',
     'TerrainGroup',
     'VegetationGroup',
-    
 ]
