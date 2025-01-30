@@ -56,7 +56,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     dataset = load_scenario(scen_name, **load_params)
     
     # Create channel generation parameters
-    ch_params = ChannelGenParameters()
+    ch_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
     
     dataset.power_linear  # Will be computed from dataset.power
 
