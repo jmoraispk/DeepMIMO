@@ -142,13 +142,6 @@ pprint(b.flatten()[-10:])
 scen_name = dm.create_scenario(r'.\P2Ms\asu_campus\study_area_asu5')
 dataset = dm.generate(scen_name)
 
-#%% Demo part 2
-# load_params = {'tx_sets': [1], 'rx_sets': [2], 'max_paths': 1}
-load_params = {'tx_sets': [1], 'rx_sets': {2: 'active'}}
-# load_params = {'tx_sets': [1], 'rx_sets': {2: [1,2,3]}}
-dataset = dm.load_scenario(scen_name, **load_params)
-# dataset = dm.load_scenario('city_10_austin')
-
 #%% Visualization check
 
 dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
