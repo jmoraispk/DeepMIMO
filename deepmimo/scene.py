@@ -390,7 +390,7 @@ class ObjectGroup:
                 'id': obj.object_id,
                 'n_faces': len(obj.faces), 
                 'n_tri_faces': sum(n_tri_faces),
-                'n_tri_faces_per_face': n_tri_faces
+                'n_tri_faces_per_face': np.array(n_tri_faces)
             })
             
         return {
