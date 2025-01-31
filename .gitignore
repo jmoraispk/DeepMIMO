@@ -12,6 +12,7 @@ deepmimo_scenarios*
 
 # Artifacts
 manuals/*
+*.pptx
 
 # Development:
 #   For wireless insite outputs
