@@ -11,9 +11,9 @@ This folder contains the files that specify how each DeepMIMO version organizes 
     4. ['inter'] is N x MAX_PATHS
         1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
     5. ['inter_loc'] is N x MAX_PATHS x 3
-    6. ['building_faces'] is N_building_faces x 9 (xyz of vertex 1, xyz of vertex 2, xyz of vertex 3)
+    6. ['building_faces'] is N_building_tri_faces x 9 (xyz of vertex 1, xyz of vertex 2, xyz of vertex 3)
        Note that each face is triangular.
-    7. ['building_materials'] ...
+    7. ['building_materials'] N_building_tri_faces x 1
     8. Similar to building faces and materials, there can be matrices for the ground, moving objects and vegetation.
     7. New format storage: 
         1. 8 matrices of N x MAX_PATHS
