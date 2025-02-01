@@ -6,6 +6,7 @@ including channel matrices, path information, and metadata.
 """
 
 # Standard library imports
+import inspect
 from typing import Dict, Optional, Any
 
 # Third-party imports
@@ -476,4 +477,107 @@ class Dataset(DotDict):
             list(self._computed_attributes.keys()) + 
             list(self.aliases.keys())
         ))
+
+class MacroDataset:
+    """A container class that holds multiple Dataset instances and propagates operations to all children.
+    
+    This class acts as a simple wrapper around a list of Dataset objects. When any attribute
+    or method is accessed on the MacroDataset, it automatically propagates that operation
+    to all contained Dataset instances.
+    """
+    
+    # Keys that should return single values from first dataset instead of lists
+    SINGLE_ACCESS_KEYS = {
+        c.LOAD_PARAMS_PARAM_NAME,  # Load parameters are shared
+        c.SCENE_PARAM_NAME,        # Scene parameters are shared
+    }
+    
+    # Methods that should be propagated to children - automatically populated from Dataset methods
+    PROPAGATE_METHODS = {
+        name for name, _ in inspect.getmembers(Dataset, predicate=inspect.isfunction)
+        if not name.startswith('__')  # Skip dunder methods
+    }
+    
+    def __init__(self, datasets=None):
+        """Initialize with optional list of Dataset instances.
+        
+        Args:
+            datasets: List of Dataset instances. If None, creates empty list.
+        """
+        self.datasets = datasets if datasets is not None else []
+        
+    def get_single(self, key):
+        """Get a single value from the first dataset for special keys.
+        
+        Args:
+            key: Key to get value for
+            
+        Returns:
+            Single value from first dataset if key is in SINGLE_ACCESS_KEYS,
+            otherwise returns list of values from all datasets
+        """
+        if not self.datasets:
+            raise IndexError("MacroDataset is empty")
+        return self.datasets[0][key]
+        
+    def __getattr__(self, name):
+        """Propagate any attribute/method access to all datasets.
+        
+        If the attribute is a method in PROPAGATE_METHODS, call it on all children.
+        If the attribute is in SINGLE_ACCESS_KEYS, return from first dataset.
+        Otherwise, return list of results from all datasets.
+        """
+        # Check if it's a method we should propagate
+        if name in self.PROPAGATE_METHODS:
+            def propagated_method(*args, **kwargs):
+                return [getattr(dataset, name)(*args, **kwargs) for dataset in self.datasets]
+            return propagated_method
+            
+        # Handle single access keys
+        if name in self.SINGLE_ACCESS_KEYS:
+            return self.get_single(name)
+            
+        # Default: propagate to all datasets
+        return [getattr(dataset, name) for dataset in self.datasets]
+        
+    def __getitem__(self, idx):
+        """Get dataset at specified index if idx is integer, otherwise propagate to all datasets.
+        
+        Args:
+            idx: Integer index to get specific dataset, or string key to get attribute from all datasets
+            
+        Returns:
+            Dataset instance if idx is integer,
+            single value if idx is in SINGLE_ACCESS_KEYS,
+            or list of results if idx is string
+        """
+        if isinstance(idx, (int, slice)):
+            return self.datasets[idx]
+        if idx in self.SINGLE_ACCESS_KEYS:
+            return self.get_single(idx)
+        return [dataset[idx] for dataset in self.datasets]
+        
+    def __setitem__(self, key, value):
+        """Set item on all contained datasets.
+        
+        Args:
+            key: Key to set
+            value: Value to set
+        """
+        for dataset in self.datasets:
+            dataset[key] = value
+        
+    def __len__(self):
+        """Return number of contained datasets."""
+        return len(self.datasets)
+        
+    def append(self, dataset):
+        """Add a dataset to the collection.
+        
+        Args:
+            dataset: Dataset instance to add
+        """
+        self.datasets.append(dataset)
+    
+    
         

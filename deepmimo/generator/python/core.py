@@ -23,7 +23,7 @@ import scipy.io
 from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ...scene import Scene
-from .dataset import Dataset
+from .dataset import Dataset, MacroDataset
 
 # Channel generation
 from .channel import ChannelGenParameters
@@ -48,33 +48,17 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     Raises:
         ValueError: If scenario name is invalid or required files are missing
     """
-    if len(load_params) == 0:
-        tx_sets = {1: [0]}
-        rx_sets = {2: 'all'}
-        load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5}
-    
     dataset = load_scenario(scen_name, **load_params)
     
     # Create channel generation parameters
     ch_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
     
-    dataset.power_linear  # Will be computed from dataset.power
-
-    dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
-
-    # TODO: NECESSARY FOR ANGLE ROTATION -> RAISE WARNING IN ANGLE ROTATION COMPUTATION
-    dataset.ch_params = ch_params
-
-    dataset.aoa_az_rot  # Triggers _compute_rotated_angles
-    # dataset.aoa_az_rot_fov  # Triggers _compute_fov
-    dataset.power_linear_ant_gain  # Triggers _compute_received_power
-
-    # Other computations
+    # Compute channels - will be propagated to all child datasets if MacroDataset
     _ = dataset._compute_channels(ch_params)
 
     return dataset
 
-def load_scenario(scen_name: str, **load_params) -> Dataset:
+def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
     """Load a DeepMIMO scenario from disk or download if not available.
     
     This function handles scenario data loading, including automatic downloading
@@ -110,6 +94,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset:
     # Load scenario data
     n_snapshots = rt_params[c.PARAMSET_DYNAMIC_SCENES]
     if n_snapshots > 1: # dynamic
+        raise NotImplementedError('..')
         dataset = []
         for snapshot_i in range(n_snapshots):
             snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
@@ -119,16 +104,10 @@ def load_scenario(scen_name: str, **load_params) -> Dataset:
     else: # static
         dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
 
+    # Now set the shared parameters
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
-    
-    dataset['scene'] = Scene.from_data(rt_params, scen_folder)
+    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(rt_params, scen_folder)
 
-    # Convert dictionary to Dataset at the end
-    if n_snapshots > 1:
-        dataset = [Dataset(d) for d in dataset]
-    else:
-        dataset = Dataset(dataset)
-        
     return dataset
 
 def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
@@ -151,11 +130,12 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
     tx_sets = validate_txrx_sets(tx_sets, rt_params, 'tx')
     rx_sets = validate_txrx_sets(rx_sets, rt_params, 'rx')
     
-    dataset_dict = {}
+    dataset_list = []
     bs_idxs = []
     
     for tx_set_idx, tx_idxs in tx_sets.items():
         for rx_set_idx, rx_idxs in rx_sets.items():
+            dataset_list.append({})
             for tx_idx in tx_idxs:
                 bs_idx = len(bs_idxs)
                 bs_idxs.append(bs_idx)
@@ -163,18 +143,94 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
                 print(f'\nTX set: {tx_set_idx} (basestation)')
                 rx_id_str = 'basestation' if rx_set_idx == tx_set_idx else 'users'
                 print(f'RX set: {rx_set_idx} ({rx_id_str})')
-                
-                dataset_dict[bs_idx] = load_tx_rx_raydata(scene_folder,
+                dataset_list[bs_idx] = load_tx_rx_raydata(scene_folder,
                                                         tx_set_idx, rx_set_idx,
                                                         tx_idx, rx_idxs,
                                                         max_paths, matrices)
-                dataset_dict[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
-    
-    # Convert dictionary to Dataset at the end
-    if len(dataset_dict) != 1:
-        return {k: Dataset(v) for k, v in dataset_dict.items()}
-    return Dataset(dataset_dict[0])
 
+                dataset_list[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
+                dataset_list[bs_idx]['info'] = {
+                    'tx_set_idx': tx_set_idx,
+                    'rx_set_idx': rx_set_idx,
+                    'tx_idx': tx_idx,
+                    'rx_idxs': rx_idxs
+                }
+
+    # Convert dictionary to Dataset at the end
+    if len(dataset_list):
+        final_dataset = MacroDataset([Dataset(d_dict) for d_dict in dataset_list])
+    else:
+        final_dataset = Dataset(dataset_list[0])
+    return final_dataset
+
+
+def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx: int, 
+                        rx_idxs: np.ndarray | List, max_paths: int, 
+                        matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
+    """Load raytracing data for a transmitter-receiver pair.
+    
+    This function loads raytracing data files containing path information
+    between a transmitter and set of receivers.
+
+    Args:
+        rayfolder (str): Path to folder containing raytracing data
+        tx_set_idx (int): Index of transmitter set
+        rx_set_idx (int): Index of receiver set
+        tx_idx (int): Index of transmitter within set
+        rx_idxs (numpy.ndarray or list): Indices of receivers to load
+        max_paths (int): Maximum number of paths to load
+        matrices_to_load (list of str, optional): List of matrix names to load. 
+
+    Returns:
+        dict: Dictionary containing loaded raytracing data
+
+    Raises:
+        ValueError: If required data files are missing or invalid
+    """
+    tx_dict = {c.AOA_AZ_PARAM_NAME: None,
+               c.AOA_EL_PARAM_NAME: None,
+               c.AOD_AZ_PARAM_NAME: None,
+               c.AOD_EL_PARAM_NAME: None,
+               c.TOA_PARAM_NAME: None,
+               c.PWR_PARAM_NAME: None,
+               c.PHASE_PARAM_NAME: None,
+               c.RX_POS_PARAM_NAME: None,
+               c.TX_POS_PARAM_NAME: None,
+               c.INTERACTIONS_PARAM_NAME: None,
+               c.INTERACTIONS_POS_PARAM_NAME: None}
+    
+    if matrices_to_load == 'all':
+        matrices_to_load = tx_dict.keys()
+    else:
+        valid_matrices = set(tx_dict.keys())
+        invalid = set(matrices_to_load) - valid_matrices
+        if invalid:
+            raise ValueError(f"Invalid matrix names: {invalid}. "
+                           f"Valid names are: {valid_matrices}")
+        
+    for key in tx_dict.keys():
+        if key not in matrices_to_load:
+            continue
+        
+        mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
+        mat_path = os.path.join(rayfolder, mat_filename)
+    
+        if os.path.exists(mat_path):
+            print(f'Loading {mat_filename}..')
+            tx_dict[key] = scipy.io.loadmat(mat_path)[key]
+        else:
+            print(f'File {mat_path} could not be found')
+        
+        # Filter by selected rx indices (all but tx positions)
+        if key != c.TX_POS_PARAM_NAME: 
+            tx_dict[key] = tx_dict[key][rx_idxs]
+            
+        # Trim by max paths
+        if key not in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
+            tx_dict[key] = tx_dict[key][:, :max_paths, ...]
+        
+        print(f'shape = {tx_dict[key].shape}')
+    return tx_dict 
 
 # Helper functions
 def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
@@ -394,72 +450,4 @@ def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
         # Process arrays recursively in case they contain mat_structs
         return np.array([mat_struct_to_dict(item) for item in mat_struct])
     return mat_struct  # Return the object as is for other types
-
-def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx: int, 
-                        rx_idxs: np.ndarray | List, max_paths: int, 
-                        matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
-    """Load raytracing data for a transmitter-receiver pair.
-    
-    This function loads raytracing data files containing path information
-    between a transmitter and set of receivers.
-
-    Args:
-        rayfolder (str): Path to folder containing raytracing data
-        tx_set_idx (int): Index of transmitter set
-        rx_set_idx (int): Index of receiver set
-        tx_idx (int): Index of transmitter within set
-        rx_idxs (numpy.ndarray or list): Indices of receivers to load
-        max_paths (int): Maximum number of paths to load
-        matrices_to_load (list of str, optional): List of matrix names to load. 
-
-    Returns:
-        dict: Dictionary containing loaded raytracing data
-
-    Raises:
-        ValueError: If required data files are missing or invalid
-    """
-    tx_dict = {c.AOA_AZ_PARAM_NAME: None,
-               c.AOA_EL_PARAM_NAME: None,
-               c.AOD_AZ_PARAM_NAME: None,
-               c.AOD_EL_PARAM_NAME: None,
-               c.TOA_PARAM_NAME: None,
-               c.PWR_PARAM_NAME: None,
-               c.PHASE_PARAM_NAME: None,
-               c.RX_POS_PARAM_NAME: None,
-               c.TX_POS_PARAM_NAME: None,
-               c.INTERACTIONS_PARAM_NAME: None,
-               c.INTERACTIONS_POS_PARAM_NAME: None}
-    
-    if matrices_to_load == 'all':
-        matrices_to_load = tx_dict.keys()
-    else:
-        valid_matrices = set(tx_dict.keys())
-        invalid = set(matrices_to_load) - valid_matrices
-        if invalid:
-            raise ValueError(f"Invalid matrix names: {invalid}. "
-                           f"Valid names are: {valid_matrices}")
-        
-    for key in tx_dict.keys():
-        if key not in matrices_to_load:
-            continue
-        
-        mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
-        mat_path = os.path.join(rayfolder, mat_filename)
-    
-        if os.path.exists(mat_path):
-            print(f'Loading {mat_filename}..')
-            tx_dict[key] = scipy.io.loadmat(mat_path)[key]
-        else:
-            print(f'File {mat_path} could not be found')
-        
-        # Filter by selected rx indices (all but tx positions)
-        if key != c.TX_POS_PARAM_NAME: 
-            tx_dict[key] = tx_dict[key][rx_idxs]
-            
-        # Trim by max paths
-        if key not in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
-            tx_dict[key] = tx_dict[key][:, :max_paths, ...]
-        
-        print(f'shape = {tx_dict[key].shape}')
-    return tx_dict 
 

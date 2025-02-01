@@ -37,7 +37,8 @@ scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
+rx_sets = {1: [0]}
+# rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -50,21 +51,17 @@ load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5,
                'matrices': ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 
                             'toa', 'power', 'phase', 'rx_pos', 'tx_pos']}
 dataset = dm.load_scenario(scen_name, **load_params)
-
-# dataset.info() # print available tx-rx information
-# from pprint import pprint
 # pprint(dataset)
 
-# V4 from Dataset
+# dataset.info() # print available tx-rx information
 
-# scen_name = 'asu_campus'
-# dataset = dm.load_scenario(scen_name, **load_params)
+# V4 from Dataset
 
 # Create channel generation parameters
 ch_params = dm.ChannelGenParameters()
 
 # Using direct dot notation for parameters
-# ch_params['bs_antenna']['rotation'] = np.array([30,40,30])
+ch_params.bs_antenna.rotation = np.array([30,40,30])
 ch_params.bs_antenna.FoV = np.array([360, 180])
 ch_params.ue_antenna.FoV = np.array([120, 180])
 ch_params.OFDM_channels = True
@@ -125,7 +122,7 @@ start_time = time.time()
 # scen_name = 'simple_street_canyon_test_old'
 scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
-# params['bs_antenna']['rotation'] = np.array([30,40,30])
+params['bs_antenna']['rotation'] = np.array([30,40,30])
 params['bs_antenna']['FoV'] = np.array([360, 180])
 params['ue_antenna']['FoV'] = np.array([120, 180])
 params['OFDM_channels'] = True
@@ -143,9 +140,10 @@ chs2 = dataset2[0]['user']['channel']
 i = 10
 a = dataset['ch'][i]
 b = chs2[i]
-
+c = a-b
 pprint(a.flatten()[-10:])
 pprint(b.flatten()[-10:])
+pprint(np.max(np.abs(c)))
 
 #%% Demo
 
