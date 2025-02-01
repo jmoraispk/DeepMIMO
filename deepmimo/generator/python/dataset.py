@@ -80,6 +80,61 @@ class Dataset(DotDict):
         """
         super().__init__(data or {})
 
+    def __getattr__(self, key: str) -> Any:
+        """Enable dot notation access."""
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            return self._resolve_key(key)
+
+    def __getitem__(self, key: str) -> Any:
+        """Get an item from the dataset, computing it if necessary."""
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            return self._resolve_key(key)
+
+    def _resolve_key(self, key: str) -> Any:
+        """Resolve a key through the lookup chain.
+        
+        Order of operations:
+        1. Check if key is an alias and resolve it first
+        2. Try direct access with resolved key
+        3. Try computing the attribute if it's computable
+        
+        Args:
+            key: The key to resolve
+            
+        Returns:
+            The resolved value
+            
+        Raises:
+            KeyError if key cannot be resolved
+        """
+        # First check if it's an alias and resolve it
+        resolved_key = self.aliases.get(key, key)
+        if resolved_key != key:
+            key = resolved_key
+            try:
+                # Try direct access with resolved key
+                return self._data[key]  # Access underlying dictionary directly
+            except KeyError:
+                pass  # Continue to computation check
+            
+        if key in self._computed_attributes:
+            compute_method_name = self._computed_attributes[key]
+            compute_method = getattr(self, compute_method_name)
+            value = compute_method()
+            # Cache the result
+            if isinstance(value, dict):
+                self.update(value)  # Uses DotDict's update which stores in _data
+                return self._data[key]  # Return the specific key requested
+            else:
+                self[key] = value  # Only store in _data
+                return value
+        
+        raise KeyError(key)
+
     def _compute_num_paths(self) -> np.ndarray:
         """Compute number of valid paths for each user."""
         max_paths = self.aoa_az.shape[-1]
@@ -340,67 +395,6 @@ class Dataset(DotDict):
     def _compute_power_linear(self) -> np.ndarray:
         """Compute linear power from power in dBm"""
         return dbm2watt(self.power) 
-
-    def _resolve_key(self, key: str) -> Any:
-        """Resolve a key through the lookup chain.
-        
-        Order of operations:
-        1. Check if key is an alias and resolve it first
-        2. Try direct access with resolved key
-        3. Try computing the attribute if it's computable
-        
-        Args:
-            key: The key to resolve
-            
-        Returns:
-            The resolved value
-            
-        Raises:
-            KeyError if key cannot be resolved
-        """
-        print(f"\nTrying to get '{key}'")
-        
-        # First check if it's an alias and resolve it
-        resolved_key = self.aliases.get(key, key)
-        if resolved_key != key:
-            print(f"Found alias: {key} -> {resolved_key}")
-            key = resolved_key
-            try:
-                # Try direct access with resolved key
-                print(f"Trying direct access for '{key}'")
-                return self._data[key]  # Access underlying dictionary directly
-            except KeyError as e:
-                # Then check if it's a computable attribute
-                print(f"Direct access failed: {str(e)}")
-            
-        if key in self._computed_attributes:
-            compute_method_name = self._computed_attributes[key]
-            print(f"Found compute method: {compute_method_name}")
-            compute_method = getattr(self, compute_method_name)
-            print(f"Computing value for '{key}'")
-            value = compute_method()
-            # Cache the result
-            if isinstance(value, dict):
-                print("Caching dictionary result")
-                self.update(value)  # Uses DotDict's update which stores in _data
-            else:
-                print("Caching scalar result")
-                self[key] = value  # Only store in _data
-            return value
-
-    def __getattr__(self, key: str) -> Any:
-        """Enable dot notation access."""
-        try:
-            return super().__getitem__(key)
-        except KeyError:
-            return self._resolve_key(key)
-
-    def __getitem__(self, key: str) -> Any:
-        """Enable dictionary access."""
-        try:
-            return super().__getitem__(key)  # Try direct dictionary access first
-        except KeyError:
-            return self._resolve_key(key)  # Fall back to resolution chain
 
     # Dictionary mapping attribute names to their computation methods
     _computed_attributes = {

@@ -1,5 +1,6 @@
 #%% Imports
 
+import time
 import numpy as np
 import deepmimo as dm
 
@@ -9,8 +10,8 @@ import matplotlib.pyplot as plt
 
 #%% V3 & V4 Conversion
 
-# path_to_p2m_outputs = r'.\P2Ms\asu_campus\study_area_asu5'
-path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
+path_to_p2m_outputs = r'.\P2Ms\asu_campus\study_area_asu5'
+# path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
 
 if 'asu_campus' in path_to_p2m_outputs:
     old_params_dict = {'num_bs': 1, 'user_grid': [1, 411, 321], 'freq': 3.5e9} # asu
@@ -28,6 +29,9 @@ scen_name = dm.create_scenario(path_to_p2m_outputs,
 
 #%% V4 Generation
 
+# Start timing
+start_time = time.time()
+
 # scen_name = 'simple_street_canyon_test'
 scen_name = 'asu_campus'
 
@@ -43,16 +47,18 @@ rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
 # tx_sets = rx_sets = 'all'
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 5,
-               'matrices': 'all'}
+               'matrices': ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 
+                            'toa', 'power', 'phase', 'rx_pos', 'tx_pos']}
 dataset = dm.load_scenario(scen_name, **load_params)
 
 # dataset.info() # print available tx-rx information
 # from pprint import pprint
 # pprint(dataset)
 
-#%% V4 from Dataset
-scen_name = 'asu_campus'
-dataset = dm.load_scenario(scen_name, **load_params)
+# V4 from Dataset
+
+# scen_name = 'asu_campus'
+# dataset = dm.load_scenario(scen_name, **load_params)
 
 # Create channel generation parameters
 ch_params = dm.ChannelGenParameters()
@@ -68,15 +74,12 @@ p = dataset.power_linear  # Will be computed from dataset.power
 
 dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
 
-# TODO: NECESSARY FOR ANGLE ROTATION -> RAISE WARNING IN ANGLE ROTATION COMPUTATION
-dataset.ch_params = ch_params
-
-dataset.aoa_az_rot  # Triggers _compute_rotated_angles
-# dataset.aoa_az_rot_fov  # Triggers _compute_fov
-dataset.power_linear_ant_gain  # Triggers _compute_received_power
-
 # Other computations
 _ = dataset._compute_channels(ch_params)
+
+# End timing
+end_time = time.time()
+print(f"Time elapsed: {end_time - start_time:.2f} seconds")
 
 #%%
 
@@ -116,6 +119,9 @@ dataset.dist     # Alias for distances
 
 #%% V3 Generation
 
+# Start timing
+start_time = time.time()
+
 # scen_name = 'simple_street_canyon_test_old'
 scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
@@ -126,6 +132,10 @@ params['OFDM_channels'] = True
 
 params['user_rows'] = np.arange(1)
 dataset2 = dm.generate_old(params)
+
+# End timing
+end_time = time.time()
+print(f"Time elapsed: {end_time - start_time:.2f} seconds")
 
 chs2 = dataset2[0]['user']['channel']
 
@@ -139,6 +149,7 @@ pprint(b.flatten()[-10:])
 
 #%% Demo
 
+import deepmimo as dm
 scen_name = dm.create_scenario(r'.\P2Ms\asu_campus\study_area_asu5')
 dataset = dm.generate(scen_name)
 
