@@ -17,7 +17,7 @@ from .sionna_rt.sionna_converter import sionna_rt_converter
 from .wireless_insite.insite_converter import insite_rt_converter
 
 
-def create_scenario(path_to_rt_folder: str, **conversion_params: Dict[str, Any]) -> Optional[Any]:
+def convert(path_to_rt_folder: str, **conversion_params: Dict[str, Any]) -> Optional[Any]:
     """Create a standardized scenario from raytracing data.
     
     This function automatically detects the raytracing data format based on file 

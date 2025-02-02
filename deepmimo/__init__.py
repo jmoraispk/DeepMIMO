@@ -26,7 +26,7 @@ from .generator.python.utils import (
 # Channel parameters
 from .generator.python.channel import ChannelGenParameters
 
-from .converter.converter import create_scenario
+from .converter.converter import convert
 from .info import info
 
 # Physical world representation
@@ -45,7 +45,7 @@ from .scene import (
 __all__ = [
     # Core functionality
     'generate',
-    'create_scenario', 
+    'convert', 
     'info',
     'load_scenario',
     'Dataset',

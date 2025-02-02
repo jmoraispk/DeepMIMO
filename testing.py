@@ -20,7 +20,7 @@ else:
 
 old = False
 scen_name = path_to_p2m_outputs.split('\\')[2] + ('_old' if old else '')
-scen_name = dm.create_scenario(path_to_p2m_outputs,
+scen_name = dm.convert(path_to_p2m_outputs,
                                overwrite=True, 
                                old=old,
                                old_params=old_params_dict,
@@ -148,7 +148,7 @@ pprint(np.max(np.abs(c)))
 #%% Demo
 
 import deepmimo as dm
-scen_name = dm.create_scenario(r'.\P2Ms\asu_campus\study_area_asu5')
+scen_name = dm.convert(r'.\P2Ms\asu_campus\study_area_asu5')
 dataset = dm.generate(scen_name)
 
 #%% Visualization check
