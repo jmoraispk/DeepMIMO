@@ -120,6 +120,9 @@ SCENARIOS_FOLDER = 'deepmimo_scenarios2'
 PARAMSET_POLAR_EN = 'enable_dual_polar'
 PARAMSET_DOPPLER_EN = 'enable_doppler' # Doppler from Ray Tracer
 PARAMSET_FD_CH = 'freq_domain' # Time Domain / Frequency Domain (OFDM)
+# PARAMSET_OFDM_CH = 'ofdm_channels' # Time Domain / Frequency Domain (OFDM)
+# PARAMSET_OTFS_CH = 'otfs_channels'
+# If OTFS, OFDM, or other channel models are OFF, generate time-domain channels
 
 PARAMSET_OFDM = 'ofdm'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'
