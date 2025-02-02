@@ -46,3 +46,45 @@ If installing on Ubuntu, ask João for the latest install steps.
 Other packages necessary: tqdm, geopy, scipy
 
 # Execution: Watch the [step-by-step video](https://youtu.be/usxQ6gtEekY)
+
+
+# Improvents
+
+1) Auto install Blender packages.
+
+Current manual method:
+
+```
+import pip
+pip.main(['install', 'pandas', '--user'])
+```
+
+Better automathic method:
+
+1. Get Blender's python path with 
+
+```
+import sys
+print(sys.executable)
+```
+
+2. use that path in a command with <python_path> -m pip install ... --user
+
+```
+import subprocess
+
+python_path = "/path/to/your/python"
+command = [python_path, "-m", "pip", "install", "some_package", "--user"]
+
+try:
+    result = subprocess.run(command, check=True, text=True, capture_output=True)
+    print("Output:", result.stdout)
+except subprocess.CalledProcessError as e:
+    print("Error:", e.stderr)
+```
+
+Note: Maybe
+
+3. To stop Blender execution, use: raise Exception("Stop here!")
+
+
