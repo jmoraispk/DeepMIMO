@@ -37,8 +37,8 @@ scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
-rx_sets = {1: [0]}
-# rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
+# rx_sets = {1: [0]}
+rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -62,9 +62,9 @@ ch_params = dm.ChannelGenParameters()
 
 # Using direct dot notation for parameters
 ch_params.bs_antenna.rotation = np.array([30,40,30])
-ch_params.bs_antenna.FoV = np.array([360, 180])
-ch_params.ue_antenna.FoV = np.array([120, 180])
-ch_params.OFDM_channels = True
+ch_params.bs_antenna.fov = np.array([360, 180])
+ch_params.ue_antenna.fov = np.array([120, 180])
+ch_params.freq_domain = True
 
 # Basic computations
 p = dataset.power_linear  # Will be computed from dataset.power
@@ -123,9 +123,9 @@ start_time = time.time()
 scen_name = 'asu_campus_old'
 params = dm.Parameters_old(scen_name)
 params['bs_antenna']['rotation'] = np.array([30,40,30])
-params['bs_antenna']['FoV'] = np.array([360, 180])
-params['ue_antenna']['FoV'] = np.array([120, 180])
-params['OFDM_channels'] = True
+params['bs_antenna']['fov'] = np.array([360, 180])
+params['ue_antenna']['fov'] = np.array([120, 180])
+params['freq_domain'] = True
 
 params['user_rows'] = np.arange(1)
 dataset2 = dm.generate_old(params)
@@ -134,12 +134,10 @@ dataset2 = dm.generate_old(params)
 end_time = time.time()
 print(f"Time elapsed: {end_time - start_time:.2f} seconds")
 
-chs2 = dataset2[0]['user']['channel']
-
 # Verification
 i = 10
 a = dataset['ch'][i]
-b = chs2[i]
+b = dataset2[0]['user']['channel'][i]
 c = a-b
 pprint(a.flatten()[-10:])
 pprint(b.flatten()[-10:])

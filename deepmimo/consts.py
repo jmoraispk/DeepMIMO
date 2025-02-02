@@ -118,15 +118,15 @@ SCENARIOS_FOLDER = 'deepmimo_scenarios2'
 
 # Channel parameters
 PARAMSET_POLAR_EN = 'enable_dual_polar'
-PARAMSET_DOPPLER_EN = 'enable_doppler'
-PARAMSET_FD_CH = 'OFDM_channels' # TD/OFDM
+PARAMSET_DOPPLER_EN = 'enable_doppler' # Doppler from Ray Tracer
+PARAMSET_FD_CH = 'freq_domain' # Time Domain / Frequency Domain (OFDM)
 
-PARAMSET_OFDM = 'OFDM'
+PARAMSET_OFDM = 'ofdm'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'
 PARAMSET_OFDM_SC_SAMP = 'selected_subcarriers'
 PARAMSET_OFDM_BW = 'bandwidth'
 PARAMSET_OFDM_BW_MULT = 1e9 # Bandwidth input is GHz, multiply by this
-PARAMSET_OFDM_LPF = 'RX_filter'
+PARAMSET_OFDM_LPF = 'rx_filter'
 
 PARAMSET_ANT_BS = 'bs_antenna'
 PARAMSET_ANT_UE = 'ue_antenna'
@@ -135,10 +135,7 @@ PARAMSET_ANT_SPACING = 'spacing'
 PARAMSET_ANT_ROTATION = 'rotation'
 PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
-PARAMSET_ANT_FOV = 'FoV'
-
-# Some scenario parameter variables
-# ...
+PARAMSET_ANT_FOV = 'fov'
 
 # ######### OLDER VERSIONS ###########
 

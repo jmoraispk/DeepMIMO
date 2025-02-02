@@ -200,8 +200,8 @@ class Dataset(DotDict):
             powers=self.power_linear_ant_gain,
             toas=self.toa,
             phases=self.phase,
-            ofdm_params=params.OFDM,
-            freq_domain=params.OFDM_channels
+            ofdm_params=params.ofdm,
+            freq_domain=params.freq_domain
         )
 
     def _compute_los(self) -> np.ndarray:
@@ -483,7 +483,8 @@ class MacroDataset:
     
     This class acts as a simple wrapper around a list of Dataset objects. When any attribute
     or method is accessed on the MacroDataset, it automatically propagates that operation
-    to all contained Dataset instances.
+    to all contained Dataset instances. If the MacroDataset contains only one dataset,
+    it will return single value instead of a list with a single element.
     """
     
     # Keys that should return single values from first dataset instead of lists
@@ -525,12 +526,14 @@ class MacroDataset:
         
         If the attribute is a method in PROPAGATE_METHODS, call it on all children.
         If the attribute is in SINGLE_ACCESS_KEYS, return from first dataset.
+        If there is only one dataset, return single value instead of lists.
         Otherwise, return list of results from all datasets.
         """
         # Check if it's a method we should propagate
         if name in self.PROPAGATE_METHODS:
             def propagated_method(*args, **kwargs):
-                return [getattr(dataset, name)(*args, **kwargs) for dataset in self.datasets]
+                results = [getattr(dataset, name)(*args, **kwargs) for dataset in self.datasets]
+                return results[0] if len(results) == 1 else results
             return propagated_method
             
         # Handle single access keys
@@ -538,7 +541,8 @@ class MacroDataset:
             return self.get_single(name)
             
         # Default: propagate to all datasets
-        return [getattr(dataset, name) for dataset in self.datasets]
+        results = [getattr(dataset, name) for dataset in self.datasets]
+        return results[0] if len(results) == 1 else results
         
     def __getitem__(self, idx):
         """Get dataset at specified index if idx is integer, otherwise propagate to all datasets.
@@ -548,14 +552,15 @@ class MacroDataset:
             
         Returns:
             Dataset instance if idx is integer,
-            single value if idx is in SINGLE_ACCESS_KEYS,
-            or list of results if idx is string
+            single value if idx is in SINGLE_ACCESS_KEYS or if there is only one dataset,
+            or list of results if idx is string and there are multiple datasets
         """
         if isinstance(idx, (int, slice)):
             return self.datasets[idx]
         if idx in self.SINGLE_ACCESS_KEYS:
             return self.get_single(idx)
-        return [dataset[idx] for dataset in self.datasets]
+        results = [dataset[idx] for dataset in self.datasets]
+        return results[0] if len(results) == 1 else results
         
     def __setitem__(self, key, value):
         """Set item on all contained datasets.
