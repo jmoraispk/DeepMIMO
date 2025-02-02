@@ -20,6 +20,45 @@ DEFAULT_MATERIALS = [WALL_MATERIAL, ROOF_MATERIAL, FLOOR_MATERIAL, OTHERS_MATERI
 KNOWN_WALL_OSM_MATERIALS = ['wall']
 KNOWN_ROOF_OSM_MATERIALS = ['roof']
 
+
+################## Automatic install of blosm ########################
+addon_name = "blosm" # From https://github.com/vvoovv/blosm
+
+# Check if the add-on is already installed
+if addon_name in bpy.context.preferences.addons.keys():
+    print(f"The add-on '{addon_name}' is already installed.")
+    
+    # Check if it's enabled
+    if bpy.context.preferences.addons[addon_name].module:
+        print(f"The add-on '{addon_name}' is enabled.")
+    else:
+        # Enable Add-on
+        bpy.ops.preferences.addon_enable(module=addon_name)
+
+        # Save the preferences so the add-on stays enabled after restarting Blender
+        bpy.ops.wm.save_userpref()
+
+        print(f"The add-on '{addon_name}' has been enabled.")
+else:
+    print(f"The add-on '{addon_name}' is not installed or enabled.")
+    
+    # Replace with the path to the add-on folder
+    addon_zip_path = PROJ_ROOT + 'blender_addons/blosm_2.7.11.zip'
+
+    # Install the add-on
+    bpy.ops.preferences.addon_install(filepath=addon_zip_path)
+
+    # Enable the add-on (assuming its name matches)
+    bpy.ops.preferences.addon_enable(module=addon_name)
+
+    # Save user preferences
+    bpy.ops.wm.save_userpref()
+
+    print(f"Add-on '{addon_name}' installed and enabled.")
+    
+########################################################################
+
+
 def compute_distance(coord1, coord2):
     """
     Computes the Haversine distance between coordinates in meters.
@@ -29,8 +68,8 @@ def compute_distance(coord1, coord2):
         return geopy.distance.geodesic(coord1, coord2).meters
         B) Implementing 
     # Example usage
-    point1 = (41.49008, -71.312796)  # Newport, RI
-    point2 = (41.499498, -81.695391)  # Cleveland, OH
+    coord1 = (41.49008, -71.312796)  # Newport, RI
+    coord2 = (41.499498, -81.695391)  # Cleveland, OH
 
     distance = compute_distance(point1, point2)
     print(f"Distance: {distance:.2f} km")
@@ -40,19 +79,19 @@ def compute_distance(coord1, coord2):
     R = 6371.0  
     
     # Unpack latitude and longitude, convert to radians
-    lat1, lon1 = map(math.radians, point1)
-    lat2, lon2 = map(math.radians, point2)
+    lat1, lon1 = map(math.radians, coord1)
+    lat2, lon2 = map(math.radians, coord2)
     
     # Differences in coordinates
     dlat = lat2 - lat1
     dlon = lon2 - lon1
-    d
+    
     # Haversine formula
     a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     
-    # Distance in kilometers
-    distance = R * c
+    # Distance in meters
+    distance = R * c * 1000
     return distance
 
 
