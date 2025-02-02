@@ -88,3 +88,67 @@ Note: Maybe
 3. To stop Blender execution, use: raise Exception("Stop here!")
 
 
+
+## Need for more accurate geodesic distances
+
+If more accurate distance functions are required in the future, here is an implementation of the Vincent formula that gives 0.01 mm errors at 10k km distances.
+
+```
+import math
+
+# Constants for WGS-84 Ellipsoid (used by GPS systems)
+WGS84_A = 6378137.0        # Semi-major axis, in meters
+WGS84_B = 6356752.314245   # Semi-minor axis, in meters
+WGS84_F = 1 / 298.257223563  # Flattening
+
+def geodesic(point1, point2):
+    # Unpack coordinates
+    lat1, lon1 = map(math.radians, point1)
+    lat2, lon2 = map(math.radians, point2)
+
+    # Differences in coordinates
+    delta_lon = lon2 - lon1
+
+    # Auxiliary values
+    U1 = math.atan((1 - WGS84_F) * math.tan(lat1))
+    U2 = math.atan((1 - WGS84_F) * math.tan(lat2))
+    sin_U1, cos_U1 = math.sin(U1), math.cos(U1)
+    sin_U2, cos_U2 = math.sin(U2), math.cos(U2)
+
+    # Iterative solution using Vincenty's formula
+    lamb = delta_lon
+    for _ in range(1000):  # Iterate up to 1000 times to converge
+        sin_lamb, cos_lamb = math.sin(lamb), math.cos(lamb)
+        sin_sigma = math.sqrt((cos_U2 * sin_lamb)**2 + (cos_U1 * sin_U2 - sin_U1 * cos_U2 * cos_lamb)**2)
+        cos_sigma = sin_U1 * sin_U2 + cos_U1 * cos_U2 * cos_lamb
+        sigma = math.atan2(sin_sigma, cos_sigma)
+        sin_alpha = cos_U1 * cos_U2 * sin_lamb / sin_sigma
+        cos2_alpha = 1 - sin_alpha**2
+        cos2_sigma_m = cos_sigma - 2 * sin_U1 * sin_U2 / cos2_alpha if cos2_alpha != 0 else 0
+        C = WGS84_F / 16 * cos2_alpha * (4 + WGS84_F * (4 - 3 * cos2_alpha))
+        lamb_prev = lamb
+        lamb = delta_lon + (1 - C) * WGS84_F * sin_alpha * (
+            sigma + C * sin_sigma * (cos2_sigma_m + C * cos_sigma * (-1 + 2 * cos2_sigma_m**2))
+        )
+        if abs(lamb - lamb_prev) < 1e-12:  # Convergence check
+            break
+
+    u_squared = cos2_alpha * (WGS84_A**2 - WGS84_B**2) / (WGS84_B**2)
+    A = 1 + u_squared / 16384 * (4096 + u_squared * (-768 + u_squared * (320 - 175 * u_squared)))
+    B = u_squared / 1024 * (256 + u_squared * (-128 + u_squared * (74 - 47 * u_squared)))
+    delta_sigma = B * sin_sigma * (cos2_sigma_m + B / 4 * (
+        cos_sigma * (-1 + 2 * cos2_sigma_m**2) -
+        B / 6 * cos2_sigma_m * (-3 + 4 * sin_sigma**2) * (-3 + 4 * cos2_sigma_m**2)
+    ))
+
+    # Distance in meters
+    distance = WGS84_B * A * (sigma - delta_sigma)
+    return distance / 1000  # Return distance in kilometers
+
+# Example usage
+point1 = (41.49008, -71.312796)  # Newport, RI
+point2 = (41.499498, -81.695391)  # Cleveland, OH
+
+distance = geodesic(point1, point2)
+print(f"Distance: {distance:.2f} km")
+```
