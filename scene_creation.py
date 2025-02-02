@@ -1,8 +1,14 @@
 import os
 import bpy
-import pandas as pd
+import csv
+import math
 from datetime import datetime as dt
-from geopy.distance import geodesic
+
+# Developer notes: 
+# To stop blender execution, use raise Exception("Stop here!")
+# To see blender output (with UI open), go to Window -> Toggle Console
+
+PROJ_ROOT = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/' # use / not \
 
 WALL_MATERIAL = 'itu_marble' # 'itu_marble', 'itu_plasterboard', 'itu_brick'
 ROOF_MATERIAL = 'itu_metal'
@@ -14,10 +20,41 @@ DEFAULT_MATERIALS = [WALL_MATERIAL, ROOF_MATERIAL, FLOOR_MATERIAL, OTHERS_MATERI
 KNOWN_WALL_OSM_MATERIALS = ['wall']
 KNOWN_ROOF_OSM_MATERIALS = ['roof']
 
-
 def compute_distance(coord1, coord2):
-    " Returns distance between coordinates in meters."
-    return  geodesic(coord1, coord2).meters
+    """
+    Computes the Haversine distance between coordinates in meters.
+    At a 10km distance, the error is ~1m which is negligible for this use case.
+    For perflectly accurate distances on the face of the earth, consider:
+        A) using the GeoPy package. This function would then change to just:
+        return geopy.distance.geodesic(coord1, coord2).meters
+        B) Implementing 
+    # Example usage
+    point1 = (41.49008, -71.312796)  # Newport, RI
+    point2 = (41.499498, -81.695391)  # Cleveland, OH
+
+    distance = compute_distance(point1, point2)
+    print(f"Distance: {distance:.2f} km")
+    """
+    
+    # Radius of Earth in kilometers
+    R = 6371.0  
+    
+    # Unpack latitude and longitude, convert to radians
+    lat1, lon1 = map(math.radians, point1)
+    lat2, lon2 = map(math.radians, point2)
+    
+    # Differences in coordinates
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    d
+    # Haversine formula
+    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    # Distance in kilometers
+    distance = R * c
+    return distance
+
 
 # Blender utils
 def get_objs_with_material(mat):
@@ -57,30 +94,35 @@ def clear_blender():
 
 time_str = dt.now().strftime("%m-%d-%Y_%HH%MM%SS")
 
-proj_root = '/home/joao/Documents/GitHub/SionnaProjects/AutoRayTracing/'
-osm_folder = proj_root + f'all_runs/run_{time_str}/'
-csv_path = proj_root + 'params.csv'
+osm_folder = PROJ_ROOT + f'all_runs/run_{time_str}/'
+csv_path = PROJ_ROOT + 'params.csv'
 
-pos_df = pd.read_csv(csv_path)
+# Read CSV using the built-in CSV module
+positions = []
+with open(csv_path, 'r') as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        positions.append(row)
 
 # Save a small file with the path of the folder containing all the maps
-with open(proj_root + 'scenes_folder.txt', 'w') as fp:
+with open(PROJ_ROOT + 'scenes_folder.txt', 'w') as fp:
     fp.write(osm_folder + '\n')
 
-for i in range(pos_df.index.stop):
+# Loop through the rows and create scenario folders
+for i, row in enumerate(positions):
     scen_folder = osm_folder + f"/scen_{i}/"
 
     os.makedirs(scen_folder, exist_ok=True)
     
-    min_lat = pos_df['min_lat'][i]
-    max_lat = pos_df['max_lat'][i]
-    min_lon = pos_df['min_lon'][i]
-    max_lon = pos_df['max_lon'][i]
+    min_lat = float(row['min_lat'])
+    max_lat = float(row['max_lat'])
+    min_lon = float(row['min_lon'])
+    max_lon = float(row['max_lon'])
     
     # 0- Clean Blender
     clear_blender()
     
-    
+
     # 1- Configure OSM map fetching
     bpy.context.preferences.addons["blosm"].preferences.dataDir = scen_folder
     
@@ -147,7 +189,7 @@ for i in range(pos_df.index.stop):
         
         # 4.4- Determine what the material is used for (walls/roofs/unknown)
         if mat.name in KNOWN_WALL_OSM_MATERIALS:
-            replace_mat = wall_material #WALL_MATERIAL ##############3
+            replace_mat = wall_material
         
         elif mat.name in KNOWN_ROOF_OSM_MATERIALS:
             replace_mat = roof_material
