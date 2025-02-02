@@ -50,7 +50,7 @@ Other packages necessary: tqdm, geopy, scipy
 
 # Improvents
 
-1) Auto install Blender packages.
+1. Install packages in Blender's Python
 
 Current manual method:
 
@@ -59,16 +59,14 @@ import pip
 pip.main(['install', 'pandas', '--user'])
 ```
 
-Better automathic method:
-
-1. Get Blender's python path with 
+2. Get Blender's python path with 
 
 ```
 import sys
 print(sys.executable)
 ```
 
-2. use that path in a command with <python_path> -m pip install ... --user
+Note: this can be used to automatically install packages in the python script using
 
 ```
 import subprocess
@@ -82,8 +80,6 @@ try:
 except subprocess.CalledProcessError as e:
     print("Error:", e.stderr)
 ```
-
-Note: Maybe
 
 3. To stop Blender execution, use: raise Exception("Stop here!")
 

@@ -8,7 +8,7 @@ from datetime import datetime as dt
 # To stop blender execution, use raise Exception("Stop here!")
 # To see blender output (with UI open), go to Window -> Toggle Console
 
-PROJ_ROOT = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/' # use / not \
+PROJ_ROOT = '/mnt/c/Users/jmora/Documents/GitHub/AutoRayTracing/' # END with '/' (prefer / not \)
 
 WALL_MATERIAL = 'itu_marble' # 'itu_marble', 'itu_plasterboard', 'itu_brick'
 ROOF_MATERIAL = 'itu_metal'
