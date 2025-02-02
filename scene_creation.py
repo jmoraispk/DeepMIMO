@@ -21,43 +21,64 @@ KNOWN_WALL_OSM_MATERIALS = ['wall']
 KNOWN_ROOF_OSM_MATERIALS = ['roof']
 
 
-################## Automatic install of blosm ########################
-addon_name = "blosm" # From https://github.com/vvoovv/blosm
-
-# Check if the add-on is already installed
-if addon_name in bpy.context.preferences.addons.keys():
-    print(f"The add-on '{addon_name}' is already installed.")
+################## Automatic install of add-ons ########################
+addons = {
+    # From https://github.com/vvoovv/blosm
+    "blosm": "blosm_2.7.11.zip",  
     
-    # Check if it's enabled
-    if bpy.context.preferences.addons[addon_name].module:
-        print(f"The add-on '{addon_name}' is enabled.")
+    # From https://github.com/mitsuba-renderer/mitsuba-blender/tree/latest
+    # "mistuba-blender": "mistuba-blender.zip",
+    # This doesn't work... Needs manual installation of the mitsuba exporter
+    # 1. Download the zip in https://github.com/mitsuba-renderer/mitsuba-blender/releases/tag/v0.4.0
+    # 2. Follow the manual install instructions:
+    #    2.1. In Blender, go to Edit -> Preferences -> Add-ons -> Install.
+    #    2.2. Select the downloaded ZIP archive.
+    #    2.3. Find the add-on using the search bar and enable it.
+    #    2.4. Click on "Install dependencies using pip" to download the latest package
+    }
+
+def install_blender_addon(addon_name, zip_name):
+    """ Installs a blender add-on from a zip file if not yet installed. """
+    print("Installed add-ons:", list(bpy.context.preferences.addons.keys()))
+
+    # Check if the add-on is already installed
+    if addon_name in bpy.context.preferences.addons.keys():
+        print(f"The add-on '{addon_name}' is already installed.")
+        
+        # Check if it's enabled
+        if bpy.context.preferences.addons[addon_name].module:
+            print(f"The add-on '{addon_name}' is enabled.")
+        else:
+            # Enable Add-on
+            bpy.ops.preferences.addon_enable(module=addon_name)
+
+            # Save the preferences so the add-on stays enabled after restarting Blender
+            bpy.ops.wm.save_userpref()
+
+            print(f"The add-on '{addon_name}' has been enabled.")
     else:
-        # Enable Add-on
+        print(f"The add-on '{addon_name}' is not installed or enabled.")
+        
+        # Replace with the path to the add-on folder
+        addon_zip_path = PROJ_ROOT + 'blender_addons/' + zip_name
+
+        # Install the add-on
+        bpy.ops.preferences.addon_install(filepath=addon_zip_path)
+
+        # Enable the add-on
         bpy.ops.preferences.addon_enable(module=addon_name)
 
-        # Save the preferences so the add-on stays enabled after restarting Blender
+        # Save user preferences
         bpy.ops.wm.save_userpref()
 
-        print(f"The add-on '{addon_name}' has been enabled.")
-else:
-    print(f"The add-on '{addon_name}' is not installed or enabled.")
-    
-    # Replace with the path to the add-on folder
-    addon_zip_path = PROJ_ROOT + 'blender_addons/blosm_2.7.11.zip'
-
-    # Install the add-on
-    bpy.ops.preferences.addon_install(filepath=addon_zip_path)
-
-    # Enable the add-on (assuming its name matches)
-    bpy.ops.preferences.addon_enable(module=addon_name)
-
-    # Save user preferences
-    bpy.ops.wm.save_userpref()
-
-    print(f"Add-on '{addon_name}' installed and enabled.")
+        print(f"Add-on '{addon_name}' installed and enabled.")
     
 ########################################################################
 
+for addon_name, zip_name in addons.items():
+    install_blender_addon(addon_name, zip_name)
+
+# raise Exception("Stop here!")
 
 def compute_distance(coord1, coord2):
     """
