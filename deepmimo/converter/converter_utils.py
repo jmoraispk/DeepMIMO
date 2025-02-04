@@ -153,4 +153,81 @@ def save_scenario(sim_folder: str, scen_name: str = '',
     
     shutil.copytree(sim_folder, scen_path)
     return scen_name
+
+################################################################################
+### Utils for compressing path data (likely to be moved outward to paths.py) ###
+################################################################################
+
+def compress_path_data(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    """Remove unused paths and interactions to optimize memory usage.
+    
+    This function compresses the path data by:
+    1. Finding the maximum number of actual paths used
+    2. Computing maximum number of interactions (bounces)
+    3. Trimming arrays to remove unused entries
+    
+    Args:
+        data (Dict[str, np.ndarray]): Dictionary containing path information arrays
+        num_paths_key (str): Key in data dict containing number of paths. Defaults to 'n_paths'
+        
+    Returns:
+        Dict[str, np.ndarray]: Compressed data dictionary with unused entries removed
+    """
+    # Compute max paths
+    max_paths = get_max_paths(data)
+
+    # Compute max bounces if interaction data exists
+    max_bounces = 0
+    if c.INTERACTIONS_PARAM_NAME in data:
+        max_bounces = np.max(comp_next_pwr_10(data[c.INTERACTIONS_PARAM_NAME]))
+    
+    # Compress arrays to not take more than that space
+    for key in data.keys():
+        if len(data[key].shape) >= 2:
+            data[key] = data[key][:, :max_paths, ...]
+        if len(data[key].shape) >= 3:
+            data[key] = data[key][:, :max_paths, :max_bounces]
+    
+    return data
+
+def comp_next_pwr_10(arr: np.ndarray) -> np.ndarray:
+    """Calculate number of interactions from interaction codes.
+    
+    This function computes the number of interactions (bounces) from the
+    interaction code array by calculating the number of digits.
+    
+    Args:
+        arr (np.ndarray): Array of interaction codes
+        
+    Returns:
+        np.ndarray: Array containing number of interactions for each path
+    """
+    # Handle zero separately
+    result = np.zeros_like(arr, dtype=int)
+    
+    # For non-zero values, calculate order
+    non_zero = arr > 0
+    result[non_zero] = np.floor(np.log10(arr[non_zero])).astype(int) + 1
+    
+    return result
+
+def get_max_paths(arr: Dict[str, np.ndarray], angle_key: str = c.AOA_AZ_PARAM_NAME,
+                  max_paths: int = 25) -> int:
+    """Find maximum number of valid paths in the dataset.
+    
+    This function determines the maximum number of valid paths by finding
+    the first path index where all entries (across all receivers) are NaN.
+    
+    Args:
+        arr (Dict[str, np.ndarray]): Dictionary containing path information arrays
+        angle_key (str): Key to use for checking valid paths. Defaults to AOA_AZ
+        max_paths (int): Maximum number of paths to consider. Defaults to 25
+        
+    Returns:
+        int: Maximum number of valid paths, or max_paths if all paths contain data
+    """
+    # The first path index with all entries at NaN
+    all_nans_per_path_idx = np.all(np.isnan(arr[angle_key]), axis=0)
+    n_max_paths = np.where(all_nans_per_path_idx)[0]
+    return n_max_paths[0] if len(n_max_paths) else max_paths
             

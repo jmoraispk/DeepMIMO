@@ -15,9 +15,10 @@ various interaction types (reflection, diffraction, scattering, etc).
 
 import numpy as np
 from tqdm import tqdm
-from typing import Dict, List, Any
+from typing import Dict
 
 from ... import consts as c
+from .. import converter_utils as cu
 
 # Configuration constants for parsing p2m files
 LINE_START = 22 # Skip info lines and n_rxs line. 
@@ -66,7 +67,6 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
     
     # Make data dictionary (to save for each tx set pair)
     data = {
-        c.NUM_PATHS_PARAM_NAME: np.zeros((n_rxs), dtype=np.float32),
         c.AOA_AZ_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
         c.AOA_EL_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
         c.AOD_AZ_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
@@ -91,7 +91,6 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
         
         n_paths_to_read = min(rx_n_paths, MAX_PATHS)
         
-        data[c.NUM_PATHS_PARAM_NAME][rx_i] = n_paths_to_read
         line_idx += 2
         
         for path_idx in range(n_paths_to_read):
@@ -126,78 +125,10 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
             line_idx += (4 + n_iteractions) # add number of description lines each path has
     
     # Remove extra paths and bounces
-    data_compressed = compress_data(data)
-    
-    del data[c.NUM_PATHS_PARAM_NAME] # not needed after compression
+    data_compressed = cu.compress_path_data(data)
     
     return data_compressed
 
-def compress_data(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
-    """Remove unused paths and interactions to optimize memory usage.
-    
-    This function compresses the path data by:
-    1. Finding the maximum number of actual paths used
-    2. Computing maximum number of interactions (bounces)
-    3. Trimming arrays to remove unused entries
-    
-    Args:
-        data (Dict[str, np.ndarray]): Dictionary containing path information arrays
-        
-    Returns:
-        Dict[str, np.ndarray]: Compressed data dictionary with unused entries removed
-    """
-    # Compute max paths
-    max_paths = data[c.NUM_PATHS_PARAM_NAME].max().astype(int)
-    
-    # Compute max bounces
-    max_bounces = np.max(comp_next_pwr_10(data[c.INTERACTIONS_PARAM_NAME]))
-    
-    # Compress arrays to not take more than that space
-    for key in data.keys():
-        if len(data[key].shape) >= 2:
-            data[key] = data[key][:, :max_paths, ...]
-        if len(data[key].shape) >= 3:
-            data[key] = data[key][:, :max_paths, :max_bounces]
-    
-    return data
-
-def comp_next_pwr_10(arr: np.ndarray) -> np.ndarray:
-    """Calculate number of interactions from interaction codes.
-    
-    This function computes the number of interactions (bounces) from the
-    interaction code array by calculating the number of digits.
-    
-    Args:
-        arr (np.ndarray): Array of interaction codes
-        
-    Returns:
-        np.ndarray: Array containing number of interactions for each path
-    """
-    # Handle zero separately
-    result = np.zeros_like(arr, dtype=int)
-    
-    # For non-zero values, calculate order
-    non_zero = arr > 0
-    result[non_zero] = np.floor(np.log10(arr[non_zero])).astype(int) + 1
-    
-    return result
-
-def get_max_n_paths(arr: Dict[str, np.ndarray]) -> int:
-    """Find maximum number of valid paths in the dataset.
-    
-    This function determines the maximum number of valid paths by finding
-    the first path index where all entries are NaN.
-    
-    Args:
-        arr (Dict[str, np.ndarray]): Dictionary containing path information arrays
-        
-    Returns:
-        int: Maximum number of valid paths, or MAX_PATHS if all paths contain data
-    """
-    # The first path index with all entries at NaN
-    all_nans_per_path_idx = np.all(np.isnan(arr[c.AOA_AZ_PARAM_NAME]), axis=0)
-    n_max_paths = np.where(all_nans_per_path_idx)[0]
-    return n_max_paths[0] if len(n_max_paths) else MAX_PATHS
 
 def extract_tx_pos(filename: str) -> np.ndarray:
     """Extract transmitter position from a paths.p2m file.
