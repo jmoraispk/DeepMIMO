@@ -29,6 +29,10 @@ INTERACTION_TRANSMISSION = 3 # Transmission
 INTERACTION_SCATTERING = 4  # Scattering
 
 
+# Path Processing Constants
+MAX_PATHS = 25  # Maximum number of paths per receiver
+MAX_INTER_PER_PATH = 10  # Maximum number of interactions per path
+
 
 # DEEPMIMOv4 Fundamental Parameters
 AOA_AZ_PARAM_NAME = 'aoa_az'
@@ -223,3 +227,4 @@ LOAD_FILE_SP_NUM_RX_ANT = 'num_rx_ant'
 
 # Physical Constants
 LIGHTSPEED = 299792458  # Speed of light in m/s
+

@@ -22,17 +22,16 @@ from .. import converter_utils as cu
 
 # Configuration constants for parsing p2m files
 LINE_START = 22 # Skip info lines and n_rxs line. 
-MAX_PATHS = 25
-MAX_INTER_PER_PATH = 10
 
-# Map interaction types to numeric codes (R=Reflection, D=Diffraction, etc.)
-INTERACTIONS_MAP = {'R': 1,   # Reflection
-                    'D': 2,   # Diffraction
-                    'DS': 3,  # Diffuse Scattering
-                    'T': 4,   # Transmission
-                    'F': 5,   # Transmission through Leafs/Trees/Vegetation
-                    'X': 6,   # Transmission through Leafs/Trees/Vegetation
-                    }
+# Interaction Type Map for Wireless Insite
+INTERACTIONS_MAP = {
+    'R':  c.INTERACTION_REFLECTION,    # Reflection
+    'D':  c.INTERACTION_DIFFRACTION,   # Diffraction
+    'DS': c.INTERACTION_SCATTERING,    # Diffuse Scattering
+    'T':  c.INTERACTION_TRANSMISSION,  # Transmission
+    'F':  c.INTERACTION_TRANSMISSION,  # Transmission through Leafs/Trees/Vegetation
+    'X':  c.INTERACTION_TRANSMISSION,  # Transmission through Leafs/Trees/Vegetation
+}
 
 def paths_parser(file: str) -> Dict[str, np.ndarray]:
     """Parse a Wireless Insite paths.p2m file to extract path information.
@@ -67,15 +66,15 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
     
     # Make data dictionary (to save for each tx set pair)
     data = {
-        c.AOA_AZ_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.AOA_EL_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.AOD_AZ_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.AOD_EL_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.TOA_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.PWR_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.PHASE_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.INTERACTIONS_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS), dtype=np.float32) * np.nan,
-        c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rxs, MAX_PATHS, MAX_INTER_PER_PATH, 3), dtype=np.float32) * np.nan,
+        c.AOA_AZ_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.AOA_EL_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.AOD_AZ_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.AOD_EL_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.TOA_PARAM_NAME:    np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.PWR_PARAM_NAME:    np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.PHASE_PARAM_NAME:  np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.INTERACTIONS_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS, c.MAX_INTER_PER_PATH, 3), dtype=np.float32) * np.nan,
     }
     
     line_idx = LINE_START
@@ -89,7 +88,7 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
             line_idx += 1
             continue
         
-        n_paths_to_read = min(rx_n_paths, MAX_PATHS)
+        n_paths_to_read = min(rx_n_paths, c.MAX_PATHS)
         
         line_idx += 2
         
