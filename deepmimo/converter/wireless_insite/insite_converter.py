@@ -13,10 +13,8 @@ can be generated using (transpose) reciprocity.
 
 # Standard library imports
 import os
-import re
-from pprint import pprint
 import shutil
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 
 # Third-party imports
 import numpy as np
@@ -24,21 +22,22 @@ import scipy.io
 
 # Local imports
 from .. import converter_utils as cu
-from ...general_utilities import PrintIfVerbose
 from ... import consts as c
 from .insite_materials import read_materials
 from .insite_setup import read_setup
 from .insite_scene import create_scene_from_folder
+from .insite_txrx import create_txrx_from_folder
+from .insite_paths import create_paths_from_folder
 
 # v3 (old)
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
-from .insite_txrx import create_txrx_from_folder
-from .insite_paths import create_paths_from_folder
 
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
+REQUIRED_EXTS = ['.setup', '.txrx']  # Required file extensions
+SOURCE_EXTS = ['.setup', '.txrx', '.ter', '.city', '.kmz']  # Files to copy
 
 def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int], rx_ids: List[int], 
                           params_dict: Dict, scenario_name: str = '') -> str:
@@ -137,13 +136,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         shutil.rmtree(output_folder)
     os.makedirs(output_folder, exist_ok=True)
 
-    # Check if necessary files exist
-    verify_sim_folder(insite_sim_folder, verbose)
-    
-    # Copy ray tracing source files
-    if copy_source:
-        cu.copy_rt_source_files(insite_sim_folder, verbose)
-    
     # Read setup (.setup)
     setup_dict = read_setup(insite_sim_folder)
 
@@ -169,7 +161,9 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
             scene.plot_3d(show=True)#, save=True, filename=os.path.join(output_folder, 'scene_3d.png'))
     
     # Export params.mat
-    cu.export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict, scene_dict)
+    cu.export_params_dict(output_folder, c.RAYTRACER_NAME_WIRELESS_INSITE, 
+                         c.RAYTRACER_VERSION_WIRELESS_INSITE,
+                         setup_dict, txrx_dict, materials_dict, scene_dict)
     
     # Move scenario to deepmimo scenarios folder
     scen_name = cu.export_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
@@ -177,25 +171,8 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
     cu.zip_folder(output_folder) # ready for upload
     
-    return scen_name
-
-
-def verify_sim_folder(sim_folder: str, verbose: bool) -> None:
-    """Verify that required simulation files exist.
+    # Copy and zip ray tracing source files as well
+    if copy_source:
+        cu.copy_rt_source_files(insite_sim_folder, SOURCE_EXTS, verbose)
     
-    Args:
-        sim_folder (str): Path to simulation folder.
-        verbose (bool): Whether to print progress messages.
-        
-    Raises:
-        Exception: If required files are missing or duplicated.
-    """
-    files_in_sim_folder = os.listdir(sim_folder)
-    for ext in ['.setup', '.txrx']:
-        files_found_with_ext = cu.ext_in_list(ext, files_in_sim_folder)
-        if verbose:
-            print(f'Found {files_found_with_ext}')
-        if len(files_found_with_ext) == 0:
-            raise Exception(f'{ext} not found in {sim_folder}')
-        elif len(files_found_with_ext) > 1:
-            raise Exception(f'Several {ext} found in {sim_folder}')
+    return scen_name

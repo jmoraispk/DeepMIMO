@@ -67,13 +67,36 @@ def zip_folder(folder_path: str) -> None:
     with zipfile.ZipFile(folder_path + '.zip', 'w') as zipf:
         for file_path in file_full_paths:
             zipf.write(file_path, os.path.basename(file_path))
-            
 
-def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
-    """Copy raytracing source files to a new directory and create a zip archive.
+
+def verify_sim_folder(sim_folder: str, required_exts: List[str], verbose: bool = True) -> None:
+    """Verify that required simulation files exist.
     
     Args:
         sim_folder (str): Path to simulation folder.
+        required_exts (List[str]): List of required file extensions to check.
+        verbose (bool): Whether to print progress messages.
+        
+    Raises:
+        Exception: If required files are missing or duplicated.
+    """
+    files_in_sim_folder = os.listdir(sim_folder)
+    for ext in required_exts:
+        files_found_with_ext = ext_in_list(ext, files_in_sim_folder)
+        if verbose:
+            print(f'Found {files_found_with_ext}')
+        if len(files_found_with_ext) == 0:
+            raise Exception(f'{ext} not found in {sim_folder}')
+        elif len(files_found_with_ext) > 1:
+            raise Exception(f'Several {ext} found in {sim_folder}')
+
+
+def save_rt_source_files(sim_folder: str, source_exts: List[str], verbose: bool = True) -> None:
+    """Save raytracing source files to a new directory and create a zip archive.
+    
+    Args:
+        sim_folder (str): Path to simulation folder.
+        source_exts (List[str]): List of file extensions to copy.
         verbose (bool): Whether to print progress messages. Defaults to True.
     """
     vprint = PrintIfVerbose(verbose) # prints if verbose 
@@ -82,7 +105,8 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
     print(f'Copying raytracing source files to {rt_source_folder}')
     zip_temp_folder = os.path.join(sim_folder, rt_source_folder)
     os.makedirs(zip_temp_folder)
-    for ext in ['.setup', '.txrx', '.ter', '.city', '.kmz']:
+    
+    for ext in source_exts:
         # copy all files with extensions to temp folder
         for file in ext_in_list(ext, files_in_sim_folder):
             curr_file_path = os.path.join(sim_folder, file)
@@ -100,17 +124,20 @@ def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
     vprint('Done')
 
 
-def export_params_dict(output_folder: str, *dicts: Dict) -> None:
-    """Export parameter dictionaries to a .mat file.
+def save_params_dict(output_folder: str, raytracer_name: str, 
+                    raytracer_version: str, *dicts: Dict) -> None:
+    """Save parameter dictionaries to a .mat file.
     
     Args:
         output_folder (str): Output directory path.
+        raytracer_name (str): Name of the raytracer used.
+        raytracer_version (str): Version of the raytracer used.
         *dicts: Variable number of dictionaries to merge and export.
     """
     base_dict = {
         c.LOAD_FILE_SP_VERSION: c.VERSION,
-        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
-        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
+        c.LOAD_FILE_SP_RAYTRACER: raytracer_name,
+        c.LOAD_FILE_SP_RAYTRACER_VERSION: raytracer_version,
         c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
     }
     
@@ -122,9 +149,9 @@ def export_params_dict(output_folder: str, *dicts: Dict) -> None:
     scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
 
 
-def export_scenario(sim_folder: str, scen_name: str = '', 
-                   overwrite: Optional[bool] = None) -> Optional[str]:
-    """Export scenario to the DeepMIMO scenarios folder.
+def save_scenario(sim_folder: str, scen_name: str = '', 
+                 overwrite: Optional[bool] = None) -> Optional[str]:
+    """Save scenario to the DeepMIMO scenarios folder.
     
     Args:
         sim_folder (str): Path to simulation folder.
