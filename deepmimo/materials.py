@@ -58,8 +58,8 @@ class Material:
     lambda_param: float = 0.5  # Forward vs backward scattering ratio (0-1)
     
     # Physical properties
-    roughness: float = 0.0  # Surface roughness (m)
-    thickness: float = 0.0  # Material thickness (m)
+    roughness: float = -1.0  # Surface roughness (m)
+    thickness: float = -1.0  # Material thickness (m)
 
 
 class MaterialList:
