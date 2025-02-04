@@ -81,8 +81,8 @@ if __name__ == "__main__":
     print("-" * 50)
     
     # First get TX/RX information
-    from .insite_txrx import create_txrx_from_folder
-    txrx_dict = create_txrx_from_folder(test_dir, p2m_folder, output_folder)
+    from .insite_txrx import read_txrx
+    txrx_dict = read_txrx(test_dir, p2m_folder, output_folder)
     
     # Create path data from test directory
     read_paths(p2m_folder, txrx_dict, output_folder) 

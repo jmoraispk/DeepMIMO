@@ -8,7 +8,6 @@ and converting them to the base TxRxSet format.
 import os
 import re
 import numpy as np
-from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -16,29 +15,7 @@ from .setup_parser import parse_file
 from .paths_parser import extract_tx_pos
 from ... import consts as c
 from ..converter_utils import save_mat
-
-
-@dataclass
-class InsiteTxRxSet:
-    """
-    TX/RX set class for Wireless Insite
-    """
-    name: str = ''
-    id_orig: int = 0   # Original Wireless Insite ID 
-    idx: int = 0  # TxRxSet index for saving after conversion and generation
-    # id_orig -> idx example: [3, 5, 7] -> [1, 2, 3]
-    is_tx: bool = False
-    is_rx: bool = False
-    
-    num_points: int = 0    # all points
-    inactive_idxs: tuple = ()  # list of indices of points with at least one path
-    num_active_points: int = 0  # number of points with at least one path
-    
-    # Antenna elements of tx / rx
-    tx_num_ant: int = 1
-    rx_num_ant: int = 1
-    
-    dual_pol: bool = False # if '_dual-pol' in name
+from ...txrx import TxRxSet
 
 
 def read_txrx(sim_folder: str, p2m_folder: str, output_folder: str) -> Dict:
@@ -123,7 +100,7 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
     
     for txrx_set_idx, key in enumerate(document.keys()):
         txrx = document[key]
-        txrx_obj = InsiteTxRxSet()
+        txrx_obj = TxRxSet()
         txrx_obj.name = key
         
         # Insite ID is used during ray tracing
@@ -155,9 +132,7 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
     # Create txrx_sets dictionary with idx-based keys (as integers)
     txrx_sets = {}
     for obj in txrx_objs:
-        # Remove 'None' from dict (to be saved as .mat)
-        obj_dict = {key: val for key, val in asdict(obj).items() if val is not None}
-        txrx_sets[f'txrx_set_{obj.idx}'] = obj_dict
+        txrx_sets[f'txrx_set_{obj.idx}'] = obj.to_dict()
 
     return tx_ids, rx_ids, txrx_sets
 
