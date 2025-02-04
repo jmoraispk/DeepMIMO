@@ -6,23 +6,31 @@ This folder contains the files that specify how each DeepMIMO version organizes 
 1. dataset[scene][tx][...]
     1. ['rx_loc'] is N x 3
     2. ['tx_loc'] is 1 x 3
-    2. ['chs'] is N x N_ant_pairs. N_ant_pairs is an index that refers to tx (h,v,p) ↔ rx (h,v,p)
     3. ['aoa_az'] | ['aod_az'] | ['aoa_el'] | ['aod_el'] | ['toa'] | ['phase'] | ['power'] are N x MAX_PATHS
     4. ['inter'] is N x MAX_PATHS
         1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
     5. ['inter_loc'] is N x MAX_PATHS x 3
-    6. ['building_faces'] is N_building_tri_faces x 9 (xyz of vertex 1, xyz of vertex 2, xyz of vertex 3)
-       Note that each face is triangular.
-    7. ['building_materials'] N_building_tri_faces x 1
-    8. Similar to building faces and materials, there can be matrices for the ground, moving objects and vegetation.
-    7. New format storage: 
-        1. 8 matrices of N x MAX_PATHS
-            (4 angles → aoa_azi, aoa_el, aod_azi, aod_el)
-            (4 others → toa, power, phase, inter)
-        2. 1 matrix of N x MAX_PATHS x 3 → interactions locations
-        3. 1 matrix of N x 3 (rx_loc.mat)
-        4. 1 matrix of M x 3 (tx_loc.mat)
-        5. 1 params.mat
+    6. ['vertices'] is N_vertices x 3. XYZ coordinates of each vertex.
+    7. ['faces'] is N_faces x 3. Indices of the vertices of each face counter-clockwise, with surface normal pointing outward (follows right-hand rule). Each face is triangular.
+    8. ['materials'] is N_faces x 1
+
+Summary of the dataset by matrix size (all real numbers):
+  1. 8 matrices of N x MAX_PATHS
+      (4 angles → aoa_az/aoa_el/aod_az/aod_el)
+      (4 others → toa/power/phase/inter)
+  2. 1 matrix of N x MAX_PATHS x 3 → interactions locations
+  3. 1 matrix of N x 3 (rx_loc.mat)
+  4. 1 matrix of M x 3 (tx_loc.mat)
+  5. 1 matrix of N_vertices x 3 (vertices.mat)
+  6. 1 matrix of N_faces x 3 (faces.mat)
+  7. 1 matrix of N_faces x 1 (materials.mat)
+  8. 1 metadata struct/dictionary (params.mat)
+
+Secondary (computed) matrices:
+  1. ['chs'] is (number of RX antennas) x (number of TX antennas) x (number of OFDM subcarriers). This should remain unchanged when introducing polarization by using antenna indices. 
+  2. ['distances'] is N x 1. Distance between each RX and TX.
+  3. ['pathloss'] is N x 1. Pathloss between each RX and TX. May be coherent or not.
+  4. ...
 
 Design principles:
 - The dataset does not include information that be easily derived. 
