@@ -41,7 +41,7 @@ class InsiteTxRxSet:
     dual_pol: bool = False # if '_dual-pol' in name
 
 
-def create_txrx_from_folder(sim_folder: str, p2m_folder: str, output_folder: str) -> Dict:
+def read_txrx(sim_folder: str, p2m_folder: str, output_folder: str) -> Dict:
     """Create TX/RX information from a folder containing Wireless Insite files.
     
     This function:
@@ -75,8 +75,8 @@ def create_txrx_from_folder(sim_folder: str, p2m_folder: str, output_folder: str
         raise ValueError(f"Multiple .txrx files found in {sim_folder}")
     
     # Parse TX/RX sets
-    tx_ids, rx_ids, txrx_dict = read_txrx(str(txrx_files[0]))
-    
+    tx_ids, rx_ids, txrx_dict = read_txrx_file(str(txrx_files[0]))
+
     # Process each TX/RX pair
     proj_name = sim_folder.name
     for tx_id in tx_ids:
@@ -104,7 +104,7 @@ def create_txrx_from_folder(sim_folder: str, p2m_folder: str, output_folder: str
     return txrx_dict
 
 
-def read_txrx(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
+def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
     """Parse a Wireless Insite .txrx file.
     
     Args:
@@ -254,7 +254,7 @@ if __name__ == "__main__":
         exit(1)
     
     # Create TX/RX information
-    txrx_dict = create_txrx_from_folder(test_dir, p2m_folder)
+    txrx_dict = read_txrx(test_dir, p2m_folder)
     
     # Print summary
     print("\nSummary:")

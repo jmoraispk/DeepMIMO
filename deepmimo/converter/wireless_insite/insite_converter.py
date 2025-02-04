@@ -25,9 +25,9 @@ from .. import converter_utils as cu
 from ... import consts as c
 from .insite_materials import read_materials
 from .insite_setup import read_setup
-from .insite_scene import create_scene_from_folder
-from .insite_txrx import create_txrx_from_folder
-from .insite_paths import create_paths_from_folder
+from .insite_scene import read_scene
+from .insite_txrx import read_txrx
+from .insite_paths import read_paths
 
 # v3 (old)
 from .ChannelDataLoader import WIChannelConverter
@@ -139,10 +139,10 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     setup_dict = read_setup(insite_sim_folder)
 
     # Read TXRX (.txrx)
-    txrx_dict = create_txrx_from_folder(insite_sim_folder, p2m_folder, output_folder)
+    txrx_dict = read_txrx(insite_sim_folder, p2m_folder, output_folder)
     
     # Read and save path data
-    create_paths_from_folder(insite_sim_folder, p2m_folder, txrx_dict, output_folder)
+    read_paths(insite_sim_folder, p2m_folder, txrx_dict, output_folder)
     
     # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
     materials_dict = read_materials(insite_sim_folder, verbose=False)
@@ -150,7 +150,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     if convert_buildings:
         
         # Create scene from simulation folder
-        scene = create_scene_from_folder(insite_sim_folder)
+        scene = read_scene(insite_sim_folder)
         
         # Export scene data (save {building/terrain/vegetaion}_{faces/materials}.mat files)
         scene_dict = scene.export_data(output_folder)

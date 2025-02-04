@@ -13,7 +13,7 @@ from .insite_txrx import get_id_to_idx_map
 from ..converter_utils import save_mat
 
 
-def create_paths_from_folder(insite_sim_folder: str, p2m_folder: str, txrx_dict: Dict, output_folder: str) -> None:
+def read_paths(insite_sim_folder: str, p2m_folder: str, txrx_dict: Dict, output_folder: str) -> None:
     """Create path data from a folder containing Wireless Insite files.
     
     This function:
@@ -23,7 +23,7 @@ def create_paths_from_folder(insite_sim_folder: str, p2m_folder: str, txrx_dict:
     
     Args:
         p2m_folder: Path to folder containing .p2m files
-        txrx_dict: Dictionary containing TX/RX set information from create_txrx_from_folder
+        txrx_dict: Dictionary containing TX/RX set information from read_txrx
         output_folder: Path to folder where .mat files will be saved
 
     Raises:
@@ -85,4 +85,4 @@ if __name__ == "__main__":
     txrx_dict = create_txrx_from_folder(test_dir, p2m_folder, output_folder)
     
     # Create path data from test directory
-    create_paths_from_folder(p2m_folder, txrx_dict, output_folder) 
+    read_paths(p2m_folder, txrx_dict, output_folder) 

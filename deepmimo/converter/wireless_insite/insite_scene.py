@@ -21,7 +21,7 @@ OBJECT_TYPES: Dict[str, Tuple[str, type[PhysicalObject]]] = {
 }
 
 
-def create_scene_from_folder(folder_path: str | Path) -> Scene:
+def read_scene(folder_path: str | Path) -> Scene:
     """Create a Scene from a folder containing Wireless InSite files.
     
     This function searches the given folder for .city, .ter, and .veg files
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     test_dir = r"./P2Ms/simple_street_canyon_test/"
     
     # Create scene from test directory
-    scene = create_scene_from_folder(test_dir)
+    scene = read_scene(test_dir)
 
     # Visualize
     scene.plot_3d(show=True) 
