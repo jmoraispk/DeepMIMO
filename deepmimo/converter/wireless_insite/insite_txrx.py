@@ -120,12 +120,15 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
             tx_ids += [insite_id]
             tx_vals = txrx.values['transmitter']
             assert tx_vals.values['power'] == 0.0, 'Tx power should be 0 dBm!'
-            txrx_obj.tx_num_ant = tx_vals['pattern'].values['antenna']
         if txrx_obj.is_rx:
             rx_ids += [insite_id]
-            rx_vals = txrx.values['receiver']
-            txrx_obj.rx_num_ant = rx_vals['pattern'].values['antenna']
         
+        ant_dict = txrx.values['receiver'] if txrx_obj.is_rx else txrx.values['transmitter']
+        txrx_obj.num_ant = ant_dict['pattern'].values['antenna']
+        
+        txrx_obj.dual_pol = False # for now, only single polarization is supported
+
+
         # The number of tx/rx points inside set is updated when reading the p2m
         txrx_objs.append(txrx_obj)
     
