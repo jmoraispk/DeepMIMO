@@ -36,8 +36,7 @@ from .ChannelDataFormatter import DeepMIMODataFormatter
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
-REQUIRED_EXTS = ['.setup', '.txrx']  # Required file extensions
-SOURCE_EXTS = ['.setup', '.txrx', '.ter', '.city', '.kmz']  # Files to copy
+SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
 
 def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int], rx_ids: List[int], 
                           params_dict: Dict, scenario_name: str = '') -> str:
@@ -160,19 +159,19 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         if vis_buildings:
             scene.plot_3d(show=True)#, save=True, filename=os.path.join(output_folder, 'scene_3d.png'))
     
-    # Export params.mat
-    cu.export_params_dict(output_folder, c.RAYTRACER_NAME_WIRELESS_INSITE, 
-                         c.RAYTRACER_VERSION_WIRELESS_INSITE,
-                         setup_dict, txrx_dict, materials_dict, scene_dict)
+    # Save params.mat
+    cu.save_params_dict(output_folder, c.RAYTRACER_NAME_WIRELESS_INSITE, 
+                       c.RAYTRACER_VERSION_WIRELESS_INSITE,
+                       setup_dict, txrx_dict, materials_dict, scene_dict)
     
-    # Move scenario to deepmimo scenarios folder
-    scen_name = cu.export_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
+    # Save scenario to deepmimo scenarios folder
+    scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
     cu.zip_folder(output_folder) # ready for upload
     
     # Copy and zip ray tracing source files as well
     if copy_source:
-        cu.copy_rt_source_files(insite_sim_folder, SOURCE_EXTS, verbose)
+        cu.save_rt_source_files(insite_sim_folder, SOURCE_EXTS)
     
     return scen_name

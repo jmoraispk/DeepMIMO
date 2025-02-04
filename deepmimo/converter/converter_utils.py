@@ -13,7 +13,7 @@ import scipy.io
 import shutil
 from pprint import pprint
 
-from ..general_utilities import get_mat_filename, PrintIfVerbose
+from ..general_utilities import get_mat_filename
 from .. import consts as c
 
 
@@ -69,29 +69,7 @@ def zip_folder(folder_path: str) -> None:
             zipf.write(file_path, os.path.basename(file_path))
 
 
-def verify_sim_folder(sim_folder: str, required_exts: List[str], verbose: bool = True) -> None:
-    """Verify that required simulation files exist.
-    
-    Args:
-        sim_folder (str): Path to simulation folder.
-        required_exts (List[str]): List of required file extensions to check.
-        verbose (bool): Whether to print progress messages.
-        
-    Raises:
-        Exception: If required files are missing or duplicated.
-    """
-    files_in_sim_folder = os.listdir(sim_folder)
-    for ext in required_exts:
-        files_found_with_ext = ext_in_list(ext, files_in_sim_folder)
-        if verbose:
-            print(f'Found {files_found_with_ext}')
-        if len(files_found_with_ext) == 0:
-            raise Exception(f'{ext} not found in {sim_folder}')
-        elif len(files_found_with_ext) > 1:
-            raise Exception(f'Several {ext} found in {sim_folder}')
-
-
-def save_rt_source_files(sim_folder: str, source_exts: List[str], verbose: bool = True) -> None:
+def save_rt_source_files(sim_folder: str, source_exts: List[str]) -> None:
     """Save raytracing source files to a new directory and create a zip archive.
     
     Args:
@@ -99,7 +77,6 @@ def save_rt_source_files(sim_folder: str, source_exts: List[str], verbose: bool 
         source_exts (List[str]): List of file extensions to copy.
         verbose (bool): Whether to print progress messages. Defaults to True.
     """
-    vprint = PrintIfVerbose(verbose) # prints if verbose 
     rt_source_folder = os.path.basename(sim_folder) + '_raytracing_source'
     files_in_sim_folder = os.listdir(sim_folder)
     print(f'Copying raytracing source files to {rt_source_folder}')
@@ -115,14 +92,13 @@ def save_rt_source_files(sim_folder: str, source_exts: List[str], verbose: bool 
             # vprint(f'Adding {file}')
             shutil.copy(curr_file_path, new_file_path)
     
-    vprint('Zipping')
+    # Zip the temp folder
     zip_folder(zip_temp_folder)
     
-    vprint(f'Deleting temp folder {os.path.basename(zip_temp_folder)}')
+    # Delete the temp folder (not the zip)
     shutil.rmtree(zip_temp_folder)
-    
-    vprint('Done')
 
+    return
 
 def save_params_dict(output_folder: str, raytracer_name: str, 
                     raytracer_version: str, *dicts: Dict) -> None:
