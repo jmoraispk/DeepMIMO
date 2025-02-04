@@ -128,7 +128,7 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
     # Remove extra paths and bounces
     data_compressed = compress_data(data)
     
-    del data[c.NUM_PATHS_PARAM_NAME] # not needed
+    del data[c.NUM_PATHS_PARAM_NAME] # not needed after compression
     
     return data_compressed
 
