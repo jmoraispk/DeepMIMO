@@ -1,17 +1,20 @@
 """
 Utility functions for file operations and compression.
 
-This module provides helper functions for working with file extensions
-and creating zip archives of folders.
+This module provides helper functions for working with file extensions,
+creating zip archives of folders, and managing scenario files.
 """
 
 import os
-from typing import List
+from typing import List, Dict, Optional
 import zipfile
 import numpy as np
 import scipy.io
+import shutil
+from pprint import pprint
 
-from ..general_utilities import get_mat_filename
+from ..general_utilities import get_mat_filename, PrintIfVerbose
+from .. import consts as c
 
 
 def save_mat(data: np.ndarray, data_key: str, output_folder: str, tx_set_idx: int,
@@ -64,4 +67,87 @@ def zip_folder(folder_path: str) -> None:
     with zipfile.ZipFile(folder_path + '.zip', 'w') as zipf:
         for file_path in file_full_paths:
             zipf.write(file_path, os.path.basename(file_path))
+            
+
+def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
+    """Copy raytracing source files to a new directory and create a zip archive.
+    
+    Args:
+        sim_folder (str): Path to simulation folder.
+        verbose (bool): Whether to print progress messages. Defaults to True.
+    """
+    vprint = PrintIfVerbose(verbose) # prints if verbose 
+    rt_source_folder = os.path.basename(sim_folder) + '_raytracing_source'
+    files_in_sim_folder = os.listdir(sim_folder)
+    print(f'Copying raytracing source files to {rt_source_folder}')
+    zip_temp_folder = os.path.join(sim_folder, rt_source_folder)
+    os.makedirs(zip_temp_folder)
+    for ext in ['.setup', '.txrx', '.ter', '.city', '.kmz']:
+        # copy all files with extensions to temp folder
+        for file in ext_in_list(ext, files_in_sim_folder):
+            curr_file_path = os.path.join(sim_folder, file)
+            new_file_path  = os.path.join(zip_temp_folder, file)
+            
+            # vprint(f'Adding {file}')
+            shutil.copy(curr_file_path, new_file_path)
+    
+    vprint('Zipping')
+    zip_folder(zip_temp_folder)
+    
+    vprint(f'Deleting temp folder {os.path.basename(zip_temp_folder)}')
+    shutil.rmtree(zip_temp_folder)
+    
+    vprint('Done')
+
+
+def export_params_dict(output_folder: str, *dicts: Dict) -> None:
+    """Export parameter dictionaries to a .mat file.
+    
+    Args:
+        output_folder (str): Output directory path.
+        *dicts: Variable number of dictionaries to merge and export.
+    """
+    base_dict = {
+        c.LOAD_FILE_SP_VERSION: c.VERSION,
+        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
+        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
+        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
+    }
+    
+    merged_dict = base_dict.copy()
+    for d in dicts:
+        merged_dict.update(d)
+        
+    pprint(merged_dict)
+    scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
+
+
+def export_scenario(sim_folder: str, scen_name: str = '', 
+                   overwrite: Optional[bool] = None) -> Optional[str]:
+    """Export scenario to the DeepMIMO scenarios folder.
+    
+    Args:
+        sim_folder (str): Path to simulation folder.
+        scen_name (str): Custom name for scenario. Uses folder name if empty.
+        overwrite (Optional[bool]): Whether to overwrite existing scenario. Defaults to None.
+        
+    Returns:
+        Optional[str]: Name of the exported scenario.
+    """
+    default_scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
+    scen_name = scen_name if scen_name else default_scen_name
+    scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
+    if os.path.exists(scen_path):
+        if overwrite is None:
+            print(f'Scenario with name "{scen_name}" already exists in '
+                  f'{c.SCENARIOS_FOLDER}. Delete? (Y/n)')
+            ans = input()
+            overwrite = False if 'n' in ans.lower() else True
+        if overwrite:
+            shutil.rmtree(scen_path)
+        else:
+            return None
+    
+    shutil.copytree(sim_folder, scen_path)
+    return scen_name
             

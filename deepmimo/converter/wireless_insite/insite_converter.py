@@ -142,7 +142,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     
     # Copy ray tracing source files
     if copy_source:
-        copy_rt_source_files(insite_sim_folder, verbose)
+        cu.copy_rt_source_files(insite_sim_folder, verbose)
     
     # Read setup (.setup)
     setup_dict = read_setup(insite_sim_folder)
@@ -169,10 +169,10 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
             scene.plot_3d(show=True)#, save=True, filename=os.path.join(output_folder, 'scene_3d.png'))
     
     # Export params.mat
-    export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict, scene_dict)
+    cu.export_params_dict(output_folder, setup_dict, txrx_dict, materials_dict, scene_dict)
     
     # Move scenario to deepmimo scenarios folder
-    scen_name = export_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
+    scen_name = cu.export_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
     cu.zip_folder(output_folder) # ready for upload
@@ -199,85 +199,3 @@ def verify_sim_folder(sim_folder: str, verbose: bool) -> None:
             raise Exception(f'{ext} not found in {sim_folder}')
         elif len(files_found_with_ext) > 1:
             raise Exception(f'Several {ext} found in {sim_folder}')
-
-
-def copy_rt_source_files(sim_folder: str, verbose: bool = True) -> None:
-    """Copy raytracing source files to a new directory.
-    
-    Args:
-        sim_folder (str): Path to simulation folder.
-        verbose (bool): Whether to print progress messages. Defaults to True.
-    """
-    vprint = PrintIfVerbose(verbose) # prints if verbose 
-    rt_source_folder = os.path.basename(sim_folder) + '_raytracing_source'
-    files_in_sim_folder = os.listdir(sim_folder)
-    print(f'Copying raytracing source files to {rt_source_folder}')
-    zip_temp_folder = os.path.join(sim_folder, rt_source_folder)
-    os.makedirs(zip_temp_folder)
-    for ext in ['.setup', '.txrx', '.ter', '.city', '.kmz']:
-        # copy all files with extensions to temp folder
-        for file in cu.ext_in_list(ext, files_in_sim_folder):
-            curr_file_path = os.path.join(sim_folder, file)
-            new_file_path  = os.path.join(zip_temp_folder, file)
-            
-            # vprint(f'Adding {file}')
-            shutil.copy(curr_file_path, new_file_path)
-    
-    vprint('Zipping')
-    cu.zip_folder(zip_temp_folder)
-    
-    vprint(f'Deleting temp folder {os.path.basename(zip_temp_folder)}')
-    shutil.rmtree(zip_temp_folder)
-    
-    vprint('Done')
-
-
-def export_params_dict(output_folder: str, *dicts: Dict) -> None:
-    """Export parameter dictionaries to a .mat file.
-    
-    Args:
-        output_folder (str): Output directory path.
-        *dicts: Variable number of dictionaries to merge and export.
-    """
-    base_dict = {
-        c.LOAD_FILE_SP_VERSION: c.VERSION,
-        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
-        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
-        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
-    }
-    
-    merged_dict = base_dict.copy()
-    for d in dicts:
-        merged_dict.update(d)
-        
-    pprint(merged_dict)
-    scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
-
-
-def export_scenario(sim_folder: str, scen_name: str = '', 
-                    overwrite: Optional[bool] = None) -> Optional[str]:
-    """Export scenario to the DeepMIMO scenarios folder.
-    
-    Args:
-        sim_folder (str): Path to simulation folder.
-        overwrite (Optional[bool]): Whether to overwrite existing scenario. Defaults to None.
-        
-    Returns:
-        Optional[str]: Name of the exported scenario.
-    """
-    default_scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
-    scen_name = scen_name if scen_name else default_scen_name
-    scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
-    if os.path.exists(scen_path):
-        if overwrite is None:
-            print(f'Scenario with name "{scen_name}" already exists in '
-                  f'{c.SCENARIOS_FOLDER}. Delete? (Y/n)')
-            ans = input()
-            overwrite = False if 'n' in ans.lower() else True
-        if overwrite:
-            shutil.rmtree(scen_path)
-        else:
-            return None
-    
-    shutil.copytree(sim_folder, scen_path)
-    return scen_name
