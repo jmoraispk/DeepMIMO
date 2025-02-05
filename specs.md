@@ -9,7 +9,7 @@ This folder contains the files that specify how each DeepMIMO version organizes 
     3. ['aoa_az'] | ['aod_az'] | ['aoa_el'] | ['aod_el'] | ['toa'] | ['phase'] | ['power'] are N x MAX_PATHS
     4. ['inter'] is N x MAX_PATHS
         1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
-    5. ['inter_loc'] is N x MAX_PATHS x 3
+    5. ['inter_loc'] is N x MAX_PATHS x MAX_INTERACTIONS x 3
     6. ['vertices'] is N_vertices x 3. XYZ coordinates of each vertex.
     7. ['faces'] is N_faces x 3. Indices of the vertices of each face counter-clockwise, with surface normal pointing outward (follows right-hand rule). Each face is triangular.
     8. ['materials'] is N_faces x 1
