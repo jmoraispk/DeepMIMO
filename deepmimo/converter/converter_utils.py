@@ -17,8 +17,8 @@ from ..general_utilities import get_mat_filename
 from .. import consts as c
 
 
-def save_mat(data: np.ndarray, data_key: str, output_folder: str, tx_set_idx: int,
-             tx_idx: int, rx_set_idx: int) -> None:
+def save_mat(data: np.ndarray, data_key: str, output_folder: str, 
+             tx_set_idx: int = -1, tx_idx: int = -1, rx_set_idx: int = -1) -> None:
     """Save data to a .mat file with standardized naming.
     
     Args:
@@ -29,9 +29,13 @@ def save_mat(data: np.ndarray, data_key: str, output_folder: str, tx_set_idx: in
         tx_idx: Transmitter index within set
         rx_set_idx: Receiver set index
     """
-    mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
+    if tx_set_idx == -1:
+        mat_file_name = data_key + '.mat'
+    else:
+        mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
     file_path = os.path.join(output_folder, mat_file_name)
     scipy.io.savemat(file_path, {data_key: data}) 
+
 
 def ext_in_list(extension: str, file_list: List[str]) -> List[str]:
     """Filter files by extension.
