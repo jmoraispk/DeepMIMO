@@ -159,7 +159,7 @@ class Face:
             self._centroid = np.mean(self.vertices, axis=0)
         return self._centroid
 
-class PhysicalObject:
+class PhysicalElement:
     """Base class for physical objects in the wireless environment."""
     
     def __init__(self, faces: List[Face], object_id: int = -1):
@@ -235,7 +235,7 @@ class PhysicalObject:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict) -> 'PhysicalObject':
+    def from_dict(cls, data: Dict) -> 'PhysicalElement':
         """Create physical object from dictionary format."""
         faces = [
             Face(
@@ -246,22 +246,22 @@ class PhysicalObject:
         ]
         return cls(faces=faces, object_id=data['id'])
 
-class Building(PhysicalObject):
+class Building(PhysicalElement):
     """Represents a building in the wireless environment."""
     pass
 
-class Terrain(PhysicalObject):
+class Terrain(PhysicalElement):
     """Represents terrain in the wireless environment."""
     pass
 
-class Vegetation(PhysicalObject):
+class Vegetation(PhysicalElement):
     """Represents vegetation in the wireless environment."""
     pass
 
 class ObjectGroup:
     """Base class for managing groups of physical objects that share matrix storage."""
     
-    def __init__(self, objects: List[PhysicalObject], prefix: str):
+    def __init__(self, objects: List[PhysicalElement], prefix: str):
         """Initialize object group.
         
         Args:
@@ -484,7 +484,7 @@ class Scene:
         self.groups: Dict[str, ObjectGroup] = {}
         self._bounding_box: BoundingBox | None = None
     
-    def add_objects(self, object_type: str, objects: List[PhysicalObject]) -> None:
+    def add_objects(self, object_type: str, objects: List[PhysicalElement]) -> None:
         """Add objects of a specific type to the scene.
         
         Args:

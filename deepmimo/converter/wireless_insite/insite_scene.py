@@ -11,10 +11,10 @@ from typing import List, Dict, Tuple
 from pathlib import Path
 from scipy.spatial import ConvexHull
 
-from ...scene import Building, Terrain, Vegetation, Face, PhysicalObject, Scene
+from ...scene import Building, Terrain, Vegetation, Face, PhysicalElement, Scene
 
 # Map file extensions to object types and their group names
-OBJECT_TYPES: Dict[str, Tuple[str, type[PhysicalObject]]] = {
+OBJECT_TYPES: Dict[str, Tuple[str, type[PhysicalElement]]] = {
     '.city': ('buildings', Building),
     '.ter': ('terrain', Terrain),
     '.veg': ('vegetation', Vegetation)
@@ -89,7 +89,7 @@ class PhysicalObjectParser:
         
         self.object_class = OBJECT_TYPES[self.file_path.suffix][1]
     
-    def parse(self) -> List[PhysicalObject]:
+    def parse(self) -> List[PhysicalElement]:
         """Parse the file and return a list of physical objects.
         
         Returns:
