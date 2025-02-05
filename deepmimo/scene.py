@@ -160,7 +160,7 @@ class Face:
         return self._centroid
 
 class PhysicalObject:
-    """Base class for all physical objects in the wireless environment."""
+    """Base class for physical objects in the wireless environment."""
     
     def __init__(self, faces: List[Face], object_id: int = -1):
         """Initialize a physical object from its faces.
@@ -221,100 +221,42 @@ class PhysicalObject:
         return self.footprint_area * self.height
     
     def to_dict(self) -> Dict:
-        """Convert object to dictionary format."""
-        raise NotImplementedError("Subclasses must implement to_dict()")
+        """Convert physical object to dictionary format."""
+        return {
+            'type': self.__class__.__name__.lower(),  # Get type from class name
+            'id': self.object_id,
+            'faces': [
+                {
+                    'vertices': face.vertices.tolist(),
+                    'material_idx': face.material_idx
+                }
+                for face in self.faces
+            ]
+        }
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'PhysicalObject':
-        """Create object from dictionary format."""
-        raise NotImplementedError("Subclasses must implement from_dict()")
+        """Create physical object from dictionary format."""
+        faces = [
+            Face(
+                vertices=np.array(face['vertices']),
+                material_idx=face['material_idx']
+            )
+            for face in data['faces']
+        ]
+        return cls(faces=faces, object_id=data['id'])
 
 class Building(PhysicalObject):
     """Represents a building in the wireless environment."""
-    
-    def to_dict(self) -> Dict:
-        """Convert building to dictionary format."""
-        return {
-            'type': 'building',
-            'id': self.object_id,
-            'faces': [
-                {
-                    'vertices': face.vertices.tolist(),
-                    'material_idx': face.material_idx
-                }
-                for face in self.faces
-            ]
-        }
-    
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'Building':
-        """Create building from dictionary format."""
-        faces = [
-            Face(
-                vertices=np.array(face['vertices']),
-                material_idx=face['material_idx']
-            )
-            for face in data['faces']
-        ]
-        return cls(faces=faces, object_id=data['id'])
+    pass
 
 class Terrain(PhysicalObject):
     """Represents terrain in the wireless environment."""
-    
-    def to_dict(self) -> Dict:
-        """Convert terrain to dictionary format."""
-        return {
-            'type': 'terrain',
-            'id': self.object_id,
-            'faces': [
-                {
-                    'vertices': face.vertices.tolist(),
-                    'material_idx': face.material_idx
-                }
-                for face in self.faces
-            ]
-        }
-    
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'Terrain':
-        """Create terrain from dictionary format."""
-        faces = [
-            Face(
-                vertices=np.array(face['vertices']),
-                material_idx=face['material_idx']
-            )
-            for face in data['faces']
-        ]
-        return cls(faces=faces, object_id=data['id'])
+    pass
 
 class Vegetation(PhysicalObject):
     """Represents vegetation in the wireless environment."""
-    
-    def to_dict(self) -> Dict:
-        """Convert vegetation to dictionary format."""
-        return {
-            'type': 'vegetation',
-            'id': self.object_id,
-            'faces': [
-                {
-                    'vertices': face.vertices.tolist(),
-                    'material_idx': face.material_idx
-                }
-                for face in self.faces
-            ]
-        }
-    
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'Vegetation':
-        """Create vegetation from dictionary format."""
-        faces = [
-            Face(
-                vertices=np.array(face['vertices']),
-                material_idx=face['material_idx']
-            )
-            for face in data['faces']
-        ]
-        return cls(faces=faces, object_id=data['id'])
+    pass
 
 class ObjectGroup:
     """Base class for managing groups of physical objects that share matrix storage."""
