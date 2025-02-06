@@ -11,13 +11,13 @@ from typing import List, Dict, Tuple
 from pathlib import Path
 from scipy.spatial import ConvexHull
 
-from ...scene import Building, Terrain, Vegetation, Face, PhysicalElement, Scene
+from ...scene import PhysicalElement, Face, Scene
 
-# Map file extensions to object types and their group names
-OBJECT_TYPES: Dict[str, Tuple[str, type[PhysicalElement]]] = {
-    '.city': ('buildings', Building),
-    '.ter': ('terrain', Terrain),
-    '.veg': ('vegetation', Vegetation)
+# Map file extensions to their corresponding labels
+OBJECT_LABELS: Dict[str, str] = {
+    '.city': 'building',
+    '.ter': 'terrain',
+    '.veg': 'vegetation'
 }
 
 
@@ -43,10 +43,10 @@ def read_scene(folder_path: str | Path) -> Scene:
     scene = Scene()
     
     # Find all files with matching extensions
-    found_files = {ext: [] for ext in OBJECT_TYPES}
+    found_files = {ext: [] for ext in OBJECT_LABELS}
     for file in folder.glob("*"):
         suffix = file.suffix.lower()
-        if suffix in OBJECT_TYPES:
+        if suffix in OBJECT_LABELS:
             found_files[suffix].append(str(file))
     
     # Check if any valid files were found
@@ -59,17 +59,10 @@ def read_scene(folder_path: str | Path) -> Scene:
             continue
             
         # Parse all files of this type
-        all_objects = []
         for file in type_files:
             parser = PhysicalObjectParser(file)
             objects = parser.parse()
-            all_objects.extend(objects)
-        
-        # Get group name for this file type
-        group_name = OBJECT_TYPES[suffix][0]
-            
-        # Add to scene with appropriate group name
-        scene.add_objects(group_name, all_objects)
+            scene.add_objects(objects)
     
     return scene
 
@@ -84,36 +77,36 @@ class PhysicalObjectParser:
             file_path: Path to the physical object file (.city, .ter, .veg)
         """
         self.file_path = Path(file_path)
-        if self.file_path.suffix not in OBJECT_TYPES:
+        if self.file_path.suffix not in OBJECT_LABELS:
             raise ValueError(f"Unsupported file type: {self.file_path.suffix}")
         
-        self.object_class = OBJECT_TYPES[self.file_path.suffix][1]
+        self.label = OBJECT_LABELS[self.file_path.suffix]
     
     def parse(self) -> List[PhysicalElement]:
         """Parse the file and return a list of physical objects.
         
         Returns:
-            List of physical objects (Building, Terrain, or Vegetation)
+            List of PhysicalElement objects with appropriate labels
         """
         # Read file content
         with open(self.file_path, 'r') as f:
             content = f.read()
             
-        # Extract buildings using extract_buildings2
-        building_vertices = extract_objects(content)
+        # Extract objects using extract_objects
+        object_vertices = extract_objects(content)
         
-        # Convert each set of vertices into a Building object
+        # Convert each set of vertices into a PhysicalElement object
         objects = []
-        for i, vertices in enumerate(building_vertices):
-            # Get faces for this building
-            building_faces = get_object_faces(vertices)
+        for i, vertices in enumerate(object_vertices):
+            # Get faces for this object
+            object_faces = get_object_faces(vertices)
             
             # Convert faces to Face objects
-            faces = [Face(vertices=face) for face in building_faces]
+            faces = [Face(vertices=face) for face in object_faces]
             
-            # Create Building object
-            building = self.object_class(faces=faces, object_id=i)
-            objects.append(building)
+            # Create PhysicalElement object with appropriate label
+            obj = PhysicalElement(faces=faces, object_id=i, label=self.label)
+            objects.append(obj)
             
         return objects
 

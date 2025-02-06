@@ -16,20 +16,28 @@ from pprint import pprint
 from ..general_utilities import get_mat_filename
 from .. import consts as c
 
-
-def save_mat(data: np.ndarray, data_key: str, output_folder: str, 
-             tx_set_idx: int = -1, tx_idx: int = -1, rx_set_idx: int = -1) -> None:
+def save_mat(data: np.ndarray, data_key: str, output_folder: str,
+             tx_set_idx: Optional[int] = None, tx_idx: Optional[int] = None, 
+             rx_set_idx: Optional[int] = None) -> None:
     """Save data to a .mat file with standardized naming.
+    
+    This function saves data to a .mat file using standardized naming conventions.
+    If transmitter/receiver indices are provided, the filename will include those indices.
+    Otherwise, it will use just the data_key as the filename.
+
+    For example:
+    - With indices: {data_key}_t{tx_set_idx}_{tx_idx}_r{rx_set_idx}.mat
+    - Without indices: {data_key}.mat
     
     Args:
         data: Data array to save
         data_key: Key identifier for the data type
         output_folder: Output directory path
-        tx_set_idx: Transmitter set index
-        tx_idx: Transmitter index within set
-        rx_set_idx: Receiver set index
+        tx_set_idx: Transmitter set index. Use None for no index.
+        tx_idx: Transmitter index within set. Use None for no index.
+        rx_set_idx: Receiver set index. Use None for no index.
     """
-    if tx_set_idx == -1:
+    if tx_set_idx is None:
         mat_file_name = data_key + '.mat'
     else:
         mat_file_name = get_mat_filename(data_key, tx_set_idx, tx_idx, rx_set_idx)
@@ -103,30 +111,6 @@ def save_rt_source_files(sim_folder: str, source_exts: List[str]) -> None:
     shutil.rmtree(zip_temp_folder)
 
     return
-
-def save_params_dict(output_folder: str, raytracer_name: str, 
-                    raytracer_version: str, *dicts: Dict) -> None:
-    """Save parameter dictionaries to a .mat file.
-    
-    Args:
-        output_folder (str): Output directory path.
-        raytracer_name (str): Name of the raytracer used.
-        raytracer_version (str): Version of the raytracer used.
-        *dicts: Variable number of dictionaries to merge and export.
-    """
-    base_dict = {
-        c.LOAD_FILE_SP_VERSION: c.VERSION,
-        c.LOAD_FILE_SP_RAYTRACER: raytracer_name,
-        c.LOAD_FILE_SP_RAYTRACER_VERSION: raytracer_version,
-        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
-    }
-    
-    merged_dict = base_dict.copy()
-    for d in dicts:
-        merged_dict.update(d)
-        
-    pprint(merged_dict)
-    scipy.io.savemat(os.path.join(output_folder, 'params.mat'), merged_dict)
 
 
 def save_scenario(sim_folder: str, scen_name: str = '', 

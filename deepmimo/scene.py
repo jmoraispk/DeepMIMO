@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
 from scipy.io import savemat, loadmat
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -162,15 +162,20 @@ class Face:
 class PhysicalElement:
     """Base class for physical objects in the wireless environment."""
     
-    def __init__(self, faces: List[Face], object_id: int = -1):
+    # Default labels that can be used
+    DEFAULT_LABELS = {'building', 'terrain', 'vegetation'}
+    
+    def __init__(self, faces: List[Face], object_id: int = -1, label: str = 'building'):
         """Initialize a physical object from its faces.
         
         Args:
             faces: List of Face objects defining the object
             object_id: Unique identifier for the object (default: -1)
+            label: Label identifying the type of object (default: 'building')
         """
         self._faces = faces
         self.object_id = object_id
+        self.label = label
         # Extract all vertices from faces for bounding box computation
         all_vertices = np.vstack([face.vertices for face in faces])
         self.vertices = all_vertices
@@ -223,7 +228,7 @@ class PhysicalElement:
     def to_dict(self) -> Dict:
         """Convert physical object to dictionary format."""
         return {
-            'type': self.__class__.__name__.lower(),  # Get type from class name
+            'label': self.label,
             'id': self.object_id,
             'faces': [
                 {
@@ -244,47 +249,56 @@ class PhysicalElement:
             )
             for face in data['faces']
         ]
-        return cls(faces=faces, object_id=data['id'])
+        return cls(faces=faces, object_id=data['id'], label=data['label'])
 
-class Building(PhysicalElement):
-    """Represents a building in the wireless environment."""
-    pass
-
-class Terrain(PhysicalElement):
-    """Represents terrain in the wireless environment."""
-    pass
-
-class Vegetation(PhysicalElement):
-    """Represents vegetation in the wireless environment."""
-    pass
-
-class ObjectGroup:
-    """Base class for managing groups of physical objects that share matrix storage."""
+class Scene:
+    """Represents a physical scene with various objects affecting wireless propagation."""
     
-    def __init__(self, objects: List[PhysicalElement], prefix: str):
-        """Initialize object group.
+    # Default visualization settings for different labels
+    DEFAULT_VISUALIZATION_SETTINGS = {
+        'terrain': {'z_order': 1, 'alpha': 0.1, 'color': 'grey'},
+        'vegetation': {'z_order': 2, 'alpha': 0.8, 'color': 'green'},
+        'building': {'z_order': 3, 'alpha': 0.8, 'color': None}  # None = use rainbow colors
+    }
+    
+    def __init__(self):
+        """Initialize an empty scene."""
+        self.objects: List[PhysicalElement] = []
+        self._bounding_box: BoundingBox | None = None
+        self.visualization_settings = self.DEFAULT_VISUALIZATION_SETTINGS.copy()
         
-        Args:
-            objects: List of physical objects in this group
-            prefix: Prefix for matrix files (e.g., 'building' for building_faces.mat)
-        """
-        self.objects = objects
-        self.prefix = prefix
-        
-        # Assign object IDs and track face indices
+        # Matrix storage tracking
         self.face_indices = []  # List[List[List[int]]] for [object][face][triangle_indices]
         self._current_index = 0
+    
+    def add_object(self, obj: PhysicalElement) -> None:
+        """Add a physical object to the scene.
         
-        for i, obj in enumerate(objects):
-            if obj.object_id == -1:
-                obj.object_id = i
-            # Add faces to group and track indices
-            obj_indices = []
-            for face in obj.faces:
-                face_indices = self._add_face(face)
-                obj_indices.append(face_indices)
-            self.face_indices.append(obj_indices)
-
+        Args:
+            obj: PhysicalElement to add
+        """
+        if obj.object_id == -1:
+            obj.object_id = len(self.objects)
+        
+        # Add faces to scene and track indices
+        obj_indices = []
+        for face in obj.faces:
+            face_indices = self._add_face(face)
+            obj_indices.append(face_indices)
+        
+        self.face_indices.append(obj_indices)
+        self.objects.append(obj)
+        self._bounding_box = None  # Reset cached bounding box
+    
+    def add_objects(self, objects: List[PhysicalElement]) -> None:
+        """Add multiple physical objects to the scene.
+        
+        Args:
+            objects: List of PhysicalElement objects to add
+        """
+        for obj in objects:
+            self.add_object(obj)
+    
     def _add_face(self, face: Face) -> List[int]:
         """Add a face and return indices of its triangular faces.
         
@@ -299,15 +313,63 @@ class ObjectGroup:
         self._current_index += n_triangles
         return triangle_indices
     
+    def get_objects_by_label(self, label: str) -> List[PhysicalElement]:
+        """Get all objects with a specific label.
+        
+        Args:
+            label: Label to filter objects by
+            
+        Returns:
+            List of objects with the specified label
+        """
+        return [obj for obj in self.objects if obj.label == label]
+    
+    @property
+    def bounding_box(self) -> BoundingBox:
+        """Get the bounding box containing all objects."""
+        if self._bounding_box is None:
+            if not self.objects:
+                raise ValueError("Scene is empty")
+            
+            # Collect all object bounding boxes
+            boxes = [obj.bounding_box.bounds for obj in self.objects]
+            boxes = np.array(boxes)  # Shape: (N, 2, 3)
+            
+            # Compute global bounds
+            global_min = np.min(boxes[:, 0], axis=0)  # Min of mins
+            global_max = np.max(boxes[:, 1], axis=0)  # Max of maxs
+            
+            self._bounding_box = BoundingBox(
+                x_min=global_min[0], x_max=global_max[0],
+                y_min=global_min[1], y_max=global_max[1],
+                z_min=global_min[2], z_max=global_max[2]
+            )
+        return self._bounding_box
+    
+    def set_visualization_settings(self, label: str, settings: Dict) -> None:
+        """Set visualization settings for a specific label.
+        
+        Args:
+            label: Object label to set settings for
+            settings: Dictionary containing visualization settings
+        """
+        self.visualization_settings[label] = settings
+    
     def export_data(self, base_folder: str) -> Dict:
-        """Export group data and return metadata dictionary.
+        """Export scene data to files and return metadata dictionary.
+        
+        Creates matrix files for faces and materials in the base folder.
+        Returns a dictionary containing metadata needed to reload the scene.
         
         Args:
             base_folder: Base folder to store matrix files
-        
+            
         Returns:
-            Dict containing metadata needed to reload the group
+            Dict containing metadata needed to reload the scene
         """
+        # Create base folder if it doesn't exist
+        Path(base_folder).mkdir(parents=True, exist_ok=True)
+        
         # Export face and material matrices
         faces = []
         materials = []
@@ -321,8 +383,8 @@ class ObjectGroup:
         materials = np.array(materials)  # Shape: (N,)
         
         # Save matrices
-        savemat(f"{base_folder}/{self.prefix}_faces.mat", {'faces': faces})
-        savemat(f"{base_folder}/{self.prefix}_materials.mat", {'materials': materials})
+        savemat(f"{base_folder}/faces.mat", {'faces': faces})
+        savemat(f"{base_folder}/materials.mat", {'materials': materials})
         
         # Return metadata
         objects_metadata = []
@@ -330,40 +392,39 @@ class ObjectGroup:
             n_tri_faces = [len(indices) for indices in obj_indices]
             objects_metadata.append({
                 'id': obj.object_id,
+                'label': obj.label,
                 'n_faces': len(obj.faces), 
                 'n_tri_faces': sum(n_tri_faces),
                 'n_tri_faces_per_face': np.array(n_tri_faces)
             })
             
         return {
-            'type': self.prefix, # or type(self.objects[0]).__name__
             'n_objects': len(self.objects),
-            'objects': objects_metadata
+            'objects': objects_metadata,
         }
-        
+    
     @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str, object_class: type) -> 'ObjectGroup':
-        """Create group from metadata and matrix files.
+    def from_data(cls, metadata: Dict, base_folder: str) -> 'Scene':
+        """Create scene from metadata dictionary and data files.
         
         Args:
-            metadata: Dictionary containing metadata about the group
+            metadata: Dictionary containing metadata about the scene
             base_folder: Base folder containing matrix files
-            object_class: Class to use for creating objects (Building, Vegetation, etc.)
         """
-        # Load matrices using prefix pattern
-        faces = loadmat(f"{base_folder}/{metadata['type']}_faces.mat")['faces']
-        materials = loadmat(f"{base_folder}/{metadata['type']}_materials.mat")['materials'].flatten()
+        # Load matrices
+        faces = loadmat(f"{base_folder}/faces.mat")['faces']
+        materials = loadmat(f"{base_folder}/materials.mat")['materials'].flatten()
+        
+        scene = cls()
+        
+        # Load visualization settings if present
+        if 'visualization_settings' in metadata:
+            scene.visualization_settings = metadata['visualization_settings']
         
         # Create objects using face counts from metadata
-        objects = []
         current_index = 0
         
-        # Handle both list and single dictionary cases
-        object_data_list = metadata['objects']
-        if isinstance(object_data_list, dict):
-            object_data_list = [object_data_list]  # Convert single dict to list
-        
-        for object_data in object_data_list:
+        for object_data in metadata['objects']:
             object_faces = []
             n_tri_faces = object_data['n_tri_faces_per_face']
             
@@ -374,7 +435,6 @@ class ObjectGroup:
                 # Get material index for this face and verify all triangles have same material
                 material_idx = materials[current_index]
                 if not np.all(materials[current_index:current_index + n_triangles] == material_idx):
-                    # Silence this if mixed materials are okay
                     raise ValueError("All triangles in a face must have the same material index")
                 
                 # Create face from triangles
@@ -384,198 +444,19 @@ class ObjectGroup:
                 
                 current_index += n_triangles
             
-            # Create object
-            obj = object_class(faces=object_faces, object_id=object_data['id'])
-            objects.append(obj)
-        
-        return cls(objects)
-
-    def print_metadata(self) -> None:
-        """Print metadata about the object group."""
-    
-        objects_metadata = []
-        for obj, obj_indices in zip(self.objects, self.face_indices):
-            n_tri_faces = [len(indices) for indices in obj_indices]
-            objects_metadata.append({
-                'id': obj.object_id,
-                'n_faces': len(obj.faces), 
-                'n_tri_faces': sum(n_tri_faces),
-                # Add physical properties
-                'height': obj.height,
-                'footprint_area': obj.footprint_area,
-                'volume': obj.volume,
-                'bounds': {
-                    'x_min': obj.bounding_box.x_min,
-                    'x_max': obj.bounding_box.x_max,
-                    'y_min': obj.bounding_box.y_min,
-                    'y_max': obj.bounding_box.y_max,
-                    'z_min': obj.bounding_box.z_min,
-                    'z_max': obj.bounding_box.z_max,
-                }
-            })
-        
-class BuildingsGroup(ObjectGroup):
-    """Group of buildings that share matrix storage."""
-    
-    def __init__(self, buildings: List[Building]):
-        """Initialize buildings group.
-        
-        Args:
-            buildings: List of Building objects
-        """
-        super().__init__(objects=buildings, prefix='building')
-    
-    @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str) -> 'BuildingsGroup':
-        """Create buildings group from metadata and matrix files."""
-        return super().from_data(metadata, base_folder, Building)
-
-class VegetationGroup(ObjectGroup):
-    """Group of vegetation objects that share matrix storage."""
-    
-    def __init__(self, vegetation_objects: List[Vegetation]):
-        """Initialize vegetation group.
-        
-        Args:
-            vegetation_objects: List of Vegetation objects
-        """
-        super().__init__(objects=vegetation_objects, prefix='vegetation')
-    
-    @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str) -> 'VegetationGroup':
-        """Create vegetation group from metadata and matrix files."""
-        return super().from_data(metadata, base_folder, Vegetation)
-
-class TerrainGroup(ObjectGroup):
-    """Group of terrain objects that share matrix storage."""
-    
-    def __init__(self, terrain_objects: List[Terrain]):
-        """Initialize terrain group.
-        
-        Args:
-            terrain_objects: List of Terrain objects
-        """
-        super().__init__(objects=terrain_objects, prefix='terrain')
-    
-    @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str) -> 'TerrainGroup':
-        """Create terrain group from metadata and matrix files."""
-        return super().from_data(metadata, base_folder, Terrain)
-
-class Scene:
-    """Represents a physical scene with various objects affecting wireless propagation."""
-    
-    # Map object types to their group classes
-    GROUP_TYPES = {
-        'buildings': BuildingsGroup,
-        'vegetation': VegetationGroup,
-        'terrain': TerrainGroup
-    }
-    
-    # Visualization settings for each object type
-    VISUALIZATION_SETTINGS = {
-        'terrain': {'z_order': 1, 'alpha': 0.1, 'color': 'grey'},
-        'vegetation': {'z_order': 2, 'alpha': 0.8, 'color': 'green'},
-        'buildings': {'z_order': 3, 'alpha': 0.8, 'color': None}  # None = use rainbow colors
-    }
-    
-    def __init__(self):
-        """Initialize an empty scene."""
-        self.groups: Dict[str, ObjectGroup] = {}
-        self._bounding_box: BoundingBox | None = None
-    
-    def add_objects(self, object_type: str, objects: List[PhysicalElement]) -> None:
-        """Add objects of a specific type to the scene.
-        
-        Args:
-            object_type: Type of objects (e.g., 'buildings', 'terrain', 'vegetation')
-            objects: List of objects to add
-        """
-        if object_type not in self.GROUP_TYPES:
-            raise ValueError(f"Unknown object type: {object_type}")
-        
-        group_class = self.GROUP_TYPES[object_type]
-        self.groups[object_type] = group_class(objects)
-        print(f'object_type = {object_type}')
-        self._bounding_box = None  # Reset cached bounding box
-    
-    @property
-    def bounding_box(self) -> BoundingBox:
-        """Get the bounding box containing all objects."""
-        if self._bounding_box is None:
-            # Collect all object bounding boxes
-            boxes = []
-            for group in self.groups.values():
-                boxes.extend(obj.bounding_box.bounds for obj in group.objects)
-            
-            if not boxes:
-                raise ValueError("Scene is empty")
-            
-            # Compute global bounds
-            boxes = np.array(boxes)  # Shape: (N, 2, 3)
-            global_min = np.min(boxes[:, 0], axis=0)  # Min of mins
-            global_max = np.max(boxes[:, 1], axis=0)  # Max of maxs
-            
-            self._bounding_box = BoundingBox(
-                x_min=global_min[0], x_max=global_max[0],
-                y_min=global_min[1], y_max=global_max[1],
-                z_min=global_min[2], z_max=global_max[2]
+            # Create object with appropriate label
+            obj = PhysicalElement(
+                faces=object_faces,
+                object_id=object_data['id'],
+                label=object_data['label']
             )
-        return self._bounding_box
-    
-    def export_data(self, base_folder: str) -> Dict:
-        """Export scene data to files and return metadata dictionary.
-        
-        Creates matrix files for faces and materials in the base folder.
-        Returns a dictionary containing metadata needed to reload the scene.
-        
-        Args:
-            base_folder: Base folder to store matrix files
-        
-        Returns:
-            Dict containing metadata needed to reload the scene
-        """
-        # Create base folder if it doesn't exist
-        Path(base_folder).mkdir(parents=True, exist_ok=True)
-        
-        metadata = {}
-        
-        # Export data for each group
-        for object_type, group in self.groups.items():
-            metadata[object_type] = group.export_data(base_folder)
-        
-        return metadata
-    
-    @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str) -> 'Scene':
-        """Create scene from metadata dictionary and data files.
-        
-        Args:
-            metadata: Dictionary containing metadata about the scene
-            base_folder: Base folder containing matrix files
-        """
-        scene = cls()
-        
-        # Load each group
-        for group_type, group_data in metadata.items():
-            # Skip if not a physical object group or no data
-            if not isinstance(group_data, dict) or 'type' not in group_data:
-                continue
-                
-            # Get the appropriate group class based on object type
-            group_class = cls.GROUP_TYPES.get(group_type)
-            
-            if group_class:
-                scene.groups[group_type] = group_class.from_data(group_data, base_folder)
+            scene.add_object(obj)
         
         return scene
     
     def plot_3d(self, show: bool = True, save: bool = False, 
                 filename: str | None = None) -> Tuple[plt.Figure, plt.Axes]:
-        """Create a 3D visualization of the scene using pre-computed faces.
-        
-        This method uses the faces already stored in each object, making it more efficient
-        than plot_3d() which recomputes the faces from vertices.
+        """Create a 3D visualization of the scene.
         
         Args:
             show: Whether to display the plot
@@ -588,16 +469,26 @@ class Scene:
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(111, projection='3d')
         
-        # Plot each group
-        for object_type, group in self.groups.items():
-            # Get visualization settings for this type
-            vis_settings = self.VISUALIZATION_SETTINGS[object_type]
+        # Group objects by label
+        label_groups = {}
+        for obj in self.objects:
+            if obj.label not in label_groups:
+                label_groups[obj.label] = []
+            label_groups[obj.label].append(obj)
+        
+        # Plot each label group
+        for label, objects in label_groups.items():
+            # Get visualization settings for this label
+            vis_settings = self.visualization_settings.get(
+                label,
+                {'z_order': 3, 'alpha': 0.8, 'color': None}  # Default settings
+            )
             
             # Use rainbow colormap for objects without fixed color
-            colors = (plt.cm.rainbow(np.linspace(0, 1, len(group.objects))) 
+            colors = (plt.cm.rainbow(np.linspace(0, 1, len(objects))) 
                      if vis_settings['color'] is None else None)
             
-            for obj_idx, obj in enumerate(group.objects):
+            for obj_idx, obj in enumerate(objects):
                 # Create 3D polygons for each face
                 for face in obj.faces:
                     poly3d = Poly3DCollection([face.vertices], alpha=vis_settings['alpha'])
@@ -653,18 +544,22 @@ class Scene:
         ax.set_box_aspect([1, 1, 1])
     
     def _get_title_with_counts(self) -> str:
-        """Generate a title string with object counts for each group.
+        """Generate a title string with object counts for each label.
         
         Returns:
             Title string with object counts
         """
+        # Count objects by label
+        label_counts = {}
+        for obj in self.objects:
+            label_counts[obj.label] = label_counts.get(obj.label, 0) + 1
+        
+        # Format counts
         counts = []
-        for object_type, group in self.groups.items():
-            n_objects = len(group.objects)
-            if n_objects > 0:
-                type_name = object_type.capitalize()
-                if n_objects == 1 and type_name.endswith('s'):
-                    type_name = type_name[:-1]
-                counts.append(f"{type_name}: {n_objects}")
+        for label, count in label_counts.items():
+            label_name = label.capitalize()
+            if count == 1 and label_name.endswith('s'):
+                label_name = label_name[:-1]
+            counts.append(f"{label_name}: {count}")
         
         return ", ".join(counts)

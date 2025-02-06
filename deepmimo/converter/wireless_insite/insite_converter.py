@@ -15,6 +15,7 @@ can be generated using (transpose) reciprocity.
 import os
 import shutil
 from typing import List, Dict, Optional
+from pathlib import Path
 
 # Third-party imports
 import numpy as np
@@ -92,10 +93,10 @@ def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int], rx_ids: List[int]
 
 
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: Optional[List[int]] = None,
-                       rx_set_ids: Optional[List[int]] = None, verbose: bool = True, 
-                       overwrite: Optional[bool] = None, vis_buildings: bool = False, 
-                       convert_buildings: bool = True, old: bool = False, 
-                       old_params: Dict = {}, scenario_name: str = '') -> str:
+                        rx_set_ids: Optional[List[int]] = None,  
+                        overwrite: Optional[bool] = None, vis_scene: bool = False, 
+                        old: bool = False, old_params: Dict = {}, # to remove later
+                        scenario_name: str = '') -> str:
     """Convert Wireless InSite ray-tracing data to DeepMIMO format.
 
     This function handles the conversion of Wireless InSite ray-tracing simulation 
@@ -107,10 +108,8 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         copy_source (bool): Whether to copy ray-tracing source files to output.
         tx_set_ids (Optional[List[int]]): List of transmitter set IDs. Uses all if None. Defaults to None.
         rx_set_ids (Optional[List[int]]): List of receiver set IDs. Uses all if None. Defaults to None.
-        verbose (bool): Whether to print progress messages. Defaults to True.
         overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
-        vis_buildings (bool): Whether to visualize building layouts. Defaults to False.
-        convert_buildings (bool): Whether to convert extract buldings from the .city file. Defaults to True.
+        vis_scene (bool): Whether to visualize the scene layout. Defaults to False.
         old (bool): Whether to use legacy v3 converter. Defaults to False.
         old_params (Dict): Parameters for legacy v3 converter. Defaults to {}.
         scenario_name (str): Custom name for output folder. Uses p2m folder name if empty.
@@ -144,25 +143,30 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     # Read and save path data
     read_paths(insite_sim_folder, p2m_folder, txrx_dict, output_folder)
     
-    # Read Materials of Buildings, Terrain and Vegetation (.city, .ter, .veg)
-    materials_dict = read_materials(insite_sim_folder, verbose=False)
+    # Read Materials of all objects (.city, .ter, .veg)
+    materials_dict = read_materials(insite_sim_folder)
     
-    if convert_buildings:
-        
-        # Create scene from simulation folder
-        scene = read_scene(insite_sim_folder)
-        
-        # Export scene data (save {building/terrain/vegetaion}_{faces/materials}.mat files)
-        scene_dict = scene.export_data(output_folder)
-        
-        # Visualize if requested
-        if vis_buildings:
-            scene.plot_3d(show=True)#, save=True, filename=os.path.join(output_folder, 'scene_3d.png'))
+    # Read scene objects
+    scene = read_scene(insite_sim_folder)
+    scene_dict = scene.export_data(output_folder)
     
-    # Save params.mat
-    cu.save_params_dict(output_folder, c.RAYTRACER_NAME_WIRELESS_INSITE, 
-                       c.RAYTRACER_VERSION_WIRELESS_INSITE,
-                       setup_dict, txrx_dict, materials_dict, scene_dict)
+    # Visualize if requested
+    if vis_scene: scene.plot_3d(show=True)
+    
+    # Save parameters to params.mat
+    params = {
+        c.LOAD_FILE_SP_VERSION: c.VERSION,
+        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
+        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
+        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
+        'setup': setup_dict,
+        'txrx': txrx_dict,
+        'materials': materials_dict,
+        'scene': scene_dict
+    }
+    from pprint import pprint
+    pprint(params)
+    cu.save_mat(params, 'params', output_folder)
     
     # Save scenario to deepmimo scenarios folder
     scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)

@@ -31,15 +31,9 @@ from .info import info
 
 # Physical world representation
 from .scene import (
-    Building,
     Face,
-    Terrain,
-    Vegetation,
     PhysicalElement,
-    Scene,
-    BuildingsGroup,
-    TerrainGroup,
-    VegetationGroup
+    Scene
 )
 
 __all__ = [
@@ -58,13 +52,7 @@ __all__ = [
     'get_idxs_with_limits',
     
     # Physical world representation
-    'Building',
     'Face',
-    'Terrain',
-    'Vegetation',
     'PhysicalElement',
     'Scene',
-    'BuildingsGroup',
-    'TerrainGroup',
-    'VegetationGroup',
 ]

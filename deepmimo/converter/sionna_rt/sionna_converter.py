@@ -51,7 +51,6 @@ def sionna_rt_converter(rt_folder: str, scenario_name: str = ''):
     output_folder = os.path.join(rt_folder, scen_name + '_deepmimo')
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
-
     os.makedirs(output_folder)
 
     # Read Setup (ray tracing parameters)
@@ -66,43 +65,30 @@ def sionna_rt_converter(rt_folder: str, scenario_name: str = ''):
     # Read Materials (.materials)
     materials_dict = read_materials(rt_folder, output_folder)
 
-
-
-
-
-    # Read Vertices (.vertices)
-
-    # Read Faces (.faces)
-
-    # Read Objects (.objects)
-
-    # # Create scene from simulation folder
-    # scene = create_scene_from_folder(insite_sim_folder)
+    # Read Scene data
+    scene = load_scene(rt_folder)
+    scene_dict = scene.export_data(output_folder) if scene else {}
     
-    # # Export scene data (save {building/terrain/vegetaion}_{faces/materials}.mat files)
-    # scene_dict = scene.export_data(output_folder)
+    # Save parameters to params.mat
+    params = {
+        'raytracer_name': c.RAYTRACER_NAME_SIONNA,
+        'raytracer_version': c.RAYTRACER_VERSION_SIONNA,
+        'setup': setup_dict,
+        'txrx': txrx_dict,
+        'materials': materials_dict,
+        'scene': scene_dict
+    }
+    cu.save_mat(params, 'params', output_folder)
     
-    # # Visualize if requested
-    # if vis_buildings:
-    #     scene.plot_3d(show=True)#, save=True, filename=os.path.join(output_folder, 'scene_3d.png'))
+    # Save scenario to deepmimo scenarios folder
+    scen_name = cu.save_scenario(output_folder, scen_name=scenario_name)
     
-
-
-    # Save params.mat
-    # cu.save_params_dict(output_folder, c.RAYTRACER_NAME_WIRELESS_INSITE, 
-    #                    c.RAYTRACER_VERSION_WIRELESS_INSITE,
-    #                    setup_dict, txrx_dict, materials_dict, scene_dict)
+    print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
+    cu.zip_folder(output_folder) # ready for upload
     
-    # # Save scenario to deepmimo scenarios folder
-    # scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
+    # Copy and zip ray tracing source files as well
+    # cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
     
-    # print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
-    # cu.zip_folder(output_folder) # ready for upload
-    
-    # # Copy and zip ray tracing source files as well
-    # cu.save_rt_source_files(insite_sim_folder, SOURCE_EXTS)
-    
-    scen_name = ''
     return scen_name
 
 
