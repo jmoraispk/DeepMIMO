@@ -1,0 +1,18 @@
+<Geometry>
+  <remcom::rxapi::City>
+    <GeometrySource>
+      <remcom::rxapi::WirelessInSiteGeometry>
+        <Filename>
+          <remcom::rxapi::FileDescription>
+            <Filename>
+              <remcom::rxapi::String Value="./pathto.city"/>
+            </Filename>
+            <FilenameChecksum>
+              <remcom::rxapi::String/>
+            </FilenameChecksum>
+          </remcom::rxapi::FileDescription>
+        </Filename>
+      </remcom::rxapi::WirelessInSiteGeometry>
+    </GeometrySource>
+  </remcom::rxapi::City>
+</Geometry>

@@ -1,0 +1,613 @@
+2025.02.05 21:34:40.285 
+
+wibatch version 3.3.0.4 - r60227
+  Built with Microsoft Visual Studio 1900
+  Built with Qt 4.8.7
+  Using Qt 4.8.7
+
+2025.02.05 21:34:40.286 Wed Feb 5 21:34:40 2025
+
+2025.02.05 21:34:40.329 Detecting GPU Information..
+2025.02.05 21:34:40.329 OptiX Runtime version = 40100
+2025.02.05 21:34:40.329 CUDA Runtime version = 8.0
+2025.02.05 21:34:40.329 CUDA Driver version  = 11.7
+2025.02.05 21:34:40.329 GPU device #0: [NVIDIA RTX A5000], 8.6 capability, 64 total cores, 1024 threads per block
+2025.02.05 21:34:40.329 GPU device #1: [NVIDIA RTX A5000], 8.6 capability, 64 total cores, 1024 threads per block
+2025.02.05 21:34:40.373 Initializing Wireless InSite X3D model
+2025.02.05 21:34:40.373 Monte Carlo parameters not detected.
+2025.02.05 21:34:40.373 ============ GEOMETRY ============
+2025.02.05 21:34:40.373 Building geometry
+2025.02.05 21:34:42.210  ============ TRANSMITTER/RECEIVER SETS ============
+2025.02.05 21:34:42.210 Generating transmitter and receiver sets
+2025.02.05 21:34:42.232 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.232 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.232 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.232 Set number: 4
+Type: GridSet
+Number of points: 5148
+APG Accelerated: yes
+Fit to terrain: yes
+
+2025.02.05 21:34:42.232 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.232 Length (x) [m]: 290.86
+Length (y) [m]: 108.339
+Planar rotation (degrees): 0
+Spacing (m): 2.5
+
+2025.02.05 21:34:42.232 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.232 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.232 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.232 Set number: 3
+Type: PointSet
+Number of points: 1
+APG Accelerated: no
+Fit to terrain: yes
+
+2025.02.05 21:34:42.232 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.232 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.232 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.232 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.233 Set number: 3
+Type: PointSet
+Number of points: 1
+APG Accelerated: no
+Fit to terrain: yes
+
+2025.02.05 21:34:42.233 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.233 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.233 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.233 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.233 Set number: 2
+Type: PointSet
+Number of points: 1
+APG Accelerated: no
+Fit to terrain: yes
+
+2025.02.05 21:34:42.233 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.233 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.233 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.233 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.233 Set number: 2
+Type: PointSet
+Number of points: 1
+APG Accelerated: no
+Fit to terrain: yes
+
+2025.02.05 21:34:42.233 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.233 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.233 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.233 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.234 Set number: 1
+Type: PointSet
+Number of points: 1
+APG Accelerated: no
+Fit to terrain: yes
+
+2025.02.05 21:34:42.234 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.234 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:42.234 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:42.234 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:42.234 Set number: 1
+Type: PointSet
+Number of points: 1
+APG Accelerated: no
+Fit to terrain: yes
+
+2025.02.05 21:34:42.234 Receiver collection radius (m): auto
+
+2025.02.05 21:34:42.234 Auto Collection Radius = 1.70338
+2025.02.05 21:34:42.244 Scene information: 
+    Number of facets: 33396
+    Number of spheres: 333
+
+BSPTree information: 
+    Number of superfacets: 3996
+    Number of subfacets: 33396
+    Maximum depth: 27
+    Bounding box: 
+      Minimum: (-296.949, -530.669, -3)
+      Maximum: (320.346, 294.611, 18)
+
+CompleteEdgeSet information: 
+    Number of superedges: 400
+    Number of subedges: 7507
+Maximum Scene Distance: 780.773
+
+2025.02.05 21:34:42.244 ============ MATERIALS ============
+2025.02.05 21:34:42.244 Diffuse Scattering: Disabled
+2025.02.05 21:34:42.244 Material number: 1
+Type: DielectricHalfspace
+Thickness (m): 0
+
+2025.02.05 21:34:42.244 Layer 0: 
+2025.02.05 21:34:42.244     Relative permittivity: 18.1758
+    Conductivity (S/m): 0.7645
+    Thickness (m): 0
+    Roughness (m): 0
+
+2025.02.05 21:34:42.244 Material number: 1
+Type: LayeredDielectric
+Thickness (m): 0
+
+2025.02.05 21:34:42.244 Layer 0: 
+2025.02.05 21:34:42.244     Relative permittivity: 5.31
+    Conductivity (S/m): 0.08987
+    Thickness (m): 0.3
+    Roughness (m): 0
+
+2025.02.05 21:34:42.244 Material number: 1
+Type: DielectricHalfspace
+Thickness (m): 0
+
+2025.02.05 21:34:42.244 Layer 0: 
+2025.02.05 21:34:42.244     Relative permittivity: 5.72
+    Conductivity (S/m): 0.0005
+    Thickness (m): 0
+    Roughness (m): 0
+
+2025.02.05 21:34:42.244 ============ ATMOSPHERE ============
+2025.02.05 21:34:42.244 Pressure = 1013.25
+2025.02.05 21:34:42.244 Temperature = 22.2
+2025.02.05 21:34:42.244 Humidity = 50
+2025.02.05 21:34:42.361 ============ MODEL ============
+2025.02.05 21:34:42.402 Starting X3D ray tracing for Tx set 3, point 1 (point 1 of 3 total)
+2025.02.05 21:34:42.402   Initializing 4 threads
+2025.02.05 21:34:42.402   Diffraction cone ray angle=0.25
+2025.02.05 21:34:42.402   Using 1 GPU ray tracer
+2025.02.05 21:34:42.474   Ray tracing ranges: 
+2025.02.05 21:34:42.474     Minimum phi: 0
+2025.02.05 21:34:42.474     Maximum phi: 360
+2025.02.05 21:34:42.474     Minimum theta: 0
+2025.02.05 21:34:42.474     Maximum theta: 180
+2025.02.05 21:34:42.474   Model parameters: 
+2025.02.05 21:34:42.474     Reflections:         3
+2025.02.05 21:34:42.474     Transmissions:       0
+2025.02.05 21:34:42.474     Diffractions:        0
+2025.02.05 21:34:42.474     Ray spacing (degrees): 0.25
+2025.02.05 21:34:42.476   Advanced model parameters:
+2025.02.05 21:34:42.476     Maximum reflections before first diffraction: 2
+2025.02.05 21:34:42.476     Maximum reflections between two diffractions: 0
+2025.02.05 21:34:42.476     Maximum reflections after last diffraction: 2
+2025.02.05 21:34:42.476   Detected 2 GPU devices.
+2025.02.05 21:34:42.484   Licensed 1 GPU devices.
+2025.02.05 21:34:42.484   Running on 1 GPU devices.
+2025.02.05 21:34:42.484     Device ID's: [ 0 ]
+2025.02.05 21:34:42.778   Optimized concurrent GPU rays: 65536
+2025.02.05 21:34:42.786 Initial Ray Generation: Phi/theta sweep mode
+2025.02.05 21:34:43.538   GPU ray tracing (65536/65536 active): 25% complete
+2025.02.05 21:34:43.613   GPU ray tracing (65536/65536 active): 39% complete
+2025.02.05 21:34:43.662   GPU ray tracing (65536/65536 active): 43% complete
+2025.02.05 21:34:43.720   GPU ray tracing (65536/65536 active): 50% complete
+2025.02.05 21:34:43.773   GPU ray tracing (65536/65536 active): 52% complete
+2025.02.05 21:34:43.833   GPU ray tracing (65536/65536 active): 55% complete
+2025.02.05 21:34:43.888   GPU ray tracing (65536/65536 active): 56% complete
+2025.02.05 21:34:43.936   GPU ray tracing (65536/65536 active): 59% complete
+2025.02.05 21:34:44.010   GPU ray tracing (65536/65536 active): 60% complete
+2025.02.05 21:34:44.066   GPU ray tracing (65536/65536 active): 62% complete
+2025.02.05 21:34:44.125   GPU ray tracing (65536/65536 active): 63% complete
+2025.02.05 21:34:44.188   GPU ray tracing (65536/65536 active): 64% complete
+2025.02.05 21:34:44.241   GPU ray tracing (65536/65536 active): 65% complete
+2025.02.05 21:34:44.754   GPU ray tracing (0/65536 active): 70% complete
+2025.02.05 21:34:44.754   Total Number of Rays shot: 1638400
+2025.02.05 21:34:44.754   Total Number of active rays shot: 1394292
+2025.02.05 21:34:44.754   Total Initial Rays shot: 663228
+2025.02.05 21:34:44.754   Total cones: 0... cone rays shot: 0
+2025.02.05 21:34:44.754   4919 unique paths found.
+
+2025.02.05 21:34:44.754   Calculating E-fields and generating output
+
+2025.02.05 21:34:44.756     ============ ATMOSPHERE ============
+
+2025.02.05 21:34:44.756     Frequency = 3.5e+09
+2025.02.05 21:34:44.756     Attenuation (db/km) = 0.00749287
+2025.02.05 21:34:44.791     Original interaction chains:          4919
+2025.02.05 21:34:44.791     Interaction chains eliminated:        4618
+2025.02.05 21:34:44.791     Physical paths generated:              301
+2025.02.05 21:34:44.791     High power paths retained:             301
+2025.02.05 21:34:44.791     Low power paths eliminated:              0
+
+2025.02.05 21:34:44.853 Starting X3D ray tracing for Tx set 2, point 1 (point 2 of 3 total)
+2025.02.05 21:34:44.856   Initializing 4 threads
+2025.02.05 21:34:44.856   Diffraction cone ray angle=0.25
+2025.02.05 21:34:44.856   Using 1 GPU ray tracer
+2025.02.05 21:34:44.883   Ray tracing ranges: 
+2025.02.05 21:34:44.883     Minimum phi: 0
+2025.02.05 21:34:44.883     Maximum phi: 360
+2025.02.05 21:34:44.883     Minimum theta: 0
+2025.02.05 21:34:44.883     Maximum theta: 180
+2025.02.05 21:34:44.883   Model parameters: 
+2025.02.05 21:34:44.883     Reflections:         3
+2025.02.05 21:34:44.883     Transmissions:       0
+2025.02.05 21:34:44.883     Diffractions:        0
+2025.02.05 21:34:44.883     Ray spacing (degrees): 0.25
+2025.02.05 21:34:44.885   Advanced model parameters:
+2025.02.05 21:34:44.885     Maximum reflections before first diffraction: 2
+2025.02.05 21:34:44.885     Maximum reflections between two diffractions: 0
+2025.02.05 21:34:44.885     Maximum reflections after last diffraction: 2
+2025.02.05 21:34:44.885   Detected 2 GPU devices.
+2025.02.05 21:34:44.891   Licensed 1 GPU devices.
+2025.02.05 21:34:44.891   Running on 1 GPU devices.
+2025.02.05 21:34:44.891     Device ID's: [ 0 ]
+2025.02.05 21:34:45.127   Optimized concurrent GPU rays: 65536
+2025.02.05 21:34:45.130 Initial Ray Generation: Phi/theta sweep mode
+2025.02.05 21:34:45.877   GPU ray tracing (65536/65536 active): 25% complete
+2025.02.05 21:34:45.958   GPU ray tracing (65536/65536 active): 39% complete
+2025.02.05 21:34:45.993   GPU ray tracing (65536/65536 active): 43% complete
+2025.02.05 21:34:46.086   GPU ray tracing (65536/65536 active): 50% complete
+2025.02.05 21:34:46.132   GPU ray tracing (65536/65536 active): 51% complete
+2025.02.05 21:34:46.184   GPU ray tracing (65536/65536 active): 54% complete
+2025.02.05 21:34:46.253   GPU ray tracing (65536/65536 active): 56% complete
+2025.02.05 21:34:46.298   GPU ray tracing (65536/65536 active): 57% complete
+2025.02.05 21:34:46.348   GPU ray tracing (65536/65536 active): 60% complete
+2025.02.05 21:34:46.419   GPU ray tracing (65536/65536 active): 61% complete
+2025.02.05 21:34:46.479   GPU ray tracing (65536/65536 active): 62% complete
+2025.02.05 21:34:46.532   GPU ray tracing (65536/65536 active): 63% complete
+2025.02.05 21:34:47.030   GPU ray tracing (3140/65536 active): 66% complete
+2025.02.05 21:34:47.057   Total Number of Rays shot: 1507328
+2025.02.05 21:34:47.057   Total Number of active rays shot: 1307439
+2025.02.05 21:34:47.057   Total Initial Rays shot: 663228
+2025.02.05 21:34:47.057   Total cones: 0... cone rays shot: 0
+2025.02.05 21:34:47.057   3190 unique paths found.
+
+2025.02.05 21:34:47.057   Calculating E-fields and generating output
+
+2025.02.05 21:34:47.059     ============ ATMOSPHERE ============
+
+2025.02.05 21:34:47.059     Frequency = 3.5e+09
+2025.02.05 21:34:47.059     Attenuation (db/km) = 0.00749287
+2025.02.05 21:34:47.090     Original interaction chains:          3190
+2025.02.05 21:34:47.090     Interaction chains eliminated:        2981
+2025.02.05 21:34:47.090     Physical paths generated:              209
+2025.02.05 21:34:47.090     High power paths retained:             209
+2025.02.05 21:34:47.090     Low power paths eliminated:              0
+
+2025.02.05 21:34:47.151 Starting X3D ray tracing for Tx set 1, point 1 (point 3 of 3 total)
+2025.02.05 21:34:47.153   Initializing 4 threads
+2025.02.05 21:34:47.153   Diffraction cone ray angle=0.25
+2025.02.05 21:34:47.153   Using 1 GPU ray tracer
+2025.02.05 21:34:47.180   Ray tracing ranges: 
+2025.02.05 21:34:47.180     Minimum phi: 0
+2025.02.05 21:34:47.180     Maximum phi: 360
+2025.02.05 21:34:47.180     Minimum theta: 0
+2025.02.05 21:34:47.180     Maximum theta: 180
+2025.02.05 21:34:47.180   Model parameters: 
+2025.02.05 21:34:47.180     Reflections:         3
+2025.02.05 21:34:47.180     Transmissions:       0
+2025.02.05 21:34:47.180     Diffractions:        0
+2025.02.05 21:34:47.180     Ray spacing (degrees): 0.25
+2025.02.05 21:34:47.182   Advanced model parameters:
+2025.02.05 21:34:47.182     Maximum reflections before first diffraction: 2
+2025.02.05 21:34:47.182     Maximum reflections between two diffractions: 0
+2025.02.05 21:34:47.182     Maximum reflections after last diffraction: 2
+2025.02.05 21:34:47.182   Detected 2 GPU devices.
+2025.02.05 21:34:47.188   Licensed 1 GPU devices.
+2025.02.05 21:34:47.188   Running on 1 GPU devices.
+2025.02.05 21:34:47.188     Device ID's: [ 0 ]
+2025.02.05 21:34:47.415   Optimized concurrent GPU rays: 65536
+2025.02.05 21:34:47.417 Initial Ray Generation: Phi/theta sweep mode
+2025.02.05 21:34:48.181   GPU ray tracing (65536/65536 active): 25% complete
+2025.02.05 21:34:48.260   GPU ray tracing (65536/65536 active): 39% complete
+2025.02.05 21:34:48.293   GPU ray tracing (65536/65536 active): 43% complete
+2025.02.05 21:34:48.381   GPU ray tracing (65536/65536 active): 50% complete
+2025.02.05 21:34:48.426   GPU ray tracing (65536/65536 active): 51% complete
+2025.02.05 21:34:48.487   GPU ray tracing (65536/65536 active): 55% complete
+2025.02.05 21:34:48.561   GPU ray tracing (65536/65536 active): 56% complete
+2025.02.05 21:34:48.611   GPU ray tracing (65536/65536 active): 57% complete
+2025.02.05 21:34:48.665   GPU ray tracing (65536/65536 active): 60% complete
+2025.02.05 21:34:48.738   GPU ray tracing (65536/65536 active): 61% complete
+2025.02.05 21:34:48.794   GPU ray tracing (65536/65536 active): 62% complete
+2025.02.05 21:34:48.851   GPU ray tracing (65536/65536 active): 63% complete
+2025.02.05 21:34:49.316   GPU ray tracing (1319/65536 active): 66% complete
+2025.02.05 21:34:49.343   Total Number of Rays shot: 1507328
+2025.02.05 21:34:49.343   Total Number of active rays shot: 1262558
+2025.02.05 21:34:49.343   Total Initial Rays shot: 663228
+2025.02.05 21:34:49.343   Total cones: 0... cone rays shot: 0
+2025.02.05 21:34:49.343   3730 unique paths found.
+
+2025.02.05 21:34:49.343   Calculating E-fields and generating output
+
+2025.02.05 21:34:49.346     ============ ATMOSPHERE ============
+
+2025.02.05 21:34:49.346     Frequency = 3.5e+09
+2025.02.05 21:34:49.346     Attenuation (db/km) = 0.00749287
+2025.02.05 21:34:49.375     Original interaction chains:          3730
+2025.02.05 21:34:49.376     Interaction chains eliminated:        3533
+2025.02.05 21:34:49.376     Physical paths generated:              197
+2025.02.05 21:34:49.376     High power paths retained:             197
+2025.02.05 21:34:49.376     Low power paths eliminated:              0
+
+2025.02.05 21:34:49.476 Total Diffraction Cones: 0
+2025.02.05 21:34:49.476 Output file location: C:\Users\salikha4\Desktop\scenario_generator\osm_exports\bbox_40-68503298_-73-84682129_40-68597435_-73-84336302\insite_3.5GHz_10MHz_25paths_3ref_0trans_0diff\study_area/
+2025.02.05 21:34:49.476 Output prefix: insite
+2025.02.05 21:34:49.478 Antenna: Isotropic
+Cable loss (dB): 0
+Polarization: Vertical
+Power threshold (dBm): -250
+Temperature (K): 293
+VSWR: 1
+
+2025.02.05 21:34:49.478 Waveform: Sinusoid
+Amplitude: 1
+Carrier frequency (MHz): 3500
+Phase (degrees): 0
+
+2025.02.05 21:34:49.478 Bandwidth (MHz): 10
+Dispersive: no
+
+2025.02.05 21:34:49.478 Set number: 4
+Type: GridSet
+Number of points: 5148
+APG Accelerated: yes
+Fit to terrain: yes
+
+2025.02.05 21:34:49.478 Receiver collection radius (m): auto
+
+2025.02.05 21:34:49.478 Length (x) [m]: 290.86
+Length (y) [m]: 108.339
+Planar rotation (degrees): 0
+Spacing (m): 2.5
+
+2025.02.05 21:34:49.481 APG Partition: -1
+2025.02.05 21:34:49.481 
+2025.02.05 21:34:49.481 Creating interaction chains for Adjacent Path Generation
+2025.02.05 21:34:49.579 Created 289 interaction chains
+
+2025.02.05 21:34:49.579 Constructing adjacent paths
+2025.02.05 21:34:49.901   Constructing adjacent paths: 5% complete
+2025.02.05 21:34:49.901   Constructing adjacent paths: 10% complete
+2025.02.05 21:34:49.901   Constructing adjacent paths: 15% complete
+2025.02.05 21:34:49.902   Constructing adjacent paths: 20% complete
+2025.02.05 21:34:49.903   Constructing adjacent paths: 25% complete
+2025.02.05 21:34:49.905   Constructing adjacent paths: 30% complete
+2025.02.05 21:34:49.908   Constructing adjacent paths: 35% complete
+2025.02.05 21:34:49.912   Constructing adjacent paths: 40% complete
+2025.02.05 21:34:49.916   Constructing adjacent paths: 46% complete
+2025.02.05 21:34:49.921   Constructing adjacent paths: 50% complete
+2025.02.05 21:34:49.926   Constructing adjacent paths: 55% complete
+2025.02.05 21:34:49.934   Constructing adjacent paths: 60% complete
+2025.02.05 21:34:49.943   Constructing adjacent paths: 65% complete
+2025.02.05 21:34:49.951   Constructing adjacent paths: 70% complete
+2025.02.05 21:34:49.958   Constructing adjacent paths: 75% complete
+2025.02.05 21:34:49.964   Constructing adjacent paths: 80% complete
+2025.02.05 21:34:49.971   Constructing adjacent paths: 85% complete
+2025.02.05 21:34:49.977   Constructing adjacent paths: 90% complete
+2025.02.05 21:34:49.982   Constructing adjacent paths: 95% complete
+2025.02.05 21:34:49.985   Constructing adjacent paths: 100% complete
+
+2025.02.05 21:34:50.110 Constructed 3085 paths
+
+2025.02.05 21:34:50.110 Finished writing Wireless InSite path results database to disk.
+
+2025.02.05 21:34:50.110 Calculating Wireless InSite output
+2025.02.05 21:34:50.139   Calculating E-fields: 5% complete
+2025.02.05 21:34:50.167   Calculating E-fields: 10% complete
+2025.02.05 21:34:50.196   Calculating E-fields: 15% complete
+2025.02.05 21:34:50.229   Calculating E-fields: 20% complete
+2025.02.05 21:34:50.261   Calculating E-fields: 25% complete
+2025.02.05 21:34:50.293   Calculating E-fields: 30% complete
+2025.02.05 21:34:50.327   Calculating E-fields: 35% complete
+2025.02.05 21:34:50.366   Calculating E-fields: 40% complete
+2025.02.05 21:34:50.409   Calculating E-fields: 45% complete
+2025.02.05 21:34:50.456   Calculating E-fields: 50% complete
+2025.02.05 21:34:50.507   Calculating E-fields: 55% complete
+2025.02.05 21:34:50.568   Calculating E-fields: 60% complete
+2025.02.05 21:34:50.626   Calculating E-fields: 65% complete
+2025.02.05 21:34:50.681   Calculating E-fields: 70% complete
+2025.02.05 21:34:50.735   Calculating E-fields: 75% complete
+2025.02.05 21:34:50.787   Calculating E-fields: 80% complete
+2025.02.05 21:34:50.842   Calculating E-fields: 85% complete
+2025.02.05 21:34:50.890   Calculating E-fields: 90% complete
+2025.02.05 21:34:50.936   Calculating E-fields: 95% complete
+2025.02.05 21:34:51.125 APG Partition: -1
+2025.02.05 21:34:51.125 
+2025.02.05 21:34:51.125 Creating interaction chains for Adjacent Path Generation
+2025.02.05 21:34:51.187 Created 202 interaction chains
+
+2025.02.05 21:34:51.187 Constructing adjacent paths
+2025.02.05 21:34:51.229   Constructing adjacent paths: 5% complete
+2025.02.05 21:34:51.230   Constructing adjacent paths: 10% complete
+2025.02.05 21:34:51.231   Constructing adjacent paths: 15% complete
+2025.02.05 21:34:51.232   Constructing adjacent paths: 20% complete
+2025.02.05 21:34:51.233   Constructing adjacent paths: 25% complete
+2025.02.05 21:34:51.234   Constructing adjacent paths: 30% complete
+2025.02.05 21:34:51.236   Constructing adjacent paths: 35% complete
+2025.02.05 21:34:51.239   Constructing adjacent paths: 40% complete
+2025.02.05 21:34:51.240   Constructing adjacent paths: 45% complete
+2025.02.05 21:34:51.243   Constructing adjacent paths: 50% complete
+2025.02.05 21:34:51.247   Constructing adjacent paths: 55% complete
+2025.02.05 21:34:51.252   Constructing adjacent paths: 60% complete
+2025.02.05 21:34:51.256   Constructing adjacent paths: 66% complete
+2025.02.05 21:34:51.259   Constructing adjacent paths: 70% complete
+2025.02.05 21:34:51.261   Constructing adjacent paths: 75% complete
+2025.02.05 21:34:51.263   Constructing adjacent paths: 80% complete
+2025.02.05 21:34:51.266   Constructing adjacent paths: 85% complete
+2025.02.05 21:34:51.267   Constructing adjacent paths: 90% complete
+2025.02.05 21:34:51.269   Constructing adjacent paths: 95% complete
+2025.02.05 21:34:51.271   Constructing adjacent paths: 100% complete
+
+2025.02.05 21:34:51.367 Constructed 1946 paths
+
+2025.02.05 21:34:51.367 Finished writing Wireless InSite path results database to disk.
+
+2025.02.05 21:34:51.367 Calculating Wireless InSite output
+2025.02.05 21:34:51.403   Calculating E-fields: 5% complete
+2025.02.05 21:34:51.437   Calculating E-fields: 10% complete
+2025.02.05 21:34:51.474   Calculating E-fields: 15% complete
+2025.02.05 21:34:51.507   Calculating E-fields: 20% complete
+2025.02.05 21:34:51.541   Calculating E-fields: 25% complete
+2025.02.05 21:34:51.576   Calculating E-fields: 30% complete
+2025.02.05 21:34:51.609   Calculating E-fields: 35% complete
+2025.02.05 21:34:51.648   Calculating E-fields: 40% complete
+2025.02.05 21:34:51.686   Calculating E-fields: 45% complete
+2025.02.05 21:34:51.725   Calculating E-fields: 50% complete
+2025.02.05 21:34:51.766   Calculating E-fields: 55% complete
+2025.02.05 21:34:51.816   Calculating E-fields: 60% complete
+2025.02.05 21:34:51.862   Calculating E-fields: 65% complete
+2025.02.05 21:34:51.905   Calculating E-fields: 70% complete
+2025.02.05 21:34:51.942   Calculating E-fields: 75% complete
+2025.02.05 21:34:51.980   Calculating E-fields: 80% complete
+2025.02.05 21:34:52.024   Calculating E-fields: 85% complete
+2025.02.05 21:34:52.061   Calculating E-fields: 90% complete
+2025.02.05 21:34:52.098   Calculating E-fields: 95% complete
+2025.02.05 21:34:52.251 APG Partition: -1
+2025.02.05 21:34:52.251 
+2025.02.05 21:34:52.251 Creating interaction chains for Adjacent Path Generation
+2025.02.05 21:34:52.313 Created 193 interaction chains
+
+2025.02.05 21:34:52.313 Constructing adjacent paths
+2025.02.05 21:34:52.355   Constructing adjacent paths: 5% complete
+2025.02.05 21:34:52.355   Constructing adjacent paths: 10% complete
+2025.02.05 21:34:52.356   Constructing adjacent paths: 15% complete
+2025.02.05 21:34:52.358   Constructing adjacent paths: 20% complete
+2025.02.05 21:34:52.359   Constructing adjacent paths: 25% complete
+2025.02.05 21:34:52.359   Constructing adjacent paths: 30% complete
+2025.02.05 21:34:52.361   Constructing adjacent paths: 35% complete
+2025.02.05 21:34:52.363   Constructing adjacent paths: 40% complete
+2025.02.05 21:34:52.365   Constructing adjacent paths: 45% complete
+2025.02.05 21:34:52.368   Constructing adjacent paths: 50% complete
+2025.02.05 21:34:52.372   Constructing adjacent paths: 55% complete
+2025.02.05 21:34:52.374   Constructing adjacent paths: 60% complete
+2025.02.05 21:34:52.378   Constructing adjacent paths: 65% complete
+2025.02.05 21:34:52.381   Constructing adjacent paths: 70% complete
+2025.02.05 21:34:52.383   Constructing adjacent paths: 76% complete
+2025.02.05 21:34:52.387   Constructing adjacent paths: 80% complete
+2025.02.05 21:34:52.390   Constructing adjacent paths: 85% complete
+2025.02.05 21:34:52.393   Constructing adjacent paths: 90% complete
+2025.02.05 21:34:52.395   Constructing adjacent paths: 95% complete
+2025.02.05 21:34:52.398   Constructing adjacent paths: 100% complete
+
+2025.02.05 21:34:52.501 Constructed 2249 paths
+
+2025.02.05 21:34:52.502 Finished writing Wireless InSite path results database to disk.
+
+2025.02.05 21:34:52.502 Calculating Wireless InSite output
+2025.02.05 21:34:52.536   Calculating E-fields: 5% complete
+2025.02.05 21:34:52.569   Calculating E-fields: 10% complete
+2025.02.05 21:34:52.602   Calculating E-fields: 15% complete
+2025.02.05 21:34:52.636   Calculating E-fields: 20% complete
+2025.02.05 21:34:52.668   Calculating E-fields: 25% complete
+2025.02.05 21:34:52.699   Calculating E-fields: 30% complete
+2025.02.05 21:34:52.732   Calculating E-fields: 35% complete
+2025.02.05 21:34:52.769   Calculating E-fields: 40% complete
+2025.02.05 21:34:52.808   Calculating E-fields: 45% complete
+2025.02.05 21:34:52.852   Calculating E-fields: 50% complete
+2025.02.05 21:34:52.895   Calculating E-fields: 55% complete
+2025.02.05 21:34:52.940   Calculating E-fields: 60% complete
+2025.02.05 21:34:52.988   Calculating E-fields: 65% complete
+2025.02.05 21:34:53.032   Calculating E-fields: 70% complete
+2025.02.05 21:34:53.075   Calculating E-fields: 75% complete
+2025.02.05 21:34:53.120   Calculating E-fields: 80% complete
+2025.02.05 21:34:53.165   Calculating E-fields: 85% complete
+2025.02.05 21:34:53.208   Calculating E-fields: 90% complete
+2025.02.05 21:34:53.251   Calculating E-fields: 95% complete
+2025.02.05 21:34:53.452 Check for any far zone requests, non-partitioned job
+
+2025.02.05 21:34:53.461 Writing output files
+2025.02.05 21:34:53.478 Finished writing output files
+
+2025.02.05 21:34:53.478 Wed Feb 5 21:34:53 2025
+
+2025.02.05 21:34:53.480 Geometry Processing Time: : 00:00:01.837
+2025.02.05 21:34:53.480 TxRx Set Generation Time: : 00:00:00.033
+2025.02.05 21:34:53.480 Path Discovery Time: : 00:00:06.615
+2025.02.05 21:34:53.480 Path Generation Time: : 00:00:00.101
+2025.02.05 21:34:53.480 Writing Binary Output Time:: 00:00:00.000
+2025.02.05 21:34:53.480 Writing Path Results Database Time: : 00:00:00.123
+2025.02.05 21:34:53.480 Writing Binary Output Time:: 00:00:00.000
+2025.02.05 21:34:53.480 Writing Path Results Database Time: : 00:00:00.095
+2025.02.05 21:34:53.480 Writing Binary Output Time:: 00:00:00.000
+2025.02.05 21:34:53.480 Writing Path Results Database Time: : 00:00:00.102
+2025.02.05 21:34:53.480 Writing Binary Output Time: : 00:00:00.000
+2025.02.05 21:34:53.480 Writing P2M Output Time: : 00:00:00.018
+
+2025.02.05 21:34:53.480 Total Runtime: : 00:00:13.194

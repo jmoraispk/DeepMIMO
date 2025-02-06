@@ -1,0 +1,17 @@
+begin_<Material> Perfect absorber
+Material 1
+ConstantCoefficient
+thickness 0.000
+begin_<Color> 
+ambient 0.500000 0.200000 0.200000 1.000000
+diffuse 0.500000 0.200000 0.200000 1.000000
+specular 0.500000 0.200000 0.200000 1.000000
+emission 0.000000 0.000000 0.000000 0.000000
+shininess 80.000000
+end_<Color>
+reflection_pl 0.000000
+reflection_pr 0.000000
+transmission_pl 0.000000
+transmission_pr 0.000000
+roughness 0.000
+end_<Material>

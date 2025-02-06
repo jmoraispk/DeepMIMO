@@ -1,0 +1,4 @@
+# <Transmitter Set: Tx: 3 BS3 - Point 1> 
+# <Receiver Set: Rx: 1 BS1> 
+# <X(m)> <Y(m)> <Z(m)> <Distance(m)> <PathLoss(dB)>
+1 -25.306 -24.0135 6 105.534 250

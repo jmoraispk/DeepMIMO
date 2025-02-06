@@ -1,0 +1,7 @@
+begin_<reference> 
+cartesian
+longitude -0.000000000000000
+latitude 0.000000000000000
+visible no
+terrain
+end_<reference>

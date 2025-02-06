@@ -1,0 +1,15 @@
+# <Transmitter Set: Tx: 3 BS3 - Point 1> 
+# <Receiver Set: Rx: 3 BS3 > 
+# <number of receiver points>
+# <receiver point number> <number of paths for this point>
+# <path number> <arrival phi(deg)> <arrival theta(deg)> <received power(dBm)>
+ 1
+1 8
+1 0 180 -68.9934
+2 -70.2072 90 -90.1168
+3 -159.198 90 -91.9933
+4 21.3169 90 -98.6927
+5 -159.551 90 -110.092
+6 21.4799 90 -110.092
+7 -159.714 90 -120.577
+8 21.8323 90 -122.716
