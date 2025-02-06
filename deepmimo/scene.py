@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
 from scipy.io import savemat, loadmat
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Literal, Optional
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -162,7 +162,7 @@ class Face:
 class PhysicalElement:
     """Base class for physical objects in the wireless environment."""
     
-    # Default labels that can be used
+    # Default labels that can be used (users may define their own - only used for search)
     DEFAULT_LABELS = {'building', 'terrain', 'vegetation', 'other'}
     
     def __init__(self, faces: List[Face], object_id: int = -1, 
@@ -181,12 +181,16 @@ class PhysicalElement:
         self.label = label
         self.color = color
         self.speed = speed
+        
         # Extract all vertices from faces for bounding box computation
         all_vertices = np.vstack([face.vertices for face in faces])
         self.vertices = all_vertices
         self._bounding_box: BoundingBox | None = None
         self._footprint: np.ndarray | None = None
         self._position: np.ndarray | None = None
+        self._hull: ConvexHull | None = None
+        self._hull_volume: float | None = None
+        self._hull_surface_area: float | None = None
         
         # Compute bounding box immediately as it's used frequently
         self._compute_bounding_box()
@@ -217,19 +221,40 @@ class PhysicalElement:
         return self._faces
     
     @property
+    def hull(self) -> ConvexHull:
+        """Get the convex hull of the object."""
+        if self._hull is None:
+            self._hull = ConvexHull(self.vertices)
+        return self._hull
+    
+    @property
+    def hull_volume(self) -> float:
+        """Get the volume of the object using its convex hull."""
+        if self._hull_volume is None:
+            self._hull_volume = self.hull.volume
+        return self._hull_volume
+    
+    @property
+    def hull_surface_area(self) -> float:
+        """Get the surface area of the object using its convex hull."""
+        if self._hull_surface_area is None:
+            self._hull_surface_area = self.hull.area
+        return self._hull_surface_area
+
+    @property
     def footprint_area(self) -> float:
-        """Get the area of the object's footprint."""
+        """Get the area of the object's footprint using 2D convex hull."""
         if self._footprint is None:
             # Project all vertices to 2D and compute convex hull
             points_2d = self.vertices[:, :2]
-            hull = ConvexHull(points_2d)
-            self._footprint = points_2d[hull.vertices]
+            hull_2d = ConvexHull(points_2d)
+            self._footprint = points_2d[hull_2d.vertices]
         return ConvexHull(self._footprint).area
     
     @property
     def volume(self) -> float:
-        """Get the approximate volume of the object."""
-        return self.footprint_area * self.height
+        """Get the volume of the object using its convex hull."""
+        return self.hull_volume
     
     def to_dict(self) -> Dict:
         """Convert physical object to dictionary format."""
@@ -269,6 +294,54 @@ class PhysicalElement:
                 (bb.z_max + bb.z_min) / 2
             ])
         return self._position
+
+    def plot_faces(self, ax: plt.Axes, alpha: float = 0.3, color: Optional[str] = None) -> None:
+        """Plot the triangular faces of the object.
+        
+        Args:
+            ax: Matplotlib 3D axes to plot on
+            alpha: Transparency of the faces (default: 0.3)
+            color: Color of the faces (if None, will use object's color)
+        """
+        for face in self.faces:
+            poly3d = Poly3DCollection([face.vertices], alpha=alpha)
+            face_color = self.color or color
+            poly3d.set_facecolor(face_color)
+            poly3d.set_edgecolor('black')
+            ax.add_collection3d(poly3d)
+
+    def plot_hull(self, ax: plt.Axes, alpha: float = 0.3, color: Optional[str] = None) -> None:
+        """Plot the convex hull of the object.
+        
+        Args:
+            ax: Matplotlib 3D axes to plot on
+            alpha: Transparency of the hull (default: 0.3)
+            color: Color of the hull (if None, will use object's color)
+        """
+        for simplex in self.hull.simplices:
+            vertices = self.vertices[simplex]
+            poly3d = Poly3DCollection([vertices], alpha=alpha)
+            hull_color = self.color or color
+            poly3d.set_facecolor(hull_color)
+            poly3d.set_edgecolor('black')
+            ax.add_collection3d(poly3d)
+
+    def plot(self, ax: Optional[plt.Axes] = None, mode: Literal['faces', 'hull'] = 'faces',
+            alpha: float = 0.8, color: Optional[str] = None) -> Tuple[plt.Figure, plt.Axes]:
+        """Plot the object using the specified visualization mode.
+        
+        Args:
+            ax: Matplotlib 3D axes to plot on (if None, creates new figure)
+            mode: Visualization mode - either 'faces' or 'hull' (default: 'faces')
+            alpha: Transparency for visualization (default: 0.8)
+            color: Color for visualization (default: None, uses object's color)
+        """
+        ax = ax or plt.subplots(1, 1, subplot_kw={'projection': '3d'})[1]
+
+        if mode == 'faces':
+            self.plot_faces(ax, alpha, color)
+        elif mode == 'hull':
+            self.plot_hull(ax, alpha, color)
 
 class Scene:
     """Represents a physical scene with various objects affecting wireless propagation."""
@@ -473,14 +546,15 @@ class Scene:
         
         return scene
     
-    def plot_3d(self, show: bool = True, save: bool = False, 
-                filename: str | None = None) -> Tuple[plt.Figure, plt.Axes]:
+    def plot_3d(self, show: bool = True, save: bool = False, filename: str | None = None,
+                mode: Literal['faces', 'hull'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene.
         
         Args:
             show: Whether to display the plot
             save: Whether to save the plot to a file
             filename: Name of the file to save the plot to (if save is True)
+            mode: Visualization mode - either 'faces' or 'hull' (default: 'faces')
             
         Returns:
             Tuple of (Figure, Axes) for the plot
@@ -504,24 +578,19 @@ class Scene:
             )
             
             # Use rainbow colormap for objects without fixed color
-            colors = (plt.cm.rainbow(np.linspace(0, 1, len(objects))) 
-                     if vis_settings['color'] is None else None)
+            n_objects = len(objects)
+            if vis_settings['color'] is None:
+                colors = plt.cm.rainbow(np.linspace(0, 1, n_objects))
+            else:
+                colors = [vis_settings['color']] * n_objects
             
             for obj_idx, obj in enumerate(objects):
-                # Create 3D polygons for each face
-                for face in obj.faces:
-                    poly3d = Poly3DCollection([face.vertices], alpha=vis_settings['alpha'])
-                    
-                    # Use object's color if specified, otherwise use label color or random color
-                    if obj.color:
-                        face_color = obj.color
-                    else:
-                        face_color = vis_settings['color'] or colors[obj_idx]
-                    
-                    poly3d.set_facecolor(face_color)
-                    poly3d.set_edgecolor('black')
-                    poly3d.set_zorder(vis_settings['z_order'])
-                    ax.add_collection3d(poly3d)
+                # Determine color (same for faces and hull)
+                color = obj.color or colors[obj_idx]
+                
+                # Plot object with specified mode
+                obj.plot(ax, mode=mode, alpha=vis_settings['alpha'],
+                        color=color)
         
         self._set_axes_lims_to_scale(ax)
         

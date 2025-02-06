@@ -164,8 +164,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         'materials': materials_dict,
         'scene': scene_dict
     }
-    from pprint import pprint
-    pprint(params)
     cu.save_mat(params, 'params', output_folder)
     
     # Save scenario to deepmimo scenarios folder
