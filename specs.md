@@ -33,12 +33,12 @@ Secondary (computed) matrices:
   4. ...
 
 Design principles:
-- The dataset does not include information that be easily derived. 
-E.g. number of interactions per path = dataset[scene][tx]['inter'] // 10 + 1
-E.g. count nans: number of paths = dataset[scene][tx]['toa']
+- The dataset does not include redundant information.
+E.g. number of interactions per path = log10(dataset[scene][tx]['inter']).floor() + 1
+E.g. number of paths = dataset[scene][tx]['toa']
 - Each dataset keeps constant a number of things: 
     - all TXs/RXs have the same number and type of antennas
-    - 
+    - the fundamental information does not change (angles, phases, ...)
 - If there is a single element in a list, there is no point having a list.
   (we flatten datset[scene][tx] to dataset if it's a single-scene and single-tx dataset)
 - All .mat files are matrices and as low dimension as possible. The only non-matrix
@@ -47,22 +47,15 @@ E.g. count nans: number of paths = dataset[scene][tx]['toa']
   explicit in params.mat (ray tracer and version). Everything else should be transparent
   to the ray tracer.
 
-
-We have these in helper functions.
-
-Files in stored: 
-- scene_X_tx_Y.mat
-- rx_loc.mat
-- tx_loc.mat
-- params.mat
-
-NOTE: an array that is 100k x 20 occupies ~7 MB of memory. 
+Interpretation of a scene:
+- A scene has PhysicalElements.
+- Each PhysicalElement has a BoundingBox and several Faces, which in turn have several triangular faces. 
 
 ## DeepMIMOv3 Spec
 
 N+1 files, N = number of RX-TX pairs enabled
 
-Rx-Tx pair i (BS1_BS.mat or BS3_UE_0-1024.mat)                                               -> NOTE: why not BS1_BS1?
+Rx-Tx pair i (BS1_BS.mat or BS3_UE_0-1024.mat)
     - channels: 1 x N cells
       Each cell: is a 1 x #P array, #P = num_paths
         AoA_phi
