@@ -185,30 +185,25 @@ class PhysicalElement:
         # Extract all vertices from faces for bounding box computation
         all_vertices = np.vstack([face.vertices for face in faces])
         self.vertices = all_vertices
-        self._bounding_box: BoundingBox | None = None
-        self._footprint: np.ndarray | None = None
+        self.bounding_box: BoundingBox
+        self._footprint_area: float | None = None
         self._position: np.ndarray | None = None
         self._hull: ConvexHull | None = None
         self._hull_volume: float | None = None
         self._hull_surface_area: float | None = None
         
-        # Compute bounding box immediately as it's used frequently
+        # Compute bounding box immediately
         self._compute_bounding_box()
     
     def _compute_bounding_box(self) -> None:
         """Compute the object's bounding box."""
         mins = np.min(self.vertices, axis=0)
         maxs = np.max(self.vertices, axis=0)
-        self._bounding_box = BoundingBox(
+        self.bounding_box = BoundingBox(
             x_min=mins[0], x_max=maxs[0],
             y_min=mins[1], y_max=maxs[1],
             z_min=mins[2], z_max=maxs[2]
         )
-    
-    @property
-    def bounding_box(self) -> BoundingBox:
-        """Get the object's bounding box."""
-        return self._bounding_box
     
     @property
     def height(self) -> float:
@@ -244,12 +239,11 @@ class PhysicalElement:
     @property
     def footprint_area(self) -> float:
         """Get the area of the object's footprint using 2D convex hull."""
-        if self._footprint is None:
+        if self._footprint_area is None:
             # Project all vertices to 2D and compute convex hull
             points_2d = self.vertices[:, :2]
-            hull_2d = ConvexHull(points_2d)
-            self._footprint = points_2d[hull_2d.vertices]
-        return ConvexHull(self._footprint).area
+            self._footprint_area = ConvexHull(points_2d).area
+        return self._footprint_area
     
     @property
     def volume(self) -> float:
