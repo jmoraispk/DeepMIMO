@@ -39,37 +39,33 @@ def load_from_pickle(filename):
     with open(filename, 'rb') as file:
         return pickle.load(file)
 
-def sionna_rt_converter(rt_output_folder: str, scenario_name: str = ''):
+def sionna_rt_converter(rt_folder: str, scenario_name: str = ''):
     print('converting from sionna RT')
 
     # Setup scenario name
-    scen_name = os.path.basename(rt_output_folder) 
+    scen_name = os.path.basename(rt_folder) 
     if scenario_name:
         scen_name = scenario_name
 
     # Setup output folder
-    output_folder = os.path.join(rt_output_folder, scen_name + '_deepmimo')
+    output_folder = os.path.join(rt_folder, scen_name + '_deepmimo')
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
 
     os.makedirs(output_folder)
 
-    read_paths = 0
-    read_vertices = 0
-    read_faces = 0
-    read_objects = 0
-
     # Read Setup (ray tracing parameters)
-    setup_dict = read_setup(rt_output_folder)
+    setup_dict = read_setup(rt_folder)
 
     # Read TXRX
     txrx_dict = read_txrx(setup_dict)
 
     # Read Paths (.paths)
-    path_dict_list = 0
+    read_paths(rt_folder, output_folder)
 
     # Read Materials (.materials)
-    materials_dict = read_materials(rt_output_folder)
+    materials_dict = read_materials(rt_folder, output_folder)
+
 
 
 
@@ -113,7 +109,6 @@ def sionna_rt_converter(rt_output_folder: str, scenario_name: str = ''):
 def read_setup(load_folder: str) -> Dict:
     return load_from_pickle(load_folder + 'sionna_rt_params.pkl')
 
-
 def read_txrx(setup_dict: Dict) -> Dict:
     
     # There will be two txrx sets, one for the sources and one for the targets
@@ -138,8 +133,6 @@ def read_txrx(setup_dict: Dict) -> Dict:
         txrx_dict[f'tx_rx_set_{i+1}'] = obj.to_dict() # 1-indexed
 
     return txrx_dict
-
-
 
 def read_paths(load_folder: str, save_folder: str) -> None:
     path_dict_list = load_from_pickle(load_folder + 'sionna_paths.pkl')
@@ -293,13 +286,14 @@ def import_sionna_for_deepmimo(save_folder: str):
 
     
     saved_vars_names = [
-        'sionna_paths.pkl', # DONE
-        'sionna_materials.pkl',        # NOW
-        'sionna_material_indices.pkl', # NOW
-        'sionna_rt_params.pkl', # DONE
-        'sionna_vertices.pkl',
-        'sionna_faces.pkl',
-        'sionna_objects.pkl',
+        'sionna_paths.pkl',            # PHASE 2: DONE
+        'sionna_materials.pkl',        # PHASE 3: NOW...
+        'sionna_material_indices.pkl', # PHASE 3: NOW...
+        'sionna_rt_params.pkl',        # PHASE 1: DONE
+        'sionna_vertices.pkl',         # PHASE 4: not started
+        'sionna_faces.pkl',            # PHASE 4: not started
+        'sionna_objects.pkl',          # PHASE 4: not started
+
     ]
     
     for filename in saved_vars_names:
@@ -309,42 +303,89 @@ def import_sionna_for_deepmimo(save_folder: str):
 
 
 
+from ...materials import (
+    Material,
+    MaterialList,
+    CATEGORY_BUILDINGS,
+    CATEGORY_TERRAIN,
+    CATEGORY_VEGETATION,
+    CATEGORY_FLOORPLANS,
+    CATEGORY_OBJECTS
+)
 
+def read_materials(load_folder: str, save_folder: str) -> Dict:
+    """Read materials from a Sionna RT simulation folder.
+    
+    Args:
+        load_folder: Path to simulation folder containing material files
+        save_folder: Path to save converted materials
+        
+    Returns:
+        Dict containing materials and their categorization
+    """
+    # Load Sionna materials
+    material_properties = load_from_pickle(load_folder + 'sionna_materials.pkl')
+    material_indices = load_from_pickle(load_folder + 'sionna_material_indices.pkl')
 
-def read_materials(load_folder):
+    # Initialize material list
+    material_list = MaterialList()
+    
+    # Attribute matching for scattering models
+    scat_model = {
+        'none?': Material.SCATTERING_NONE,  # if scattering coeff = 0
+        'LambertianPattern': Material.SCATTERING_LAMBERTIAN,
+        'DirectivePattern': Material.SCATTERING_DIRECTIVE,
+        'BackscatteringPattern': Material.SCATTERING_DIRECTIVE  # directive = backscattering
+    }
 
-    material_properties = 0
-
-    # Attribute matching
-    scat_model = {'none?': 'none', # if scattering coeff = 0
-                'LambertianPattern': 'lambertian',
-                'DirectivePattern': 'directive',
-                'BackscatteringPattern': 'directive'} # directive = backscattering
-
-    for mat_property in material_properties:
-        a = mat_property.conductivity.numpy()
-        b = mat_property.relative_permeability.numpy()
-        c = mat_property.relative_permittivity.numpy()
-        scat_coeff = mat_property.scattering_coefficient.numpy()
-        e = mat_property.scattering_pattern.alpha_r
-        f = mat_property.scattering_pattern.alpha_i
-        g = mat_property.scattering_pattern.lambda_.numpy()
-        h = mat_property.xpd_coefficient.numpy()
+    # Convert each Sionna material to DeepMIMO Material
+    materials = []
+    for i, mat_property in enumerate(material_properties):
+        # Get scattering model type and handle case where scattering is disabled
         scattering_model = scat_model[type(mat_property.scattering_pattern).__name__]
-        scattering_model = 'none' if not scat_coeff else scattering_model
+        scat_coeff = mat_property.scattering_coefficient.numpy()
+        scattering_model = Material.SCATTERING_NONE if not scat_coeff else scattering_model
+        
+        # Create Material object
+        material = Material(
+            id=i,
+            name=f'material_{i}',  # Default name if not provided
+            permittivity=mat_property.relative_permittivity.numpy(),
+            conductivity=mat_property.conductivity.numpy(),
+            scattering_model=scattering_model,
+            scattering_coefficient=scat_coeff,
+            cross_polarization_coefficient=mat_property.xpd_coefficient.numpy(),
+            alpha=mat_property.scattering_pattern.alpha_r,
+            beta=mat_property.scattering_pattern.alpha_i,
+            lambda_param=mat_property.scattering_pattern.lambda_.numpy()
+        )
+        materials.append(material)
+    
+    # Add all materials to buildings category by default
+    # This can be modified if Sionna provides material categorization
+    material_list.add_materials(materials, CATEGORY_BUILDINGS)
+    
+    # Get dictionary representation
+    materials_dict = material_list.get_materials_dict()
+    
+    # Save materials to matlab file
+    cu.save_mat(material_indices, 'materials', save_folder)
+    
+    return materials_dict
 
 
+def load_scene(load_folder):
 
-
-def load_vertices(load_folder):
     pass
 
 
-
-
-
-
 if __name__ == '__main__':
-    setup_dict = read_setup('...')
+    rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/' + \
+                'all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
+    output_folder = os.path.join(rt_folder, 'test_deepmimo')
+
+    setup_dict = read_setup(rt_folder)
     txrx_dict = read_txrx(setup_dict)
-    
+    read_paths(rt_folder, output_folder)
+    read_materials(rt_folder, output_folder)
+
