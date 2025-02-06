@@ -163,24 +163,30 @@ class PhysicalElement:
     """Base class for physical objects in the wireless environment."""
     
     # Default labels that can be used
-    DEFAULT_LABELS = {'building', 'terrain', 'vegetation'}
+    DEFAULT_LABELS = {'building', 'terrain', 'vegetation', 'other'}
     
-    def __init__(self, faces: List[Face], object_id: int = -1, label: str = 'building'):
+    def __init__(self, faces: List[Face], object_id: int = -1, 
+                 label: str = 'other', color: str = '', speed: float = 0.0):
         """Initialize a physical object from its faces.
         
         Args:
             faces: List of Face objects defining the object
             object_id: Unique identifier for the object (default: -1)
             label: Label identifying the type of object (default: 'building')
+            color: Color for visualization (default: '', which means use default color)
+            speed: Speed of the object (default: 0.0)
         """
         self._faces = faces
         self.object_id = object_id
         self.label = label
+        self.color = color
+        self.speed = speed
         # Extract all vertices from faces for bounding box computation
         all_vertices = np.vstack([face.vertices for face in faces])
         self.vertices = all_vertices
         self._bounding_box: BoundingBox | None = None
         self._footprint: np.ndarray | None = None
+        self._position: np.ndarray | None = None
         
         # Compute bounding box immediately as it's used frequently
         self._compute_bounding_box()
@@ -250,6 +256,19 @@ class PhysicalElement:
             for face in data['faces']
         ]
         return cls(faces=faces, object_id=data['id'], label=data['label'])
+
+    @property
+    def position(self) -> np.ndarray:
+        """Get the center of mass (position) of the object."""
+        if self._position is None:
+            bb = self.bounding_box
+            # Calculate center as midpoint of bounding box
+            self._position = np.array([
+                (bb.x_max + bb.x_min) / 2,
+                (bb.y_max + bb.y_min) / 2, 
+                (bb.z_max + bb.z_min) / 2
+            ])
+        return self._position
 
 class Scene:
     """Represents a physical scene with various objects affecting wireless propagation."""
@@ -492,7 +511,14 @@ class Scene:
                 # Create 3D polygons for each face
                 for face in obj.faces:
                     poly3d = Poly3DCollection([face.vertices], alpha=vis_settings['alpha'])
-                    poly3d.set_facecolor(vis_settings['color'] or colors[obj_idx])
+                    
+                    # Use object's color if specified, otherwise use label color or random color
+                    if obj.color:
+                        face_color = obj.color
+                    else:
+                        face_color = vis_settings['color'] or colors[obj_idx]
+                    
+                    poly3d.set_facecolor(face_color)
                     poly3d.set_edgecolor('black')
                     poly3d.set_zorder(vis_settings['z_order'])
                     ax.add_collection3d(poly3d)
