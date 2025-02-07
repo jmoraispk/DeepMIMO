@@ -50,6 +50,8 @@ INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 RT_PARAMS_PARAM_NAME = 'rt_params'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
 SCENE_PARAM_NAME = 'scene'  # Scene parameters and configuration
+MATERIALS_PARAM_NAME = 'materials'  # Materials list and properties
+
 
 # DEEPMIMOv4 Computed Parameters
 CHANNEL_PARAM_NAME = 'channel'

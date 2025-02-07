@@ -155,18 +155,17 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     # Save parameters to params.mat
     params = {
         c.LOAD_FILE_SP_VERSION: c.VERSION,
+        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
-        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
-        # 'setup': setup_dict,
-        # 'txrx': txrx_dict,
-        # 'materials': materials_dict,
-        # 'scene': scene_dict
+        # c.RT_PARAMS_PARAM_NAME: setup_dict,
+        # c.PARAMSET_TXRX: txrx_dict,
+        c.MATERIALS_PARAM_NAME: materials_dict,
+        # c.SCENE_PARAM_NAME: scene_dict
     }
-    # for debugging, we can try adding the dictionaries FLAT. ############
     from pprint import pprint
     pprint(params)
-    params = {**params, **setup_dict, **txrx_dict, **materials_dict, **scene_dict}
+    params = {**params, **setup_dict, **txrx_dict, **scene_dict}
     cu.save_mat(params, 'params', output_folder)
     
 

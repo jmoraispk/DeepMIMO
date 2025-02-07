@@ -92,7 +92,8 @@ class BoundingBox:
 class Face:
     """Represents a single face (surface) of a physical object."""
     
-    def __init__(self, vertices: List[Tuple[float, float, float]] | np.ndarray, material_idx: int = 0):
+    def __init__(self, vertices: List[Tuple[float, float, float]] | np.ndarray, 
+                 material_idx: int | np.integer = 0):
         """Initialize a face from its vertices.
         
         Args:
@@ -101,7 +102,7 @@ class Face:
             material_idx: Index of the material for this face (default: 0)
         """
         self.vertices = np.asarray(vertices, dtype=np.float32)
-        self.material_idx = material_idx
+        self.material_idx = int(material_idx)  # Convert to Python int
         self._normal: np.ndarray | None = None
         self._area: float | None = None
         self._centroid: np.ndarray | None = None
@@ -390,7 +391,7 @@ class PhysicalElementGroup:
         for obj in self._objects:
             for face in obj.faces:
                 materials.add(face.material_idx)
-        return materials
+        return list(materials)
     
     def filter_by_label(self, label: str) -> 'PhysicalElementGroup':
         """Get all objects with a specific label."""

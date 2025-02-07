@@ -4,14 +4,16 @@ Materials handling for Wireless Insite conversion.
 This module provides functionality for parsing materials from Wireless Insite files
 and converting them to the base Material format.
 """
-
+# Standard library imports
 import os
 from typing import List, Dict
 from dataclasses import dataclass
 from pathlib import Path
+from pprint import pprint
 
-from .setup_parser import parse_file
-from ...materials import Material, MaterialList
+# Local imports
+from .setup_parser import parse_file  # For parsing Wireless InSite setup-like files
+from ...materials import Material, MaterialList  # Base material classes
 
 
 @dataclass
@@ -141,10 +143,10 @@ def read_materials(sim_folder: str, verbose: bool = False) -> Dict:
         material_list.add_materials(materials)
             
     if verbose:
-        from pprint import pprint
-        pprint(material_list.get_materials_dict())
+        print('\nMaterial list:')
+        pprint(material_list.to_dict())
         
-    return material_list.get_materials_dict()
+    return material_list.to_dict()
 
 
 if __name__ == "__main__":

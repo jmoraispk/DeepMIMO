@@ -11,7 +11,6 @@ import zipfile
 import numpy as np
 import scipy.io
 import shutil
-from pprint import pprint
 
 from ..general_utilities import get_mat_filename
 from .. import consts as c

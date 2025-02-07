@@ -24,6 +24,7 @@ from ... import consts as c
 from ...general_utilities import get_mat_filename
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
+from ...materials import MaterialList
 
 # Channel generation
 from .channel import ChannelGenParameters
@@ -59,22 +60,22 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     return dataset
 
 def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
-    """Load a DeepMIMO scenario from disk or download if not available.
+    """Load a DeepMIMO scenario.
     
-    This function handles scenario data loading, including automatic downloading
-    if the scenario is not found locally.
+    This function loads raytracing data and creates a Dataset or MacroDataset instance.
     
     Args:
         scen_name (str): Name of the scenario to load
-        **load_params (dict): Additional loading parameters including tx_sets, rx_sets, max_paths
-            
+        **load_params: Additional parameters for loading the scenario
+        
     Returns:
-        Dataset: Loaded scenario data including ray-tracing results and parameters
+        Dataset or MacroDataset: Loaded dataset(s)
         
     Raises:
         ValueError: If scenario files cannot be loaded
     """
-    if '\\' in scen_name or '/' in scen_name:
+    # Handle absolute paths
+    if os.path.isabs(scen_name):
         scen_folder = scen_name
         scen_name = os.path.basename(scen_folder)
     else:
@@ -83,12 +84,17 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
     # Download scenario if needed
     if not os.path.exists(scen_folder):
         print('Scenario not found. Would you like to download it? [Y/n]')
-        ans = input()
-        if not ('n' in ans.lower()):
-            zip_path = download_scenario_handler(scen_name)
-            extract_scenario(zip_path)
+        response = input().lower()
+        if response in ['', 'y', 'yes']:
+            download_scenario_handler(scen_name)
+            extract_scenario(scen_name)
+        else:
+            raise ValueError(f'Scenario {scen_name} not found')
     
+    # Load parameters file
     params_mat_file = os.path.join(scen_folder, 'params.mat')
+    if not os.path.exists(params_mat_file):
+        raise ValueError(f'Parameters file not found in {scen_folder}')
     rt_params = load_mat_file_as_dict(params_mat_file)['params']
     
     # Load scenario data
@@ -103,10 +109,11 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
             dataset.append(load_raytracing_scene(snapshot_folder, rt_params, **load_params))
     else: # static
         dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
-
-    # Now set the shared parameters
+    
+    # Set shared parameters
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
     dataset[c.SCENE_PARAM_NAME] = Scene.from_data(rt_params, scen_folder)
+    dataset[c.MATERIALS_PARAM_NAME] = MaterialList.from_dict(rt_params['materials'])
 
     return dataset
 

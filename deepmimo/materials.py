@@ -89,19 +89,6 @@ class MaterialList:
         for i, mat in enumerate(self._materials):
             mat.id = i
     
-    def get_materials_dict(self) -> Dict:
-        """Get dictionary representation of all materials.
-        
-        Returns:
-            Dict mapping material IDs to their properties. Note that when saved
-            to .mat format, numeric keys will be converted to strings (e.g., '0', '1', etc.)
-        """
-        materials_dict = {}
-        for mat in self._materials:
-            mat_dict = asdict(mat)
-            materials_dict[f'material_{mat.id}'] = mat_dict  # Use numeric ID as key
-        return materials_dict
-    
     def _filter_duplicates(self) -> None:
         """Remove duplicate materials based on their properties."""
         unique_materials = []
@@ -116,3 +103,31 @@ class MaterialList:
                 unique_materials.append(mat)
         
         self._materials = unique_materials
+
+    def to_dict(self) -> Dict:
+        """Get dictionary representation of all materials.
+        
+        Returns:
+            Dict mapping material IDs to their properties. Note that when saved
+            to .mat format, numeric keys will be converted to strings (e.g., '0', '1', etc.)
+        """
+        return {f'material_{mat.id}': asdict(mat) for mat in self._materials}
+
+    @classmethod
+    def from_dict(cls, materials_dict: Dict) -> 'MaterialList':
+        """Create MaterialList from dictionary representation.
+        
+        Args:
+            materials_dict: Dictionary mapping material IDs to their properties
+            
+        Returns:
+            MaterialList containing the materials from the dictionary
+        """
+        materials_list = cls()
+        materials = []
+        
+        for _, mat_data in materials_dict.items():
+            materials.append(Material(**mat_data))
+        
+        materials_list.add_materials(materials)
+        return materials_list

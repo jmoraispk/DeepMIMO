@@ -355,7 +355,8 @@ class Dataset(DotDict):
             c.AOA_AZ_FOV_PARAM_NAME: np.where(fov_mask, aoa_phi, np.nan)
         }
 
-    def _compute_single_array_response(self, ant_params: Dict, theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+    def _compute_single_array_response(self, ant_params: Dict, theta: np.ndarray, 
+                                       phi: np.ndarray) -> np.ndarray:
         """Compute array response for a single antenna array.
         
         Args:
@@ -398,6 +399,7 @@ class Dataset(DotDict):
         return dbm2watt(self.power) 
 
     # Dictionary mapping attribute names to their computation methods
+    # (in order of computation)
     _computed_attributes = {
         'num_paths': '_compute_num_paths',
         'num_interactions': '_compute_num_interactions',
@@ -405,19 +407,27 @@ class Dataset(DotDict):
         'pathloss': '_compute_pathloss',
         'channel': '_compute_channels',
         'los': '_compute_los',
+        
+        # Power linear
         'power_linear': '_compute_power_linear',
-        'power_linear_ant_gain': '_compute_power_linear_ant_gain',
-        'fov': '_compute_fov',
-        'array_response_product': '_compute_array_response_product',
+        
+        # Rotated angles
         'aoa_az_rot': '_compute_rotated_angles',
-        'aoa_el_rot': '_compute_rotated_angles',
+        'aoa_el_rot': '_compute_rotated_angles', 
         'aod_az_rot': '_compute_rotated_angles',
         'aod_el_rot': '_compute_rotated_angles',
+        'array_response_product': '_compute_array_response_product',
+        
+        # Field of view
+        'fov': '_compute_fov',
+        'fov_mask': '_compute_fov',
         'aoa_az_rot_fov': '_compute_fov',
         'aoa_el_rot_fov': '_compute_fov',
         'aod_az_rot_fov': '_compute_fov',
         'aod_el_rot_fov': '_compute_fov',
-        'fov_mask': '_compute_fov'  
+        
+        # Power with antenna gain
+        'power_linear_ant_gain': '_compute_power_linear_ant_gain'
     }
 
     # Dictionary of common aliases for dataset attributes
@@ -491,6 +501,7 @@ class MacroDataset:
     SINGLE_ACCESS_KEYS = {
         c.LOAD_PARAMS_PARAM_NAME,  # Load parameters are shared
         c.SCENE_PARAM_NAME,        # Scene parameters are shared
+        c.MATERIALS_PARAM_NAME,    # Materials are shared
     }
     
     # Methods that should be propagated to children - automatically populated from Dataset methods
