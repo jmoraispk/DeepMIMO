@@ -11,16 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .setup_parser import parse_file
-from .. import converter_utils as cu
-from ...materials import (
-    Material,
-    MaterialList,
-    CATEGORY_BUILDINGS,
-    CATEGORY_TERRAIN,
-    CATEGORY_VEGETATION,
-    CATEGORY_FLOORPLANS,
-    CATEGORY_OBJECTS
-)
+from ...materials import Material, MaterialList
 
 
 @dataclass
@@ -127,7 +118,7 @@ def read_materials(sim_folder: str, verbose: bool = False) -> Dict:
         verbose: Whether to print debug information
         
     Returns:
-        Dict containing materials and their categorization
+        Dict containing materials and their properties
     """
     sim_folder = Path(sim_folder)
     if not sim_folder.exists():
@@ -136,20 +127,18 @@ def read_materials(sim_folder: str, verbose: bool = False) -> Dict:
     # Initialize material list
     material_list = MaterialList()
     
-    # Get files by type
-    file_types = {
-        CATEGORY_BUILDINGS: list(sim_folder.glob("*.city")),
-        CATEGORY_TERRAIN: list(sim_folder.glob("*.ter")),
-        CATEGORY_VEGETATION: list(sim_folder.glob("*.veg")),
-        CATEGORY_FLOORPLANS: list(sim_folder.glob("*.flp")),
-        CATEGORY_OBJECTS: list(sim_folder.glob("*.obj"))
-    }
+    # Find all material files
+    material_files = []
+    for ext in ['.city', '.ter', '.veg', '.flp', '.obj']:
+        material_files.extend(sim_folder.glob(f"*{ext}"))
     
-    # Parse materials from each file type
-    for category, files in file_types.items():
-        for file in files:
-            materials = parse_materials_from_file(file)
-            material_list.add_materials(materials, category)
+    if not material_files:
+        raise ValueError(f"No material files found in {sim_folder}")
+    
+    # Parse materials from each file
+    for file in material_files:
+        materials = parse_materials_from_file(file)
+        material_list.add_materials(materials)
             
     if verbose:
         from pprint import pprint
@@ -173,8 +162,4 @@ if __name__ == "__main__":
     
     # Basic test
     materials_dict = read_materials(test_dir, verbose=True)
-    print("\nCategories found:")
-    for category, materials in materials_dict.items():
-        if materials:
-            print(f"{category}: {len(materials)} materials")
-            
+    print(f"\nTotal materials found: {len(materials_dict)}")

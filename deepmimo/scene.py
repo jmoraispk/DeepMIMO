@@ -10,9 +10,26 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
 from scipy.io import savemat, loadmat
-from typing import List, Dict, Tuple, Literal, Optional
+from typing import List, Dict, Tuple, Literal, Optional, Set
 from dataclasses import dataclass
 from pathlib import Path
+from .materials import MaterialList
+
+# Physical element categories
+CAT_BUILDINGS: str = 'buildings'      # Building structures
+CAT_TERRAIN: str = 'terrain'          # Ground/terrain surfaces
+CAT_VEGETATION: str = 'vegetation'    # Vegetation/foliage
+CAT_FLOORPLANS: str = 'floorplans'    # Indoor floorplans
+CAT_OBJECTS: str = 'objects'          # Other scene objects
+
+# All valid categories
+ELEMENT_CATEGORIES = [
+    CAT_BUILDINGS,
+    CAT_TERRAIN,
+    CAT_VEGETATION,
+    CAT_FLOORPLANS,
+    CAT_OBJECTS
+]
 
 @dataclass
 class BoundingBox:
@@ -163,22 +180,22 @@ class PhysicalElement:
     """Base class for physical objects in the wireless environment."""
     
     # Default labels that can be used (users may define their own - only used for search)
-    DEFAULT_LABELS = {'building', 'terrain', 'vegetation', 'other'}
+    DEFAULT_LABELS = {CAT_BUILDINGS, CAT_TERRAIN, CAT_VEGETATION, CAT_FLOORPLANS, CAT_OBJECTS}
     
     def __init__(self, faces: List[Face], object_id: int = -1, 
-                 label: str = 'other', color: str = '', speed: float = 0.0):
+                 label: str = CAT_OBJECTS, color: str = '', speed: float = 0.0):
         """Initialize a physical object from its faces.
         
         Args:
             faces: List of Face objects defining the object
             object_id: Unique identifier for the object (default: -1)
-            label: Label identifying the type of object (default: 'building')
+            label: Label identifying the type of object (default: 'objects')
             color: Color for visualization (default: '', which means use default color)
             speed: Speed of the object (default: 0.0)
         """
         self._faces = faces
         self.object_id = object_id
-        self.label = label
+        self.label = label if label in self.DEFAULT_LABELS else CAT_OBJECTS
         self.color = color
         self.speed = speed
         
@@ -191,6 +208,9 @@ class PhysicalElement:
         self._hull: ConvexHull | None = None
         self._hull_volume: float | None = None
         self._hull_surface_area: float | None = None
+        
+        # Cache material indices
+        self._material_indices: Optional[Set[int]] = None
         
         # Compute bounding box immediately
         self._compute_bounding_box()
@@ -337,26 +357,110 @@ class PhysicalElement:
         elif mode == 'hull':
             self.plot_hull(ax, alpha, color)
 
+    @property
+    def material_indices(self) -> Set[int]:
+        """Get set of material indices used by this object."""
+        if self._material_indices is None:
+            self._material_indices = {face.material_idx for face in self._faces}
+        return self._material_indices
+
+class PhysicalElementGroup:
+    """Represents a group of physical objects that can be queried and manipulated together."""
+    
+    def __init__(self, objects: List[PhysicalElement]):
+        """Initialize a group of physical objects."""
+        self._objects = objects
+        self._bounding_box: Optional[BoundingBox] = None
+        
+    def __len__(self) -> int:
+        """Get number of objects in group."""
+        return len(self._objects)
+        
+    def __iter__(self):
+        """Iterate over objects in group."""
+        return iter(self._objects)
+        
+    def __getitem__(self, idx: int) -> PhysicalElement:
+        """Get object by index."""
+        return self._objects[idx]
+    
+    def get_materials(self) -> Set[int]:
+        """Get set of material indices used by objects in this group."""
+        materials = set()
+        for obj in self._objects:
+            for face in obj.faces:
+                materials.add(face.material_idx)
+        return materials
+    
+    def filter_by_label(self, label: str) -> 'PhysicalElementGroup':
+        """Get all objects with a specific label."""
+        objects = [obj for obj in self._objects if obj.label == label]
+        return PhysicalElementGroup(objects)
+    
+    def filter_by_material(self, material_idx: int) -> 'PhysicalElementGroup':
+        """Get all objects that use a specific material."""
+        objects = [obj for obj in self._objects if any(face.material_idx == material_idx for face in obj.faces)]
+        return PhysicalElementGroup(objects)
+    
+    @property
+    def bounding_box(self) -> BoundingBox:
+        """Get the bounding box containing all objects."""
+        if self._bounding_box is None:
+            if not self._objects:
+                raise ValueError("Group is empty")
+            
+            # Collect all object bounding boxes
+            boxes = [obj.bounding_box.bounds for obj in self._objects]
+            boxes = np.array(boxes)  # Shape: (N, 2, 3)
+            
+            # Compute global bounds
+            global_min = np.min(boxes[:, 0], axis=0)  # Min of mins
+            global_max = np.max(boxes[:, 1], axis=0)  # Max of maxs
+            
+            self._bounding_box = BoundingBox(
+                x_min=global_min[0], x_max=global_max[0],
+                y_min=global_min[1], y_max=global_max[1],
+                z_min=global_min[2], z_max=global_max[2]
+            )
+        return self._bounding_box
+
 class Scene:
     """Represents a physical scene with various objects affecting wireless propagation."""
     
     # Default visualization settings for different labels
     DEFAULT_VISUALIZATION_SETTINGS = {
-        'terrain': {'z_order': 1, 'alpha': 0.1, 'color': 'grey'},
-        'vegetation': {'z_order': 2, 'alpha': 0.8, 'color': 'green'},
-        'building': {'z_order': 3, 'alpha': 0.8, 'color': None}  # None = use rainbow colors
+        CAT_TERRAIN: {'z_order': 1, 'alpha': 0.1, 'color': 'grey'},
+        CAT_VEGETATION: {'z_order': 2, 'alpha': 0.8, 'color': 'green'},
+        CAT_BUILDINGS: {'z_order': 3, 'alpha': 0.8, 'color': None},  # use random color
+        CAT_FLOORPLANS: {'z_order': 4, 'alpha': 0.8, 'color': 'blue'},
+        CAT_OBJECTS: {'z_order': 5, 'alpha': 0.8, 'color': 'blue'}
     }
     
     def __init__(self):
         """Initialize an empty scene."""
         self.objects: List[PhysicalElement] = []
-        self._bounding_box: BoundingBox | None = None
         self.visualization_settings = self.DEFAULT_VISUALIZATION_SETTINGS.copy()
         
         # Matrix storage tracking
         self.face_indices = []  # List[List[List[int]]] for [object][face][triangle_indices]
         self._current_index = 0
+        
+        # Initialize tracking dictionaries
+        self._objects_by_category: Dict[str, List[PhysicalElement]] = {
+            cat: [] for cat in ELEMENT_CATEGORIES
+        }
+        self._objects_by_material: Dict[int, List[PhysicalElement]] = {}
+        self._materials: Optional[MaterialList] = None
+
+    @property
+    def bounding_box(self) -> BoundingBox:
+        """Get the bounding box containing all objects."""
+        return self.get_objects().bounding_box
     
+    def set_visualization_settings(self, label: str, settings: Dict) -> None:
+        """Set visualization settings for a specific label."""
+        self.visualization_settings[label] = settings
+
     def add_object(self, obj: PhysicalElement) -> None:
         """Add a physical object to the scene.
         
@@ -371,6 +475,18 @@ class Scene:
         for face in obj.faces:
             face_indices = self._add_face(face)
             obj_indices.append(face_indices)
+        
+        # Track object by materials
+        for material_idx in obj.material_indices:
+            if material_idx not in self._objects_by_material:
+                self._objects_by_material[material_idx] = []
+            self._objects_by_material[material_idx].append(obj)
+        
+        # Track object by category
+        category = obj.label if obj.label in ELEMENT_CATEGORIES else CAT_OBJECTS
+        if category not in self._objects_by_category:
+            self._objects_by_category[category] = []
+        self._objects_by_category[category].append(obj)
         
         self.face_indices.append(obj_indices)
         self.objects.append(obj)
@@ -399,47 +515,29 @@ class Scene:
         self._current_index += n_triangles
         return triangle_indices
     
-    def get_objects_by_label(self, label: str) -> List[PhysicalElement]:
-        """Get all objects with a specific label.
+    def get_objects(self, label: str | None = None) -> PhysicalElementGroup:
+        """Get all objects, optionally filtered by label.
         
         Args:
-            label: Label to filter objects by
+            label: Optional label to filter objects by
             
         Returns:
-            List of objects with the specified label
+            PhysicalElementGroup containing objects (filtered by label if specified)
         """
-        return [obj for obj in self.objects if obj.label == label]
+        group = PhysicalElementGroup(self.objects)
+        return group.filter_by_label(label) if label else group
     
-    @property
-    def bounding_box(self) -> BoundingBox:
-        """Get the bounding box containing all objects."""
-        if self._bounding_box is None:
-            if not self.objects:
-                raise ValueError("Scene is empty")
-            
-            # Collect all object bounding boxes
-            boxes = [obj.bounding_box.bounds for obj in self.objects]
-            boxes = np.array(boxes)  # Shape: (N, 2, 3)
-            
-            # Compute global bounds
-            global_min = np.min(boxes[:, 0], axis=0)  # Min of mins
-            global_max = np.max(boxes[:, 1], axis=0)  # Max of maxs
-            
-            self._bounding_box = BoundingBox(
-                x_min=global_min[0], x_max=global_max[0],
-                y_min=global_min[1], y_max=global_max[1],
-                z_min=global_min[2], z_max=global_max[2]
-            )
-        return self._bounding_box
-    
-    def set_visualization_settings(self, label: str, settings: Dict) -> None:
-        """Set visualization settings for a specific label.
+    def get_objects_by_material(self, material_idx: int) -> PhysicalElementGroup:
+        """Get all objects that use a specific material.
         
         Args:
-            label: Object label to set settings for
-            settings: Dictionary containing visualization settings
+            material_idx: Index of the material to filter by
+            
+        Returns:
+            PhysicalElementGroup containing objects that use the specified material
         """
-        self.visualization_settings[label] = settings
+        objects = self._objects_by_material.get(material_idx, [])
+        return PhysicalElementGroup(objects)
     
     def export_data(self, base_folder: str) -> Dict:
         """Export scene data to files and return metadata dictionary.
@@ -540,8 +638,8 @@ class Scene:
         
         return scene
     
-    def plot_3d(self, show: bool = True, save: bool = False, filename: str | None = None,
-                mode: Literal['faces', 'hull'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
+    def plot(self, show: bool = True, save: bool = False, filename: str | None = None,
+             mode: Literal['faces', 'hull'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene.
         
         Args:

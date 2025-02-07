@@ -11,13 +11,24 @@ from typing import List, Dict, Tuple
 from pathlib import Path
 from scipy.spatial import ConvexHull
 
-from ...scene import PhysicalElement, Face, Scene
+from ...scene import (
+    PhysicalElement, 
+    Face, 
+    Scene,
+    CAT_BUILDINGS,
+    CAT_TERRAIN,
+    CAT_VEGETATION,
+    CAT_FLOORPLANS,
+    CAT_OBJECTS
+)
 
 # Map file extensions to their corresponding labels
 OBJECT_LABELS: Dict[str, str] = {
-    '.city': 'building',
-    '.ter': 'terrain',
-    '.veg': 'vegetation'
+    '.city': CAT_BUILDINGS,
+    '.ter': CAT_TERRAIN,
+    '.veg': CAT_VEGETATION,
+    '.flp': CAT_FLOORPLANS,
+    '.obj': CAT_OBJECTS
 }
 
 
@@ -243,4 +254,4 @@ if __name__ == "__main__":
     scene = read_scene(test_dir)
 
     # Visualize
-    scene.plot_3d(show=True) 
+    scene.plot(show=True) 

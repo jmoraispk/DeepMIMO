@@ -8,24 +8,6 @@ including electromagnetic and scattering characteristics.
 from dataclasses import dataclass, asdict, astuple
 from typing import Dict, ClassVar, List, Set
 
-
-# Material categories used across all converters
-CATEGORY_BUILDINGS: str = 'buildings'      # Materials used in outdoor building structures
-CATEGORY_TERRAIN: str = 'terrain'          # Materials used in ground/terrain surfaces
-CATEGORY_VEGETATION: str = 'vegetation'     # Materials used in vegetation/foliage
-CATEGORY_FLOORPLANS: str = 'floorplans'    # Materials used in indoor structures (walls, floors, etc.)
-CATEGORY_OBJECTS: str = 'objects'          # Materials used in other scene objects
-
-# All valid material categories
-MATERIAL_CATEGORIES = [
-    CATEGORY_BUILDINGS,
-    CATEGORY_TERRAIN,
-    CATEGORY_VEGETATION,
-    CATEGORY_FLOORPLANS,
-    CATEGORY_OBJECTS
-]
-
-
 @dataclass
 class Material:
     """Base class for material representation.
@@ -61,21 +43,43 @@ class Material:
     roughness: float = -1.0  # Surface roughness (m)
     thickness: float = -1.0  # Material thickness (m)
 
-
 class MaterialList:
-    """Container for managing a collection of materials and their categorization."""
+    """Container for managing a collection of materials."""
     
     def __init__(self):
         """Initialize an empty material list."""
         self._materials: List[Material] = []
-        self._materials_by_type: Dict[str, Set[str]] = {cat: set() for cat in MATERIAL_CATEGORIES}
+    
+    def __getitem__(self, idx: int | List[int]) -> 'Material | MaterialList':
+        """Get material(s) by index or indices.
         
-    def add_materials(self, materials: List[Material], category: str | None = None) -> None:
+        Args:
+            idx: Single index or list of indices
+            
+        Returns:
+            Single Material if idx is int, or MaterialList if idx is list
+        """
+        if isinstance(idx, int):
+            return self._materials[idx]
+        else:
+            # Create new MaterialList with selected materials
+            materials = MaterialList()
+            materials.add_materials([self._materials[i] for i in idx])
+            return materials
+    
+    def __len__(self) -> int:
+        """Get number of materials."""
+        return len(self._materials)
+    
+    def __iter__(self):
+        """Iterate over materials."""
+        return iter(self._materials)
+        
+    def add_materials(self, materials: List[Material]) -> None:
         """Add materials to the collection.
         
         Args:
             materials: List of Material objects to add
-            category: Optional category to assign materials to
         """
         # Add to main list and filter duplicates
         self._materials.extend(materials)
@@ -84,38 +88,19 @@ class MaterialList:
         # Assign IDs after filtering
         for i, mat in enumerate(self._materials):
             mat.id = i
-        
-        # Add to category if specified
-        if category and category in MATERIAL_CATEGORIES:
-            self._materials_by_type[category].update(mat.name for mat in materials)
     
     def get_materials_dict(self) -> Dict:
         """Get dictionary representation of all materials.
         
         Returns:
-            Dict containing:
-            - materials: Dict mapping material IDs to their properties. Note that when saved
-              to .mat format, numeric keys will be converted to strings (e.g., '0', '1', etc.)
-            - buildings_materials: List of material names used in buildings
-            - terrain_materials: List of material names used in terrain
-            - vegetation_materials: List of material names used in vegetation
-            - floorplans_materials: List of material names used in indoor structures
-            - objects_materials: List of material names used in other scene objects
+            Dict mapping material IDs to their properties. Note that when saved
+            to .mat format, numeric keys will be converted to strings (e.g., '0', '1', etc.)
         """
-        # Get material definitions
         materials_dict = {}
         for mat in self._materials:
             mat_dict = asdict(mat)
             materials_dict[f'material_{mat.id}'] = mat_dict  # Use numeric ID as key
-            
-        # Add _materials suffix to category names
-        materials_by_type = {
-            f"{k}_materials": sorted(list(v)) 
-            for k, v in self._materials_by_type.items()
-        }
-        
-        # Combine both in final dictionary
-        return {**materials_dict, **materials_by_type}
+        return materials_dict
     
     def _filter_duplicates(self) -> None:
         """Remove duplicate materials based on their properties."""

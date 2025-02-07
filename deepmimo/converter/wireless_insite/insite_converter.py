@@ -15,7 +15,6 @@ can be generated using (transpose) reciprocity.
 import os
 import shutil
 from typing import List, Dict, Optional
-from pathlib import Path
 
 # Third-party imports
 import numpy as np
@@ -151,7 +150,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     scene_dict = scene.export_data(output_folder)
     
     # Visualize if requested
-    if vis_scene: scene.plot_3d(show=True)
+    if vis_scene: scene.plot()
     
     # Save parameters to params.mat
     params = {
@@ -159,13 +158,18 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
         c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
-        'setup': setup_dict,
-        'txrx': txrx_dict,
-        'materials': materials_dict,
-        'scene': scene_dict
+        # 'setup': setup_dict,
+        # 'txrx': txrx_dict,
+        # 'materials': materials_dict,
+        # 'scene': scene_dict
     }
+    # for debugging, we can try adding the dictionaries FLAT. ############
+    from pprint import pprint
+    pprint(params)
+    params = {**params, **setup_dict, **txrx_dict, **materials_dict, **scene_dict}
     cu.save_mat(params, 'params', output_folder)
     
+
     # Save scenario to deepmimo scenarios folder
     scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     

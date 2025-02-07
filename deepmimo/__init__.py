@@ -33,6 +33,7 @@ from .info import info
 from .scene import (
     Face,
     PhysicalElement,
+    PhysicalElementGroup,
     Scene
 )
 
@@ -54,5 +55,6 @@ __all__ = [
     # Physical world representation
     'Face',
     'PhysicalElement',
+    'PhysicalElementGroup',
     'Scene',
 ]

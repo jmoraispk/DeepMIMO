@@ -89,12 +89,12 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
             extract_scenario(zip_path)
     
     params_mat_file = os.path.join(scen_folder, 'params.mat')
-    rt_params = load_mat_file_as_dict(params_mat_file) # should be appended in upper level
+    rt_params = load_mat_file_as_dict(params_mat_file)['params']
     
     # Load scenario data
     n_snapshots = rt_params[c.PARAMSET_DYNAMIC_SCENES]
     if n_snapshots > 1: # dynamic
-        raise NotImplementedError('..')
+        raise NotImplementedError('Dynamic scenarios not implemented yet')
         dataset = []
         for snapshot_i in range(n_snapshots):
             snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],

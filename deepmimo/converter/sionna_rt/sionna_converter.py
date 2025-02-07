@@ -28,6 +28,7 @@ INTERACTIONS_MAP = {
     4:  None,  # Sionna RIS is not supported yet
 }
 
+SOURCE_EXTS = ['.pkl']
 
 def save_to_pickle(obj, filename):
     """Saves an object to a pickle file."""
@@ -87,7 +88,7 @@ def sionna_rt_converter(rt_folder: str, scenario_name: str = ''):
     cu.zip_folder(output_folder) # ready for upload
     
     # Copy and zip ray tracing source files as well
-    # cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
+    cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
     
     return scen_name
 
@@ -291,12 +292,7 @@ def import_sionna_for_deepmimo(save_folder: str):
 
 from ...materials import (
     Material,
-    MaterialList,
-    CATEGORY_BUILDINGS,
-    CATEGORY_TERRAIN,
-    CATEGORY_VEGETATION,
-    CATEGORY_FLOORPLANS,
-    CATEGORY_OBJECTS
+    MaterialList
 )
 
 def read_materials(load_folder: str, save_folder: str) -> Dict:
