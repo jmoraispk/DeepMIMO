@@ -43,15 +43,28 @@ E.g. number of paths = dataset[scene][tx]['toa']
   (we flatten datset[scene][tx] to dataset if it's a single-scene and single-tx dataset)
 - All .mat files are matrices and as low dimension as possible. The only non-matrix
   is a struct/dictionairy called params.mat.
-- To the user, the only visible differences of which ray tracer was used, will be 
-  explicit in params.mat (ray tracer and version). Everything else should be transparent
-  to the ray tracer.
+- The user experience after generation should be transparent to the ray tracer. 
+- Be very space and compute efficient, as often as possible, and document when
+  possible improvements are known. This frequently involves:
+    - doing lazy evaluation and caching
+    - pre-allocating and not copying data unnecessarily
+    - using efficient data structures that avoid redundancies
+    - ...
+- Places we know that efficiency is lacking:
+    - Running computations on GPU (*optionally* with cuPy, most likely.)
+    - Batching channel computations
+    - Frequencies (only power and phase change with frequency. Possibly certain 
+    material change too)
+    - Dynamic scenarios (depending on how much data changes between scenes, and 
+      mainly regarding storage, not runtime)
 
 Interpretation of a scene:
 - A scene has PhysicalElements.
 - Each PhysicalElement has a BoundingBox and several Faces, which in turn have several triangular faces. 
 
 ## DeepMIMOv3 Spec
+
+
 
 N+1 files, N = number of RX-TX pairs enabled
 
