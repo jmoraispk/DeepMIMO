@@ -10,30 +10,47 @@ import matplotlib.pyplot as plt
 
 #%% V3 & V4 Conversion
 
-# path_to_p2m_outputs = r'.\P2Ms\asu_campus\study_area_asu5'
-path_to_p2m_outputs = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
+def convert_scenario(p2m_folder: str, use_v3: bool = False) -> str:
+    """Convert a Wireless Insite scenario to DeepMIMO format.
+    
+    Args:
+        p2m_folder (str): Path to the p2m folder
+        use_v3 (bool): Whether to use v3 converter. Defaults to False.
+        
+    Returns:
+        str: Name of the converted scenario
+    """
+    # Set parameters based on scenario
+    if 'asu_campus' in p2m_folder:
+        old_params_dict = {'num_bs': 1, 'user_grid': [1, 411, 321], 'freq': 3.5e9} # asu
+    else:
+        old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61], 'freq': 3.5e9} # simple canyon
 
-if 'asu_campus' in path_to_p2m_outputs:
-    old_params_dict = {'num_bs': 1, 'user_grid': [1, 411, 321], 'freq': 3.5e9} # asu
-else:
-    old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61],   'freq': 3.5e9} # simple canyon
+    # Get scenario name from path
+    scen_name = p2m_folder.split('\\')[2] + ('_old' if use_v3 else '')
+    
+    # Convert using appropriate converter
+    return dm.convert(p2m_folder,
+                     overwrite=True, 
+                     old=use_v3,
+                     old_params=old_params_dict if use_v3 else None,
+                     scenario_name=scen_name,
+                     vis_scene=True)
 
-old = False
-scen_name = path_to_p2m_outputs.split('\\')[2] + ('_old' if old else '')
-scen_name = dm.convert(path_to_p2m_outputs,
-                       overwrite=True, 
-                       old=old,
-                       old_params=old_params_dict,
-                       scenario_name=scen_name,
-                       vis_scene=True)
+# Example usage
+# p2m_folder = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
+p2m_folder = r'.\P2Ms\asu_campus\study_area_asu5'
+
+# Convert using v4 converter
+scen_name = convert_scenario(p2m_folder, use_v3=True)
 
 #%% V4 Generation
 
 # Start timing
 start_time = time.time()
 
-scen_name = 'simple_street_canyon_test'
-# scen_name = 'asu_campus'
+# scen_name = 'simple_street_canyon_test'
+scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
@@ -75,42 +92,6 @@ _ = dataset._compute_channels(ch_params)
 # End timing
 end_time = time.time()
 print(f"Time elapsed: {end_time - start_time:.2f} seconds")
-
-#%%
-
-# dataset.num_paths  # Triggers _compute_num_paths
-
-# # Rotated angles computation
-# # These will be computed when first accessed:
-dataset.aoa_az_rot  # Triggers _compute_rotated_angles
-# dataset.aoa_el_rot
-# dataset.aod_az_rot
-# dataset.aod_el_rot
-
-# # FoV filtered angles computation
-# # These will be computed when first accessed:
-dataset.aoa_az_rot_fov  # Triggers _compute_fov
-# dataset.aoa_el_rot_fov
-# dataset.aod_az_rot_fov
-# dataset.aod_el_rot_fov
-# dataset.fov_mask
-
-# # Compute received power with antenna pattern
-dataset.power_linear_ant_gain  # Triggers _compute_received_power
-
-dataset.channel  # Triggers _compute_channels with ch_params
-dataset.pathloss  # Triggers _compute_pathloss
-dataset.distances  # Triggers _compute_distances
-
-# The aliases are already defined in the Dataset class
-# So these will work automatically:
-dataset.pwr      # Alias for power
-dataset.pwr_lin  # Alias for power_linear
-dataset.ch       # Alias for channel
-dataset.pl       # Alias for pathloss
-dataset.rx_loc   # Alias for rx_pos
-dataset.tx_loc   # Alias for tx_pos
-dataset.dist     # Alias for distances
 
 #%% V3 Generation
 
@@ -167,7 +148,10 @@ dataset = dm.load_scenario(scen_name)
 # Get the scene
 scene = dataset.scene
 
-# TODO: put this into some info object
+# TODO: put these prints into an example or some info object
+# (make the example for essentially all functionality)
+# in the case of the channel and other _functions, make them also avaiable,
+# and find a way to store the value in the dataset when calling them explicitly
 
 # 1. Basic scene information
 print("\n1. Scene Overview:")
@@ -182,26 +166,33 @@ print(f"Buildings: {len(buildings)}")
 print(f"Terrain: {len(terrain)}")
 print(f"Vegetation: {len(vegetation)}")
 
-# 2. Materials
-print("\n2. Materials Usage:")
+# 2. Materials and Filtering
+print("\n2. Materials and Filtering:")
 materials = dataset.materials
 
 # Get materials used by buildings
 building_materials = buildings.get_materials()
 print(f"Materials used in buildings: {building_materials}")
 
-# Get objects using a specific material
-material_idx = list(building_materials)[0]  # Get first material index
-objects_with_material = scene.get_objects_by_material(material_idx)
-print(f"Objects using material {material_idx}: {len(objects_with_material)}")
+# Different ways to filter objects
+print("\nFiltering examples:")
 
-# TODO: add a __repr__ for the material or something such that we don't have to refer 
-# to it by the index, especially in prints like here
+# Filter by label only
+buildings = scene.get_objects(label='buildings')
+print(f"Buildings: {len(buildings)}")
 
-# Print material properties
+# Filter by material only
+material_idx = building_materials[0]  # Get first material index
+objects_with_material = scene.get_objects(material=material_idx)
+print(f"Objects with material {material_idx}: {len(objects_with_material)}")
+
+# Filter by both label and material
+buildings_with_material = scene.get_objects(label='buildings', material=material_idx)
+print(f"Buildings with material {material_idx}: {len(buildings_with_material)}")
+
+# Print material properties for reference
 material = materials[material_idx]
 print(f"\nMaterial {material_idx} properties:")
-
 print(f"- Name: {material.name}")
 print(f"- Permittivity: {material.permittivity}")
 print(f"- Conductivity: {material.conductivity}")
@@ -230,10 +221,15 @@ print("Plotting scene with different categories highlighted...")
 scene.plot()
 
 # Plot just the buildings
-buildings_scene = dm.Scene()
-for obj in buildings:
-    buildings_scene.add_object(obj)
+# buildings_scene = dm.Scene()
+# for obj in buildings:
+#     buildings_scene.add_object(obj)
     
-buildings_scene.plot()
+# buildings_scene.plot()
+
+# TODO: add a __repr__ for the material or something such that we don't have to refer 
+# to it by the index, especially in prints like here
 
 # TODO: make hull better (to contain the whole building, not just each face)
+
+# %%
