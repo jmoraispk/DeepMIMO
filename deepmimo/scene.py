@@ -365,21 +365,28 @@ class PhysicalElementGroup:
         """Get object by index."""
         return self._objects[idx]
     
-    def get_materials(self) -> Set[int]:
-        """Get set of material indices used by objects in this group."""
-        materials = set()
-        for obj in self._objects:
-            materials.update(obj.material_indices)
-        return list(materials)
+    def get_materials(self) -> List[int]:
+        """Get list of material indices used by objects in this group."""
+        return list(set().union(*(obj.material_indices for obj in self._objects)))
     
-    def filter_by_label(self, label: str) -> 'PhysicalElementGroup':
-        """Get all objects with a specific label."""
-        objects = [obj for obj in self._objects if obj.label == label]
-        return PhysicalElementGroup(objects)
-    
-    def filter_by_material(self, material_idx: int) -> 'PhysicalElementGroup':
-        """Get all objects that use a specific material."""
-        objects = [obj for obj in self._objects if material_idx in obj.material_indices]
+    def get_objects(self, label: Optional[str] = None, material: Optional[int] = None) -> 'PhysicalElementGroup':
+        """Get objects filtered by label and/or material.
+        
+        Args:
+            label: Optional label to filter objects by
+            material: Optional material index to filter objects by
+            
+        Returns:
+            PhysicalElementGroup containing filtered objects
+        """
+        objects = self._objects
+        
+        if label:
+            objects = [obj for obj in objects if obj.label == label]
+            
+        if material:
+            objects = [obj for obj in objects if material in obj.material_indices]
+            
         return PhysicalElementGroup(objects)
     
     @property
@@ -495,30 +502,28 @@ class Scene:
         self._current_index += n_triangles
         return triangle_indices
     
-    def get_objects(self, label: str | None = None) -> PhysicalElementGroup:
-        """Get all objects, optionally filtered by label.
+    def get_objects(self, label: Optional[str] = None, material: Optional[int] = None) -> PhysicalElementGroup:
+        """Get objects filtered by label and/or material.
         
         Args:
             label: Optional label to filter objects by
+            material: Optional material index to filter objects by
             
         Returns:
-            PhysicalElementGroup containing objects (filtered by label if specified)
+            PhysicalElementGroup containing filtered objects
         """
-        if label is None:
-            return PhysicalElementGroup(self.objects)
-        return PhysicalElementGroup(self._objects_by_category.get(label, []))
-    
-    def get_objects_by_material(self, material_idx: int) -> PhysicalElementGroup:
-        """Get all objects that use a specific material.
+        # Get initial objects based on first filter
+        if label:
+            objects = self._objects_by_category.get(label, [])
+        elif material:
+            objects = self._objects_by_material.get(material, [])
+        else:
+            objects = self.objects
+            
+        # Create group and apply material filter if needed
+        group = PhysicalElementGroup(objects)
         
-        Args:
-            material_idx: Index of the material to filter by
-            
-        Returns:
-            PhysicalElementGroup containing objects that use the specified material
-        """
-        objects = self._objects_by_material.get(material_idx, [])
-        return PhysicalElementGroup(objects)
+        return group.get_objects(material=material) if material else group
     
     def export_data(self, base_folder: str) -> Dict:
         """Export scene data to files and return metadata dictionary.
