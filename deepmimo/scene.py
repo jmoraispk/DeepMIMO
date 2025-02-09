@@ -310,37 +310,6 @@ class PhysicalElement:
             ])
         return self._position
 
-    def plot_faces(self, ax: plt.Axes, alpha: float = 0.3, color: Optional[str] = None) -> None:
-        """Plot the triangular faces of the object.
-        
-        Args:
-            ax: Matplotlib 3D axes to plot on
-            alpha: Transparency of the faces (default: 0.3)
-            color: Color of the faces (if None, will use object's color)
-        """
-        for face in self.faces:
-            poly3d = Poly3DCollection([face.vertices], alpha=alpha)
-            face_color = self.color or color
-            poly3d.set_facecolor(face_color)
-            poly3d.set_edgecolor('black')
-            ax.add_collection3d(poly3d)
-
-    def plot_hull(self, ax: plt.Axes, alpha: float = 0.3, color: Optional[str] = None) -> None:
-        """Plot the convex hull of the object.
-        
-        Args:
-            ax: Matplotlib 3D axes to plot on
-            alpha: Transparency of the hull (default: 0.3)
-            color: Color of the hull (if None, will use object's color)
-        """
-        for simplex in self.hull.simplices:
-            vertices = self.vertices[simplex]
-            poly3d = Poly3DCollection([vertices], alpha=alpha)
-            hull_color = self.color or color
-            poly3d.set_facecolor(hull_color)
-            poly3d.set_edgecolor('black')
-            ax.add_collection3d(poly3d)
-
     def plot(self, ax: Optional[plt.Axes] = None, mode: Literal['faces', 'hull'] = 'faces',
             alpha: float = 0.8, color: Optional[str] = None) -> Tuple[plt.Figure, plt.Axes]:
         """Plot the object using the specified visualization mode.
@@ -352,11 +321,22 @@ class PhysicalElement:
             color: Color for visualization (default: None, uses object's color)
         """
         ax = ax or plt.subplots(1, 1, subplot_kw={'projection': '3d'})[1]
-
+        
+        # Get vertices based on mode
         if mode == 'faces':
-            self.plot_faces(ax, alpha, color)
+            vertices_list = [face.vertices for face in self.faces]
         elif mode == 'hull':
-            self.plot_hull(ax, alpha, color)
+            vertices_list = [self.vertices[simplex] for simplex in self.hull.simplices]
+        
+        # Plot all vertices
+        for vertices in vertices_list:
+            poly3d = Poly3DCollection([vertices], alpha=alpha)
+            plot_color = self.color or color
+            poly3d.set_facecolor(plot_color)
+            poly3d.set_edgecolor('black')
+            ax.add_collection3d(poly3d)
+            
+        return ax.get_figure(), ax
 
     @property
     def material_indices(self) -> Set[int]:
