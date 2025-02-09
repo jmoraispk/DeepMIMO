@@ -369,8 +369,7 @@ class PhysicalElementGroup:
         """Get set of material indices used by objects in this group."""
         materials = set()
         for obj in self._objects:
-            for face in obj.faces:
-                materials.add(face.material_idx)
+            materials.update(obj.material_indices)
         return list(materials)
     
     def filter_by_label(self, label: str) -> 'PhysicalElementGroup':
@@ -380,7 +379,7 @@ class PhysicalElementGroup:
     
     def filter_by_material(self, material_idx: int) -> 'PhysicalElementGroup':
         """Get all objects that use a specific material."""
-        objects = [obj for obj in self._objects if any(face.material_idx == material_idx for face in obj.faces)]
+        objects = [obj for obj in self._objects if material_idx in obj.material_indices]
         return PhysicalElementGroup(objects)
     
     @property
@@ -505,8 +504,9 @@ class Scene:
         Returns:
             PhysicalElementGroup containing objects (filtered by label if specified)
         """
-        group = PhysicalElementGroup(self.objects)
-        return group.filter_by_label(label) if label else group
+        if label is None:
+            return PhysicalElementGroup(self.objects)
+        return PhysicalElementGroup(self._objects_by_category.get(label, []))
     
     def get_objects_by_material(self, material_idx: int) -> PhysicalElementGroup:
         """Get all objects that use a specific material.
