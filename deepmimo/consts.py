@@ -15,9 +15,12 @@ FP_TYPE = np.float32  # floating point precision for saving values
 
 # Supported ray tracers and their versions
 RAYTRACER_NAME_WIRELESS_INSITE = 'Remcom Wireless Insite'
-RAYTRACER_VERSION_WIRELESS_INSITE = 3.3
+RAYTRACER_VERSION_WIRELESS_INSITE = '3.3'
 RAYTRACER_NAME_SIONNA = 'Sionna Ray Tracing'           # not supported yet
+RAYTRACER_VERSION_SIONNA = '0.19.1'
 RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'  # not supported yet
+RAYTRACER_VERSION_AODT = '1.x'
+
 
 
 # Interaction Codes
