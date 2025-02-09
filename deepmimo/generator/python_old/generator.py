@@ -2,7 +2,7 @@ import os
 import copy
 import numpy as np
 
-from ... import consts as c
+from ... import consts_v3 as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
 from .utils import safe_print
 from .params import Parameters
@@ -22,7 +22,7 @@ def generate_data(params_obj=None):
         ans = input()
         if not ('n' in ans.lower()):
             zip_path = download_scenario_handler(params_obj.get_name())
-            scen_path = extract_scenario(zip_path)
+            extract_scenario(zip_path)
         
     try:
         params = validate_params(copy.deepcopy(ext_params))

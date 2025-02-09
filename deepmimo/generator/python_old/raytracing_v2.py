@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from tqdm import tqdm
-from ... import consts as c
+from ... import consts_v3 as c
 from .utils import PathVerifier, dbm2watt
 import scipy.io
 
