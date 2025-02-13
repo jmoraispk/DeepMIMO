@@ -141,4 +141,10 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
              dataset['inter_pos'][10], dataset['inter'][10],
              proj_3D=True, color_by_type=True)
 
+# Next: determine which buildings interact with each ray. 
+#       make a set of those buildings for all the rays in the user.
+#       plot the buildings that matter to that user along with the rays.
+#       (based on the building bounding boxes)
+#       Use the PhysicalObjects class to plot a group of buildings.
+
 #%%
