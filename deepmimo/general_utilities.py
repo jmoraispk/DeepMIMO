@@ -7,7 +7,7 @@ the DeepMIMO toolkit.
 """
 
 from pprint import pformat
-from typing import Dict, Any, Iterator, TypeVar, Mapping, Optional
+from typing import Dict, Any, TypeVar, Mapping, Optional
 
 K = TypeVar('K', bound=str)
 V = TypeVar('V')
