@@ -42,7 +42,7 @@ def convert_scenario(p2m_folder: str, use_v3: bool = False) -> str:
 p2m_folder = r'.\P2Ms\asu_campus\study_area_asu5'
 
 # Convert using v4 converter
-scen_name = convert_scenario(p2m_folder, use_v3=True)
+scen_name = convert_scenario(p2m_folder, use_v3=False)
 
 #%% V4 Generation
 
@@ -130,7 +130,15 @@ dataset = dm.generate(scen_name)
 
 #%% Visualization check
 
-dm.visualization.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
+dm.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
                                bs_pos=dataset['tx_pos'].T)
 
-plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=20)
+plt.scatter(dataset['rx_pos'][10,0], dataset['rx_pos'][10,1], c='k', s=20)
+
+#%%
+
+dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
+             dataset['inter_pos'][10], dataset['inter'][10],
+             proj_3D=True, color_by_type=True)
+
+#%%

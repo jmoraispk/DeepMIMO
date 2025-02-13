@@ -13,7 +13,10 @@ from .generator.python.core import (
 from .generator.python.dataset import Dataset
 
 # Visualization
-from .generator.python import visualization
+from .generator.python.visualization import (
+    plot_coverage,
+    plot_rays,
+)
 
 # Utilities
 from .generator.python.utils import (
@@ -45,6 +48,10 @@ __all__ = [
     'load_scenario',
     'Dataset',
     'ChannelGenParameters',
+    
+    # Visualization
+    'plot_coverage',
+    'plot_rays',
     
     # Utilities
     'LinearPath',

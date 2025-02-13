@@ -190,6 +190,149 @@ def export_xyz_csv(data: Dict[str, Any], z_var: np.ndarray, outfile: str = '',
 
 
 
+def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
+              inter: np.ndarray, figsize: tuple = (10,8), dpi: int = 300,
+              proj_3D: bool = True, color_by_type: bool = False) -> Tuple[Figure, Axes]:
+    """Plot ray paths between transmitter and receiver with interaction points.
+    
+    For a given user, plots all ray paths connecting TX and RX through their
+    respective interaction points. Each path is drawn as a sequence of segments
+    connecting TX -> interaction points -> RX.
+
+    Args:
+        rx_loc (np.ndarray): Receiver location array with shape [3,]
+        tx_loc (np.ndarray): Transmitter location array with shape [3,]
+        inter_pos (np.ndarray): Interaction positions with shape [n_paths, max_interactions, 3]
+            where n_paths is the number of rays for this user
+        inter (np.ndarray): Interaction types with shape [n_paths,]
+            where each path's value contains digits representing interaction types
+            (e.g., 211 means type 2 for first bounce, type 1 for second and third)
+        figsize (tuple, optional): Figure size in inches. Defaults to (10,8).
+        dpi (int, optional): Resolution in dots per inch. Defaults to 300.
+        proj_3D (bool, optional): Whether to create 3D projection. Defaults to True.
+        color_by_type (bool, optional): Whether to color interaction points by their type. Defaults to False.
+
+    Returns:
+        Tuple containing:
+        - matplotlib Figure object
+        - matplotlib Axes object
+    """
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi,
+                          subplot_kw={'projection': '3d'} if proj_3D else {})
+    
+    # Ensure inputs are numpy arrays and have correct shape
+    rx_loc = np.asarray(rx_loc)  # Shape: (3,)
+    tx_loc = np.asarray(tx_loc)  # Shape: (3,)
+    inter_pos = np.asarray(inter_pos)  # Shape: (n_paths, max_interactions, 3)
+    inter = np.asarray(inter)  # Shape: (n_paths,)
+    
+    # Define colors and names for different interaction types
+    interaction_colors = {
+        0: 'green',    # Line-of-sight (direct path)
+        1: 'red',      # Reflection
+        2: 'orange',   # Diffraction
+        3: 'blue',     # Scattering
+        4: 'purple',   # Transmission
+        -1: 'gray'     # Unknown/Invalid
+    }
+    
+    interaction_names = {
+        0: 'Line-of-sight',
+        1: 'Reflection',
+        2: 'Diffraction',
+        3: 'Scattering',
+        4: 'Transmission',
+        -1: 'Unknown'
+    }
+    
+    # For each ray path
+    for path_idx in range(len(inter_pos)):
+        # Get valid interaction points for this path (excluding zero padding)
+        # Check if any coordinate (x,y,z) is non-zero
+        valid_inters = np.any(inter_pos[path_idx] != 0, axis=1)
+        path_interactions = inter_pos[path_idx][valid_inters]
+        
+        # Create complete path: TX -> interactions -> RX
+        path_points = np.vstack([tx_loc, path_interactions, rx_loc])
+        
+        # Get interaction types for this path
+        # Convert to integer first to remove decimal part
+        path_type_int = int(inter[path_idx])
+        if path_type_int == 0:
+            path_types = []
+        else:
+            # Convert to string and get individual digits
+            path_types = [int(d) for d in str(path_type_int)]
+        
+        # Check if this is a LoS path
+        is_los = len(path_interactions) == 0
+        
+        # Plot the ray path segments
+        for i in range(len(path_points)-1):
+            if proj_3D:
+                ax.plot([path_points[i,0], path_points[i+1,0]], 
+                       [path_points[i,1], path_points[i+1,1]],
+                       [path_points[i,2], path_points[i+1,2]],
+                       'g-' if is_los else 'r-', alpha=0.5)
+            else:
+                ax.plot([path_points[i,0], path_points[i+1,0]],
+                       [path_points[i,1], path_points[i+1,1]],
+                       'g-' if is_los else 'r-', alpha=0.5)
+        
+        # Plot interaction points
+        if len(path_interactions) > 0:  # If there are interaction points
+            for i, pos in enumerate(path_interactions):
+                if color_by_type and i < len(path_types):
+                    # Get color based on interaction type at this position
+                    point_color = interaction_colors.get(path_types[i], 'gray')
+                    point_label = interaction_names.get(path_types[i], 'Unknown')
+                else:
+                    point_color = 'blue'
+                    point_label = None
+                
+                if proj_3D:
+                    ax.scatter(pos[0], pos[1], pos[2],
+                             c=point_color, marker='o', s=50,
+                             label=point_label)
+                else:
+                    ax.scatter(pos[0], pos[1],
+                             c=point_color, marker='o', s=50,
+                             label=point_label)
+    
+    # Plot TX and RX points
+    if proj_3D:
+        ax.scatter(tx_loc[0], tx_loc[1], tx_loc[2], 
+                  c='black', marker='^', s=100, label='TX')
+        ax.scatter(rx_loc[0], rx_loc[1], rx_loc[2],
+                  c='black', marker='v', s=100, label='RX')
+        ax.set_zlabel('z (m)')
+    else:
+        ax.scatter(tx_loc[0], tx_loc[1],
+                  c='black', marker='^', s=100, label='TX')
+        ax.scatter(rx_loc[0], rx_loc[1],
+                  c='black', marker='v', s=100, label='RX')
+    
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    
+    # Only show legend if color_by_type is True or if there are TX/RX points
+    if color_by_type:
+        # Remove duplicate labels
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys())
+    else:
+        ax.legend()
+    
+    # Set equal aspect ratio for better visualization
+    if not proj_3D:
+        ax.set_aspect('equal')
+    
+    return fig, ax
+
+
+
+
 
 
 
