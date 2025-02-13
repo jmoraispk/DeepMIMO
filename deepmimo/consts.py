@@ -28,8 +28,8 @@ RAYTRACER_VERSION_AODT = '1.x'
 INTERACTION_LOS = 0         # Line-of-sight (direct path)
 INTERACTION_REFLECTION = 1  # Reflection
 INTERACTION_DIFFRACTION = 2 # Diffraction
-INTERACTION_TRANSMISSION = 3 # Transmission
-INTERACTION_SCATTERING = 4  # Scattering
+INTERACTION_SCATTERING = 3 # Scattering
+INTERACTION_TRANSMISSION = 4 # Transmission
 
 
 # Path Processing Constants
