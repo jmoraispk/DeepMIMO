@@ -10,47 +10,55 @@ import matplotlib.pyplot as plt
 
 #%% V3 & V4 Conversion
 
-def convert_scenario(p2m_folder: str, use_v3: bool = False) -> str:
+def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
     """Convert a Wireless Insite scenario to DeepMIMO format.
     
     Args:
-        p2m_folder (str): Path to the p2m folder
+        rt_folder (str): Path to the ray tracing folder
         use_v3 (bool): Whether to use v3 converter. Defaults to False.
         
     Returns:
         str: Name of the converted scenario
     """
     # Set parameters based on scenario
-    if 'asu_campus' in p2m_folder:
+    if 'asu_campus' in rt_folder:
         old_params_dict = {'num_bs': 1, 'user_grid': [1, 411, 321], 'freq': 3.5e9} # asu
     else:
         old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61], 'freq': 3.5e9} # simple canyon
 
+    rt_folder = rt_folder.replace('\\', '/')
+
     # Get scenario name from path
-    scen_name = p2m_folder.split('\\')[2] + ('_old' if use_v3 else '')
-    
+    i = -2 if 'P2Ms' in rt_folder else -1 
+    # -2 for Wireless Insite, -1 for other raytracers
+    # because for Wireless Insite, we give the P2M INSIDE the rt_folder.. 
+
+    # Get scenario name
+    scen_name = rt_folder.split('/')[-i] + ('_old' if use_v3 else '')
+
     # Convert using appropriate converter
-    return dm.convert(p2m_folder,
-                     overwrite=True, 
-                     old=use_v3,
-                     old_params=old_params_dict if use_v3 else None,
-                     scenario_name=scen_name,
-                     vis_scene=True)
+    return dm.convert(rt_folder,
+                      overwrite=True, 
+                      old=use_v3,
+                      old_params=old_params_dict if use_v3 else None,
+                      scenario_name=scen_name,
+                      vis_scene=True)
 
 # Example usage
-# p2m_folder = r'.\P2Ms\simple_street_canyon_test\study_rays=0.25_res=2m_3ghz'
-p2m_folder = r'.\P2Ms\asu_campus\study_area_asu5'
+# rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
+# rt_folder = './P2Ms/asu_campus/study_area_asu5'
+rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
 
 # Convert using v4 converter
-scen_name = convert_scenario(p2m_folder, use_v3=False)
+scen_name = convert_scenario(rt_folder, use_v3=False)
 
 #%% V4 Generation
 
 # Start timing
 start_time = time.time()
 
-# scen_name = 'simple_street_canyon_test'
-scen_name = 'asu_campus'
+scen_name = 'simple_street_canyon_test'
+# scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}

@@ -37,7 +37,7 @@ def convert(path_to_rt_folder: str, **conversion_params: Dict[str, Any]) -> Opti
     if cu.ext_in_list('.aodt', files_in_dir):
         print("Using AODT generator")
         rt_converter = aodt_rt_converter
-    elif cu.ext_in_list('.path', files_in_dir):
+    elif cu.ext_in_list('.pkl', files_in_dir):
         print("Using Sionna_RT generator")
         rt_converter = sionna_rt_converter
     elif cu.ext_in_list('.p2m', files_in_dir):
