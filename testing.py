@@ -37,12 +37,10 @@ def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
     scen_name = rt_folder.split('/')[-i] + ('_old' if use_v3 else '')
 
     # Convert using appropriate converter
-    return dm.convert(rt_folder,
-                      overwrite=True, 
-                      old=use_v3,
-                      old_params=old_params_dict if use_v3 else None,
-                      scenario_name=scen_name,
-                      vis_scene=True)
+    if use_v3:
+        return dm.insite_rt_converter_v3(rt_folder, None, None, old_params_dict, scen_name)
+    else:
+        return dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=True)
 
 # Example usage
 # rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'

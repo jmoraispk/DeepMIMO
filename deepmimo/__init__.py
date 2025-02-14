@@ -32,6 +32,7 @@ from .generator.python.utils import (
 from .generator.python.channel import ChannelGenParameters
 
 from .converter.converter import convert
+from .converter.wireless_insite.insite_converter_v3 import insite_rt_converter_v3
 from .info import info
 
 # Physical world representation
@@ -50,6 +51,7 @@ __all__ = [
     'load_scenario',
     'Dataset',
     'ChannelGenParameters',
+    'insite_rt_converter_v3',
     
     # Visualization
     'plot_coverage',

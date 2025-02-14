@@ -14,7 +14,7 @@ can be generated using (transpose) reciprocity.
 # Standard library imports
 import os
 import shutil
-from typing import List, Dict, Optional
+from typing import Optional
 
 # Local imports
 from .. import converter_utils as cu
@@ -24,7 +24,6 @@ from .insite_setup import read_setup
 from .insite_scene import read_scene
 from .insite_txrx import read_txrx
 from .insite_paths import read_paths
-from .insite_converter_v3 import insite_rt_converter_v3
 
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
@@ -33,7 +32,6 @@ SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
 
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                         overwrite: Optional[bool] = None, vis_scene: bool = False, 
-                        old: bool = False, old_params: Dict = {}, # to remove later
                         scenario_name: str = '') -> str:
     """Convert Wireless InSite ray-tracing data to DeepMIMO format.
 
@@ -46,8 +44,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         copy_source (bool): Whether to copy ray-tracing source files to output.
         overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
         vis_scene (bool): Whether to visualize the scene layout. Defaults to False.
-        old (bool): Whether to use legacy v3 converter. Defaults to False.
-        old_params (Dict): Parameters for legacy v3 converter. Defaults to {}.
         scenario_name (str): Custom name for output folder. Uses p2m folder name if empty.
 
     Returns:
@@ -57,9 +53,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         FileNotFoundError: If required input files are missing.
         ValueError: If transmitter or receiver IDs are invalid.
     """
-    if old: # v3
-        return insite_rt_converter_v3(p2m_folder, None, None, old_params, scenario_name)
-    
+
     # Setup output folder
     insite_sim_folder = os.path.dirname(p2m_folder)
     p2m_basename = os.path.basename(p2m_folder)
