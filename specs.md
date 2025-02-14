@@ -32,6 +32,9 @@ Secondary (computed) matrices:
   3. ['pathloss'] is N x 1. Pathloss between each RX and TX. May be coherent or not.
   4. ...
 
+Versioning:
+<global_format_rules>.<converter_version>.<generator_version> 
+
 Design principles:
 - The dataset does not include redundant information.
 E.g. number of interactions per path = log10(dataset[scene][tx]['inter']).floor() + 1
