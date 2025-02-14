@@ -186,11 +186,14 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, np.ndarray]:
     Output:
         vertice_matrix: n_vertices_in_scene x 3 (xyz coordinates)
         face_matrix: n_faces_in_scene x 3 (indices of each vertex in triangular face)
+
+    For the reference of a shape, used in a Sionna Scene, accessible in scene.mi_shapes, see:
+    https://mitsuba.readthedocs.io/en/stable/src/api_reference.html#mitsuba.Mesh
     """
     # Count all faces of all shapes
     n_tot_vertices = 0
     n_tot_faces = 0
-    for i, shape in enumerate(scene.mi_shapes):
+    for shape in scene.mi_shapes:
         n_tot_vertices += shape.vertex_count()
         n_tot_faces += shape.face_count()
     
@@ -202,7 +205,7 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, np.ndarray]:
     last_vertice_idx = 0
     last_face_idx = 0
     objects_dict = {}  # store object-to-face mapping
-    for i, shape in enumerate(scene.mi_shapes):
+    for shape in scene.mi_shapes:
         n_vertices = shape.vertex_count()
         vertice_idxs = last_vertice_idx + np.arange(n_vertices)
         vertice_matrix[vertice_idxs] = np.array(shape.vertex_position(np.arange(n_vertices)))
