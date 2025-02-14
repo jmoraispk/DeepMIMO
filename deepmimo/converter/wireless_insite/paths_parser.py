@@ -70,8 +70,8 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
         c.AOA_EL_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
         c.AOD_AZ_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
         c.AOD_EL_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        c.TOA_PARAM_NAME:    np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        c.PWR_PARAM_NAME:    np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.DELAY_PARAM_NAME:    np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        c.POWER_PARAM_NAME:    np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
         c.PHASE_PARAM_NAME:  np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
         c.INTERACTIONS_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS), dtype=np.float32) * np.nan,
         c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rxs, c.MAX_PATHS, c.MAX_INTER_PER_PATH, 3), dtype=np.float32) * np.nan,
@@ -98,9 +98,9 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
             i1, i2, i3, i4, i5, i6, i7, i8, i9 = tuple(line.split())
             # (no need) i1 = <path number>
     		# (no need) i2 = <total interactions for path> (not including Tx and Rx)
-            data[c.PWR_PARAM_NAME][rx_i, path_idx]   = np.float32(i3) # i3 = <received power(dBm)>
+            data[c.POWER_PARAM_NAME][rx_i, path_idx]   = np.float32(i3) # i3 = <received power(dBm)>
             data[c.PHASE_PARAM_NAME][rx_i, path_idx] = np.float32(i4) # i4 = <phase(deg)>
-            data[c.TOA_PARAM_NAME][rx_i, path_idx]   = np.float32(i5) # i5 = <time of arrival(sec)>
+            data[c.DELAY_PARAM_NAME][rx_i, path_idx]   = np.float32(i5) # i5 = <time of arrival(sec)>
             data[c.AOA_EL_PARAM_NAME][rx_i, path_idx] = np.float32(i6) # i6 = <arrival theta(deg)>
             data[c.AOA_AZ_PARAM_NAME][rx_i, path_idx] = np.float32(i7) # i7 = <arrival phi(deg)>
             data[c.AOD_EL_PARAM_NAME][rx_i, path_idx] = np.float32(i8) # i8 = <departure theta(deg)>
