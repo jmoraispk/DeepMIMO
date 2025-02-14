@@ -31,8 +31,7 @@ MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
 SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
 
-def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: Optional[List[int]] = None,
-                        rx_set_ids: Optional[List[int]] = None,  
+def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
                         overwrite: Optional[bool] = None, vis_scene: bool = False, 
                         old: bool = False, old_params: Dict = {}, # to remove later
                         scenario_name: str = '') -> str:
@@ -45,8 +44,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
     Args:
         p2m_folder (str): Path to folder containing .p2m path files.
         copy_source (bool): Whether to copy ray-tracing source files to output.
-        tx_set_ids (Optional[List[int]]): List of transmitter set IDs. Uses all if None. Defaults to None.
-        rx_set_ids (Optional[List[int]]): List of receiver set IDs. Uses all if None. Defaults to None.
         overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
         vis_scene (bool): Whether to visualize the scene layout. Defaults to False.
         old (bool): Whether to use legacy v3 converter. Defaults to False.
@@ -61,7 +58,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         ValueError: If transmitter or receiver IDs are invalid.
     """
     if old: # v3
-        return insite_rt_converter_v3(p2m_folder, tx_set_ids, rx_set_ids, old_params, scenario_name)
+        return insite_rt_converter_v3(p2m_folder, None, None, old_params, scenario_name)
     
     # Setup output folder
     insite_sim_folder = os.path.dirname(p2m_folder)

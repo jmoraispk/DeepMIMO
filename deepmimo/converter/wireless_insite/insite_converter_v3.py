@@ -14,8 +14,8 @@ from ... import consts_v3 as c
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
 
-def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int], rx_ids: List[int], 
-                          params_dict: Dict, scenario_name: str = '') -> str:
+def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int] | None = None, rx_ids: List[int] | None = None, 
+                          params_dict: Dict | None = None, scenario_name: str = '') -> str:
     """Convert Wireless Insite files to DeepMIMO format using legacy v3 converter.
 
     Args:
