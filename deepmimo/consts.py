@@ -51,6 +51,7 @@ TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 RT_PARAMS_PARAM_NAME = 'rt_params'
+TXRX_PARAM_NAME = 'txrx'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
 SCENE_PARAM_NAME = 'scene'  # Scene parameters and configuration
 MATERIALS_PARAM_NAME = 'materials'  # Materials list and properties

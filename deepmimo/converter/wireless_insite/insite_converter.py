@@ -16,10 +16,6 @@ import os
 import shutil
 from typing import List, Dict, Optional
 
-# Third-party imports
-import numpy as np
-import scipy.io
-
 # Local imports
 from .. import converter_utils as cu
 from ... import consts as c
@@ -102,15 +98,14 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False, tx_set_ids: 
         c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
-        # c.RT_PARAMS_PARAM_NAME: setup_dict,
-        # c.PARAMSET_TXRX: txrx_dict,
+        c.RT_PARAMS_PARAM_NAME: setup_dict,
+        c.TXRX_PARAM_NAME: txrx_dict,
         c.MATERIALS_PARAM_NAME: materials_dict,
-        # c.SCENE_PARAM_NAME: scene_dict
+        c.SCENE_PARAM_NAME: scene_dict
     }
-    from pprint import pprint
-    params = {**params, **setup_dict, **txrx_dict, **scene_dict}
     cu.save_mat(params, 'params', output_folder)
     
+    from pprint import pprint
     pprint(params)
 
     # Save scenario to deepmimo scenarios folder

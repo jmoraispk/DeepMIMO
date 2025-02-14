@@ -95,29 +95,30 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
     params_mat_file = os.path.join(scen_folder, 'params.mat')
     if not os.path.exists(params_mat_file):
         raise ValueError(f'Parameters file not found in {scen_folder}')
-    rt_params = load_mat_file_as_dict(params_mat_file)['params']
+    params = load_mat_file_as_dict(params_mat_file)['params']
     
     # Load scenario data
-    n_snapshots = rt_params[c.PARAMSET_DYNAMIC_SCENES]
+    n_snapshots = params[c.PARAMSET_DYNAMIC_SCENES]
     if n_snapshots > 1: # dynamic
         raise NotImplementedError('Dynamic scenarios not implemented yet')
-        dataset = []
+        dataset = {}
         for snapshot_i in range(n_snapshots):
             snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
                                            f'scene_{snapshot_i}')
             print(f'Scene {snapshot_i + 1}/{n_snapshots}')
-            dataset.append(load_raytracing_scene(snapshot_folder, rt_params, **load_params))
+            dataset[snapshot_i] = load_raytracing_scene(snapshot_folder, rt_params, **load_params)
     else: # static
-        dataset = load_raytracing_scene(scen_folder, rt_params, **load_params)
+        dataset = load_raytracing_scene(scen_folder, params[c.TXRX_PARAM_NAME], **load_params)
     
     # Set shared parameters
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
-    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(rt_params, scen_folder)
-    dataset[c.MATERIALS_PARAM_NAME] = MaterialList.from_dict(rt_params['materials'])
+    dataset[c.RT_PARAMS_PARAM_NAME] = params[c.RT_PARAMS_PARAM_NAME]
+    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(params[c.SCENE_PARAM_NAME], scen_folder)
+    dataset[c.MATERIALS_PARAM_NAME] = MaterialList.from_dict(params[c.MATERIALS_PARAM_NAME])
 
     return dataset
 
-def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5,
+def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = 5,
                          tx_sets: Dict[int, list | str] | list | str = 'all',
                          rx_sets: Dict[int, list | str] | list | str = 'all',
                          matrices: List[str] | str = 'all') -> Dataset:
@@ -134,8 +135,8 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
     Returns:
         Dataset: Dataset containing the requested matrices for each tx-rx pair
     """
-    tx_sets = validate_txrx_sets(tx_sets, rt_params, 'tx')
-    rx_sets = validate_txrx_sets(rx_sets, rt_params, 'rx')
+    tx_sets = validate_txrx_sets(tx_sets, txrx_dict, 'tx')
+    rx_sets = validate_txrx_sets(rx_sets, txrx_dict, 'rx')
     
     dataset_list = []
     bs_idxs = []
@@ -151,11 +152,10 @@ def load_raytracing_scene(scene_folder: str, rt_params: dict, max_paths: int = 5
                 rx_id_str = 'basestation' if rx_set_idx == tx_set_idx else 'users'
                 print(f'RX set: {rx_set_idx} ({rx_id_str})')
                 dataset_list[bs_idx] = load_tx_rx_raydata(scene_folder,
-                                                        tx_set_idx, rx_set_idx,
-                                                        tx_idx, rx_idxs,
-                                                        max_paths, matrices)
+                                                          tx_set_idx, rx_set_idx,
+                                                          tx_idx, rx_idxs,
+                                                          max_paths, matrices)
 
-                dataset_list[bs_idx][c.RT_PARAMS_PARAM_NAME] = rt_params
                 dataset_list[bs_idx]['info'] = {
                     'tx_set_idx': tx_set_idx,
                     'rx_set_idx': rx_set_idx,
@@ -241,7 +241,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
 
 # Helper functions
 def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
-                      rt_params: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
+                      txrx_dict: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
     """Validate and process TX/RX set specifications.
 
     This function validates and processes transmitter/receiver set specifications,
@@ -260,7 +260,8 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
     """
     valid_tx_set_idxs = []
     valid_rx_set_idxs = []
-    for key, val in rt_params.items():
+    
+    for key, val in txrx_dict.items():
         if key.startswith('txrx_set_'):
             if val['is_tx']:
                 valid_tx_set_idxs.append(val['idx'])
@@ -280,7 +281,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             
             # Get the txrx_set info for this index
             txrx_set_key = f'txrx_set_{set_idx}'
-            txrx_set = rt_params[txrx_set_key]
+            txrx_set = txrx_dict[txrx_set_key]
             all_idxs_available = np.arange(txrx_set['num_points'])
             
             if type(idxs) is np.ndarray:
@@ -313,7 +314,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
                 raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
                               + info_str)
         
-            sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+            sets_dict[set_idx] = np.arange(txrx_dict[f'txrx_set_{set_idx}']['num_points'])
     elif type(sets) is str:
         if sets != 'all':
             raise Exception(f"String '{sets}' not understood. Only string allowed "
@@ -322,7 +323,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
         # Generate dict with all sets and indices available
         sets_dict = {}
         for set_idx in valid_set_idxs:
-            sets_dict[set_idx] = np.arange(rt_params[f'txrx_set_{set_idx}']['num_points'])
+            sets_dict[set_idx] = np.arange(txrx_dict[f'txrx_set_{set_idx}']['num_points'])
     return sets_dict
         
 def validate_ch_gen_params(params: ChannelGenParameters, n_active_ues: int) -> ChannelGenParameters:
