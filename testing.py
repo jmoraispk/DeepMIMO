@@ -146,5 +146,12 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 #       plot the buildings that matter to that user along with the rays.
 #       (based on the building bounding boxes)
 #       Use the PhysicalObjects class to plot a group of buildings.
+#### NEXT: Make a plot of just SOME of the buildings
+# buildings_scene = dm.Scene()
+# for obj in buildings[:3]:
+#     buildings_scene.add_object(obj)
+    
+# buildings_scene.plot()
+#####
 
 #%%
