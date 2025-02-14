@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=65", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "DeepMIMO"
+name = "DeepMIMOtest"
 version = "4.0.0alpha"
 authors = [
     { name = "João Morais" },
@@ -11,14 +11,15 @@ authors = [
     { name = "Ahmed Alkhateeb" },
 ]
 description = "DeepMIMO dataset generator library"
+license = { file = "LICENSE" }
 readme = "README.md"
-license = { file = "LICENSE.txt" }
 requires-python = ">=3.10"
 keywords = ["MIMO", "ray tracing", "dataset", "DeepMIMO", "raytracing", "wireless"]
 classifiers = [
-    "Development Status :: 4 - Alpha",
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License"
 ]
 dependencies = [
     "matplotlib>=3.8.2",
@@ -26,6 +27,10 @@ dependencies = [
     "scipy>=1.6.2",
     "tqdm>=4.59.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["deepmimo*"]
+
 
 [project.urls]
 Homepage = "https://deepmimo.net/" 

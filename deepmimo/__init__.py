@@ -2,6 +2,8 @@
 DeepMIMO Python Package.
 """
 
+__version__ = "4.0.0alpha"
+
 from .generator.python_old.generator import generate_data as generate_old
 from .generator.python_old.params import Parameters as Parameters_old
 
