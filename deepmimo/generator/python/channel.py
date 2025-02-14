@@ -176,7 +176,7 @@ class OFDM_PathGenerator:
 
 def generate_MIMO_channel(array_response_product: np.ndarray,
                          powers: np.ndarray,
-                         toas: np.ndarray,
+                         delays: np.ndarray,
                          phases: np.ndarray,
                          ofdm_params: Dict,
                          freq_domain: bool = True) -> np.ndarray:
@@ -228,11 +228,11 @@ def generate_MIMO_channel(array_response_product: np.ndarray,
         
         # Get pre-computed values for this user
         power = powers[i, non_nan_mask]
-        toas_user = toas[i, non_nan_mask]
+        delays_user = delays[i, non_nan_mask]
         phases_user = phases[i, non_nan_mask]
         
         if freq_domain: # OFDM
-            path_gains = path_gen.generate(pwr=power, toa=toas_user, phs=phases_user, Ts=Ts).T
+            path_gains = path_gen.generate(pwr=power, toa=delays_user, phs=phases_user, Ts=Ts).T
             channel[i] = np.nansum(array_product[..., None, :] * 
                                    path_gains[None, None, :, :], axis=-1)
         else: # TD channel

@@ -46,7 +46,7 @@ class Dataset(DotDict):
     Primary (Static) Attributes:
         power: Path powers in dBm
         phase: Path phases in degrees
-        toa: Time of arrival for each path
+        delay: Path delays in seconds (i.e. propagation time)
         aoa_az/aoa_el: Angles of arrival (azimuth/elevation)
         aod_az/aod_el: Angles of departure (azimuth/elevation)
         rx_pos: Receiver positions
@@ -198,7 +198,7 @@ class Dataset(DotDict):
         return generate_MIMO_channel(
             array_response_product=array_response_product,
             powers=self.power_linear_ant_gain,
-            toas=self.toa,
+            delays=self.delay,
             phases=self.phase,
             ofdm_params=params.ofdm,
             freq_domain=params.freq_domain
@@ -470,8 +470,9 @@ class Dataset(DotDict):
         'n_paths': 'num_paths',
         
         # Time of arrival aliases
-        'time_of_arrival': 'toa',
-        
+        'toa': 'delay',
+        'time_of_arrival': 'delay',
+
         # Interaction aliases
         'interactions': 'inter',
         'interaction_positions': 'inter_pos',
