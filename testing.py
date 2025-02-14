@@ -26,15 +26,19 @@ def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
     else:
         old_params_dict = {'num_bs': 1, 'user_grid': [1, 91, 61], 'freq': 3.5e9} # simple canyon
 
+    # Convert to unix path
     rt_folder = rt_folder.replace('\\', '/')
-
-    # Get scenario name from path
-    i = -2 if 'P2Ms' in rt_folder else -1 
+    # Make sure it ends with a /
+    if 'P2Ms' in rt_folder:
+        i = -2
+    else:
+        rt_folder += '/' if not rt_folder.endswith('/') else ''
+        i = -1
     # -2 for Wireless Insite, -1 for other raytracers
     # because for Wireless Insite, we give the P2M INSIDE the rt_folder.. 
 
     # Get scenario name
-    scen_name = rt_folder.split('/')[-i] + ('_old' if use_v3 else '')
+    scen_name = rt_folder.split('/')[i] + ('_old' if use_v3 else '')
 
     # Convert using appropriate converter
     if use_v3:
@@ -43,8 +47,8 @@ def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
         return dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=True)
 
 # Example usage
-# rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
 # rt_folder = './P2Ms/asu_campus/study_area_asu5'
+# rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
 rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
 
 # Convert using v4 converter
@@ -103,10 +107,10 @@ print(f"Time elapsed: {end_time - start_time:.2f} seconds")
 
 # Start timing
 start_time = time.time()
-
+scen_name_old = scen_name + '_old'
 # scen_name = 'simple_street_canyon_test_old'
-scen_name = 'asu_campus_old'
-params = dm.Parameters_old(scen_name)
+# scen_name = 'asu_campus_old'
+params = dm.Parameters_old(scen_name_old)
 params['bs_antenna']['rotation'] = np.array([30,40,30])
 params['bs_antenna']['fov'] = np.array([360, 180])
 params['ue_antenna']['fov'] = np.array([120, 180])

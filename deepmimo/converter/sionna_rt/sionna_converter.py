@@ -11,13 +11,18 @@ into the DeepMIMO format. It handles reading and processing ray tracing data inc
 import os
 import shutil
 import numpy as np
-from typing import Dict
+from typing import Dict, Optional
 import pickle
 
 # Internal DeepMIMO imports
 from ...txrx import TxRxSet  # For TX/RX set handling
 from ... import consts as c  # Constants and configuration parameters
 from .. import converter_utils as cu  # Shared converter utilities
+from ...materials import (
+    Material,
+    MaterialList
+)
+
 
 # Interaction Type Map for Wireless Insite
 INTERACTIONS_MAP = {
@@ -40,7 +45,29 @@ def load_from_pickle(filename):
     with open(filename, 'rb') as file:
         return pickle.load(file)
 
-def sionna_rt_converter(rt_folder: str, scenario_name: str = ''):
+def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
+                        overwrite: Optional[bool] = None, vis_scene: bool = False, 
+                        scenario_name: str = '') -> str:
+    """Convert Sionna ray-tracing data to DeepMIMO format.
+
+    This function handles the conversion of Sionna ray-tracing simulation 
+    data into the DeepMIMO dataset format. It processes path data, setup files,
+    and transmitter/receiver configurations to generate channel matrices and metadata.
+
+    Args:
+        rt_folder (str): Path to folder containing Sionna ray-tracing data.
+        copy_source (bool): Whether to copy ray-tracing source files to output.
+        overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
+        vis_scene (bool): Whether to visualize the scene layout. Defaults to False.
+        scenario_name (str): Custom name for output folder. Uses rt folder name if empty.
+
+    Returns:
+        str: Path to output folder containing converted DeepMIMO dataset.
+        
+    Raises:
+        FileNotFoundError: If required input files are missing.
+        ValueError: If transmitter or receiver IDs are invalid.
+    """
     print('converting from sionna RT')
 
     # Setup scenario name
@@ -70,25 +97,32 @@ def sionna_rt_converter(rt_folder: str, scenario_name: str = ''):
     scene = load_scene(rt_folder)
     scene_dict = scene.export_data(output_folder) if scene else {}
     
+    # Visualize if requested
+    if vis_scene and scene:
+        scene.plot()
+    
     # Save parameters to params.mat
     params = {
-        'raytracer_name': c.RAYTRACER_NAME_SIONNA,
-        'raytracer_version': c.RAYTRACER_VERSION_SIONNA,
-        'setup': setup_dict,
-        'txrx': txrx_dict,
-        'materials': materials_dict,
-        'scene': scene_dict
+        c.LOAD_FILE_SP_VERSION: c.VERSION,
+        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
+        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_SIONNA,
+        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_SIONNA,
+        c.RT_PARAMS_PARAM_NAME: setup_dict,
+        c.TXRX_PARAM_NAME: txrx_dict,
+        c.MATERIALS_PARAM_NAME: materials_dict,
+        c.SCENE_PARAM_NAME: scene_dict
     }
     cu.save_mat(params, 'params', output_folder)
     
     # Save scenario to deepmimo scenarios folder
-    scen_name = cu.save_scenario(output_folder, scen_name=scenario_name)
+    scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     
     print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
     cu.zip_folder(output_folder) # ready for upload
     
     # Copy and zip ray tracing source files as well
-    cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
+    if copy_source:
+        cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
     
     return scen_name
 
@@ -145,7 +179,7 @@ def read_paths(load_folder: str, save_folder: str) -> None:
         'aoa_el': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'aod_az': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'aod_el': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'toa':    np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        'delay':    np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'power':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'phase':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'inter':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
@@ -164,23 +198,42 @@ def read_paths(load_folder: str, save_folder: str) -> None:
         
         a = ss(paths_dict['a'])
         not_nan_mask = a != 0
-        data['power'][idxs][not_nan_mask] = 20 * np.log10(np.absolute(a[not_nan_mask]))
-        data['phase'][idxs][not_nan_mask] = np.angle(a[not_nan_mask], deg=True)
-        data['toa'][idxs][not_nan_mask]   = ss(paths_dict['tau'])
+        
+        # Process each field with proper masking
+        for rx_idx, path_mask in enumerate(not_nan_mask):
+            if rx_idx >= len(idxs):
+                break
+                
+            abs_idx = idxs[rx_idx]
+            data['power'][abs_idx][path_mask] = 20 * np.log10(np.absolute(a[rx_idx][path_mask]))
+            data['phase'][abs_idx][path_mask] = np.angle(a[rx_idx][path_mask], deg=True)
+            data['delay'][abs_idx][path_mask] = ss(paths_dict['tau'])[rx_idx][path_mask]
+            data['aoa_az'][abs_idx][path_mask] = ss(paths_dict['phi_r'])[rx_idx][path_mask] * 180 / np.pi
+            data['aoa_el'][abs_idx][path_mask] = ss(paths_dict['theta_r'])[rx_idx][path_mask] * 180 / np.pi
+            data['aod_az'][abs_idx][path_mask] = ss(paths_dict['phi_t'])[rx_idx][path_mask] * 180 / np.pi
+            data['aod_el'][abs_idx][path_mask] = ss(paths_dict['theta_t'])[rx_idx][path_mask] * 180 / np.pi
 
-        data['aoa_az'][idxs][not_nan_mask] = ss(paths_dict['phi_r'])   * 180 / np.pi
-        data['aoa_el'][idxs][not_nan_mask] = ss(paths_dict['theta_r']) * 180 / np.pi
-        data['aod_az'][idxs][not_nan_mask] = ss(paths_dict['phi_t'])   * 180 / np.pi
-        data['aod_el'][idxs][not_nan_mask] = ss(paths_dict['theta_t']) * 180 / np.pi
+            # Handle interactions for this receiver
+            types = ss(paths_dict['types'])[rx_idx]
+            # Convert types to array if it's a scalar
+            if np.isscalar(types):
+                types = np.array([types])
+            # Get number of paths from the mask
+            n_paths = np.sum(path_mask)
+            if n_paths > 0:
+                # Ensure types has the right shape
+                if len(types) < n_paths:
+                    types = np.repeat(types, n_paths)
+                types = types[:n_paths]
+                
+                inter_pos_rx = data['inter_pos'][abs_idx][path_mask]
+                interactions = get_sionna_interaction_types(types, inter_pos_rx)
+                data['inter'][abs_idx][path_mask] = interactions
 
+        # Handle interaction positions
         inter_pos = paths_dict['vertices'].squeeze()[:max_iteract, :, :c.MAX_PATHS, :]
         data['inter_pos'][idxs] = np.transpose(inter_pos, (1,2,0,3))
-
-        data['inter'][idxs][not_nan_mask] = get_sionna_interaction_types(ss(paths_dict['types']),
-                                                                         data['inter_pos'][idxs])
                                                                           
-        
-    
     # Compress data before saving
     data = cu.compress_path_data(data)
     
@@ -194,77 +247,67 @@ def get_sionna_interaction_types(types: np.ndarray, inter_pos: np.ndarray) -> np
     """
     Convert Sionna interaction types to DeepMIMO interaction codes.
     
-    Similarities between Sionna and DeepMIMO:
-        - Sionna uses 0 for LoS. DeepMIMO too.
-
-    Important differences between Sionna and DeepMIMO:
-        - Sionna uses 1 to refer to paths with only reflections. The number of reflections in the 
-        path, however, can be 1, 2, 3, etc... The way we are able to tell which DeepMIMO code 
-        to use (respectively, 1, 11, 111, etc...) is by the size of the corresponding path vertices. 
-        - Sionna uses 2 to refer to paths with A SINGLE diffraction. It doesn't allow paths with 
-        two diffractions or paths with a diffraction and any other phenomena. So this is simple 
-        to equate in DeepMIMO, since we use the single code for diffraction, 2.
-        - Sionna uses 3 to refer to paths with a diffuse reflection / scattering event at the end. 
-        These paths end with a diffusion, but may have any number of reflections (up to max_depth-1)
-        before the diffusion. Therefore, like in the first case, we have to use the size of the vertices
-        to determine whether to use DeepMIMO code 3, 13, 113, 1113, 11113, etc. 
-        - Sionna uses 4 to refer to RIS. DeepMIMO does not support RIS yet, so we ignore this.
-        (technically, DeepMIMO supports RIS, but not yet as a path interaction type)
-
     Args:
-        types: Array of interaction types from Sionna (N_USERS x MAX_PATHS)
-        inter_pos: Array of interaction positions (N_USERS x MAX_PATHS x MAX_INTERACTIONS x 3)
+        types: Array of interaction types from Sionna (N_PATHS,)
+        inter_pos: Array of interaction positions (N_PATHS x MAX_INTERACTIONS x 3)
 
     Returns:
-        np.ndarray: Array of DeepMIMO interaction codes (N_USERS x MAX_PATHS)
+        np.ndarray: Array of DeepMIMO interaction codes (N_PATHS,)
     """
-    n_users, max_paths = inter_pos.shape[:2]
-    result = np.zeros((n_users, max_paths), dtype=np.float32)
+    # Ensure types is a numpy array
+    types = np.asarray(types)
+    if types.ndim == 0:
+        types = np.array([types])
+    
+    # Get number of paths
+    n_paths = len(types)
+    result = np.zeros(n_paths, dtype=np.float32)
     
     # For each path
-    for rx_idx in range(n_users):
-        for path_idx in range(max_paths):
+    for path_idx in range(n_paths):
+        # Skip if no type (nan or 0)
+        if np.isnan(types[path_idx]) or types[path_idx] == 0:
+            continue
             
-            # Skip if no type (nan or 0)
-            if np.isnan(types[rx_idx, path_idx]) or types[rx_idx, path_idx] == 0:
-                continue
-                
-            sionna_type = int(types[rx_idx, path_idx])
+        sionna_type = int(types[path_idx])
+        
+        # Handle LoS case (type 0)
+        if sionna_type == 0:
+            result[path_idx] = c.INTERACTION_LOS
+            continue
             
-            # Handle LoS case (type 0)
-            if sionna_type == 0:
-                result[rx_idx, path_idx] = c.INTERACTION_LOS
-                continue
-                
-                
-            # Count number of actual interactions by checking non-nan positions
-            n_interactions = np.nansum(~np.isnan(inter_pos[rx_idx, path_idx, :, 0]))
-            if n_interactions == 0:  # Skip if no interactions
-                continue
-                
-            # Handle different Sionna interaction types
-            if sionna_type == 1:  # Pure reflection path
-                # Create string of '1's with length = number of reflections
-                code = '1' * n_interactions
-                result[rx_idx, path_idx] = np.float32(code)
-                
-            elif sionna_type == 2:  # Single diffraction path
-                # Always just '2' since Sionna only allows single diffraction
-                result[rx_idx, path_idx] = c.INTERACTION_DIFFRACTION
-                
-            elif sionna_type == 3:  # Scattering path with possible reflections
-                # Create string of '1's for reflections + '3' at the end for scattering
-                if n_interactions > 1:
-                    code = '1' * (n_interactions - 1) + '3'
-                else:
-                    code = '3'
-                result[rx_idx, path_idx] = np.float32(code)
-                
+        # Count number of actual interactions by checking non-nan positions
+        if inter_pos.ndim == 2:  # Single path case
+            n_interactions = np.nansum(~np.isnan(inter_pos[:, 0]))
+        else:  # Multiple paths case
+            n_interactions = np.nansum(~np.isnan(inter_pos[path_idx, :, 0]))
+            
+        if n_interactions == 0:  # Skip if no interactions
+            continue
+            
+        # Handle different Sionna interaction types
+        if sionna_type == 1:  # Pure reflection path
+            # Create string of '1's with length = number of reflections
+            code = '1' * n_interactions
+            result[path_idx] = np.float32(code)
+            
+        elif sionna_type == 2:  # Single diffraction path
+            # Always just '2' since Sionna only allows single diffraction
+            result[path_idx] = c.INTERACTION_DIFFRACTION
+            
+        elif sionna_type == 3:  # Scattering path with possible reflections
+            # Create string of '1's for reflections + '3' at the end for scattering
+            if n_interactions > 1:
+                code = '1' * (n_interactions - 1) + '3'
             else:
-                if sionna_type == 4:
-                    raise NotImplementedError('RIS code not supported yet')
-                else:
-                    raise ValueError(f'Unknown Sionna interaction type: {sionna_type}')
+                code = '3'
+            result[path_idx] = np.float32(code)
+            
+        else:
+            if sionna_type == 4:
+                raise NotImplementedError('RIS code not supported yet')
+            else:
+                raise ValueError(f'Unknown Sionna interaction type: {sionna_type}')
     
     return result
 
@@ -274,13 +317,12 @@ def import_sionna_for_deepmimo(save_folder: str):
     
     saved_vars_names = [
         'sionna_paths.pkl',            # PHASE 2: DONE
-        'sionna_materials.pkl',        # PHASE 3: NOW...
-        'sionna_material_indices.pkl', # PHASE 3: NOW...
+        'sionna_materials.pkl',        # PHASE 3: DONE
+        'sionna_material_indices.pkl', # PHASE 3: DONE
         'sionna_rt_params.pkl',        # PHASE 1: DONE
         'sionna_vertices.pkl',         # PHASE 4: not started
         'sionna_faces.pkl',            # PHASE 4: not started
         'sionna_objects.pkl',          # PHASE 4: not started
-
     ]
     
     for filename in saved_vars_names:
@@ -288,12 +330,6 @@ def import_sionna_for_deepmimo(save_folder: str):
 
     return
 
-
-
-from ...materials import (
-    Material,
-    MaterialList
-)
 
 def read_materials(load_folder: str, save_folder: str) -> Dict:
     """Read materials from a Sionna RT simulation folder.
@@ -314,7 +350,6 @@ def read_materials(load_folder: str, save_folder: str) -> Dict:
     
     # Attribute matching for scattering models
     scat_model = {
-        'none?': Material.SCATTERING_NONE,  # if scattering coeff = 0
         'LambertianPattern': Material.SCATTERING_LAMBERTIAN,
         'DirectivePattern': Material.SCATTERING_DIRECTIVE,
         'BackscatteringPattern': Material.SCATTERING_DIRECTIVE  # directive = backscattering
@@ -324,36 +359,33 @@ def read_materials(load_folder: str, save_folder: str) -> Dict:
     materials = []
     for i, mat_property in enumerate(material_properties):
         # Get scattering model type and handle case where scattering is disabled
-        scattering_model = scat_model[type(mat_property.scattering_pattern).__name__]
-        scat_coeff = mat_property.scattering_coefficient.numpy()
+        scattering_model = scat_model[mat_property['scattering_pattern']]
+        scat_coeff = mat_property['scattering_coefficient']
         scattering_model = Material.SCATTERING_NONE if not scat_coeff else scattering_model
         
         # Create Material object
         material = Material(
             id=i,
             name=f'material_{i}',  # Default name if not provided
-            permittivity=mat_property.relative_permittivity.numpy(),
-            conductivity=mat_property.conductivity.numpy(),
+            permittivity=mat_property['relative_permittivity'],
+            conductivity=mat_property['conductivity'],
             scattering_model=scattering_model,
             scattering_coefficient=scat_coeff,
-            cross_polarization_coefficient=mat_property.xpd_coefficient.numpy(),
-            alpha=mat_property.scattering_pattern.alpha_r,
-            beta=mat_property.scattering_pattern.alpha_i,
-            lambda_param=mat_property.scattering_pattern.lambda_.numpy()
+            cross_polarization_coefficient=mat_property['xpd_coefficient'],
+            alpha=mat_property['alpha_r'],
+            beta=mat_property['alpha_i'],
+            lambda_param=mat_property['lambda_']
         )
         materials.append(material)
     
     # Add all materials to buildings category by default
     # This can be modified if Sionna provides material categorization
-    material_list.add_materials(materials, CATEGORY_BUILDINGS)
+    material_list.add_materials(materials)
     
-    # Get dictionary representation
-    materials_dict = material_list.get_materials_dict()
-    
-    # Save materials to matlab file
+    # Save materials indices to matrix file
     cu.save_mat(material_indices, 'materials', save_folder)
     
-    return materials_dict
+    return material_list.to_dict()
 
 
 def load_scene(load_folder):
