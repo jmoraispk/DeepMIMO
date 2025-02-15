@@ -13,6 +13,7 @@ import shutil
 import numpy as np
 from typing import Dict, Optional
 import pickle
+from pprint import pprint
 
 # Internal DeepMIMO imports
 from ...txrx import TxRxSet  # For TX/RX set handling
@@ -22,6 +23,17 @@ from ...materials import (
     Material,
     MaterialList
 )
+from ...scene import Scene, PhysicalElement, Face
+
+# saved_vars_names = [
+#     'sionna_paths.pkl',            
+#     'sionna_materials.pkl',        
+#     'sionna_material_indices.pkl', 
+#     'sionna_rt_params.pkl',       
+#     'sionna_vertices.pkl',        
+#     'sionna_faces.pkl',           
+#     'sionna_objects.pkl',         
+# ]
 
 
 # Interaction Type Map for Wireless Insite
@@ -113,7 +125,8 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
         c.SCENE_PARAM_NAME: scene_dict
     }
     cu.save_mat(params, 'params', output_folder)
-    
+    pprint(params)
+
     # Save scenario to deepmimo scenarios folder
     scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     
@@ -179,7 +192,7 @@ def read_paths(load_folder: str, save_folder: str) -> None:
         'aoa_el': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'aod_az': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'aod_el': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'delay':    np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
+        'delay':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'power':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'phase':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'inter':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
@@ -205,35 +218,36 @@ def read_paths(load_folder: str, save_folder: str) -> None:
                 break
                 
             abs_idx = idxs[rx_idx]
-            data['power'][abs_idx][path_mask] = 20 * np.log10(np.absolute(a[rx_idx][path_mask]))
-            data['phase'][abs_idx][path_mask] = np.angle(a[rx_idx][path_mask], deg=True)
-            data['delay'][abs_idx][path_mask] = ss(paths_dict['tau'])[rx_idx][path_mask]
-            data['aoa_az'][abs_idx][path_mask] = ss(paths_dict['phi_r'])[rx_idx][path_mask] * 180 / np.pi
-            data['aoa_el'][abs_idx][path_mask] = ss(paths_dict['theta_r'])[rx_idx][path_mask] * 180 / np.pi
-            data['aod_az'][abs_idx][path_mask] = ss(paths_dict['phi_t'])[rx_idx][path_mask] * 180 / np.pi
-            data['aod_el'][abs_idx][path_mask] = ss(paths_dict['theta_t'])[rx_idx][path_mask] * 180 / np.pi
+
+            n_paths = np.sum(path_mask)
+
+            data['power'][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rx_idx][path_mask]))
+            data['phase'][abs_idx,:n_paths] = np.angle(a[rx_idx][path_mask], deg=True)
+            data['delay'][abs_idx,:n_paths] = ss(paths_dict['tau'])[rx_idx][path_mask]
+            data['aoa_az'][abs_idx,:n_paths] = ss(paths_dict['phi_r'])[rx_idx][path_mask] * 180 / np.pi
+            data['aoa_el'][abs_idx,:n_paths] = ss(paths_dict['theta_r'])[rx_idx][path_mask] * 180 / np.pi
+            data['aod_az'][abs_idx,:n_paths] = ss(paths_dict['phi_t'])[rx_idx][path_mask] * 180 / np.pi
+            data['aod_el'][abs_idx,:n_paths] = ss(paths_dict['theta_t'])[rx_idx][path_mask] * 180 / np.pi
 
             # Handle interactions for this receiver
-            types = ss(paths_dict['types'])[rx_idx]
-            # Convert types to array if it's a scalar
-            if np.isscalar(types):
-                types = np.array([types])
+            types = ss(paths_dict['types'])[path_mask]
+
             # Get number of paths from the mask
-            n_paths = np.sum(path_mask)
             if n_paths > 0:
                 # Ensure types has the right shape
                 if len(types) < n_paths:
+                    print('types has less paths than n_paths')
                     types = np.repeat(types, n_paths)
                 types = types[:n_paths]
                 
-                inter_pos_rx = data['inter_pos'][abs_idx][path_mask]
+                inter_pos_rx = data['inter_pos'][abs_idx, :n_paths]
                 interactions = get_sionna_interaction_types(types, inter_pos_rx)
-                data['inter'][abs_idx][path_mask] = interactions
+                data['inter'][abs_idx, :n_paths] = interactions
 
         # Handle interaction positions
         inter_pos = paths_dict['vertices'].squeeze()[:max_iteract, :, :c.MAX_PATHS, :]
-        data['inter_pos'][idxs] = np.transpose(inter_pos, (1,2,0,3))
-                                                                          
+        data['inter_pos'][idxs, :len(path_mask), :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
+
     # Compress data before saving
     data = cu.compress_path_data(data)
     
@@ -311,26 +325,6 @@ def get_sionna_interaction_types(types: np.ndarray, inter_pos: np.ndarray) -> np
     
     return result
 
-# Unwrap materials
-def import_sionna_for_deepmimo(save_folder: str):
-
-    
-    saved_vars_names = [
-        'sionna_paths.pkl',            # PHASE 2: DONE
-        'sionna_materials.pkl',        # PHASE 3: DONE
-        'sionna_material_indices.pkl', # PHASE 3: DONE
-        'sionna_rt_params.pkl',        # PHASE 1: DONE
-        'sionna_vertices.pkl',         # PHASE 4: not started
-        'sionna_faces.pkl',            # PHASE 4: not started
-        'sionna_objects.pkl',          # PHASE 4: not started
-    ]
-    
-    for filename in saved_vars_names:
-        variable = load_from_pickle(save_folder + filename)
-
-    return
-
-
 def read_materials(load_folder: str, save_folder: str) -> Dict:
     """Read materials from a Sionna RT simulation folder.
     
@@ -387,10 +381,35 @@ def read_materials(load_folder: str, save_folder: str) -> Dict:
     
     return material_list.to_dict()
 
-
 def load_scene(load_folder):
+    vertices = load_from_pickle(load_folder + 'sionna_vertices.pkl')
+    faces = load_from_pickle(load_folder + 'sionna_faces.pkl')
+    objects = load_from_pickle(load_folder + 'sionna_objects.pkl')
 
-    pass
+    id_counter = 0
+    scene = Scene()
+    for name, face_indices in objects.items():
+        face_list = [Face(vertices=vertices[tri_face_idxs])
+                     for tri_face_idxs in face_indices.astype(np.int32)]
+        
+        # Remove material names from object name
+        itu_splits = name.split('-itu_') # object names are like: "mesh-abcdef-itu_metal"
+        if len(itu_splits) <= 2:
+            obj_name = itu_splits[0]
+        else:
+            raise Exception(f'Object name "{name}" contains more than one "-itu_"')
+
+        # Remove also "mesh-" prefix
+        obj_name = obj_name[5:] if obj_name.startswith('mesh-') else obj_name
+
+        # Attribute the corrent label to the object
+        obj_label = 'terrain' if obj_name.lower() in ['plane', 'floor'] else 'building'
+
+        obj = PhysicalElement(faces=face_list, object_id=id_counter, label=obj_label)
+        scene.add_object(obj)
+        id_counter += 1
+
+    return scene
 
 
 if __name__ == '__main__':
