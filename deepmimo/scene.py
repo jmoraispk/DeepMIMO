@@ -310,13 +310,13 @@ class PhysicalElement:
             ])
         return self._position
 
-    def plot(self, ax: Optional[plt.Axes] = None, mode: Literal['faces', 'hull'] = 'faces',
+    def plot(self, ax: Optional[plt.Axes] = None, mode: Literal['faces', 'tri_faces'] = 'faces',
             alpha: float = 0.8, color: Optional[str] = None) -> Tuple[plt.Figure, plt.Axes]:
         """Plot the object using the specified visualization mode.
         
         Args:
             ax: Matplotlib 3D axes to plot on (if None, creates new figure)
-            mode: Visualization mode - either 'faces' or 'hull' (default: 'faces')
+            mode: Visualization mode - either 'faces' or 'tri_faces' (default: 'faces')
             alpha: Transparency for visualization (default: 0.8)
             color: Color for visualization (default: None, uses object's color)
         """
@@ -325,7 +325,7 @@ class PhysicalElement:
         # Get vertices based on mode
         if mode == 'faces':
             vertices_list = [face.vertices for face in self.faces]
-        elif mode == 'hull':
+        elif mode == 'tri_faces':
             vertices_list = [self.vertices[simplex] for simplex in self.hull.simplices]
         
         # Plot all vertices
@@ -528,7 +528,7 @@ class Scene:
     def export_data(self, base_folder: str) -> Dict:
         """Export scene data to files and return metadata dictionary.
         
-        Creates matrix files for faces and materials in the base folder.
+        Creates matrix files for vertices, faces and materials in the base folder.
         Returns a dictionary containing metadata needed to reload the scene.
         
         Args:
@@ -540,36 +540,63 @@ class Scene:
         # Create base folder if it doesn't exist
         Path(base_folder).mkdir(parents=True, exist_ok=True)
         
-        # Export face and material matrices
-        faces = []
-        materials = []
-        for obj in self.objects:
-            for face in obj.faces:
-                for triangle in face.triangular_faces:
-                    faces.append(triangle.reshape(-1))
-                    materials.append(face.material_idx)
+        # First collect all vertices and build index mapping
+        all_vertices = []
+        vertex_map = {}  # Maps (x,y,z) tuple to vertex index
+        tri_faces = []  # List of triangular face vertex indices (3 vertices each)
+        materials = []  # Material index for each triangular face
         
-        faces = np.array(faces)  # Shape: (N, 9)
-        materials = np.array(materials)  # Shape: (N,)
-        
-        # Save matrices
-        savemat(f"{base_folder}/faces.mat", {'faces': faces})
-        savemat(f"{base_folder}/materials.mat", {'materials': materials})
-        
-        # Return metadata
+        # Track object metadata
         objects_metadata = []
-        for obj, obj_indices in zip(self.objects, self.face_indices):
-            n_tri_faces = [len(indices) for indices in obj_indices]
+        current_tri_idx = 0
+        
+        for obj in self.objects:
+            object_faces_metadata = []  # List of triangular face indices for each face
+            
+            for face in obj.faces:
+                face_tri_indices = []  # Indices of triangular faces for this face
+                
+                # Process each triangular face
+                for tri_vertices in face.triangular_faces:
+                    # Get or create indices for each vertex in the triangle
+                    tri_indices = []
+                    for vertex in tri_vertices:
+                        vertex_tuple = tuple(vertex)
+                        if vertex_tuple not in vertex_map:
+                            vertex_map[vertex_tuple] = len(all_vertices)
+                            all_vertices.append(vertex)
+                        tri_indices.append(vertex_map[vertex_tuple])
+                    
+                    # Add triangular face and its material
+                    tri_faces.append(tri_indices)
+                    materials.append(face.material_idx)
+                    face_tri_indices.append(current_tri_idx)
+                    current_tri_idx += 1
+                
+                # Store triangular face indices for this face
+                object_faces_metadata.append(face_tri_indices)
+            
+            # Store object metadata
             objects_metadata.append({
                 'id': obj.object_id,
                 'label': obj.label,
-                'n_faces': len(obj.faces), 
-                'n_tri_faces': sum(n_tri_faces),
-                'n_tri_faces_per_face': np.array(n_tri_faces)
+                'faces': object_faces_metadata  # List of lists of triangular face indices
             })
-            
+        
+        # Convert to numpy arrays
+        vertices = np.array(all_vertices)  # Shape: (N_vertices, 3)
+        tri_faces = np.array(tri_faces)  # Shape: (N_triangular_faces, 3)
+        materials = np.array(materials)  # Shape: (N_triangular_faces,)
+        
+        # Save matrices
+        savemat(f"{base_folder}/vertices.mat", {'vertices': vertices})
+        savemat(f"{base_folder}/faces.mat", {'faces': tri_faces})
+        savemat(f"{base_folder}/materials.mat", {'materials': materials})
+        
         return {
             'n_objects': len(self.objects),
+            'n_vertices': len(vertices),
+            'n_triangular_faces': len(tri_faces),
             'objects': objects_metadata,
         }
     
@@ -582,7 +609,8 @@ class Scene:
             base_folder: Base folder containing matrix files
         """
         # Load matrices
-        faces = loadmat(f"{base_folder}/faces.mat")['faces']
+        vertices = loadmat(f"{base_folder}/vertices.mat")['vertices']
+        tri_faces = loadmat(f"{base_folder}/faces.mat")['faces']
         materials = loadmat(f"{base_folder}/materials.mat")['materials'].flatten()
         
         scene = cls()
@@ -591,28 +619,32 @@ class Scene:
         if 'visualization_settings' in metadata:
             scene.visualization_settings = metadata['visualization_settings']
         
-        # Create objects using face counts from metadata
-        current_index = 0
-        
+        # Create objects using face metadata
         for object_data in metadata['objects']:
             object_faces = []
-            n_tri_faces = object_data['n_tri_faces_per_face']
             
-            for n_triangles in n_tri_faces:
-                # Get triangles for this face
-                triangles = faces[current_index:current_index + n_triangles]
+            # Process each face in the object
+            for face_tri_indices in object_data['faces']:
+                # Collect all vertices from all triangles in order
+                face_vertex_indices = []
+                for tri_idx in face_tri_indices:
+                    # Add each vertex index if not already present
+                    for vertex_idx in tri_faces[tri_idx]:
+                        if vertex_idx not in face_vertex_indices:
+                            face_vertex_indices.append(vertex_idx)
                 
-                # Get material index for this face and verify all triangles have same material
-                material_idx = materials[current_index]
-                if not np.all(materials[current_index:current_index + n_triangles] == material_idx):
-                    raise ValueError("All triangles in a face must have the same material index")
+                # Get vertices in the order they were added
+                face_vertices = vertices[face_vertex_indices]
                 
-                # Create face from triangles
-                vertices = triangles.reshape(-1, 3)  # Reshape to (N*3, 3)
-                face = Face(vertices=vertices, material_idx=material_idx)
+                # Get material index (same for all triangular faces in this face)
+                material_idx = materials[face_tri_indices[0]]
+                
+                # Create face with all vertices in order
+                face = Face(
+                    vertices=face_vertices,
+                    material_idx=material_idx
+                )
                 object_faces.append(face)
-                
-                current_index += n_triangles
             
             # Create object with appropriate label
             obj = PhysicalElement(
@@ -625,14 +657,14 @@ class Scene:
         return scene
     
     def plot(self, show: bool = True, save: bool = False, filename: str | None = None,
-             mode: Literal['faces', 'hull'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
+             mode: Literal['faces', 'tri_faces'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene.
         
         Args:
             show: Whether to display the plot
             save: Whether to save the plot to a file
             filename: Name of the file to save the plot to (if save is True)
-            mode: Visualization mode - either 'faces' or 'hull' (default: 'faces')
+            mode: Visualization mode - either 'faces' or 'tri_faces' (default: 'faces')
             
         Returns:
             Tuple of (Figure, Axes) for the plot
