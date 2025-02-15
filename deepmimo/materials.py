@@ -14,6 +14,10 @@ class Material:
     
     This class defines the common properties of materials used in electromagnetic
     simulations, including their electrical properties and scattering characteristics.
+
+    Notes:
+    - Modeling based on https://ieeexplore.ieee.org/document/4052607
+    (common approach to backscattering in all ray tracing software)
     """
     
     # Scattering model types
@@ -35,8 +39,8 @@ class Material:
     cross_polarization_coefficient: float = 0.0  # Fraction of scattered field cross-polarized (0-1)
     
     # Directive scattering parameters
-    alpha: float = 4.0  # Forward scattering lobe width (1-10)
-    beta: float = 4.0   # Backscattering lobe width (1-10)
+    alpha_r: float = 4.0  # Forward scattering lobe width (1-10) (r ~ reflection)
+    alpha_i: float = 4.0  # Backscattering lobe width (1-10) (i ~ incidence)
     lambda_param: float = 0.5  # Forward vs backward scattering ratio (0-1)
     
     # Physical properties

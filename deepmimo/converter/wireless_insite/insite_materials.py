@@ -66,8 +66,8 @@ class InsiteMaterial:
             scattering_model=model_mapping.get(self.diffuse_scattering_model, Material.SCATTERING_NONE),
             scattering_coefficient=self.fields_diffusively_scattered,
             cross_polarization_coefficient=self.cross_polarized_power,
-            alpha=self.directive_alpha,
-            beta=self.directive_beta,
+            alpha_r=self.directive_alpha,
+            alpha_i=self.directive_beta,
             lambda_param=self.directive_lambda,
             roughness=self.roughness,
             thickness=self.thickness
