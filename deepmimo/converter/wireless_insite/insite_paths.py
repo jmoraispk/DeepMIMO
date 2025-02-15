@@ -13,7 +13,7 @@ from .insite_txrx import get_id_to_idx_map
 from ..converter_utils import save_mat
 
 
-def read_paths(p2m_folder: str, txrx_dict: Dict, output_folder: str) -> None:
+def read_paths(p2m_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     """Create path data from a folder containing Wireless Insite files.
     
     This function:
