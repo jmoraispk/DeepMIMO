@@ -55,7 +55,7 @@ class InsiteMaterial:
             '': Material.SCATTERING_NONE,
             'lambertian': Material.SCATTERING_LAMBERTIAN,
             'directive': Material.SCATTERING_DIRECTIVE,
-            'directive_w_backscatter': Material.SCATTERING_DIRECTIVE  # Map both directive models to same type
+            'directive_with_backscatter': Material.SCATTERING_DIRECTIVE  # Map both directive models to same type
         }
         
         return Material(
