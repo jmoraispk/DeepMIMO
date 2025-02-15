@@ -55,10 +55,10 @@ def export_paths(path_list: List[Paths] | Paths) -> List[dict]:
     relevant_keys = ['sources', 'targets', 'a', 'tau', 'phi_r', 'phi_t', 
                      'theta_r', 'theta_t', 'types', 'vertices']
     
-    path_list = [path_list] if not isinstance(path_list, list) else path_list
+    path_list = [path_list] if type(path_list) != list else path_list
     
     paths_dict_list = []
-    for path_obj in path_list:
+    for obj_idx, path_obj in enumerate(path_list):
         path_dict = path_obj.to_dict()
         
         # filter unnecessary keys
@@ -75,63 +75,48 @@ def scene_to_dict(scene: Scene) -> Dict[str, Any]:
     data = {attr_name[1:] : attr_obj for (attr_obj, attr_name)
             in zip(members_objects, members_names)
             if not callable(attr_obj) and
-               not isinstance(attr_obj, Scene) and
+               not isinstance(attr_obj, sionna.rt.Scene) and
                not attr_name.startswith("__") and
                attr_name.startswith("_")}
     return data
 
 def export_scene_materials(scene: Scene) -> Tuple[List[Dict[str, Any]], List[int]]:
-    """ Extract materials from Scene. 
-    Outputs list of unique material dictionaries and a list of the material of each shape.
-    """
-    # Get scene in dictionary format
-    scene_dict = scene_to_dict(scene)
-    materials_predefined = scene_dict['radio_materials']
+    """ Export the materials in a Sionna Scene to a list of dictionaries """
     
-    # Materials in each object:
-    materials = []
-    for shape in scene.mi_shapes:
-        shape_name = shape.id()
-        shape_material = shape_name.split('-itu_')[-1]
-        materials += [shape_material]
+    obj_materials = []
+    for _, obj in scene._scene_objects.items():
+        obj_materials += [obj.radio_material]
     
-    unique_materials = np.unique(materials).tolist()
+    unique_materials = set(obj_materials)
+    unique_mat_names = [mat.name for mat in unique_materials]
     
-    material_indices = [unique_materials.index(material) for material in materials]
+    n_objs = len(scene._scene_objects)
+    obj_mat_indices = np.zeros(n_objs, dtype=int)
+    for obj_idx, obj_mat in enumerate(obj_materials):
+        obj_mat_indices[obj_idx] = unique_mat_names.index(obj_mat.name)
     
-    # Terrain added manually in Blender (made of Concrete)
-    if 'mesh-Plane' in unique_materials:
-        plane_idx = unique_materials.index('mesh-Plane')
-        unique_materials[plane_idx] = 'concrete'
-    
-    # Add 'itu_' preffixes back
-    unique_materials_w_preffix = ['itu_' + mat for mat in unique_materials]
-    
-    # Get material indices and material properties from the predefined material list
-    material_properties = {key: value for key, value in materials_predefined.items()
-                           if key in unique_materials_w_preffix}
-
     # Do some light processing to add dictionaries to a list in a pickable format
     materials_dict_list = []
-    for material_name, mat_property in material_properties.items():
+    for material in unique_materials:
         materials_dict = {
-            'name': material_name,
-            'conductivity': mat_property.conductivity.numpy(),
-            'relative_permeability': mat_property.relative_permeability.numpy(),
-            'relative_permittivity': mat_property.relative_permittivity.numpy(),
-            'scattering_coefficient': mat_property.scattering_coefficient.numpy(),
-            'scattering_pattern': type(mat_property.scattering_pattern).__name__,
-            'alpha_r': mat_property.scattering_pattern.alpha_r,
-            'alpha_i': mat_property.scattering_pattern.alpha_i,
-            'lambda_': mat_property.scattering_pattern.lambda_.numpy(),
-            'xpd_coefficient': mat_property.xpd_coefficient.numpy(),   
+            'name': material.name,
+            'conductivity': material.conductivity.numpy(),
+            'relative_permeability': material.relative_permeability.numpy(),
+            'relative_permittivity': material.relative_permittivity.numpy(),
+            'scattering_coefficient': material.scattering_coefficient.numpy(),
+            'scattering_pattern': type(material.scattering_pattern).__name__,
+            'alpha_r': material.scattering_pattern.alpha_r,
+            'alpha_i': material.scattering_pattern.alpha_i,
+            'lambda_': material.scattering_pattern.lambda_.numpy(),
+            'xpd_coefficient': material.xpd_coefficient.numpy(),   
         }
         materials_dict_list += [materials_dict]
-        
-    return materials_dict_list, material_indices
+
+    return materials_dict_list, obj_mat_indices
 
 def export_scene_rt_params(scene: Scene, **compute_paths_kwargs) -> Dict[str, Any]:
     """ Extract parameters from Scene (and from compute_paths arguments)"""
+    
     scene_dict = scene_to_dict(scene)
     rt_params_dict = dict(
         bandwidth=scene_dict['bandwidth'].numpy(),
@@ -186,42 +171,56 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, np.ndarray]:
     Output:
         vertice_matrix: n_vertices_in_scene x 3 (xyz coordinates)
         face_matrix: n_faces_in_scene x 3 (indices of each vertex in triangular face)
-
-    For the reference of a shape, used in a Sionna Scene, accessible in scene.mi_shapes, see:
-    https://mitsuba.readthedocs.io/en/stable/src/api_reference.html#mitsuba.Mesh
     """
-    # Count all faces of all shapes
-    n_tot_vertices = 0
-    n_tot_faces = 0
-    for shape in scene.mi_shapes:
-        n_tot_vertices += shape.vertex_count()
-        n_tot_faces += shape.face_count()
+    all_vertices = []
+    all_faces = []
+    obj_index_map = {}  # Stores the name and starting index of each object
     
-    # Pre-allocate matrices
-    vertice_matrix = np.array(np.zeros((n_tot_vertices, 3)))  # each vertice has 3 coordinates (xyz)
-    face_matrix = np.array(np.zeros((n_tot_faces, 3)))  # each face has the indices of 3 vertices
+    vertex_offset = 0
     
-    # Load matrices of vertices and faces
-    last_vertice_idx = 0
-    last_face_idx = 0
-    objects_dict = {}  # store object-to-face mapping
-    for shape in scene.mi_shapes:
-        n_vertices = shape.vertex_count()
-        vertice_idxs = last_vertice_idx + np.arange(n_vertices)
-        vertice_matrix[vertice_idxs] = np.array(shape.vertex_position(np.arange(n_vertices)))
-        last_vertice_idx = vertice_idxs[-1]
+    # Dictionary to store per-object data for debugging
+    object_data = {}
     
-        n_faces = shape.face_count()
-        face_idxs = last_face_idx + np.arange(n_faces)
-        face_matrix[face_idxs] = np.array(shape.vertex_position(np.arange(n_faces)))
-        last_face_idx = face_idxs[-1]
+    for obj_name, obj in scene._scene_objects.items():
+    
+        # Get vertices
+        n_v = obj._mi_shape.vertex_count()
+        obj_vertices = np.array(obj._mi_shape.vertex_position(np.arange(n_v)))
+        
+        # Append vertices to global list
+        all_vertices.append(obj_vertices)
+    
+        # Store object index range
+        obj_index_map[obj_name] = (vertex_offset, vertex_offset + n_v)
+        
+        # Get faces with corrected indices
+        n_f = obj._mi_shape.face_count()
+        obj_faces = np.array(obj._mi_shape.face_indices(np.arange(n_f)))
+    
+        # Adjust face indices to be absolute
+        obj_faces_absolute = obj_faces + vertex_offset  
+        
+        # Append faces to global list
+        all_faces.append(obj_faces_absolute)
+    
+        # Store debug data
+        object_data[obj_name] = {
+            "vertices": obj_vert_offset,
+            "faces": obj_faces_absolute,
+        }
+    
+        # Update vertex offset
+        vertex_offset += n_v
+    
+    # Convert lists to numpy arrays
+    all_vertices = np.vstack(all_vertices)
+    all_faces = np.vstack(all_faces)
 
-        objects_dict[shape.id()] = face_matrix[face_idxs]
-    
-    return vertice_matrix, face_matrix, objects_dict
+    return all_vertices, all_faces, obj_index_map
 
-def export_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
-                       my_compute_path_params: Dict, save_folder: str):
+
+def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
+                              my_compute_path_params: Dict, save_folder: str):
     """ Export a complete Sionna simulation to a format that can be converted by DeepMIMO """
     
     paths_dict_list = export_paths(path_list)
