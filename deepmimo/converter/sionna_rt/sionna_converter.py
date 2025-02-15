@@ -14,6 +14,7 @@ import numpy as np
 from typing import Dict, Optional
 import pickle
 from pprint import pprint
+from tqdm import tqdm
 
 # Internal DeepMIMO imports
 from ...txrx import TxRxSet  # For TX/RX set handling
@@ -202,7 +203,12 @@ def read_paths(load_folder: str, save_folder: str) -> None:
     # make squeeze and slice function to be applied to each Sionna array
     ss = lambda array: array.squeeze()[..., :c.MAX_PATHS]
 
-    # Read paths 
+    # Calculate total number of users for progress bar
+    total_users = sum(paths_dict['a'].shape[1] for paths_dict in path_dict_list)
+    
+    # Create progress bar
+    pbar = tqdm(total=total_users, desc="Processing users")
+    
     last_idx = 0
     for paths_dict in path_dict_list:
         batch_size = paths_dict['a'].shape[1]
@@ -244,9 +250,16 @@ def read_paths(load_folder: str, save_folder: str) -> None:
                 interactions = get_sionna_interaction_types(types, inter_pos_rx)
                 data['inter'][abs_idx, :n_paths] = interactions
 
+                
+            # Update progress bar for each user processed
+            pbar.update(1)
+
         # Handle interaction positions
         inter_pos = paths_dict['vertices'].squeeze()[:max_iteract, :, :c.MAX_PATHS, :]
         data['inter_pos'][idxs, :len(path_mask), :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
+
+    
+    pbar.close()
 
     # Compress data before saving
     data = cu.compress_path_data(data)
@@ -366,8 +379,8 @@ def read_materials(load_folder: str, save_folder: str) -> Dict:
             scattering_model=scattering_model,
             scattering_coefficient=scat_coeff,
             cross_polarization_coefficient=mat_property['xpd_coefficient'],
-            alpha=mat_property['alpha_r'],
-            beta=mat_property['alpha_i'],
+            alpha_r=mat_property['alpha_r'],
+            alpha_i=mat_property['alpha_i'],
             lambda_param=mat_property['lambda_']
         )
         materials.append(material)
