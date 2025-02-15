@@ -19,17 +19,7 @@ from .sionna_scene import read_scene
 from .sionna_materials import read_materials
 from .sionna_paths import read_paths
 from .sionna_txrx import read_txrx
-
-def read_setup(load_folder: str) -> dict:
-    """Read Sionna RT setup parameters.
-    
-    Args:
-        load_folder: Path to folder containing setup file
-        
-    Returns:
-        Dict containing setup parameters
-    """
-    return cu.load_pickle(load_folder + 'sionna_rt_params.pkl')
+from .sionna_rt_params import read_raytracing_parameters
 
 def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
                         overwrite: bool = None, vis_scene: bool = False, 
@@ -67,11 +57,11 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
         shutil.rmtree(output_folder)
     os.makedirs(output_folder)
 
-    # Read Setup (ray tracing parameters)
-    setup_dict = read_setup(rt_folder)
+    # Read ray tracing parameters
+    rt_params = read_raytracing_parameters(rt_folder)
 
     # Read TXRX
-    txrx_dict = read_txrx(setup_dict)
+    txrx_dict = read_txrx(rt_params)
 
     # Read Paths (.paths)
     read_paths(rt_folder, output_folder)
@@ -93,7 +83,7 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
         c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_SIONNA,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_SIONNA,
-        c.RT_PARAMS_PARAM_NAME: setup_dict,
+        c.RT_PARAMS_PARAM_NAME: rt_params,
         c.TXRX_PARAM_NAME: txrx_dict,
         c.MATERIALS_PARAM_NAME: materials_dict,
         c.SCENE_PARAM_NAME: scene_dict
@@ -119,8 +109,8 @@ if __name__ == '__main__':
                 'all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
     output_folder = os.path.join(rt_folder, 'test_deepmimo')
 
-    setup_dict = read_setup(rt_folder)
-    txrx_dict = read_txrx(setup_dict)
+    rt_params = read_raytracing_parameters(rt_folder)
+    txrx_dict = read_txrx(rt_params)
     read_paths(rt_folder, output_folder)
     read_materials(rt_folder, output_folder)
 
