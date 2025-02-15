@@ -11,7 +11,7 @@ into the DeepMIMO format. It handles reading and processing ray tracing data inc
 import os
 import shutil
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, List
 import pickle
 from pprint import pprint
 from tqdm import tqdm
@@ -24,7 +24,16 @@ from ...materials import (
     Material,
     MaterialList
 )
-from ...scene import Scene, PhysicalElement, Face
+from ...scene import (
+    PhysicalElement, 
+    Face, 
+    Scene,
+    CAT_BUILDINGS,
+    CAT_TERRAIN,
+    CAT_VEGETATION,
+    CAT_FLOORPLANS,
+    CAT_OBJECTS
+)
 
 # saved_vars_names = [
 #     'sionna_paths.pkl',            
@@ -104,10 +113,10 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     read_paths(rt_folder, output_folder)
 
     # Read Materials (.materials)
-    materials_dict = read_materials(rt_folder, output_folder)
+    materials_dict, material_indices = read_materials(rt_folder, output_folder)
 
     # Read Scene data
-    scene = load_scene(rt_folder)
+    scene = load_scene(rt_folder, material_indices)
     scene_dict = scene.export_data(output_folder) if scene else {}
     
     # Visualize if requested
@@ -338,7 +347,7 @@ def get_sionna_interaction_types(types: np.ndarray, inter_pos: np.ndarray) -> np
     
     return result
 
-def read_materials(load_folder: str, save_folder: str) -> Dict:
+def read_materials(load_folder: str, save_folder: str) -> Tuple[Dict, Dict[str, int]]:
     """Read materials from a Sionna RT simulation folder.
     
     Args:
@@ -346,7 +355,8 @@ def read_materials(load_folder: str, save_folder: str) -> Dict:
         save_folder: Path to save converted materials
         
     Returns:
-        Dict containing materials and their categorization
+        Tuple of (Dict containing materials and their categorization,
+                 Dict mapping object names to material indices)
     """
     # Load Sionna materials
     material_properties = load_from_pickle(load_folder + 'sionna_materials.pkl')
@@ -392,38 +402,134 @@ def read_materials(load_folder: str, save_folder: str) -> Dict:
     # Save materials indices to matrix file
     cu.save_mat(material_indices, 'materials', save_folder)
     
-    return material_list.to_dict()
+    return material_list.to_dict(), material_indices
 
-def load_scene(load_folder):
-    vertices = load_from_pickle(load_folder + 'sionna_vertices.pkl')
-    faces = load_from_pickle(load_folder + 'sionna_faces.pkl')
-    objects = load_from_pickle(load_folder + 'sionna_objects.pkl')
-
-    id_counter = 0
-    scene = Scene()
-    for name, face_indices in objects.items():
-        face_list = [Face(vertices=vertices[tri_face_idxs])
-                     for tri_face_idxs in face_indices.astype(np.int32)]
+def load_scene(load_folder: str, material_indices: List[int]) -> Scene:
+    """Load scene data from Sionna format.
+    
+    Args:
+        load_folder: Path to folder containing Sionna scene files
+        material_indices: List of material indices, one per object
         
-        # Remove material names from object name
-        itu_splits = name.split('-itu_') # object names are like: "mesh-abcdef-itu_metal"
-        if len(itu_splits) <= 2:
-            obj_name = itu_splits[0]
-        else:
-            raise Exception(f'Object name "{name}" contains more than one "-itu_"')
-
-        # Remove also "mesh-" prefix
-        obj_name = obj_name[5:] if obj_name.startswith('mesh-') else obj_name
-
-        # Attribute the corrent label to the object
-        obj_label = (Scene.LABEL_TERRAIN if obj_name.lower() in ['plane', 'floor']
-                     else Scene.LABEL_BUILDING)
-
-        obj = PhysicalElement(faces=face_list, object_id=id_counter, label=obj_label)
-        scene.add_object(obj)
-        id_counter += 1
+    Returns:
+        Scene: Loaded scene with all objects
+    """
+    # Load raw data - already in correct format
+    vertices = load_from_pickle(load_folder + 'sionna_vertices.pkl') # (N_VERTICES, 3)
+    tri_faces = load_from_pickle(load_folder + 'sionna_faces.pkl').astype(np.int32) # (N_FACES, 3)  
+    objects = load_from_pickle(load_folder + 'sionna_objects.pkl') # Dict with vertex ranges
+    
+    print("\nInitial data shapes and types:")
+    print("Vertices shape:", vertices.shape)
+    print("Tri faces shape:", tri_faces.shape)
+    print("Objects structure:", objects)
+    
+    # Create scene
+    scene = Scene()
+    
+    # Process each object
+    for id_counter, (name, vertex_range) in enumerate(objects.items()):
+        print(f"\nProcessing object {id_counter}: {name}")
+        try:
+            # Get vertex range for this object
+            start_idx, end_idx = vertex_range
+            print(f"Vertex range: {start_idx} to {end_idx}")
+            
+            obj_name = name[5:] if name.startswith('mesh-') else name
+            
+            # Attribute the correct label to the object
+            is_floor = obj_name.lower() in ['plane', 'floor']
+            obj_label = CAT_TERRAIN if is_floor else CAT_BUILDINGS
+            print(f"Processing object: {obj_name}, label: {obj_label}")
+            
+            # Get material index for this object
+            material_idx = material_indices[id_counter]
+            
+            # Get vertices for this object
+            object_vertices = []
+            for i in range(start_idx, end_idx):
+                vertex = vertices[i]
+                vertex_tuple = (float(vertex[0]), float(vertex[1]), float(vertex[2]))
+                object_vertices.append(vertex_tuple)
+            
+            print(f"Object has {len(object_vertices)} vertices")
+            
+            # Generate faces using convex hull approach
+            generated_faces = get_object_faces(object_vertices)
+            print(f"Generated {len(generated_faces)} faces using convex hull")
+            
+            # Create Face objects with material indices
+            object_faces = []
+            for face_vertices in generated_faces:
+                face = Face(
+                    vertices=face_vertices,
+                    material_idx=material_idx
+                )
+                object_faces.append(face)
+            
+            # Create object
+            obj = PhysicalElement(
+                faces=object_faces,
+                object_id=id_counter,
+                label=obj_label
+            )
+            scene.add_object(obj)
+            
+        except Exception as e:
+            print(f"Error processing object {name}: {str(e)}")
+            raise
 
     return scene
+
+
+
+from scipy.spatial import ConvexHull
+def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces for a physical object from its vertices.
+    
+    This function takes a list of vertices and generates faces to form a complete 
+    3D object. It creates a convex hull from the base points and generates top, 
+    bottom and side faces.
+
+    Args:
+        vertices (list of tuple): List of (x,y,z) vertex coordinates for the object
+
+    Returns:
+        list of list of tuple: List of faces, where each face is a list of (x,y,z) 
+            vertex coordinates defining the face polygon
+    """
+    # Extract base points (x,y coordinates)
+    points_2d = np.array([(x, y) for x, y, z in vertices])
+    
+    # Get object height (assuming constant height)
+    heights = [z for _, _, z in vertices]
+    object_height = max(heights) - min(heights)
+    base_height = min(heights)
+    
+    # Create convex hull for base shape
+    hull = ConvexHull(points_2d)
+    base_shape = points_2d[hull.vertices]
+    
+    # Create top and bottom faces
+    bottom_face = [(x, y, base_height) for x, y in base_shape]
+    top_face = [(x, y, base_height + object_height) for x, y in base_shape]
+    
+    # Create side faces
+    side_faces = []
+    for i in range(len(base_shape)):
+        j = (i + 1) % len(base_shape)
+        side = [
+            bottom_face[i],
+            bottom_face[j],
+            top_face[j],
+            top_face[i]
+        ]
+        side_faces.append(side)
+    
+    # Combine all faces
+    faces = [bottom_face, top_face] + side_faces
+    
+    return faces
 
 
 if __name__ == '__main__':

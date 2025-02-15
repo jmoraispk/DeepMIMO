@@ -59,7 +59,8 @@ scen_name = convert_scenario(rt_folder, use_v3=False)
 # Start timing
 start_time = time.time()
 
-scen_name = 'simple_street_canyon_test'
+scen_name = 'DeepMIMO_folder'
+# scen_name = 'simple_street_canyon_test'
 # scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
