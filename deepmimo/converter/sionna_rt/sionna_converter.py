@@ -32,7 +32,8 @@ from ...scene import (
     CAT_TERRAIN,
     CAT_VEGETATION,
     CAT_FLOORPLANS,
-    CAT_OBJECTS
+    CAT_OBJECTS,
+    get_object_faces
 )
 
 # saved_vars_names = [
@@ -490,56 +491,6 @@ def load_scene(load_folder: str, material_indices: List[int]) -> Scene:
             raise
 
     return scene
-
-
-
-from scipy.spatial import ConvexHull
-def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tuple[float, float, float]]]:
-    """Generate faces for a physical object from its vertices.
-    
-    This function takes a list of vertices and generates faces to form a complete 
-    3D object. It creates a convex hull from the base points and generates top, 
-    bottom and side faces.
-
-    Args:
-        vertices (list of tuple): List of (x,y,z) vertex coordinates for the object
-
-    Returns:
-        list of list of tuple: List of faces, where each face is a list of (x,y,z) 
-            vertex coordinates defining the face polygon
-    """
-    # Extract base points (x,y coordinates)
-    points_2d = np.array([(x, y) for x, y, z in vertices])
-    
-    # Get object height (assuming constant height)
-    heights = [z for _, _, z in vertices]
-    object_height = max(heights) - min(heights)
-    base_height = min(heights)
-    
-    # Create convex hull for base shape
-    hull = ConvexHull(points_2d)
-    base_shape = points_2d[hull.vertices]
-    
-    # Create top and bottom faces
-    bottom_face = [(x, y, base_height) for x, y in base_shape]
-    top_face = [(x, y, base_height + object_height) for x, y in base_shape]
-    
-    # Create side faces
-    side_faces = []
-    for i in range(len(base_shape)):
-        j = (i + 1) % len(base_shape)
-        side = [
-            bottom_face[i],
-            bottom_face[j],
-            top_face[j],
-            top_face[i]
-        ]
-        side_faces.append(side)
-    
-    # Combine all faces
-    faces = [bottom_face, top_face] + side_faces
-    
-    return faces
 
 
 if __name__ == '__main__':

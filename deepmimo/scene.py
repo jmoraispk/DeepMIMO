@@ -3,6 +3,16 @@ Physical world representation module.
 
 This module provides core classes for representing physical objects in a wireless environment,
 including buildings, terrain, vegetation, and other structures that affect wireless propagation.
+
+Module Organization:
+1. Constants - Categories and labels for physical elements
+2. Core Classes - Main classes for scene representation:
+   - BoundingBox: 3D bounding box representation
+   - Face: Surface representation with dual face approach
+   - PhysicalElement: Base class for physical objects
+   - PhysicalElementGroup: Group operations on physical elements
+   - Scene: Complete physical environment representation
+3. Utilities - Standalone geometric and conversion functions used by converters
 """
 
 import numpy as np
@@ -15,6 +25,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from .materials import MaterialList
 
+#------------------------------------------------------------------------------
+# Constants
+#------------------------------------------------------------------------------
+
 # Physical element categories
 CAT_BUILDINGS: str = 'buildings'      # Building structures
 CAT_TERRAIN: str = 'terrain'          # Ground/terrain surfaces
@@ -22,7 +36,7 @@ CAT_VEGETATION: str = 'vegetation'    # Vegetation/foliage
 CAT_FLOORPLANS: str = 'floorplans'    # Indoor floorplans
 CAT_OBJECTS: str = 'objects'          # Other scene objects
 
-# All valid categories
+# All valid categories (used for search - can be extended by users)
 ELEMENT_CATEGORIES = [
     CAT_BUILDINGS,
     CAT_TERRAIN,
@@ -30,6 +44,10 @@ ELEMENT_CATEGORIES = [
     CAT_FLOORPLANS,
     CAT_OBJECTS
 ]
+
+#------------------------------------------------------------------------------
+# Core Classes
+#------------------------------------------------------------------------------
 
 @dataclass
 class BoundingBox:
@@ -795,3 +813,59 @@ class Scene:
             counts.append(f"{label_name}: {count}")
         
         return ", ".join(counts)
+
+#------------------------------------------------------------------------------
+# Utilities
+#------------------------------------------------------------------------------
+
+def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces for a physical object from its vertices.
+    
+    This function takes a list of vertices and generates faces to form a complete 
+    3D object. It creates a convex hull from the base points and generates top, 
+    bottom and side faces. This is a utility function used by various converters
+    to generate efficient convex hull representations of objects.
+    
+    Note that while this generates convex hull faces, the Face class maintains
+    the ability to generate triangular faces when needed through its
+    triangular_faces property.
+
+    Args:
+        vertices (list of tuple): List of (x,y,z) vertex coordinates for the object
+
+    Returns:
+        list of list of tuple: List of faces, where each face is a list of (x,y,z) 
+            vertex coordinates defining the face polygon
+    """
+    # Extract base points (x,y coordinates)
+    points_2d = np.array([(x, y) for x, y, z in vertices])
+    
+    # Get object height (assuming constant height)
+    heights = [z for _, _, z in vertices]
+    object_height = max(heights) - min(heights)
+    base_height = min(heights)
+    
+    # Create convex hull for base shape
+    hull = ConvexHull(points_2d)
+    base_shape = points_2d[hull.vertices]
+    
+    # Create top and bottom faces
+    bottom_face = [(x, y, base_height) for x, y in base_shape]
+    top_face = [(x, y, base_height + object_height) for x, y in base_shape]
+    
+    # Create side faces
+    side_faces = []
+    for i in range(len(base_shape)):
+        j = (i + 1) % len(base_shape)
+        side = [
+            bottom_face[i],
+            bottom_face[j],
+            top_face[j],
+            top_face[i]
+        ]
+        side_faces.append(side)
+    
+    # Combine all faces
+    faces = [bottom_face, top_face] + side_faces
+    
+    return faces
