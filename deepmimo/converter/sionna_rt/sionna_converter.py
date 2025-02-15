@@ -407,6 +407,13 @@ def read_materials(load_folder: str, save_folder: str) -> Tuple[Dict, Dict[str, 
 def load_scene(load_folder: str, material_indices: List[int]) -> Scene:
     """Load scene data from Sionna format.
     
+    This function converts Sionna's triangular mesh representation into DeepMIMO's
+    scene format. While we receive the scene as triangular faces, we store it using
+    convex hull faces for efficiency. The Face class in DeepMIMO can handle both
+    representations:
+    1. Convex hull faces (more efficient for storage and most operations)
+    2. Triangular faces (available when needed for detailed visualization)
+    
     Args:
         load_folder: Path to folder containing Sionna scene files
         material_indices: List of material indices, one per object
@@ -455,6 +462,9 @@ def load_scene(load_folder: str, material_indices: List[int]) -> Scene:
             print(f"Object has {len(object_vertices)} vertices")
             
             # Generate faces using convex hull approach
+            # Note: While we store faces as convex hulls for efficiency,
+            # the Face class maintains the ability to generate triangular faces
+            # when needed (e.g., for detailed visualization)
             generated_faces = get_object_faces(object_vertices)
             print(f"Generated {len(generated_faces)} faces using convex hull")
             

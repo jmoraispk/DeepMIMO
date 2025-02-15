@@ -90,7 +90,23 @@ class BoundingBox:
         return self.z_max - self.z_min
 
 class Face:
-    """Represents a single face (surface) of a physical object."""
+    """Represents a single face (surface) of a physical object.
+    
+    This class implements a dual representation for faces:
+    1. Primary representation: Convex hull faces (stored in vertices)
+       - More efficient for storage
+       - Better for most geometric operations
+       - Suitable for ray tracing and wireless simulations
+       
+    2. Secondary representation: Triangular faces (generated on demand)
+       - Available through triangular_faces property
+       - Better for detailed visualization
+       - Preserves exact geometry when needed
+       - Generated using fan triangulation
+       
+    This dual representation allows the system to be efficient while maintaining
+    the ability to represent detailed geometry when required.
+    """
     
     def __init__(self, vertices: List[Tuple[float, float, float]] | np.ndarray, 
                  material_idx: int | np.integer = 0):
@@ -659,6 +675,17 @@ class Scene:
     def plot(self, show: bool = True, save: bool = False, filename: str | None = None,
              mode: Literal['faces', 'tri_faces'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene.
+        
+        The scene can be visualized in two modes:
+        1. 'faces' (default) - Uses the primary convex hull representation
+           - More efficient for visualization
+           - Cleaner look for simple geometric shapes
+           - Suitable for most visualization needs
+           
+        2. 'tri_faces' - Uses the secondary triangular representation
+           - Shows detailed geometry
+           - Better for debugging geometric issues
+           - More accurate representation of complex shapes
         
         Args:
             show: Whether to display the plot
