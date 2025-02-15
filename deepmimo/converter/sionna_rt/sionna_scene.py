@@ -17,7 +17,7 @@ from ...scene import (
     get_object_faces
 )
 
-def load_scene(load_folder: str, material_indices: List[int]) -> Scene:
+def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
     """Load scene data from Sionna format.
     
     This function converts Sionna's triangular mesh representation into DeepMIMO's

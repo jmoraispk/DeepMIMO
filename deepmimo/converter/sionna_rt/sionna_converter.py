@@ -15,7 +15,7 @@ from pprint import pprint
 from ... import consts as c
 from .. import converter_utils as cu
 
-from .sionna_scene import load_scene
+from .sionna_scene import read_scene
 from .sionna_materials import read_materials
 from .sionna_paths import read_paths
 from .sionna_txrx import read_txrx
@@ -80,7 +80,7 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     materials_dict, material_indices = read_materials(rt_folder, output_folder)
 
     # Read Scene data
-    scene = load_scene(rt_folder, material_indices)
+    scene = read_scene(rt_folder, material_indices)
     scene_dict = scene.export_data(output_folder) if scene else {}
     
     # Visualize if requested
