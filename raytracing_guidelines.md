@@ -31,6 +31,8 @@ Left to test:
 
 
 In Sionna:
-- Be aware when using the isotropic antenna. The UE tilt must not be different from 0. 
-  This is because Sionna applies phase rotations even with the isotropic antenna. 
-  So, it won't match the other raytracers and can give strange results.
+- Be aware when using the isotropic antenna. The UE tilt must be 0. 
+  Why? Because Sionna applies phase rotations even with the isotropic antenna. 
+  It won't match the other raytracers for non-zero tilts and can give strange results.
+- Ensure the compute_parameters were extracted.
+- Compute a list of Paths, but ensure all txs and rxs are included in the scene when exporting.
