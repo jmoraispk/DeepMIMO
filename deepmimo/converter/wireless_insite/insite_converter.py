@@ -71,7 +71,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     txrx_dict = read_txrx(insite_sim_folder, p2m_folder, output_folder)
     
     # Read and save path data
-    read_paths(insite_sim_folder, p2m_folder, txrx_dict, output_folder)
+    read_paths(p2m_folder, txrx_dict, output_folder)
     
     # Read Materials of all objects (.city, .ter, .veg)
     materials_dict = read_materials(insite_sim_folder)

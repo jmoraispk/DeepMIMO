@@ -13,7 +13,7 @@ from .insite_txrx import get_id_to_idx_map
 from ..converter_utils import save_mat
 
 
-def read_paths(insite_sim_folder: str, p2m_folder: str, txrx_dict: Dict, output_folder: str) -> None:
+def read_paths(p2m_folder: str, txrx_dict: Dict, output_folder: str) -> None:
     """Create path data from a folder containing Wireless Insite files.
     
     This function:
@@ -45,8 +45,11 @@ def read_paths(insite_sim_folder: str, p2m_folder: str, txrx_dict: Dict, output_
     # Get ID to index mapping
     id_to_idx_map = get_id_to_idx_map(txrx_dict)
     
+    # Find any p2m file to extract project name
+    # Format is: project_name.paths.t001_01.r001.p2m
+    proj_name = list(p2m_folder.glob("*.p2m"))[0].name.split('.')[0]
+    
     # Process each TX/RX pair
-    proj_name = Path(insite_sim_folder).name
     for tx_id in tx_ids:
         for rx_id in rx_ids:
             # Generate filenames
