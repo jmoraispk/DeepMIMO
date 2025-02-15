@@ -416,7 +416,8 @@ def load_scene(load_folder):
         obj_name = obj_name[5:] if obj_name.startswith('mesh-') else obj_name
 
         # Attribute the corrent label to the object
-        obj_label = 'terrain' if obj_name.lower() in ['plane', 'floor'] else 'building'
+        obj_label = (Scene.LABEL_TERRAIN if obj_name.lower() in ['plane', 'floor']
+                     else Scene.LABEL_BUILDING)
 
         obj = PhysicalElement(faces=face_list, object_id=id_counter, label=obj_label)
         scene.add_object(obj)
