@@ -6,14 +6,37 @@ creating zip archives of folders, and managing scenario files.
 """
 
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import zipfile
 import numpy as np
 import scipy.io
 import shutil
+import pickle
 
 from ..general_utilities import get_mat_filename
 from .. import consts as c
+
+def save_pickle(obj: Any, filename: str) -> None:
+    """Saves an object to a pickle file.
+    
+    Args:
+        obj: Object to save
+        filename: Path to save the pickle file
+    """
+    with open(filename, 'wb') as file:
+        pickle.dump(obj, file)
+
+def load_pickle(filename: str) -> Any:
+    """Loads an object from a pickle file.
+    
+    Args:
+        filename: Path to the pickle file
+        
+    Returns:
+        The unpickled object
+    """
+    with open(filename, 'rb') as file:
+        return pickle.load(file)
 
 def save_mat(data: np.ndarray, data_key: str, output_folder: str,
              tx_set_idx: Optional[int] = None, tx_idx: Optional[int] = None, 

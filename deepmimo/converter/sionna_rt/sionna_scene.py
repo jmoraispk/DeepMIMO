@@ -1,0 +1,102 @@
+"""
+Sionna Ray Tracing Scene Module.
+
+This module handles loading and converting scene data from Sionna's format to DeepMIMO's format.
+"""
+
+import numpy as np
+from typing import List
+
+from .. import converter_utils as cu
+from ...scene import (
+    PhysicalElement, 
+    Face, 
+    Scene,
+    CAT_BUILDINGS,
+    CAT_TERRAIN,
+    get_object_faces
+)
+
+def load_scene(load_folder: str, material_indices: List[int]) -> Scene:
+    """Load scene data from Sionna format.
+    
+    This function converts Sionna's triangular mesh representation into DeepMIMO's
+    scene format. While we receive the scene as triangular faces, we store it using
+    convex hull faces for efficiency. The Face class in DeepMIMO can handle both
+    representations:
+    1. Convex hull faces (more efficient for storage and most operations)
+    2. Triangular faces (available when needed for detailed visualization)
+    
+    Args:
+        load_folder: Path to folder containing Sionna scene files
+        material_indices: List of material indices, one per object
+        
+    Returns:
+        Scene: Loaded scene with all objects
+    """
+    # Load raw data - already in correct format
+    vertices = cu.load_pickle(load_folder + 'sionna_vertices.pkl') # (N_VERTICES, 3)
+    tri_faces = cu.load_pickle(load_folder + 'sionna_faces.pkl').astype(np.int32) # (N_FACES, 3)  
+    objects = cu.load_pickle(load_folder + 'sionna_objects.pkl') # Dict with vertex ranges
+    
+    print("\nInitial data shapes and types:")
+    print("Vertices shape:", vertices.shape)
+    print("Tri faces shape:", tri_faces.shape)
+    print("Objects structure:", objects)
+    
+    # Create scene
+    scene = Scene()
+    
+    # Process each object
+    for id_counter, (name, vertex_range) in enumerate(objects.items()):
+        print(f"\nProcessing object {id_counter}: {name}")
+        try:
+            # Get vertex range for this object
+            start_idx, end_idx = vertex_range
+            print(f"Vertex range: {start_idx} to {end_idx}")
+            
+            obj_name = name[5:] if name.startswith('mesh-') else name
+            
+            # Attribute the correct label to the object
+            is_floor = obj_name.lower() in ['plane', 'floor']
+            obj_label = CAT_TERRAIN if is_floor else CAT_BUILDINGS
+            print(f"Processing object: {obj_name}, label: {obj_label}")
+            
+            # Get material index for this object
+            material_idx = material_indices[id_counter]
+            
+            # Get vertices for this object
+            object_vertices = []
+            for i in range(start_idx, end_idx):
+                vertex = vertices[i]
+                vertex_tuple = (float(vertex[0]), float(vertex[1]), float(vertex[2]))
+                object_vertices.append(vertex_tuple)
+            
+            print(f"Object has {len(object_vertices)} vertices")
+            
+            # Generate faces using convex hull approach
+            generated_faces = get_object_faces(object_vertices)
+            print(f"Generated {len(generated_faces)} faces using convex hull")
+            
+            # Create Face objects with material indices
+            object_faces = []
+            for face_vertices in generated_faces:
+                face = Face(
+                    vertices=face_vertices,
+                    material_idx=material_idx
+                )
+                object_faces.append(face)
+            
+            # Create object
+            obj = PhysicalElement(
+                faces=object_faces,
+                object_id=id_counter,
+                label=obj_label
+            )
+            scene.add_object(obj)
+            
+        except Exception as e:
+            print(f"Error processing object {name}: {str(e)}")
+            raise
+
+    return scene 

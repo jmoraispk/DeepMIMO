@@ -27,10 +27,8 @@ Note:
 import os
 import numpy as np
 from typing import Tuple, List, Dict, Any
-import pickle
 
-# Only export the pickle functions by default (robust to "from deepmimo import *")
-__all__ = ['save_to_pickle', 'load_from_pickle']
+from .. import converter_utils as cu
 
 # Define types at module level
 try:
@@ -39,16 +37,6 @@ try:
     Scene = sionna.rt.Scene
 except ImportError:
     print("Sionna is not installed. To use sionna_exporter, please install it.")
-
-def save_to_pickle(obj, filename):
-    """Saves an object to a pickle file."""
-    with open(filename, 'wb') as file:
-        pickle.dump(obj, file)
-
-def load_from_pickle(filename):
-    """Loads an object from a pickle file."""
-    with open(filename, 'rb') as file:
-        return pickle.load(file)
 
 def export_paths(path_list: List[Paths] | Paths) -> List[dict]:
     """Exports paths to a filtered dictionary with only selected keys """
@@ -205,7 +193,7 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, np.ndarray]:
     
         # Store debug data
         object_data[obj_name] = {
-            "vertices": obj_vert_offset,
+            "vertices": obj_vertices,
             "faces": obj_faces_absolute,
         }
     
@@ -242,6 +230,6 @@ def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths,
     }
     
     for filename, variable in save_vars_dict.items():
-        save_to_pickle(variable, save_folder + filename)
+        cu.save_pickle(variable, save_folder + filename)
 
     return
