@@ -7,10 +7,11 @@ legacy versions of DeepMIMO.
 """
 
 import numpy as np
+from . import __version__
 
+# Extract major version number from __version__ (e.g., "4.0.0" -> 4)
+VERSION = __version__
 
-# Core Configuration - defines DeepMIMO version and numerical precision
-VERSION = 4
 FP_TYPE = np.float32  # floating point precision for saving values
 
 # Supported ray tracers and their versions
