@@ -326,7 +326,7 @@ class PhysicalElement:
         if mode == 'faces':
             vertices_list = [face.vertices for face in self.faces]
         elif mode == 'tri_faces':
-            vertices_list = [self.vertices[simplex] for simplex in self.hull.simplices]
+            vertices_list = [tri for face in self.faces for tri in face.triangular_faces]
         
         # Plot all vertices
         for vertices in vertices_list:
