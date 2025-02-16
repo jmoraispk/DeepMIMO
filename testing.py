@@ -59,7 +59,7 @@ scen_name = convert_scenario(rt_folder, use_v3=False)
 # Start timing
 start_time = time.time()
 
-scen_name = 'DeepMIMO_folder'
+# scen_name = 'DeepMIMO_folder'
 # scen_name = 'simple_street_canyon_test'
 # scen_name = 'asu_campus'
 
@@ -108,10 +108,7 @@ print(f"Time elapsed: {end_time - start_time:.2f} seconds")
 
 # Start timing
 start_time = time.time()
-scen_name_old = scen_name + '_old'
-# scen_name = 'simple_street_canyon_test_old'
-# scen_name = 'asu_campus_old'
-params = dm.Parameters_old(scen_name_old)
+params = dm.Parameters_old(scen_name + '_old')
 params['bs_antenna']['rotation'] = np.array([30,40,30])
 params['bs_antenna']['fov'] = np.array([360, 180])
 params['ue_antenna']['fov'] = np.array([120, 180])
