@@ -33,6 +33,6 @@ def read_txrx(setup_dict: Dict) -> Dict:
         obj.ant_rel_positions = setup_dict[obj.name + '_ant_pos']        
         obj.dual_pol = setup_dict[obj.name + '_num_ant'] != setup_dict[obj.name + '_size']
 
-        txrx_dict[f'tx_rx_set_{i+1}'] = obj.to_dict() # 1-indexed
+        txrx_dict[f'txrx_set_{i+1}'] = obj.to_dict() # 1-indexed
 
     return txrx_dict 

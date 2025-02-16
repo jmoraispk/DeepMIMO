@@ -64,7 +64,7 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     txrx_dict = read_txrx(rt_params)
 
     # Read Paths (.paths)
-    read_paths(rt_folder, output_folder)
+    read_paths(rt_folder, output_folder, txrx_dict)
 
     # Read Materials (.materials)
     materials_dict, material_indices = read_materials(rt_folder, output_folder)

@@ -1,4 +1,3 @@
-
 General: 
 
 Most raytracing simulations can be static. A car driving in the city or a drone flying in the air can be modeled as a set of BSs on the ground and a set of points along the trajectory of the car/drone, which are raytraced in parallel. Instead of a trajectory, it is more general to consider a grid of points with sufficiently small spacing between points, which will contain a much higher number of possible trajectories.
@@ -36,3 +35,9 @@ In Sionna:
   It won't match the other raytracers for non-zero tilts and can give strange results.
 - Ensure the compute_parameters were extracted.
 - Compute a list of Paths, but ensure all txs and rxs are included in the scene when exporting.
+- Current TX/RX position assumptions:
+  - Multiple TX positions are supported (many-to-many scenarios)
+  - All TX positions must be present in each paths dictionary (e.g., if using 3 TXs, 
+    each paths dictionary must contain those same 3 TXs)
+  - RX positions can vary across path dictionaries and are processed sequentially
+    (e.g., first batch has RXs 0-9, second has 10-22, etc.)
