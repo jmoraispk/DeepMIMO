@@ -39,28 +39,20 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
     tri_faces = cu.load_pickle(load_folder + 'sionna_faces.pkl').astype(np.int32) # (N_FACES, 3)  
     objects = cu.load_pickle(load_folder + 'sionna_objects.pkl') # Dict with vertex ranges
     
-    print("\nInitial data shapes and types:")
-    print("Vertices shape:", vertices.shape)
-    print("Tri faces shape:", tri_faces.shape)
-    print("Objects structure:", objects)
-    
     # Create scene
     scene = Scene()
     
     # Process each object
     for id_counter, (name, vertex_range) in enumerate(objects.items()):
-        print(f"\nProcessing object {id_counter}: {name}")
         try:
             # Get vertex range for this object
             start_idx, end_idx = vertex_range
-            print(f"Vertex range: {start_idx} to {end_idx}")
             
             obj_name = name[5:] if name.startswith('mesh-') else name
             
             # Attribute the correct label to the object
             is_floor = obj_name.lower() in ['plane', 'floor']
             obj_label = CAT_TERRAIN if is_floor else CAT_BUILDINGS
-            print(f"Processing object: {obj_name}, label: {obj_label}")
             
             # Get material index for this object
             material_idx = material_indices[id_counter]
@@ -72,11 +64,8 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
                 vertex_tuple = (float(vertex[0]), float(vertex[1]), float(vertex[2]))
                 object_vertices.append(vertex_tuple)
             
-            print(f"Object has {len(object_vertices)} vertices")
-            
             # Generate faces using convex hull approach
             generated_faces = get_object_faces(object_vertices)
-            print(f"Generated {len(generated_faces)} faces using convex hull")
             
             # Create Face objects with material indices
             object_faces = []
