@@ -101,10 +101,10 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             data['power'][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx][path_mask]))
             data['phase'][abs_idx,:n_paths] = np.angle(a[rel_idx][path_mask], deg=True)
             data['delay'][abs_idx,:n_paths] = ss(paths_dict['tau'])[rel_idx][path_mask]
-            data['aoa_az'][abs_idx,:n_paths] = ss(paths_dict['phi_r'])[rel_idx][path_mask] * 180 / np.pi
-            data['aod_az'][abs_idx,:n_paths] = ss(paths_dict['phi_t'])[rel_idx][path_mask] * 180 / np.pi
-            data['aoa_el'][abs_idx,:n_paths] = ss(paths_dict['theta_r'])[rel_idx][path_mask] * 180 / np.pi
-            data['aod_el'][abs_idx,:n_paths] = ss(paths_dict['theta_t'])[rel_idx][path_mask] * 180 / np.pi
+            data['aoa_az'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['phi_r'])[rel_idx][path_mask])
+            data['aod_az'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['phi_t'])[rel_idx][path_mask])
+            data['aoa_el'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['theta_r'])[rel_idx][path_mask])
+            data['aod_el'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['theta_t'])[rel_idx][path_mask])
 
             # Handle interactions for this receiver
             types = ss(paths_dict['types'])[path_mask]
