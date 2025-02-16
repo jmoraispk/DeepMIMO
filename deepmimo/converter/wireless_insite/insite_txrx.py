@@ -6,25 +6,19 @@ and converting them to the base TxRxSet format.
 """
 
 import os
-import re
-import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 from .setup_parser import parse_file
-from .paths_parser import extract_tx_pos
-from ... import consts as c
-from ..converter_utils import save_mat
 from ...txrx import TxRxSet
 
 
-def read_txrx(sim_folder: str, p2m_folder: str, output_folder: str) -> Dict:
+def read_txrx(sim_folder: str, p2m_folder: str) -> Dict:
     """Create TX/RX information from a folder containing Wireless Insite files.
     
     This function:
     1. Reads the .txrx file to get TX/RX set configurations
-    2. Creates position matrices for each TX/RX pair
-    3. Returns a dictionary with all TX/RX information
+    2. Returns a dictionary with all TX/RX information
     
     Args:
         sim_folder: Path to simulation folder containing .txrx file
@@ -53,30 +47,6 @@ def read_txrx(sim_folder: str, p2m_folder: str, output_folder: str) -> Dict:
     
     # Parse TX/RX sets
     tx_ids, rx_ids, txrx_dict = read_txrx_file(str(txrx_files[0]))
-
-    # Process each TX/RX pair
-    proj_name = sim_folder.name
-    for tx_id in tx_ids:
-        for rx_id in rx_ids:
-            # Generate filenames
-            for tx_idx, tx_num in enumerate([1]):  # We assume each TX/RX SET only has one BS
-                base_filename = f'{proj_name}.pl.t{tx_num:03}_{tx_id:02}.r{rx_id:03}.p2m'
-                pl_p2m_file = p2m_folder / base_filename
-                
-                # Extract positions and path loss
-                rx_pos, _, path_loss = read_pl_p2m_file(str(pl_p2m_file))
-                
-                # Update TX/RX set information
-                rx_set_idx = get_id_to_idx_map(txrx_dict)[rx_id]
-                update_txrx_points(txrx_dict, rx_set_idx, rx_pos, path_loss)
-                
-                # Extract TX positions
-                paths_p2m_file = str(pl_p2m_file).replace('.pl.', '.paths.')
-                tx_pos = extract_tx_pos(paths_p2m_file)
-                
-                tx_set_idx = get_id_to_idx_map(txrx_dict)[tx_id]
-                save_mat(rx_pos, c.RX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
-                save_mat(tx_pos, c.TX_POS_PARAM_NAME, output_folder, tx_set_idx, tx_idx, rx_set_idx)
     
     return txrx_dict
 
@@ -128,7 +98,6 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
         
         txrx_obj.dual_pol = False # for now, only single polarization is supported
 
-
         # The number of tx/rx points inside set is updated when reading the p2m
         txrx_objs.append(txrx_obj)
     
@@ -138,25 +107,6 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
         txrx_sets[f'txrx_set_{obj.idx}'] = obj.to_dict()
 
     return tx_ids, rx_ids, txrx_sets
-
-
-def update_txrx_points(txrx_dict: Dict, rx_set_idx: int, rx_pos: np.ndarray, path_loss: np.ndarray) -> None:
-    """Update TxRx set information with point counts and inactive indices.
-    
-    Args:
-        txrx_dict: Dictionary containing TxRx set information
-        rx_set_idx: Index of the receiver set to update
-        rx_pos: Array of receiver positions
-        path_loss: Array of path loss values
-    """
-    # Update number of points
-    n_points = rx_pos.shape[0]
-    txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = n_points
-    
-    # Find inactive points (those with path loss of 250 dB)
-    inactive_idxs = np.where(path_loss == 250.)[0]
-    txrx_dict[f'txrx_set_{rx_set_idx}']['inactive_idxs'] = inactive_idxs
-    txrx_dict[f'txrx_set_{rx_set_idx}']['num_active_points'] = n_points - len(inactive_idxs)
 
 
 def get_id_to_idx_map(txrx_dict: Dict) -> Dict[int, int]:
@@ -173,66 +123,17 @@ def get_id_to_idx_map(txrx_dict: Dict) -> Dict[int, int]:
     return {key:val for key, val in zip(ids, idxs)}
 
 
-def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Read position and path loss data from a .p2m file.
-    
-    Args:
-        filename: Path to the .p2m file to read
-        
-    Returns:
-        Tuple containing:
-        - xyz: Array of positions with shape (n_points, 3)
-        - dist: Array of distances with shape (n_points, 1)
-        - path_loss: Array of path losses with shape (n_points, 1)
-    """
-    assert filename.endswith('.p2m') # should be a .p2m file
-    assert '.pl.' in filename        # should be the pathloss p2m
-
-    # Initialize empty lists for matrices
-    xyz_list = []
-    dist_list = []
-    path_loss_list = []
-
-    # Define (regex) patterns to match numbers (optionally signed floats)
-    re_data = r"-?\d+\.?\d*"
-    
-    with open(filename, 'r') as fp:
-        lines = fp.readlines()
-    
-    for line in lines:
-        if line[0] != '#':
-            data = re.findall(re_data, line)
-            xyz_list.append([float(data[1]), float(data[2]), float(data[3])]) # XYZ (m)
-            dist_list.append([float(data[4])])       # distance (m)
-            path_loss_list.append([float(data[5])])  # path loss (dB)
-
-    # Convert lists to numpy arrays
-    xyz_matrix = np.array(xyz_list, dtype=np.float32)
-    dist_matrix = np.array(dist_list, dtype=np.float32)
-    path_loss_matrix = np.array(path_loss_list, dtype=np.float32)
-
-    return xyz_matrix, dist_matrix, path_loss_matrix
-
-
 if __name__ == "__main__":
     # Test directory with TX/RX files
     test_dir = r"./P2Ms/simple_street_canyon_test/"
+    p2m_folder = r"./P2Ms/simple_street_canyon_test/p2m"
+    output_folder = r"./P2Ms/simple_street_canyon_test/mat_files"
     
     print(f"\nTesting TX/RX set extraction from: {test_dir}")
     print("-" * 50)
     
-    # Find p2m folder
-    p2m_folder = None
-    for subdir in Path(test_dir).iterdir():
-        if subdir.is_dir() and 'p2m' in subdir.name.lower():
-            p2m_folder = subdir
-            break
-    if not p2m_folder:
-        print(f"No P2M folder found in {test_dir}")
-        exit(1)
-    
     # Create TX/RX information
-    txrx_dict = read_txrx(test_dir, p2m_folder)
+    txrx_dict = read_txrx(test_dir, p2m_folder, output_folder)
     
     # Print summary
     print("\nSummary:")

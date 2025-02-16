@@ -1,14 +1,28 @@
 """Wireless Insite to DeepMIMO Scenario Converter.
 
-This module provides functionality to convert Wireless Insite raytracing simulation
-outputs into DeepMIMO-compatible scenario files. It handles:
-- Channel data formatting and conversion
-- Single and multi-user scenario support
-- Single and multi-basestation configurations
-- Path delay and coefficient extraction
+This module serves as the main entry point for converting Wireless Insite raytracing simulation
+outputs into DeepMIMO-compatible scenario files. It orchestrates the conversion process by:
+
+1. Reading and processing setup files (.setup)
+2. Reading TX/RX configurations (.txrx)
+3. Converting path data from .p2m files
+4. Processing material properties (.city, .ter, .veg)
+5. Converting scene geometry
+6. Saving all data in DeepMIMO format
+
+Module Dependencies:
+- insite_materials.py: Material property handling
+- insite_setup.py: Setup file parsing
+- insite_scene.py: Scene geometry conversion
+- insite_txrx.py: TX/RX configuration handling
+- insite_paths.py: Path data processing
+  - p2m_parser.py: Low-level .p2m file parsing
 
 The adapter assumes BSs are transmitters and users are receivers. Uplink channels
 can be generated using (transpose) reciprocity.
+
+Main Entry Point:
+    insite_rt_converter(): Converts a complete Wireless Insite scenario to DeepMIMO format
 """
 
 # Standard library imports
@@ -68,7 +82,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     setup_dict = read_setup(insite_sim_folder)
 
     # Read TXRX (.txrx)
-    txrx_dict = read_txrx(insite_sim_folder, p2m_folder, output_folder)
+    txrx_dict = read_txrx(insite_sim_folder, p2m_folder)
     
     # Read and save path data
     read_paths(p2m_folder, output_folder, txrx_dict)

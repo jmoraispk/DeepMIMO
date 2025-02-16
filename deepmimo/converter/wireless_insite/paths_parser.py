@@ -1,21 +1,32 @@
-# -*- coding: utf-8 -*-
 """
-Wireless Insite Path File Parser Module.
+Wireless Insite P2M File Parser Module.
 
-This module provides functionality for parsing Wireless Insite .p2m path files,
-which contain detailed ray-tracing information including:
+This module provides low-level functionality for parsing Wireless Insite .p2m files.
+It handles the detailed parsing of path data files, extracting information such as:
+
 - Path angles (arrival/departure)
 - Path delays, powers and phases
 - Interaction coordinates and types
 - Transmitter/receiver positions
 
-The module handles both single and multi-path scenarios, with support for
-various interaction types (reflection, diffraction, scattering, etc).
+The module supports both single and multi-path scenarios, with various interaction
+types (reflection, diffraction, scattering, etc). It serves as the foundation for
+higher-level path data processing in insite_paths.py.
+
+Main Functions:
+    paths_parser(): Parse complete path information from .paths.p2m files
+    extract_tx_pos(): Extract transmitter positions from path files
+    read_pl_p2m_file(): Read position and path loss data from .pl.p2m files
+
+Note:
+    This module is typically not used directly, but rather through the higher-level
+    functions in insite_paths.py.
 """
 
 import numpy as np
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, Tuple
+import re
 
 from ... import consts as c
 from .. import converter_utils as cu
@@ -175,8 +186,49 @@ def extract_tx_pos(filename: str) -> np.ndarray:
     print('Found it!')
     return tx_pos
 
+def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Read position and path loss data from a .p2m file.
+    
+    Args:
+        filename: Path to the .p2m file to read
+        
+    Returns:
+        Tuple containing:
+        - xyz: Array of positions with shape (n_points, 3)
+        - dist: Array of distances with shape (n_points, 1)
+        - path_loss: Array of path losses with shape (n_points, 1)
+    """
+    assert filename.endswith('.p2m') # should be a .p2m file
+    assert '.pl.' in filename        # should be the pathloss p2m
+
+    # Initialize empty lists for matrices
+    xyz_list = []
+    dist_list = []
+    path_loss_list = []
+
+    # Define (regex) patterns to match numbers (optionally signed floats)
+    re_data = r"-?\d+\.?\d*"
+    
+    with open(filename, 'r') as fp:
+        lines = fp.readlines()
+    
+    for line in lines:
+        if line[0] != '#':
+            data = re.findall(re_data, line)
+            xyz_list.append([float(data[1]), float(data[2]), float(data[3])]) # XYZ (m)
+            dist_list.append([float(data[4])])       # distance (m)
+            path_loss_list.append([float(data[5])])  # path loss (dB)
+
+    # Convert lists to numpy arrays
+    xyz_matrix = np.array(xyz_list, dtype=np.float32)
+    dist_matrix = np.array(dist_list, dtype=np.float32)
+    path_loss_matrix = np.array(path_loss_list, dtype=np.float32)
+
+    return xyz_matrix, dist_matrix, path_loss_matrix
+
+
 if __name__ == '__main__':
     file = './P2Ms/ASU_campus_just_p2m/study_area_asu5/asu_campus.paths.t001_01.r004.p2m'
     file = './P2Ms/simple_street_canyon/study_rays=0.25_res=2m_3ghz/simple_street_canyon_test.paths.t001_01.r002.p2m'
     data = paths_parser(file)
-    print(data)
+    print(data) 
