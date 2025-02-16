@@ -15,11 +15,11 @@ from pprint import pprint
 from ... import consts as c
 from .. import converter_utils as cu
 
-from .sionna_scene import read_scene
-from .sionna_materials import read_materials
-from .sionna_paths import read_paths
+from .sionna_rt_params import read_rt_params
 from .sionna_txrx import read_txrx
-from .sionna_rt_params import read_raytracing_parameters
+from .sionna_paths import read_paths
+from .sionna_materials import read_materials
+from .sionna_scene import read_scene
 
 def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
                         overwrite: bool = None, vis_scene: bool = False, 
@@ -58,7 +58,7 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     os.makedirs(output_folder)
 
     # Read ray tracing parameters
-    rt_params = read_raytracing_parameters(rt_folder)
+    rt_params = read_rt_params(rt_folder)
 
     # Read TXRX
     txrx_dict = read_txrx(rt_params)
@@ -109,7 +109,7 @@ if __name__ == '__main__':
                 'all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
     output_folder = os.path.join(rt_folder, 'test_deepmimo')
 
-    rt_params = read_raytracing_parameters(rt_folder)
+    rt_params = read_rt_params(rt_folder)
     txrx_dict = read_txrx(rt_params)
     read_paths(rt_folder, output_folder)
     read_materials(rt_folder, output_folder)
