@@ -1,5 +1,6 @@
 """
-Parses a TXRX file into a Python object that can be easily queried.
+Parses Wireless Insite setup files (.setup, .txrx, .city, .ter, .veg) into 
+Python objects that can be easily queried.
 
 The processed file looks like a list of nodes, and nodes are dictionaries with 
 certain fields. Print the document to see all the elements.

@@ -33,11 +33,13 @@ from typing import Optional
 # Local imports
 from .. import converter_utils as cu
 from ... import consts as c
-from .insite_materials import read_materials
-from .insite_setup import read_setup
-from .insite_scene import read_scene
+
+from .insite_rt_params import read_rt_params
 from .insite_txrx import read_txrx
 from .insite_paths import read_paths
+from .insite_materials import read_materials
+from .insite_scene import read_scene
+
 
 # Constants
 MATERIAL_FILES = ['.city', '.ter', '.veg']
@@ -79,7 +81,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     os.makedirs(output_folder, exist_ok=True)
 
     # Read setup (.setup)
-    setup_dict = read_setup(insite_sim_folder)
+    rt_params = read_rt_params(insite_sim_folder)
 
     # Read TXRX (.txrx)
     txrx_dict = read_txrx(insite_sim_folder, p2m_folder)
@@ -103,7 +105,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
         c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
         c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
-        c.RT_PARAMS_PARAM_NAME: setup_dict,
+        c.RT_PARAMS_PARAM_NAME: rt_params,
         c.TXRX_PARAM_NAME: txrx_dict,
         c.MATERIALS_PARAM_NAME: materials_dict,
         c.SCENE_PARAM_NAME: scene_dict

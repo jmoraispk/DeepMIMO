@@ -12,7 +12,7 @@ from typing import Dict
 from .setup_parser import parse_file
 
 
-def read_setup(sim_folder: str | Path) -> Dict:
+def read_rt_params(sim_folder: str | Path) -> Dict:
     """Read a Wireless Insite setup file and extract all configuration parameters.
     
     Simulation parameter include:
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     print("-" * 50)
     
     # Extract setup information
-    setup_dict = read_setup(setup_file)
+    setup_dict = read_rt_params(setup_file)
     
     # Print summary by categories
     print("\nAntenna Settings:")
@@ -174,4 +174,4 @@ if __name__ == "__main__":
     print("\nBoundary Settings:")
     print(f"  X: [{setup_dict['boundary_xmin']}, {setup_dict['boundary_xmax']}]")
     print(f"  Y: [{setup_dict['boundary_ymin']}, {setup_dict['boundary_ymax']}]")
-    print(f"  Z: [{setup_dict['boundary_zmin']}, {setup_dict['boundary_zmax']}]")
+    print(f"  Z: [{setup_dict['boundary_zmin']}, {setup_dict['boundary_zmax']}]") 
