@@ -54,7 +54,6 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     max_iteract = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
 
     data = {
-        'n_paths': np.zeros((n_rx), dtype=np.float32),
         'rx_pos': rx_pos,
         'tx_pos': tx_pos,
         'aoa_az': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
