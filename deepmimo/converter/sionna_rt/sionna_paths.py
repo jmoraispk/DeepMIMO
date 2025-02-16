@@ -126,7 +126,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     
     # Save each data key
     for key in data.keys():
-        cu.save_mat(data[key], key, save_folder, 1, 1, 2) # Static for Sionna (for now - later use txrx_dict)
+        cu.save_mat(data[key], key, save_folder, 1, 0, 2) # Static for Sionna (for now - later use txrx_dict)
 
     # Update txrx_dict with tx and rx numbers 
     
