@@ -162,4 +162,96 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 # buildings_scene.plot()
 #####
 
+#%% An exmaple of mapping params.mat values to web data
+
+
+# TODO: move this summary to dm.summary(scenario_name)
+
+
+# DM scenario summary
+
+# Read params.mat and provide TXRX summary, total number of tx & rx, scene size, 
+# and other relevant parameters, computed/extracted from the all dicts, not just rt_params
+
+scen_folder = dm.consts.SCENARIOS_FOLDER + '/' + scen_name
+
+mat_file = f'C:/Users/jmora/Documents/GitHub/DeepMIMO/{scen_folder}/params.mat'
+
+params_dict = dm.generator.python.core.load_mat_file_as_dict(mat_file)['params']
+
+# pprint(params_dict)
+
+# Print scenario summary
+print("\n" + "="*50)
+print(f"DeepMIMO {scen_name} Scenario Summary")
+print("="*50)
+
+print("\n[Ray-Tracing Configuration]")
+print(f"- Ray-tracer: {params_dict['raytracer']} v{params_dict['raytracer_version']}")
+print(f"- Frequency: {params_dict['rt_params']['frequency']/1e9:.1f} GHz")
+
+print("\n[Ray-tracing parameters]")
+print(f"- Max reflections: {params_dict['rt_params']['max_reflections']}")
+print(f"- Max path depth: {params_dict['rt_params']['path_depth']}")
+print(f"- Diffuse scattering: {params_dict['rt_params']['diffuse_scattering']} ({params_dict['rt_params']['diffuse_reflections']} reflections, {params_dict['rt_params']['diffuse_diffractions']} diffractions)")
+print(f"- Polarization: {params_dict['rt_params']['polarization']}")
+print(f"- Antenna type: {params_dict['rt_params']['antenna_type']}")
+
+print("\n[Scene Composition]")
+# Get scene object counts using Scene class method
+scene = dm.Scene.from_data(params_dict['scene'], scen_folder)
+label_counts = scene.count_objects_by_label()
+objects_summary = ', '.join(f'{count} {label}' for label, count in label_counts.items())
+
+# Count faces from scene metadata
+normal_faces = sum(len(obj['faces']) for obj in params_dict['scene']['objects'])
+
+print(f"- Total objects: {params_dict['scene']['n_objects']} ({objects_summary})")
+print(f"- Vertices: {params_dict['scene']['n_vertices']}")
+print(f"- Faces: {normal_faces:,} (decomposed into {params_dict['scene']['n_triangular_faces']:,} triangular faces)")
+
+# Get scene boundaries from scene bounding box
+bbox = scene.bounding_box
+print("\n[Scene boundaries]")
+print(f"- X: {bbox.x_min:.2f}m to {bbox.x_max:.2f}m (width: {bbox.width:.2f}m)")
+print(f"- Y: {bbox.y_min:.2f}m to {bbox.y_max:.2f}m (length: {bbox.length:.2f}m)")
+print(f"- Z: {bbox.z_min:.2f}m to {bbox.z_max:.2f}m (height: {bbox.height:.2f}m)")
+print(f"- Area: {bbox.width * bbox.length:,.2f}m²")
+
+print("\n[Materials]")
+print(f"Total materials: {len(params_dict['materials'])}")
+for mat_name, mat_props in params_dict['materials'].items():
+    print(f"\n{mat_props['name']}:")
+    print(f"- Permittivity: {mat_props['permittivity']:.2f}")
+    print(f"- Conductivity: {mat_props['conductivity']:.2f} S/m")
+    print(f"- Scattering model: {mat_props['scattering_model']}")
+    print(f"- Scattering coefficient: {mat_props['scattering_coefficient']:.2f}")
+    print(f"- Cross-polarization coefficient: {mat_props['cross_polarization_coefficient']:.2f}")
+
+print("\n[Transmitter/Receiver Configuration]")
+for set_name, set_info in params_dict['txrx'].items():
+    print(f"\n{set_name} ({set_info['name']}):")
+    role = []
+    if set_info['is_tx']: role.append("TX")
+    if set_info['is_rx']: role.append("RX")
+    print(f"- Role: {' & '.join(role)}")
+    print(f"- Total points: {set_info['num_points']:,}")
+    print(f"- Active points: {set_info['num_active_points']:,}")
+    print(f"- Antennas per point: {set_info['num_ant']}")
+
+print(f"\n[Version Information]")
+print(f"- DeepMIMO Version: {params_dict['version']}")
+print(f"- Dynamic scenes: {params_dict['dynamic_scenario_scenes']}")
+
+
+# Sum total number of receivers and transmitters
+n_rx = sum(set_info['num_active_points'] for set_info in params_dict['txrx'].values()
+           if set_info['is_rx'] and not set_info['is_tx'])
+n_tx = sum(set_info['num_active_points'] for set_info in params_dict['txrx'].values()
+           if set_info['is_tx'] and not set_info['is_rx'])
+print(f"Total number of receivers: {n_rx}")
+print(f"Total number of transmitters: {n_tx}")
+
+
+
 #%%
