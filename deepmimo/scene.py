@@ -814,6 +814,18 @@ class Scene:
         
         return ", ".join(counts)
 
+    def count_objects_by_label(self) -> Dict[str, int]:
+        """Count the number of objects for each label in the scene.
+        
+        Returns:
+            Dict[str, int]: Dictionary mapping labels to their counts
+        """
+        label_counts = {}
+        for obj in self.objects:
+            label = obj.label
+            label_counts[label] = label_counts.get(label, 0) + 1
+        return label_counts
+
 #------------------------------------------------------------------------------
 # Utilities
 #------------------------------------------------------------------------------
