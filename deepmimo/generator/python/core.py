@@ -456,6 +456,11 @@ def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
         return result
     elif isinstance(mat_struct, np.ndarray):
         # Process arrays recursively in case they contain mat_structs
-        return np.array([mat_struct_to_dict(item) for item in mat_struct])
+        try:
+            # First try to convert directly to numpy array
+            return np.array([mat_struct_to_dict(item) for item in mat_struct])
+        except ValueError:
+            # If that fails due to inhomogeneous shapes, return as list instead
+            return [mat_struct_to_dict(item) for item in mat_struct]
     return mat_struct  # Return the object as is for other types
 
