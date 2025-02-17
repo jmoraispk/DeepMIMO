@@ -35,9 +35,8 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
         Scene: Loaded scene with all objects
     """
     # Load raw data - already in correct format
-    vertices = cu.load_pickle(load_folder + 'sionna_vertices.pkl') # (N_VERTICES, 3)
-    tri_faces = cu.load_pickle(load_folder + 'sionna_faces.pkl').astype(np.int32) # (N_FACES, 3)  
-    objects = cu.load_pickle(load_folder + 'sionna_objects.pkl') # Dict with vertex ranges
+    vertices = cu.load_pickle(load_folder + 'sionna_vertices.pkl') # (N_VERTICES, 3) 
+    objects = cu.load_pickle(load_folder + 'sionna_objects.pkl') # Dict with vertex index ranges
     
     # Create scene
     scene = Scene()
