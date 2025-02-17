@@ -52,10 +52,10 @@ class InsiteRayTracingParameters(RayTracingParameters):
     
     # Diffuse scattering settings
     diffuse_scattering: bool = False  # Whether diffuse scattering is enabled
-    diffuse_reflections: bool = False  # Whether diffuse reflections are enabled
-    diffuse_diffractions: bool = False  # Whether diffuse diffractions are enabled
-    diffuse_transmissions: bool = False  # Whether diffuse transmissions are enabled
-    final_interaction_only: bool = False  # Whether to only consider final interactions
+    diffuse_reflections: int = 0  # Number of reflections allowed in paths with diffuse scattering
+    diffuse_diffractions: int = 0  # Number of diffractions allowed in paths with diffuse scattering
+    diffuse_transmissions: int = 0  # Number of transmissions allowed in paths with diffuse scattering
+    final_interaction_only: bool = False  # Whether to only consider diffuse scattering at final interaction
     
     
     def __post_init__(self):
