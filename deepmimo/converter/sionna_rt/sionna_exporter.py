@@ -154,20 +154,16 @@ def export_scene_rt_params(scene: Scene, **compute_paths_kwargs) -> Dict[str, An
 
     return {**rt_params_dict, **default_compute_paths_params}
 
-def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, np.ndarray]:
+def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, Dict]:
     """ Export the vertices and faces of buildings in a Sionna Scene.
     Output:
         vertice_matrix: n_vertices_in_scene x 3 (xyz coordinates)
-        face_matrix: n_faces_in_scene x 3 (indices of each vertex in triangular face)
+        obj_index_map: Dict with object name as key and (start_idx, end_idx) as value
     """
     all_vertices = []
-    all_faces = []
     obj_index_map = {}  # Stores the name and starting index of each object
     
     vertex_offset = 0
-    
-    # Dictionary to store per-object data for debugging
-    object_data = {}
     
     for obj_name, obj in scene._scene_objects.items():
     
@@ -181,31 +177,13 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, np.ndarray]:
         # Store object index range
         obj_index_map[obj_name] = (vertex_offset, vertex_offset + n_v)
         
-        # Get faces with corrected indices
-        n_f = obj._mi_shape.face_count()
-        obj_faces = np.array(obj._mi_shape.face_indices(np.arange(n_f)))
-    
-        # Adjust face indices to be absolute
-        obj_faces_absolute = obj_faces + vertex_offset  
-        
-        # Append faces to global list
-        all_faces.append(obj_faces_absolute)
-    
-        # Store debug data
-        object_data[obj_name] = {
-            "vertices": obj_vertices,
-            "faces": obj_faces_absolute,
-        }
-    
         # Update vertex offset
         vertex_offset += n_v
     
     # Convert lists to numpy arrays
     all_vertices = np.vstack(all_vertices)
-    all_faces = np.vstack(all_faces)
 
-    return all_vertices, all_faces, obj_index_map
-
+    return all_vertices, obj_index_map
 
 def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
                               my_compute_path_params: Dict, save_folder: str):
@@ -214,7 +192,7 @@ def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths,
     paths_dict_list = export_paths(path_list)
     materials_dict_list, material_indices = export_scene_materials(scene)
     rt_params = export_scene_rt_params(scene, **my_compute_path_params)
-    vertice_matrix, face_matrix, objects_dict = export_scene_buildings(scene)
+    vertice_matrix, obj_index_map = export_scene_buildings(scene)
     
     os.makedirs(save_folder, exist_ok=True)
     
@@ -225,8 +203,7 @@ def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths,
         'sionna_material_indices.pkl': material_indices,
         'sionna_rt_params.pkl': rt_params,
         'sionna_vertices.pkl': vertice_matrix,
-        'sionna_faces.pkl': face_matrix,
-        'sionna_objects.pkl': objects_dict,
+        'sionna_objects.pkl': obj_index_map,
     }
     
     for filename, variable in save_vars_dict.items():
