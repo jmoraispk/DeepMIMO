@@ -6,7 +6,7 @@ ray tracing engines (Wireless Insite, Sionna, etc.). It defines common parameter
 and functionality while allowing engine-specific extensions.
 """
 
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from typing import Dict, Optional
 from pathlib import Path
 
@@ -21,9 +21,8 @@ class RayTracingParameters:
     Note: All parameters are required to allow child classes to add their own required
     parameters. Default values are set in __post_init__.
     """
-    # Frequency and bandwidth settings
+    # Frequency (determines material properties)
     frequency: float  # Center frequency in Hz
-    bandwidth: float  # Bandwidth in Hz
     
     # Ray tracing interaction settings
     max_depth: int  # Maximum number of interactions (reflections + diffractions + scattering)

@@ -124,7 +124,6 @@ class InsiteRayTracingParameters(RayTracingParameters):
         params_dict = {
             # Base required parameters
             'frequency': waveform_vals['CarrierFrequency'],
-            'bandwidth': waveform_vals['bandwidth'],
             'max_depth': model_vals.get('path_depth', 3),
             'max_reflections': model_vals.get('max_reflections', 3),
             'raytracer_name': RAYTRACER_NAME_WIRELESS_INSITE,

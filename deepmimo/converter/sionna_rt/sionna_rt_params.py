@@ -75,7 +75,6 @@ class SionnaRayTracingParameters(RayTracingParameters):
         params_dict = {
             # Base required parameters
             'frequency': raw_params['frequency'],
-            'bandwidth': raw_params['bandwidth'],
             'max_depth': raw_params.get('max_depth', 3),
             'max_reflections': raw_params.get('max_reflections', raw_params.get('max_depth', 3)),
             'raytracer_name': RAYTRACER_NAME_SIONNA,
