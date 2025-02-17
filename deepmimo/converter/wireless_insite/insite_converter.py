@@ -102,9 +102,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # Save parameters to params.mat
     params = {
         c.LOAD_FILE_SP_VERSION: c.VERSION,
-        c.PARAMSET_DYNAMIC_SCENES: 0, # only static currently
-        c.LOAD_FILE_SP_RAYTRACER: c.RAYTRACER_NAME_WIRELESS_INSITE,
-        c.LOAD_FILE_SP_RAYTRACER_VERSION: c.RAYTRACER_VERSION_WIRELESS_INSITE,
+        c.PARAMSET_NUMBER_SCENES: 0, # only static currently
         c.RT_PARAMS_PARAM_NAME: rt_params,
         c.TXRX_PARAM_NAME: txrx_dict,
         c.MATERIALS_PARAM_NAME: materials_dict,

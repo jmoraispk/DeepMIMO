@@ -164,4 +164,4 @@ LOAD_FILE_SP_RAYTRACER_VERSION = 'raytracer_version'
 LOAD_FILE_SP_EXT = '.params.mat'
 
 # Dynamic scenario params - for v3 compatibility
-PARAMSET_DYNAMIC_SCENES = 'dynamic_scenario_scenes'
+PARAMSET_NUMBER_SCENES = 'number_scenes'
