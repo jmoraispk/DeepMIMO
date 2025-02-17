@@ -24,6 +24,7 @@ from typing import List, Dict, Tuple, Literal, Optional, Set
 from dataclasses import dataclass
 from pathlib import Path
 from .materials import MaterialList
+from .consts import PARAMSET_NUMBER_SCENES
 
 #------------------------------------------------------------------------------
 # Constants
@@ -628,6 +629,7 @@ class Scene:
         savemat(f"{base_folder}/materials.mat", {'materials': materials})
         
         return {
+            PARAMSET_NUMBER_SCENES: 1,
             'n_objects': len(self.objects),
             'n_vertices': len(vertices),
             'n_triangular_faces': len(tri_faces),
