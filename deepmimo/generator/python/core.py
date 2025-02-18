@@ -98,7 +98,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
     params = load_mat_file_as_dict(params_mat_file)['params']
     
     # Load scenario data
-    n_snapshots = params[c.PARAMSET_DYNAMIC_SCENES]
+    n_snapshots = params[c.PARAMSET_NUMBER_SCENES]
     if n_snapshots > 1: # dynamic
         raise NotImplementedError('Dynamic scenarios not implemented yet')
         dataset = {}
