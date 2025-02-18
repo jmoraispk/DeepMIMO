@@ -6,7 +6,7 @@ ray tracing engines (Wireless Insite, Sionna, etc.). It defines common parameter
 and functionality while allowing engine-specific extensions.
 """
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import Dict, Optional
 from pathlib import Path
 
@@ -19,45 +19,44 @@ class RayTracingParameters:
     with its own parameters and methods.
     
     Note: All parameters are required to allow child classes to add their own required
-    parameters. Default values are set in __post_init__.
+    parameters. Default values can be set in __post_init__.
     """
+    # Ray Tracing Engine info
+    raytracer_name: str  # Name of ray tracing engine (from constants)
+    raytracer_version: str  # Version of ray tracing engine
+    
     # Frequency (determines material properties)
     frequency: float  # Center frequency in Hz
     
     # Ray tracing interaction settings
-    max_depth: int  # Maximum number of interactions (reflections + diffractions + scattering)
-    max_reflections: int  # Maximum number of reflections
-    los: bool  # Line of sight
-    reflection: bool  # Reflections
-    diffraction: bool  # Diffraction
-    scattering: bool  # Scattering
+    max_path_depth: int  # Maximum number of interactions (ideally, R + D + S + T)
+    max_reflections: int  # Maximum number of reflections (R)
+    max_diffractions: int  # Maximum number of diffractions (D)
+    max_scatterings: int  # Maximum number of scatterings (S)
+    max_transmissions: int  # Maximum number of transmissions (T)
+
+    # Details on diffraction, scattering, and transmission
+    diffuse_reflections: int = 0  # Number of reflections allowed in paths with diffuse scattering
+    diffuse_diffractions: int = 0  # Number of diffractions allowed in paths with diffuse scattering
+    diffuse_transmissions: int = 0  # Number of transmissions allowed in paths with diffuse scattering
+    diffuse_final_interaction_only: bool = False  # Whether to only consider diffuse scattering at final interaction
+    diffuse_random_phases: bool = False  # Whether to randomize phases of diffuse scattering
+
+    terrain_reflection: bool = False  # Whether to allow reflections on terrain
+    terrain_diffraction: bool = False  # Whether to allow diffractions on terrain
+    terrain_scattering: bool = False  # Whether to allow scattering on terrain
     
-    # Engine info
-    raytracer_name: str  # Name of ray tracing engine (from constants)
-    raytracer_version: str  # Version of ray tracing engine
-    
+    # Ray casting settings
+    num_rays: int = 1000000 # Number of rays to launch (per antenna)
+    ray_casting_method: str = 'uniform' # 'uniform' (e.g. a fibonacci sphere) or '...'
+    synthetic_array: bool = True  # Whether to use a synthetic array
+
+    # Ray casting range (when casting method is uniform, centered at antenna boresight)
+    ray_casting_range_az : float = 360.0 # casting range in azimuth (degrees)
+    ray_casting_range_el : float = 180.0 # casting range in elevation (degrees)
+
     # Raw parameters storage
-    raw_params: Dict  # Store original parameters from engine
-    
-    def __post_init__(self):
-        """Set default values for parameters if not explicitly provided."""
-        # Set defaults for interaction flags
-        if not hasattr(self, 'los'):
-            self.los = True
-        if not hasattr(self, 'reflection'):
-            self.reflection = True
-        if not hasattr(self, 'diffraction'):
-            self.diffraction = False
-        if not hasattr(self, 'scattering'):
-            self.scattering = False
-            
-        # Set defaults for engine info
-        if not hasattr(self, 'raytracer_version'):
-            self.raytracer_version = ''
-            
-        # Initialize raw parameters if not provided
-        if not hasattr(self, 'raw_params'):
-            self.raw_params = {}
+    raw_params: Dict = field(default_factory=dict)  # Store original parameters from engine
     
     def to_dict(self) -> Dict:
         """Convert parameters to dictionary format.

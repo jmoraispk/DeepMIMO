@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Dict
 from dataclasses import dataclass
+from pprint import pprint
 
 from .setup_parser import parse_file
 from ...rt_params import RayTracingParameters
@@ -30,46 +31,6 @@ class InsiteRayTracingParameters(RayTracingParameters):
     First come the base class required parameters (inherited), then the class-specific
     required parameters, then all optional parameters.
     """
-    # Required parameters (no defaults)
-    antenna_type: str  # Type of antenna
-    polarization: str  # Antenna polarization
-    power_threshold: float  # Power threshold for rays
-    path_depth: int  # Path depth for APG
-    
-    # Optional parameters (with defaults)
-    # Study area settings
-    initial_ray_mode: str = ''  # Initial ray mode
-    foliage_model: str = ''  # Foliage model
-    foliage_attenuation_vert: float = 0.0  # Vertical foliage attenuation
-    foliage_attenuation_hor: float = 0.0  # Horizontal foliage attenuation
-    terrain_diffractions: int = 0  # Number of terrain diffractions
-    ray_spacing: float = 0.25  # Ray spacing
-    
-    # APG acceleration settings
-    apg_acceleration: bool = False  # Whether APG acceleration is enabled
-    workflow_mode: str = ''  # APG workflow mode
-    adjacency_distance: float = 0.0  # Adjacency distance for APG
-    
-    # Diffuse scattering settings
-    diffuse_scattering: bool = False  # Whether diffuse scattering is enabled
-    diffuse_reflections: int = 0  # Number of reflections allowed in paths with diffuse scattering
-    diffuse_diffractions: int = 0  # Number of diffractions allowed in paths with diffuse scattering
-    diffuse_transmissions: int = 0  # Number of transmissions allowed in paths with diffuse scattering
-    final_interaction_only: bool = False  # Whether to only consider diffuse scattering at final interaction
-    
-    
-    def __post_init__(self):
-        """Set Wireless Insite-specific engine info and defaults."""
-        # Call parent's post init first
-        super().__post_init__()
-        
-        # Set Wireless Insite-specific engine info
-        self.raytracer_name = RAYTRACER_NAME_WIRELESS_INSITE
-        self.raytracer_version = RAYTRACER_VERSION_WIRELESS_INSITE
-        
-        # Set max_depth based on path_depth if available
-        if hasattr(self, 'path_depth') and not hasattr(self, 'max_depth'):
-            self.max_depth = self.path_depth
     
     @classmethod
     def read_rt_params(cls, sim_folder: str | Path) -> 'InsiteRayTracingParameters':
@@ -119,45 +80,48 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'apg_acceleration': apg_accel_vals,
             'diffuse_scattering': diffuse_scat_vals
         }
+
+        max_scat = sum([diffuse_scat_vals['diffuse_reflections'],
+                        diffuse_scat_vals['diffuse_diffractions'],
+                        diffuse_scat_vals['diffuse_transmissions']])
         
+        num_rays = 360 // model_vals['ray_spacing'] * 180  
+
         # Build standardized parameter dictionary
         params_dict = {
-            # Base required parameters
-            'frequency': waveform_vals['CarrierFrequency'],
-            'max_depth': model_vals.get('path_depth', 3),
-            'max_reflections': model_vals.get('max_reflections', 3),
+            # Ray Tracing Engine info
             'raytracer_name': RAYTRACER_NAME_WIRELESS_INSITE,
             'raytracer_version': RAYTRACER_VERSION_WIRELESS_INSITE,
-            'los': True,  # Always enabled in Wireless Insite
-            'reflection': True,  # Always enabled in Wireless Insite
-            'diffraction': bool(model_vals.get('terrain_diffractions', 0)),
-            'scattering': diffuse_scat_vals['enabled'],
-            'raw_params': raw_params,
+
+            # Frequency
+            'frequency': waveform_vals['CarrierFrequency'],
             
-            # Required Insite-specific parameters
-            'antenna_type': antenna_vals['type'],
-            'polarization': antenna_vals['polarization'],
-            'power_threshold': antenna_vals['power_threshold'],
-            'path_depth': apg_accel_vals['path_depth'],
-            
-            # Optional Insite-specific parameters
-            'initial_ray_mode': model_vals.get('initial_ray_mode', ''),
-            'foliage_model': model_vals.get('foliage_model', ''),
-            'foliage_attenuation_vert': model_vals.get('foliage_attenuation_vert', 0.0),
-            'foliage_attenuation_hor': model_vals.get('foliage_attenuation_hor', 0.0),
-            'terrain_diffractions': bool(model_vals.get('terrain_diffractions', 0)),
-            'ray_spacing': model_vals.get('ray_spacing', 0.25),
-            
-            'apg_acceleration': apg_accel_vals['enabled'],
-            'workflow_mode': apg_accel_vals['workflow_mode'],
-            'adjacency_distance': apg_accel_vals['adjacency_distance'],
-            
-            'diffuse_scattering': diffuse_scat_vals['enabled'],
+            # Ray tracing interaction settings
+            'max_path_depth': apg_accel_vals['path_depth'],
+            'max_reflections': model_vals['max_reflections'],
+            'max_diffractions': model_vals['terrain_diffractions'], 
+            'max_scatterings': max_scat if bool(diffuse_scat_vals['enabled']) else 0,  # 1 if enabled, 0 if not
+            'max_transmissions': 0,  # Insite does not support transmissions in our setup
+
+            # Details on diffraction, scattering, and transmission
             'diffuse_reflections': diffuse_scat_vals['diffuse_reflections'],
             'diffuse_diffractions': diffuse_scat_vals['diffuse_diffractions'],
             'diffuse_transmissions': diffuse_scat_vals['diffuse_transmissions'],
-            'final_interaction_only': diffuse_scat_vals['final_interaction_only'],
-            
+            'diffuse_final_interaction_only': diffuse_scat_vals['final_interaction_only'],
+            'diffuse_random_phases': False,  # Insite does not support random phases
+
+            # Terrain interaction settings
+            'terrain_reflection': bool(model_vals.get('terrain_reflections', 0)),
+            'terrain_diffraction': 'Yes' == model_vals['terrain_diffractions'],
+            'terrain_scattering': bool(model_vals.get('terrain_scattering', 0)),
+
+            # Ray casting settings
+            'num_rays': num_rays,  # Insite uses ray spacing instead of explicit ray count
+            'ray_casting_method': 'uniform',  # Insite uses uniform ray casting
+            'synthetic_array': True,  # Currently only synthetic arrays are supported
+
+            # Store raw parameters
+            'raw_params': raw_params,
         }
         
         # Create and return parameters object
@@ -185,34 +149,9 @@ if __name__ == "__main__":
     print(f"\nTesting setup extraction from: {setup_file}")
     print("-" * 50)
     
-    # Extract setup information
+    # Extract setup information and print in a nicely formatted way
     setup_dict = InsiteRayTracingParameters.read_rt_params(setup_file)
     
-    # Print summary by categories
-    print("\nAntenna Settings:")
-    print(f"  Type: {setup_dict['antenna_type']}")
-    print(f"  Polarization: {setup_dict['polarization']}")
-    print(f"  Power Threshold: {setup_dict['power_threshold']}")
-    
-    print("\nWaveform Settings:")
-    print(f"  Frequency: {setup_dict['frequency']} Hz")
-    print(f"  Bandwidth: {setup_dict['bandwidth']} Hz")
-    
-    print("\nStudy Area Settings:")
-    print(f"  Ray Spacing: {setup_dict['ray_spacing']}")
-    print(f"  Max Reflections: {setup_dict['max_reflections']}")
-    print(f"  Initial Ray Mode: {setup_dict['initial_ray_mode']}")
-    
-    print("\nAPG Settings:")
-    print(f"  Enabled: {setup_dict['apg_acceleration']}")
-    print(f"  Workflow Mode: {setup_dict['workflow_mode']}")
-    print(f"  Path Depth: {setup_dict['path_depth']}")
-    print(f"  Adjacency Distance: {setup_dict['adjacency_distance']}")
-    
-    print("\nDiffuse Scattering Settings:")
-    print(f"  Enabled: {setup_dict['diffuse_scattering']}")
-    print(f"  Reflections: {setup_dict['diffuse_reflections']}")
-    print(f"  Diffractions: {setup_dict['diffuse_diffractions']}")
-    print(f"  Transmissions: {setup_dict['diffuse_transmissions']}")
-    print(f"  Final Interaction Only: {setup_dict['final_interaction_only']}")
+    # Filter out raw_params to keep output cleaner
+    pprint(setup_dict, sort_dicts=True, width=80)
     

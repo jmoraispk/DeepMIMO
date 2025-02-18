@@ -118,7 +118,7 @@ def export_scene_rt_params(scene: Scene, **compute_paths_kwargs) -> Dict[str, An
         tx_array_num_ant=scene_dict['tx_array'].num_ant,
         tx_array_ant_pos=scene_dict['tx_array'].positions.numpy(),
     
-        array_synthetic=scene_dict['synthetic_array'],
+        synthetic_array=scene_dict['synthetic_array'],
     
         # custom
         raytracer_version=sionna.__version__,

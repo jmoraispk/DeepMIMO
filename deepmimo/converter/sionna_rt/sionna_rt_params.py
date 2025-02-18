@@ -29,34 +29,6 @@ class SionnaRayTracingParameters(RayTracingParameters):
     First come the base class required parameters (inherited), then the class-specific
     required parameters, then all optional parameters.
     """
-    # Required array parameters (no defaults)
-    rx_array_size: int  # Size of RX array
-    rx_array_num_ant: int  # Number of RX antennas
-    rx_array_ant_pos: np.ndarray  # RX antenna positions relative to reference
-    tx_array_size: int  # Size of TX array
-    tx_array_num_ant: int  # Number of TX antennas
-    tx_array_ant_pos: np.ndarray  # TX antenna positions relative to reference
-    
-    # Optional parameters (with defaults)
-    array_synthetic: bool = False  # Whether arrays are synthetic
-    method: str = 'fibonacci'  # Ray launching method
-    num_samples: int = 1000000  # Number of rays to launch
-    scat_keep_prob: float = 0.001  # Scattering keep probability
-    scat_random_phases: bool = True  # Random phases for scattering
-    doppler_available: int = 0  # Whether Doppler information is available
-    
-    def __post_init__(self):
-        """Set Sionna-specific engine info and defaults."""
-        # Call parent's post init first
-        super().__post_init__()
-        
-        # Set Sionna-specific engine info
-        self.raytracer_name = RAYTRACER_NAME_SIONNA
-        self.raytracer_version = self.raw_params.get('raytracer_version', RAYTRACER_VERSION_SIONNA)
-        
-        # Map max_depth to max_reflections if needed
-        if 'max_depth' not in self.raw_params and hasattr(self, 'max_depth'):
-            self.max_reflections = self.max_depth
     
     @classmethod
     def read_rt_params(cls, load_folder: str) -> 'SionnaRayTracingParameters':
@@ -71,35 +43,54 @@ class SionnaRayTracingParameters(RayTracingParameters):
         # Load original parameters
         raw_params = cu.load_pickle(load_folder + 'sionna_rt_params.pkl')
         
+        # Raise error if los is not present
+        if 'los' not in raw_params or not raw_params['los']:
+            raise ValueError("los not found in Sionna RT parameters")
+        
+        # Raise error if arrays are not synthetic
+        if not raw_params['synthetic_array']:
+            raise ValueError("arrays are not synthetic in Sionna RT parameters. "
+                             "Multi-antenna arrays are not supported yet.")
+        
+        # NOTE: Sionna distributes these samples across antennas AND TXs
+        n_tx, n_tx_ant = raw_params['tx_array_size'], raw_params['tx_array_num_ant']
+        n_emmitters = n_tx * n_tx_ant
+        n_rays = raw_params['num_samples'] // n_emmitters
+    
         # Create standardized parameters
         params_dict = {
-            # Base required parameters
-            'frequency': raw_params['frequency'],
-            'max_depth': raw_params.get('max_depth', 3),
-            'max_reflections': raw_params.get('max_reflections', raw_params.get('max_depth', 3)),
+            # Ray Tracing Engine info
             'raytracer_name': RAYTRACER_NAME_SIONNA,
             'raytracer_version': raw_params.get('raytracer_version', RAYTRACER_VERSION_SIONNA),
-            'los': raw_params.get('los', True),
-            'reflection': raw_params.get('reflection', True),
-            'diffraction': raw_params.get('diffraction', False),
-            'scattering': raw_params.get('scattering', False),
+
+            # Base required parameters
+            'frequency': raw_params['frequency'],
+            
+            # Ray tracing interaction settings
+            'max_path_depth': raw_params['max_depth'],
+            'max_reflections': raw_params['max_depth'] if raw_params['reflection'] else 0,
+            'max_diffractions': int(raw_params['diffraction']),  # Sionna only supports 1 diffraction event
+            'max_scatterings': int(raw_params['scattering']),   # Sionna only supports 1 scattering event
+            'max_transmissions': 0, # Sionna does not support transmissions
+
+            # Terrain interaction settings
+            'terrain_reflection': bool(raw_params['reflection']), 
+            'terrain_diffraction': raw_params['diffraction'],  # Sionna only supports 1 diffraction, may be on terrain
+            'terrain_scattering': raw_params['scattering'],
+
+            # Details on diffraction, scattering, and transmission
+            'diffuse_reflections': raw_params['max_depth'] - 1, # Sionna only supports diffuse reflections
+            'diffuse_diffractions': 0, # Sionna only supports 1 diffraction event, with no diffuse scattering
+            'diffuse_transmissions': 0, # Sionna does not support transmissions
+            'diffuse_final_interaction_only': True, # Sionna only supports diffuse scattering at final interaction
+            'diffuse_random_phases': raw_params.get('scat_random_phases', True),
+
+            'synthetic_array': raw_params.get('synthetic_array', True),
+            'num_rays': -1 if raw_params['method'] == 'fibonacci' else n_rays, 
+            'ray_casting_method': raw_params['method'].replace('fibonacci', 'uniform'),
+            # The alternative to fibonacci is exhaustive, for which the number of rays is not predictable
+
             'raw_params': raw_params,
-            
-            # Required Sionna-specific parameters
-            'rx_array_size': raw_params['rx_array_size'],
-            'rx_array_num_ant': raw_params['rx_array_num_ant'],
-            'rx_array_ant_pos': raw_params['rx_array_ant_pos'],
-            'tx_array_size': raw_params['tx_array_size'],
-            'tx_array_num_ant': raw_params['tx_array_num_ant'],
-            'tx_array_ant_pos': raw_params['tx_array_ant_pos'],
-            
-            # Optional Sionna-specific parameters
-            'array_synthetic': raw_params.get('array_synthetic', False),
-            'method': raw_params.get('method', 'fibonacci'),
-            'num_samples': raw_params.get('num_samples', 1000000),
-            'scat_keep_prob': raw_params.get('scat_keep_prob', 0.001),
-            'scat_random_phases': raw_params.get('scat_random_phases', True),
-            'doppler_available': raw_params.get('doppler_available', 0)
         }
         
         # Create and return parameters object
