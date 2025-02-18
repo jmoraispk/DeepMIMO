@@ -7,7 +7,7 @@ This module handles loading and converting transmitter and receiver data from Si
 from typing import Dict
 from ...txrx import TxRxSet
 
-def read_txrx(setup_dict: Dict) -> Dict:
+def read_txrx(rt_params_dict: Dict) -> Dict:
     """Read and convert TX/RX data from Sionna format.
     
     Args:
@@ -16,6 +16,7 @@ def read_txrx(setup_dict: Dict) -> Dict:
     Returns:
         Dict containing TX/RX configuration in DeepMIMO format
     """
+    raw_params = rt_params_dict['raw_params']
     txrx_dict = {}
     # Create TX and RX objects in a loop
     for i in range(2):
@@ -29,9 +30,12 @@ def read_txrx(setup_dict: Dict) -> Dict:
         obj.idx = i + 1  # 1-indexed
         
         # Set antenna properties        
-        obj.num_ant = 1 if setup_dict['array_synthetic'] else setup_dict[obj.name + '_num_ant']
-        obj.ant_rel_positions = setup_dict[obj.name + '_ant_pos']        
-        obj.dual_pol = setup_dict[obj.name + '_num_ant'] != setup_dict[obj.name + '_size']
+        obj.num_ant = 1 if rt_params_dict['synthetic_array'] else raw_params[obj.name + '_num_ant']
+        obj.ant_rel_positions = raw_params[obj.name + '_ant_pos']        
+        obj.dual_pol = raw_params[obj.name + '_num_ant'] != raw_params[obj.name + '_size']
+        # num_ant refers to single polarized elements. 
+        # size refers to the number of elements in the array, which can be dual polarized.
+        # if dual_pol is True, then num_ant = 2 * size.
 
         txrx_dict[f'txrx_set_{i+1}'] = obj.to_dict() # 1-indexed
 
