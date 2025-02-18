@@ -15,6 +15,7 @@ import numpy as np
 # Base utilities
 from ...general_utilities import DotDict
 from ... import consts as c
+from ...info import info
 
 # Channel generation
 from .channel import generate_MIMO_channel, ChannelGenParameters
@@ -489,6 +490,22 @@ class Dataset(DotDict):
             list(self.aliases.keys())
         ))
 
+    def info(self, param_name: str | None = None) -> None:
+        """Display help information about DeepMIMO dataset parameters.
+        
+        Args:
+            param_name: Name of the parameter to get info about.
+                       If None or 'all', displays information for all parameters.
+                       If the parameter name is an alias, shows info for the resolved parameter.
+        """
+        # If it's an alias, resolve it first
+        if param_name in self.aliases:
+            resolved_name = self.aliases[param_name]
+            print(f"'{param_name}' is an alias for '{resolved_name}'")
+            param_name = resolved_name
+            
+        info(param_name)
+
 class MacroDataset:
     """A container class that holds multiple Dataset instances and propagates operations to all children.
     
@@ -503,6 +520,11 @@ class MacroDataset:
         c.LOAD_PARAMS_PARAM_NAME,  # Load parameters are shared
         c.SCENE_PARAM_NAME,        # Scene parameters are shared
         c.MATERIALS_PARAM_NAME,    # Materials are shared
+    }
+    
+    # Methods that should only be called on the first dataset
+    SINGLE_ACCESS_METHODS = {
+        'info',  # Parameter info should only be shown once
     }
     
     # Methods that should be propagated to children - automatically populated from Dataset methods
@@ -543,10 +565,17 @@ class MacroDataset:
         """
         # Check if it's a method we should propagate
         if name in self.PROPAGATE_METHODS:
-            def propagated_method(*args, **kwargs):
-                results = [getattr(dataset, name)(*args, **kwargs) for dataset in self.datasets]
-                return results[0] if len(results) == 1 else results
-            return propagated_method
+            if name in self.SINGLE_ACCESS_METHODS:
+                # For single access methods, only call on first dataset
+                def single_method(*args, **kwargs):
+                    return getattr(self.datasets[0], name)(*args, **kwargs)
+                return single_method
+            else:
+                # For normal methods, propagate to all datasets
+                def propagated_method(*args, **kwargs):
+                    results = [getattr(dataset, name)(*args, **kwargs) for dataset in self.datasets]
+                    return results[0] if len(results) == 1 else results
+                return propagated_method
             
         # Handle single access keys
         if name in self.SINGLE_ACCESS_KEYS:
