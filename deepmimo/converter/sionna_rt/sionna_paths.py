@@ -50,9 +50,10 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     rx_pos = np.vstack([paths_dict['targets'] for paths_dict in path_dict_list])
     n_rx = rx_pos.shape[0]
 
+    # Get max number of interactions per path
+    max_inter = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
+    
     # Pre-allocate matrices
-    max_iteract = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
-
     data = {
         'rx_pos': rx_pos,
         'tx_pos': tx_pos,
@@ -64,7 +65,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         'power':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'phase':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
         'inter':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'inter_pos': np.zeros((n_rx, c.MAX_PATHS, max_iteract, 3), dtype=np.float32) * np.nan,
+        'inter_pos': np.zeros((n_rx, c.MAX_PATHS, max_inter, 3), dtype=np.float32) * np.nan,
     }
 
     # Squeeze and slice function to be applied to each Sionna array
@@ -115,8 +116,8 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             # Update progress bar for each receiver processed
             pbar.update(1)
 
-        # Handle interaction positions
-        inter_pos = paths_dict['vertices'][0, :max_iteract, :, :c.MAX_PATHS, :]
+        # Handle interaction positions (vertices: (depth, user, ?, path, pos))
+        inter_pos = paths_dict['vertices'][:max_inter, :, 0, :c.MAX_PATHS, :] 
         data['inter_pos'][abs_idxs, :len(path_mask), :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
 
     pbar.close()
