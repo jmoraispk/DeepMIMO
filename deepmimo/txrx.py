@@ -8,8 +8,6 @@ to represent transmitter and receiver configurations.
 from dataclasses import dataclass, asdict, field
 from typing import Dict, List
 
-# TODO: add a from_dict method (to be used in generation)
-
 @dataclass
 class TxRxSet:
     """
@@ -36,9 +34,11 @@ class TxRxSet:
     
     num_ant: int = 1  # number of antenna elements
     dual_pol: bool = False # if antenna supports dual polarization
-    ant_rel_positions: List = field(default_factory=lambda: [[0,0,0]])  # relative to the center of the antenna
-                                                                # (only single antenna supported for now)
-
+    
+    # For forward compatibility (only single antenna supported for now)
+    ant_rel_positions: List = field(default_factory=lambda: [[0,0,0]]) # relative to the center of the antenna
+    array_orientation: List = field(default_factory=lambda: [0,0,0]) # [azimuth, elevation, roll]
+    
     def to_dict(self) -> Dict:
         """Convert TxRxSet to a dictionary, filtering out None values.
         
