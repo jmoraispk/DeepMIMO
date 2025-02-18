@@ -116,7 +116,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             pbar.update(1)
 
         # Handle interaction positions
-        inter_pos = paths_dict['vertices'].squeeze()[:max_iteract, :, :c.MAX_PATHS, :]
+        inter_pos = paths_dict['vertices'][0, :max_iteract, :, :c.MAX_PATHS, :]
         data['inter_pos'][abs_idxs, :len(path_mask), :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
 
     pbar.close()
