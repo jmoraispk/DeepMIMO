@@ -88,8 +88,8 @@ def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.nd
     Returns:
         Array of indices for uniformly sampled users
     """
-    cols = np.arange(users_per_row, step=sampling_div[0])
-    rows = np.arange(n_rows, step=sampling_div[1])
+    cols = np.arange(users_per_row, step=steps[0])
+    rows = np.arange(n_rows, step=steps[1])
     uniform_idxs = np.array([j + i*users_per_row for i in rows for j in cols])
     return uniform_idxs
 
