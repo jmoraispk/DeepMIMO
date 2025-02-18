@@ -61,12 +61,12 @@ start_time = time.time()
 
 # scen_name = 'DeepMIMO_folder'
 # scen_name = 'simple_street_canyon_test'
-# scen_name = 'asu_campus'
+scen_name = 'asu_campus'
 
 # Option 1 - dictionaries per tx/rx set and tx/rx index inside the set)
 tx_sets = {1: [0]}
 # rx_sets = {1: [0]}
-rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
+rx_sets = {2: 'all'}#[0,1,2,3,4,5,6,7,8,9,10]}
 
 # Option 2 - lists with tx/rx set (assumes all points inside the set)
 # tx_sets = [1]
@@ -138,10 +138,10 @@ dataset = dm.generate(scen_name)
 
 #%% Visualization check
 
-dm.plot_coverage(dataset['rx_pos'], dataset['aoa_az'][:, 0],
-                               bs_pos=dataset['tx_pos'].T)
+idxs = dm.uniform_sampling([16,4], 321, 411)
+dm.plot_coverage(dataset['rx_pos'][idxs], dataset['aoa_az'][idxs, 0], bs_pos=dataset['tx_pos'].T)
 
-plt.scatter(dataset['rx_pos'][10,0], dataset['rx_pos'][10,1], c='k', s=20)
+# plt.scatter(dataset['rx_pos'][10,0], dataset['rx_pos'][10,1], c='k', s=20)
 
 #%%
 
