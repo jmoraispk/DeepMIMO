@@ -4,10 +4,10 @@ Sionna Ray Tracing Scene Module.
 This module handles loading and converting scene data from Sionna's format to DeepMIMO's format.
 """
 
-import numpy as np
 from typing import List
 
 from .. import converter_utils as cu
+
 from ...scene import (
     PhysicalElement, 
     Face, 
