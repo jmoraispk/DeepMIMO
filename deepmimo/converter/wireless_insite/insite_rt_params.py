@@ -74,6 +74,18 @@ class InsiteRayTracingParameters(RayTracingParameters):
         # Defaults that sometimes are not present in the setup file
         model_vals['ray_spacing'] = model_vals.get('ray_spacing', 0.25)
         model_vals['terrain_diffractions'] = model_vals.get('terrain_diffractions', 'No')
+        
+        # Diffractions
+        if 'max_wedge_diffractions' in model_vals.keys():
+            pass # all good, information present
+        else:
+            default_diffractions = diffuse_scat_vals.get('diffuse_diffractions', 0)
+            if default_diffractions == 0:
+                default_diffractions = 1 if model_vals['terrain_diffractions'] == 'Yes' else 0
+            model_vals['max_wedge_diffractions'] = default_diffractions
+        
+        # Transmissions
+        model_vals['max_transmissions'] = model_vals.get('max_transmissions', 0)
 
         # Store raw parameters
         raw_params = {
@@ -85,10 +97,6 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'diffuse_scattering': diffuse_scat_vals
         }
 
-        max_scat = sum([diffuse_scat_vals['diffuse_reflections'],
-                        diffuse_scat_vals['diffuse_diffractions'],
-                        diffuse_scat_vals['diffuse_transmissions']])
-        
         num_rays = 360 // model_vals['ray_spacing'] * 180  
 
         # Build standardized parameter dictionary
@@ -103,9 +111,9 @@ class InsiteRayTracingParameters(RayTracingParameters):
             # Ray tracing interaction settings
             'max_path_depth': apg_accel_vals['path_depth'],
             'max_reflections': model_vals['max_reflections'],
-            'max_diffractions': model_vals['terrain_diffractions'], 
-            'max_scatterings': max_scat if bool(diffuse_scat_vals['enabled']) else 0,  # 1 if enabled, 0 if not
-            'max_transmissions': 0,  # Insite does not support transmissions in our setup
+            'max_diffractions': model_vals['max_wedge_diffractions'], ######
+            'max_scatterings': int(diffuse_scat_vals['enabled']) ,  # 1 if enabled, 0 if not
+            'max_transmissions': model_vals['max_transmissions'], # Insite does not support transmissions in our setup
 
             # Details on diffraction, scattering, and transmission
             'diffuse_reflections': diffuse_scat_vals['diffuse_reflections'],
@@ -115,7 +123,7 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'diffuse_random_phases': False,  # Insite does not support random phases
 
             # Terrain interaction settings
-            'terrain_reflection': bool(model_vals.get('terrain_reflections', 0)),
+            'terrain_reflection': bool(model_vals.get('terrain_reflections', 1)),
             'terrain_diffraction': 'Yes' == model_vals['terrain_diffractions'],
             'terrain_scattering': bool(model_vals.get('terrain_scattering', 0)),
 

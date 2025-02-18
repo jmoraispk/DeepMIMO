@@ -2,16 +2,61 @@
 Constants and configuration parameters for the DeepMIMO dataset generation.
 
 This module contains all constant definitions used throughout the DeepMIMO toolkit,
-including parameter names, file paths, and configuration options for both v4 and
-legacy versions of DeepMIMO.
+organized into the following categories:
+
+1. Core Configuration
+   - Version information
+   - File paths and data types
+   - Supported ray tracers
+
+2. Ray-Tracing Parameters
+   - Basic parameters (frequency, raytracer info)
+   - Interaction limits
+   - Diffuse scattering settings
+   - Terrain interaction settings
+   - Ray casting configuration
+
+3. Scene Parameters
+   - Scene structure (objects, faces, vertices)
+
+4. Materials Parameters
+   - Material properties
+
+5. TXRX Parameters
+   - Transmitter/Receiver configuration
+
+6. Paths Parameters
+   - Interaction codes
+   - Path processing limits
+
+7. DeepMIMO Parameters
+   - Fundamental parameters (angles, power, positions)
+   - Computed parameters
+   - Channel parameters
+   - OFDM configuration
+   - Antenna settings
+   - Parameter aliases
+
+IMPORTANT: The string values of these constants MUST match exactly the field names 
+used in the respective files (params.mat, scene files, dataclasses, etc.). 
 """
 
 import numpy as np
 from . import __version__
 
-# Extract major version number from __version__ (e.g., "4.0.0" -> 4)
+#==============================================================================
+# 1. Core Configuration
+#==============================================================================
+
+# Version information
+VERSION_PARAM_NAME = 'version'
 VERSION = __version__
 
+# File and folder paths
+SCENARIOS_FOLDER = 'deepmimo_scenarios2'
+PARAMS_FILENAME = 'params'
+
+# Data types
 FP_TYPE = np.float32  # floating point precision for saving values
 
 # Supported ray tracers and their versions
@@ -22,23 +67,104 @@ RAYTRACER_VERSION_SIONNA = '0.19.1'
 RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'  # not supported yet
 RAYTRACER_VERSION_AODT = '1.x'
 
+#==============================================================================
+# 2. Ray-Tracing Parameters
+#==============================================================================
 
+# Main RT params dictionary key
+RT_PARAMS_PARAM_NAME = 'rt_params'
 
-# Interaction Codes
-# The codes are read from left to right, starting from the transmitter end
-INTERACTION_LOS = 0         # Line-of-sight (direct path)
-INTERACTION_REFLECTION = 1  # Reflection
-INTERACTION_DIFFRACTION = 2 # Diffraction
-INTERACTION_SCATTERING = 3 # Scattering
-INTERACTION_TRANSMISSION = 4 # Transmission
+# Basic RT parameters
+RT_PARAM_FREQUENCY = 'frequency'
+RT_PARAM_RAYTRACER = 'raytracer_name'
+RT_PARAM_RAYTRACER_VERSION = 'raytracer_version'
 
+# Interaction limits
+RT_PARAM_PATH_DEPTH = 'max_path_depth'
+RT_PARAM_MAX_REFLECTIONS = 'max_reflections'
+RT_PARAM_MAX_DIFFRACTIONS = 'max_diffractions'
+RT_PARAM_MAX_SCATTERINGS = 'max_scatterings'
+RT_PARAM_MAX_TRANSMISSIONS = 'max_transmissions'
+
+# Diffuse scattering parameters
+RT_PARAM_DIFFUSE_REFLECTIONS = 'diffuse_reflections'
+RT_PARAM_DIFFUSE_DIFFRACTIONS = 'diffuse_diffractions'
+RT_PARAM_DIFFUSE_TRANSMISSIONS = 'diffuse_transmissions'
+RT_PARAM_DIFFUSE_FINAL_ONLY = 'diffuse_final_interaction_only'
+RT_PARAM_DIFFUSE_RANDOM_PHASES = 'diffuse_random_phases'
+
+# Terrain interaction parameters
+RT_PARAM_TERRAIN_REFLECTION = 'terrain_reflection'
+RT_PARAM_TERRAIN_DIFFRACTION = 'terrain_diffraction'
+RT_PARAM_TERRAIN_SCATTERING = 'terrain_scattering'
+
+# Ray casting parameters
+RT_PARAM_NUM_RAYS = 'num_rays'
+RT_PARAM_RAY_CASTING_METHOD = 'ray_casting_method'
+RT_PARAM_SYNTHETIC_ARRAY = 'synthetic_array'
+RT_PARAM_RAY_CASTING_RANGE_AZ = 'ray_casting_range_az'
+RT_PARAM_RAY_CASTING_RANGE_EL = 'ray_casting_range_el'
+
+#==============================================================================
+# 3. Scene Parameters
+#==============================================================================
+
+# Scene parameters
+SCENE_PARAM_NAME = 'scene'  # Scene parameters and configuration
+SCENE_PARAM_NUMBER_SCENES = 'num_scenes'
+SCENE_PARAM_OBJECTS = 'objects'
+SCENE_PARAM_FACES = 'faces'
+SCENE_PARAM_N_OBJECTS = 'n_objects'
+SCENE_PARAM_N_VERTICES = 'n_vertices'
+SCENE_PARAM_N_TRIANGULAR_FACES = 'n_triangular_faces'
+
+#==============================================================================
+# 4. Materials Parameters
+#==============================================================================
+
+# Materials parameters
+MATERIALS_PARAM_NAME = 'materials'  # Materials list and properties
+MATERIALS_PARAM_NAME_FIELD = 'name'
+MATERIALS_PARAM_PERMITTIVITY = 'permittivity'
+MATERIALS_PARAM_CONDUCTIVITY = 'conductivity'
+MATERIALS_PARAM_SCATTERING_MODEL = 'scattering_model'
+MATERIALS_PARAM_SCATTERING_COEF = 'scattering_coefficient'
+MATERIALS_PARAM_CROSS_POL_COEF = 'cross_polarization_coefficient'
+
+#==============================================================================
+# 5. TXRX Parameters
+#==============================================================================
+
+# TXRX configuration
+TXRX_PARAM_NAME = 'txrx'
+TXRX_PARAM_NAME_FIELD = 'name'
+TXRX_PARAM_IS_TX = 'is_tx'
+TXRX_PARAM_IS_RX = 'is_rx'
+TXRX_PARAM_NUM_POINTS = 'num_points'
+TXRX_PARAM_NUM_ACTIVE_POINTS = 'num_active_points'
+TXRX_PARAM_NUM_ANT = 'num_ant'
+TXRX_PARAM_DUAL_POL = 'dual_pol'
+
+#==============================================================================
+# 6. Paths Parameters
+#==============================================================================
+
+# Interaction Codes (read from left to right, starting from transmitter end)
+INTERACTION_LOS = 0           # Line-of-sight (direct path)
+INTERACTION_REFLECTION = 1    # Reflection
+INTERACTION_DIFFRACTION = 2   # Diffraction
+INTERACTION_SCATTERING = 3    # Scattering
+INTERACTION_TRANSMISSION = 4  # Transmission
 
 # Path Processing Constants
 MAX_PATHS = 25  # Maximum number of paths per receiver
 MAX_INTER_PER_PATH = 10  # Maximum number of interactions per path
 
+#==============================================================================
+# 7. DeepMIMO Dataset Parameters
+#==============================================================================
 
-# DEEPMIMOv4 Fundamental Parameters
+# Fundamental Parameters
 AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
 AOD_AZ_PARAM_NAME = 'aod_az'
@@ -49,16 +175,13 @@ PHASE_PARAM_NAME = 'phase'
 DELAY_PARAM_NAME = 'delay'
 RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
+BOUNCE_POS_PARAM_NAME = 'bounce_pos'
+BOUNCE_TYPE_PARAM_NAME = 'bounce_type'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
-RT_PARAMS_PARAM_NAME = 'rt_params'
-TXRX_PARAM_NAME = 'txrx'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
-SCENE_PARAM_NAME = 'scene'  # Scene parameters and configuration
-MATERIALS_PARAM_NAME = 'materials'  # Materials list and properties
 
-
-# DEEPMIMOv4 Computed Parameters
+# Computed Parameters
 CHANNEL_PARAM_NAME = 'channel'
 NUM_PATHS_PARAM_NAME = 'num_paths'
 NUM_PATHS_FOV_PARAM_NAME = 'num_paths_fov'  # Number of paths within FoV for each user
@@ -66,7 +189,7 @@ PWR_LINEAR_PARAM_NAME = 'power_linear'
 PATHLOSS_PARAM_NAME = 'pathloss'
 DIST_PARAM_NAME = 'distance'
 
-# Rotated angles parameters (after antenna rotation)
+# Rotated angles (after antenna rotation)
 AOA_AZ_ROT_PARAM_NAME = 'aoa_az_rot'
 AOA_EL_ROT_PARAM_NAME = 'aoa_el_rot'
 AOD_AZ_ROT_PARAM_NAME = 'aod_az_rot'
@@ -82,66 +205,20 @@ FOV_MASK_PARAM_NAME = 'fov_mask'      # Boolean mask for FoV filtering
 # Power parameters
 PWR_LINEAR_ANT_GAIN_PARAM_NAME = 'power_linear_ant_gain'
 
-# Aliases
-# Channel aliases
-CHANNEL_PARAM_NAME_2 = 'channels'
-CHANNEL_PARAM_NAME_3 = 'ch'
-CHANNEL_PARAM_NAME_4 = 'chs'
-# Pathloss aliases
-PATHLOSS_PARAM_NAME_2 = 'path_loss'
-PATHLOSS_PARAM_NAME_3 = 'pl'
-# Distance aliases
-DIST_PARAM_NAME_2 = 'distances'
-DIST_PARAM_NAME_3 = 'dist'
-DIST_PARAM_NAME_4 = 'dists'
-# Number of paths aliases
-NUM_PATHS_PARAM_NAME_2 = 'n_paths'
-# Power aliases
-PWR_PARAM_NAME_2 = 'pwr'
-PWR_PARAM_NAME_3 = 'powers'
-PWR_LINEAR_PARAM_NAME_2 = 'pwr_lin'
-PWR_LINEAR_PARAM_NAME_3 = 'power_lin'
-PWR_LINEAR_PARAM_NAME_4 = 'pwr_linear'
-# Position aliases
-RX_POS_PARAM_NAME_2 = 'rx_loc'
-RX_POS_PARAM_NAME_3 = 'rx_position'
-RX_POS_PARAM_NAME_4 = 'rx_locations'
-TX_POS_PARAM_NAME_2 = 'tx_loc'
-TX_POS_PARAM_NAME_3 = 'tx_position'
-TX_POS_PARAM_NAME_4 = 'tx_locations'
-# Angle aliases
-AOA_AZ_PARAM_NAME_2 = 'aoa_azimuth'
-AOA_EL_PARAM_NAME_2 = 'aoa_elevation'
-AOD_AZ_PARAM_NAME_2 = 'aod_azimuth'
-AOD_EL_PARAM_NAME_2 = 'aod_elevation'
-# Time aliases
-TOA_PARAM_NAME_2 = 'time_of_arrival'
-# Interaction aliases
-INTERACTIONS_PARAM_NAME_2 = 'interactions'
-INTERACTIONS_POS_PARAM_NAME_2 = 'interaction_locations'
-
-# Load Params
-LOAD_PARAM_MAX_PATH = 'max_paths'
-
-# ######### BOTH DM v4 and older versions ###########
-
-SCENARIOS_FOLDER = 'deepmimo_scenarios2'
-
 # Channel parameters
 PARAMSET_POLAR_EN = 'enable_dual_polar'
-PARAMSET_DOPPLER_EN = 'enable_doppler' # Doppler from Ray Tracer
-PARAMSET_FD_CH = 'freq_domain' # Time Domain / Frequency Domain (OFDM)
-# PARAMSET_OFDM_CH = 'ofdm_channels' # Time Domain / Frequency Domain (OFDM)
-# PARAMSET_OTFS_CH = 'otfs_channels'
-# If OTFS, OFDM, or other channel models are OFF, generate time-domain channels
+PARAMSET_DOPPLER_EN = 'enable_doppler'  # Doppler from Ray Tracer
+PARAMSET_FD_CH = 'freq_domain'  # Time Domain / Frequency Domain (OFDM)
 
+# OFDM parameters
 PARAMSET_OFDM = 'ofdm'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'
 PARAMSET_OFDM_SC_SAMP = 'selected_subcarriers'
 PARAMSET_OFDM_BW = 'bandwidth'
-PARAMSET_OFDM_BW_MULT = 1e9 # Bandwidth input is GHz, multiply by this
+PARAMSET_OFDM_BW_MULT = 1e9  # Bandwidth input is GHz, multiply by this
 PARAMSET_OFDM_LPF = 'rx_filter'
 
+# Antenna parameters
 PARAMSET_ANT_BS = 'bs_antenna'
 PARAMSET_ANT_UE = 'ue_antenna'
 PARAMSET_ANT_SHAPE = 'shape'
@@ -151,17 +228,51 @@ PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
 PARAMSET_ANT_FOV = 'fov'
 
-# Physical Constants
-LIGHTSPEED = 299792458  # Speed of light in m/s
+#------------------------------------------------------------------------------
+# Parameter Aliases
+#------------------------------------------------------------------------------
 
-# Scenarios folder
-SCENARIOS_FOLDER = 'deepmimo_scenarios2'
+# Channel aliases
+CHANNEL_PARAM_NAME_2 = 'channels'
+CHANNEL_PARAM_NAME_3 = 'ch'
+CHANNEL_PARAM_NAME_4 = 'chs'
 
-# Scenario params file variable names - for v3 compatibility
-LOAD_FILE_SP_VERSION = 'version'
-LOAD_FILE_SP_RAYTRACER = 'raytracer'
-LOAD_FILE_SP_RAYTRACER_VERSION = 'raytracer_version'
-LOAD_FILE_SP_EXT = '.params.mat'
+# Pathloss aliases
+PATHLOSS_PARAM_NAME_2 = 'path_loss'
+PATHLOSS_PARAM_NAME_3 = 'pl'
 
-# Dynamic scenario params - for v3 compatibility
-PARAMSET_NUMBER_SCENES = 'number_scenes'
+# Distance aliases
+DIST_PARAM_NAME_2 = 'distances'
+DIST_PARAM_NAME_3 = 'dist'
+DIST_PARAM_NAME_4 = 'dists'
+
+# Number of paths aliases
+NUM_PATHS_PARAM_NAME_2 = 'n_paths'
+
+# Power aliases
+PWR_PARAM_NAME_2 = 'pwr'
+PWR_PARAM_NAME_3 = 'powers'
+PWR_LINEAR_PARAM_NAME_2 = 'pwr_lin'
+PWR_LINEAR_PARAM_NAME_3 = 'power_lin'
+PWR_LINEAR_PARAM_NAME_4 = 'pwr_linear'
+
+# Position aliases
+RX_POS_PARAM_NAME_2 = 'rx_loc'
+RX_POS_PARAM_NAME_3 = 'rx_position'
+RX_POS_PARAM_NAME_4 = 'rx_locations'
+TX_POS_PARAM_NAME_2 = 'tx_loc'
+TX_POS_PARAM_NAME_3 = 'tx_position'
+TX_POS_PARAM_NAME_4 = 'tx_locations'
+
+# Angle aliases
+AOA_AZ_PARAM_NAME_2 = 'aoa_azimuth'
+AOA_EL_PARAM_NAME_2 = 'aoa_elevation'
+AOD_AZ_PARAM_NAME_2 = 'aod_azimuth'
+AOD_EL_PARAM_NAME_2 = 'aod_elevation'
+
+# Time aliases
+TOA_PARAM_NAME_2 = 'time_of_arrival'
+
+# Interaction aliases
+INTERACTIONS_PARAM_NAME_2 = 'interactions'
+INTERACTIONS_POS_PARAM_NAME_2 = 'interaction_locations'

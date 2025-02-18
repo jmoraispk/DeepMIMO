@@ -101,13 +101,13 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     
     # Save parameters to params.mat
     params = {
-        c.LOAD_FILE_SP_VERSION: c.VERSION,
+        c.VERSION_PARAM_NAME: c.VERSION,
         c.RT_PARAMS_PARAM_NAME: rt_params,
         c.TXRX_PARAM_NAME: txrx_dict,
         c.MATERIALS_PARAM_NAME: materials_dict,
         c.SCENE_PARAM_NAME: scene_dict
     }
-    cu.save_mat(params, 'params', output_folder)
+    cu.save_mat(params, c.PARAMS_FILENAME, output_folder)
     
     from pprint import pprint
     pprint(params)
