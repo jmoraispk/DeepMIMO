@@ -71,6 +71,10 @@ class InsiteRayTracingParameters(RayTracingParameters):
         apg_accel_vals = studyarea_vals['apg_acceleration'].values
         diffuse_scat_vals = studyarea_vals['diffuse_scattering'].values
         
+        # Defaults that sometimes are not present in the setup file
+        model_vals['ray_spacing'] = model_vals.get('ray_spacing', 0.25)
+        model_vals['terrain_diffractions'] = model_vals.get('terrain_diffractions', 'No')
+
         # Store raw parameters
         raw_params = {
             'antenna': antenna_vals,
