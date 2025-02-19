@@ -21,7 +21,7 @@ import scipy.io
 
 # Local imports
 from ... import consts as c
-from ...general_utilities import get_mat_filename
+from ...general_utilities import get_mat_filename, load_mat_file_as_dict
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
 from ...materials import MaterialList
@@ -420,47 +420,4 @@ def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
             if key in dict2:
                 additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
     return additional_keys
-
-def load_mat_file_as_dict(file_path: str) -> Dict[str, Any]:
-    """Load MATLAB .mat file as Python dictionary.
-    
-    Args:
-        file_path (str): Path to .mat file to load
-        
-    Returns:
-        dict: Dictionary containing loaded MATLAB data
-        
-    Raises:
-        ValueError: If file cannot be loaded
-    """
-    mat_data = scipy.io.loadmat(file_path, squeeze_me=True, struct_as_record=False)
-    return {key: mat_struct_to_dict(value) for key, value in mat_data.items()
-            if not key.startswith('__')}
-
-def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
-    """Convert MATLAB structure to Python dictionary.
-    
-    This function recursively converts MATLAB structures and arrays to
-    Python dictionaries and numpy arrays.
-
-    Args:
-        mat_struct (any): MATLAB structure to convert
-        
-    Returns:
-        dict: Dictionary containing converted data
-    """
-    if isinstance(mat_struct, scipy.io.matlab.mat_struct):
-        result = {}
-        for field in mat_struct._fieldnames:
-            result[field] = mat_struct_to_dict(getattr(mat_struct, field))
-        return result
-    elif isinstance(mat_struct, np.ndarray):
-        # Process arrays recursively in case they contain mat_structs
-        try:
-            # First try to convert directly to numpy array
-            return np.array([mat_struct_to_dict(item) for item in mat_struct])
-        except ValueError:
-            # If that fails due to inhomogeneous shapes, return as list instead
-            return [mat_struct_to_dict(item) for item in mat_struct]
-    return mat_struct  # Return the object as is for other types
 
