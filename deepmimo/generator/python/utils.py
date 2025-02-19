@@ -19,9 +19,6 @@ from typing import List, Tuple, Optional, Dict, Any
 # Third-party imports
 import numpy as np
 
-# Local imports
-from ... import consts as c
-
 ################################# Internal ####################################
 
 def safe_print(text: str, stop_dur: float = 0.3) -> None:
