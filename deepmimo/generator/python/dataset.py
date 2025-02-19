@@ -7,7 +7,7 @@ including channel matrices, path information, and metadata.
 
 # Standard library imports
 import inspect
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 
 # Third-party imports
 import numpy as np
@@ -399,6 +399,43 @@ class Dataset(DotDict):
         """Compute linear power from power in dBm"""
         return dbm2watt(self.power) 
 
+    def _compute_grid_info(self) -> Dict[str, np.ndarray]:
+        """Compute grid size and spacing information from receiver positions.
+        
+        Returns:
+            Dict containing:
+                grid_size: Array with [x_size, y_size] - number of points in each dimension
+                grid_spacing: Array with [x_spacing, y_spacing] - spacing between points in meters
+        """
+        x_positions = np.unique(self.rx_pos[:, 0])
+        y_positions = np.unique(self.rx_pos[:, 1])
+        
+        grid_size = np.array([len(x_positions), len(y_positions)])
+        grid_spacing = np.array([
+            np.mean(np.diff(x_positions)),
+            np.mean(np.diff(y_positions))
+        ])
+        
+        return {
+            'grid_size': grid_size,
+            'grid_spacing': grid_spacing
+        }
+
+    def get_uniform_idxs(self, steps: List[int]) -> np.ndarray:
+        """Return indices of users at uniform intervals.
+        
+        Args:
+            steps: List of sampling steps for each dimension [x_step, y_step]
+            
+        Returns:
+            Array of indices for uniformly sampled users
+        """
+        grid_size = self.grid_size  # [x_size, y_size] = [n_cols, n_rows]
+        cols = np.arange(grid_size[0], step=steps[0])
+        rows = np.arange(grid_size[1], step=steps[1])
+        uniform_idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
+        return uniform_idxs
+
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
@@ -428,7 +465,11 @@ class Dataset(DotDict):
         'aod_el_rot_fov': '_compute_fov',
         
         # Power with antenna gain
-        'power_linear_ant_gain': '_compute_power_linear_ant_gain'
+        'power_linear_ant_gain': '_compute_power_linear_ant_gain',
+        
+        # Grid information
+        'grid_size': '_compute_grid_info',
+        'grid_spacing': '_compute_grid_info'
     }
 
     # Dictionary of common aliases for dataset attributes

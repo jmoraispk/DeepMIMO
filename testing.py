@@ -6,7 +6,6 @@ import deepmimo as dm
 
 from pprint import pprint
 
-
 #%% V3 & V4 Conversion
 
 def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
@@ -139,6 +138,16 @@ import deepmimo as dm
 dataset = dm.load_scenario('asu_campus', tx_sets={1: [0]}, rx_sets={2: 'all'})
 idxs = dm.uniform_sampling([16,4], 321, 411)
 dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
+
+#%%
+
+
+import deepmimo as dm
+dataset = dm.load_scenario('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
+idxs = dataset.get_uniform_idxs([1,1])
+dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
+
+
 
 # import matplotlib.pyplot as plt
 # plt.scatter(dataset['rx_pos'][10,0], dataset['rx_pos'][10,1], c='k', s=20)
