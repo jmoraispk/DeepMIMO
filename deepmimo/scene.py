@@ -609,7 +609,8 @@ class Scene:
                     current_tri_idx += 1
                 
                 # Store triangular face indices for this face
-                object_faces_metadata.append(face_tri_indices)
+                # Ensure face_tri_indices is stored as a list, even if it's a single index
+                object_faces_metadata.append(face_tri_indices if len(face_tri_indices) > 1 else [face_tri_indices[0]])
             
             # Store object metadata
             objects_metadata.append({
@@ -661,6 +662,10 @@ class Scene:
             
             # Process each face in the object
             for face_tri_indices in object_data['faces']:
+                # Handle both list and integer cases
+                if isinstance(face_tri_indices, (int, np.integer)):
+                    face_tri_indices = [face_tri_indices]
+                
                 # Collect all vertices from all triangles in order
                 face_vertex_indices = []
                 for tri_idx in face_tri_indices:
