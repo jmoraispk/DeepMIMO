@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from .materials import MaterialList
 from .consts import SCENE_PARAM_NUMBER_SCENES
-
+from .generator.python.core import load_mat_file_as_dict
 #------------------------------------------------------------------------------
 # Constants
 #------------------------------------------------------------------------------
@@ -628,13 +628,13 @@ class Scene:
         savemat(f"{base_folder}/vertices.mat", {'vertices': vertices})
         savemat(f"{base_folder}/faces.mat", {'faces': tri_faces})
         savemat(f"{base_folder}/materials.mat", {'materials': materials})
+        savemat(f"{base_folder}/objects.mat", {'objects': objects_metadata})
         
         return {
             SCENE_PARAM_NUMBER_SCENES: 1,
             'n_objects': len(self.objects),
             'n_vertices': len(vertices),
-            'n_triangular_faces': len(tri_faces),
-            'objects': objects_metadata,
+            'n_triangular_faces': len(tri_faces)
         }
     
     @classmethod
@@ -649,15 +649,12 @@ class Scene:
         vertices = loadmat(f"{base_folder}/vertices.mat")['vertices']
         tri_faces = loadmat(f"{base_folder}/faces.mat")['faces']
         materials = loadmat(f"{base_folder}/materials.mat")['materials'].flatten()
+        objects_metadata = load_mat_file_as_dict(f"{base_folder}/objects.mat")['objects']
         
         scene = cls()
         
-        # Load visualization settings if present
-        if 'visualization_settings' in metadata:
-            scene.visualization_settings = metadata['visualization_settings']
-        
         # Create objects using face metadata
-        for object_data in metadata['objects']:
+        for object_data in objects_metadata:
             object_faces = []
             
             # Process each face in the object
