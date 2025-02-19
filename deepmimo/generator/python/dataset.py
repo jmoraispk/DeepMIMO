@@ -81,6 +81,32 @@ class Dataset(DotDict):
             data: Initial dataset dictionary. If None, creates empty dataset.
         """
         super().__init__(data or {})
+        self._ch_params = None  # Internal storage for channel parameters
+
+    def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
+        """Compute MIMO channel matrices for all users.
+        
+        This is the main public method for computing channel matrices. It handles all the
+        necessary preprocessing steps including:
+        - Antenna pattern application
+        - Field of view filtering
+        - Array response computation
+        - OFDM processing (if enabled)
+        
+        The computed channel will be cached and accessible as dataset.channel
+        or dataset['channel'] after this call.
+        
+        Args:
+            params: Channel generation parameters. If None, uses default parameters.
+                   See ChannelGenParameters class for details.
+            
+        Returns:
+            numpy.ndarray: MIMO channel matrix with shape [n_users, n_rx_ant, n_tx_ant, n_subcarriers]
+                          if freq_domain=True, otherwise [n_users, n_rx_ant, n_tx_ant, n_paths]
+        """
+        channel = self._compute_channels(params)
+        self['channel'] = channel  # Explicitly cache the result
+        return channel
 
     def __getattr__(self, key: str) -> Any:
         """Enable dot notation access."""
@@ -114,7 +140,7 @@ class Dataset(DotDict):
             KeyError if key cannot be resolved
         """
         # First check if it's an alias and resolve it
-        resolved_key = self.aliases.get(key, key)
+        resolved_key = self._aliases.get(key, key)
         if resolved_key != key:
             key = resolved_key
             try:
@@ -177,10 +203,12 @@ class Dataset(DotDict):
         return -10 * np.log10(total_power)
 
     def _compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
-        """Compute MIMO channel matrices for all users.
+        """Internal method to compute MIMO channel matrices.
+        
+        This is an internal implementation method. Users should use compute_channel() instead.
         
         Args:
-            params (ChannelGenParameters, optional): Channel generation parameters
+            params: Channel generation parameters
             
         Returns:
             numpy.ndarray: MIMO channel matrix
@@ -189,7 +217,7 @@ class Dataset(DotDict):
             params = ChannelGenParameters()
         
         # Store params for use by other compute functions
-        self.ch_params = params
+        self._ch_params = params
         
         np.random.seed(1001)
         
@@ -241,9 +269,9 @@ class Dataset(DotDict):
         """
         # Use stored channel parameters if none provided
         if tx_ant_params is None:
-            tx_ant_params = self.ch_params[c.PARAMSET_ANT_BS]
+            tx_ant_params = self._ch_params[c.PARAMSET_ANT_BS]
         if rx_ant_params is None:
-            rx_ant_params = self.ch_params[c.PARAMSET_ANT_UE]
+            rx_ant_params = self._ch_params[c.PARAMSET_ANT_UE]
             
         # Create antenna pattern object
         antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
@@ -269,9 +297,9 @@ class Dataset(DotDict):
         """
         # Use stored channel parameters if none provided
         if tx_ant_params is None:
-            tx_ant_params = self.ch_params[c.PARAMSET_ANT_BS]
+            tx_ant_params = self._ch_params[c.PARAMSET_ANT_BS]
         if rx_ant_params is None:
-            rx_ant_params = self.ch_params[c.PARAMSET_ANT_UE]
+            rx_ant_params = self._ch_params[c.PARAMSET_ANT_UE]
             
         # Rotate angles for all users at once
         aod_theta_rot, aod_phi_rot = rotate_angles_batch(
@@ -308,9 +336,9 @@ class Dataset(DotDict):
         """
         # Use stored channel parameters if none provided
         if bs_params is None:
-            bs_params = self.ch_params[c.PARAMSET_ANT_BS]
+            bs_params = self._ch_params[c.PARAMSET_ANT_BS]
         if ue_params is None:
-            ue_params = self.ch_params[c.PARAMSET_ANT_UE]
+            ue_params = self._ch_params[c.PARAMSET_ANT_UE]
             
         # Get rotated angles from dataset
         aod_theta = self[c.AOD_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
@@ -358,7 +386,7 @@ class Dataset(DotDict):
 
     def _compute_single_array_response(self, ant_params: Dict, theta: np.ndarray, 
                                        phi: np.ndarray) -> np.ndarray:
-        """Compute array response for a single antenna array.
+        """Internal method to compute array response for a single antenna array.
         
         Args:
             ant_params: Antenna parameters dictionary
@@ -375,14 +403,14 @@ class Dataset(DotDict):
         return array_response_batch(ant_ind=ant_ind, theta=theta, phi=phi, kd=kd)
 
     def _compute_array_response_product(self) -> np.ndarray:
-        """Compute product of TX and RX array responses.
+        """Internal method to compute product of TX and RX array responses.
         
         Returns:
             Array response product matrix
         """
         # Get antenna parameters from ch_params
-        tx_ant_params = self.ch_params.bs_antenna
-        rx_ant_params = self.ch_params.ue_antenna
+        tx_ant_params = self._ch_params.bs_antenna
+        rx_ant_params = self._ch_params.ue_antenna
         
         # Compute individual responses
         array_response_TX = self._compute_single_array_response(
@@ -396,11 +424,11 @@ class Dataset(DotDict):
         return array_response_RX[:, :, None, :] * array_response_TX[:, None, :, :]
 
     def _compute_power_linear(self) -> np.ndarray:
-        """Compute linear power from power in dBm"""
+        """Internal method to compute linear power from power in dBm"""
         return dbm2watt(self.power) 
 
     def _compute_grid_info(self) -> Dict[str, np.ndarray]:
-        """Compute grid size and spacing information from receiver positions.
+        """Internal method to compute grid size and spacing information from receiver positions.
         
         Returns:
             Dict containing:
@@ -473,7 +501,7 @@ class Dataset(DotDict):
     }
 
     # Dictionary of common aliases for dataset attributes
-    aliases = {
+    _aliases = {
         # Channel aliases
         'ch': 'channel',
         'chs': 'channel',
@@ -530,7 +558,7 @@ class Dataset(DotDict):
         return list(set(
             list(super().__dir__()) + 
             list(self._computed_attributes.keys()) + 
-            list(self.aliases.keys())
+            list(self._aliases.keys())
         ))
 
     def info(self, param_name: str | None = None) -> None:
@@ -542,8 +570,8 @@ class Dataset(DotDict):
                        If the parameter name is an alias, shows info for the resolved parameter.
         """
         # If it's an alias, resolve it first
-        if param_name in self.aliases:
-            resolved_name = self.aliases[param_name]
+        if param_name in self._aliases:
+            resolved_name = self._aliases[param_name]
             print(f"'{param_name}' is an alias for '{resolved_name}'")
             param_name = resolved_name
             
