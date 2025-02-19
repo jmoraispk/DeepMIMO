@@ -107,7 +107,6 @@ def generate_scene_data(params):
                     dataset[i][c.DICT_BS_IDX][c.OUT_CHANNEL], dataset[i][c.DICT_BS_IDX][c.OUT_LOS] = np.stack(dataset[i][c.DICT_BS_IDX][c.OUT_CHANNEL], axis=0)
     return dataset
 
-# TODO: Move validation into another script
 def validate_params(params):
 
     additional_keys = compare_two_dicts(params, Parameters().get_params_dict())

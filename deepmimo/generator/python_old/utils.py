@@ -74,10 +74,6 @@ def steering_vec(array, phi=0, theta=0, spacing=0.5):
     resp = array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
     return resp / np.linalg.norm(resp)
 
-# TODO: add info field to dataset (so data like number of users per row doesn't 
-#       need to be read from the webstie). This way, we can make the arguments
-#       of this function defaults based on the dataset
-
 def uniform_sampling(sampling_div, n_rows, users_per_row):
     """
     Returns indices of users at uniform steps/intervals.
@@ -242,13 +238,6 @@ class LinearPath():
     def get_feature_names(self):
         return self.feature_names
     
-# TODO: add more LinearPath functions
-# - To append paths use, for example: linpath3.append(linpath1, linpath2)
-# - To repeat back and forth: linpath3.append(linpath3.flip())
-# - Supposing the last position of linpath3 coincides with the first, it can be looped like:
-# linpath3.append(linpath3, linpath3, linpath3) or linpath3.repeat(3)
-
-
 
 def get_idxs_in_xy_box(data_pos, x_min, x_max, y_min, y_max):
     """
