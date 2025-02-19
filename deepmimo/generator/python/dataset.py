@@ -475,7 +475,9 @@ class Dataset(DotDict):
         'time_of_arrival': 'delay',
 
         # Interaction aliases
+        'bounce_type': 'inter',
         'interactions': 'inter',
+        'bounce_pos': 'inter_pos',
         'interaction_positions': 'inter_pos',
         'interaction_locations': 'inter_pos'
     }
