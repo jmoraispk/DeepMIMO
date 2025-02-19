@@ -109,6 +109,15 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
 
             # Handle interactions for this receiver
             types = ss(paths_dict['types'])[path_mask]
+
+            # TODO:ADD MASKING HERE
+
+            # Handle interactions for this receiver
+            # try:
+            #     types = np.squeeze(paths_dict['types'])[path_mask]
+            # except:
+            #     print('dafd')
+
             inter_pos_rx = data['inter_pos'][abs_idx, :n_paths]
             interactions = get_sionna_interaction_types(types, inter_pos_rx)
             data['inter'][abs_idx, :n_paths] = interactions

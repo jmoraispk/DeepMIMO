@@ -86,8 +86,8 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
         print('Scenario not found. Would you like to download it? [Y/n]')
         response = input().lower()
         if response in ['', 'y', 'yes']:
-            download_scenario_handler(scen_name)
-            extract_scenario(scen_name)
+            zip_path = download_scenario_handler(scen_name)
+            extract_scenario(zip_path)
         else:
             raise ValueError(f'Scenario {scen_name} not found')
     

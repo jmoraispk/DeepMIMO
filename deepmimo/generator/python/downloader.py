@@ -34,7 +34,8 @@ HEADERS = {
 # Mapping of current scenarios names and their dropbox links
 NAME_TO_LINK: Dict[str, str] = {
     # ASU Campus
-    'asu_campus1': 'https://www.dropbox.com/scl/fi/unldvnar22cuxjh7db2rf/ASU_Campus1.zip?rlkey=rs2ofv3pt4ctafs2zi3vwogrh&dl=1', 
+    #'asu_campus1': 'https://www.dropbox.com/scl/fi/unldvnar22cuxjh7db2rf/ASU_Campus1.zip?rlkey=rs2ofv3pt4ctafs2zi3vwogrh&dl=1', 
+    'asu_campus': 'https://www.dropbox.com/scl/fi/ujeyo5fg6akbl4ic0gghd/asu_campus.zip?rlkey=8bctahqn1rdinsnljh3urdi5x&st=vlri3krf&dl=1',
     
     # O1 variants
     'O1_3p4': 'https://www.dropbox.com/s/2zj4xk3oo9lh07n/O1_3p4.zip?dl=1',

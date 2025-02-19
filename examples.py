@@ -1,102 +1,60 @@
-import time
+#%%
 import numpy as np
 import deepmimo as dm
-import matplotlib.pyplot as plt
-from pprint import pprint
 
 #%% Basic End-to-End Example
-print("\nBasic End-to-End Example")
-print("-" * 50)
 
-# Convert a Wireless Insite scenario to DeepMIMO format
-scen_name = dm.convert(r'.\P2Ms\asu_campus\study_area_asu5',
-                      overwrite=True,  # Whether to overwrite existing scenario
-                      old=False,       # Whether to use v3 converter
-                      scenario_name=None,  # Custom name for the scenario
-                      vis_scene=True)  # Visualize the scene after conversion
+scen_name = dm.convert(r'.\P2Ms\asu_campus\study_area_asu5', vis_scene=True)
+dm.generate(scen_name)
 
-# Load the scenario with all available options
-dataset = dm.load_scenario(
-    scen_name,
-    tx_sets='all',  # Can be 'all', list of sets, or dict of {set: [indices]}
-    rx_sets='all',  # Same as tx_sets
-    load_paths=True,  # Whether to load ray paths
-    load_materials=True,  # Whether to load material information
-)
-
-# Create channel generation parameters with all options
-ch_params = dm.ChannelGenParameters()
-ch_params.bs_antenna.rotation = np.array([30, 40, 30])  # [az, el, pol] in degrees
-ch_params.bs_antenna.fov = np.array([360, 180])  # [az, el] in degrees
-ch_params.ue_antenna.fov = np.array([120, 180])  # [az, el] in degrees
-ch_params.freq_domain = True  # Whether to compute frequency domain channels
-
-# Generate channels
-dataset._compute_channels(ch_params)
 
 #%% Detailed Conversion Example
 print("\nDetailed Conversion Example")
 print("-" * 50)
 
 # Example with ASU campus scenario
-p2m_folder = r'.\P2Ms\asu_campus\study_area_asu5'
-old_params_dict = {
-    'num_bs': 1,  # Number of base stations
-    'user_grid': [1, 411, 321],  # [z_points, x_points, y_points]
-    'freq': 3.5e9  # Carrier frequency in Hz
-}
+# rt_folder = './P2Ms/asu_campus/study_area_asu5'
+# rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
+rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder/'
 
-# Convert using v3 converter
-scen_name_v3 = dm.convert(
-    p2m_folder,
-    overwrite=True,
-    old=True,
-    old_params=old_params_dict,
-    scenario_name='asu_campus_v3',
-    vis_scene=True
-)
+# Convert a Wireless Insite scenario to DeepMIMO format
+scen_name = dm.convert(rt_folder,
+                       overwrite=True,  # Whether to overwrite existing scenario
+                       scenario_name=None,  # Custom name for the scenario
+                       vis_scene=True)  # Visualize the scene after conversion
 
-# Convert using v4 converter
-scen_name_v4 = dm.convert(
-    p2m_folder,
-    overwrite=True,
-    old=False,
-    scenario_name='asu_campus_v4',
-    vis_scene=True
-)
+#%%
 
-#%% Detailed Loading Example
-print("\nDetailed Loading Example")
+dataset = dm.load_scenario('asu_campus')
+
+#%%
+
+dm.summary('asu_campus')
+
+dm.info()
+
+
+#%% Loading Example
+print("\nLoading Example")
 print("-" * 50)
 
 # Example 1: Load specific TX/RX sets using dictionaries
-tx_sets_dict = {1: [0, 1], 2: [0, 1, 2]}  # Load first 2 points from set 1 and first 3 from set 2
-rx_sets_dict = {1: [0], 2: range(10)}  # Load first point from set 1 and first 10 from set 2
+tx_sets_dict = {1: [0]}  # Load first 2 points from set 1 and first 3 from set 2
+rx_sets_dict = {2: np.arange(10)}  # Load first point from set 1 and first 10 from set 2
 
 dataset1 = dm.load_scenario(
-    scen_name_v4,
+    scen_name,
     tx_sets=tx_sets_dict,
     rx_sets=rx_sets_dict,
-    load_paths=True,
-    load_materials=True
+    matrices=['aoa_az', 'aoa_el', 'inter_pos', 'inter'], 
+    max_paths=10
 )
 
 # Example 2: Load specific TX/RX sets using lists
-tx_sets_list = [1, 2]  # Load all points from sets 1 and 2
-rx_sets_list = [1]     # Load all points from set 1
-
-dataset2 = dm.load_scenario(
-    scen_name_v4,
-    tx_sets=tx_sets_list,
-    rx_sets=rx_sets_list
-)
+dataset = dm.load_scenario(scen_name, tx_sets=[1], rx_sets=[2])
 
 # Example 3: Load all TX/RX sets
-dataset3 = dm.load_scenario(
-    scen_name_v4,
-    tx_sets='all',
-    rx_sets='all'
-)
+dataset3 = dm.load_scenario(scen_name, tx_sets='all', rx_sets='all')
 
 #%% Channel Generation Example
 print("\nChannel Generation Example")
@@ -109,21 +67,22 @@ ch_params = dm.ChannelGenParameters()
 ch_params.bs_antenna.rotation = np.array([30, 40, 30])  # [az, el, pol] in degrees
 ch_params.bs_antenna.fov = np.array([360, 180])        # [az, el] in degrees
 ch_params.bs_antenna.array_size = np.array([8, 8])     # [horizontal, vertical] elements
-ch_params.bs_antenna.spacing = np.array([0.5, 0.5])    # Element spacing in wavelengths
+ch_params.bs_antenna.spacing = 0.5    # Element spacing in wavelengths
 
-# User equipment antenna parameters
+# # User equipment antenna parameters
 ch_params.ue_antenna.rotation = np.array([0, 0, 0])    # [az, el, pol] in degrees
 ch_params.ue_antenna.fov = np.array([120, 180])        # [az, el] in degrees
 ch_params.ue_antenna.array_size = np.array([4, 4])     # [horizontal, vertical] elements
-ch_params.ue_antenna.spacing = np.array([0.5, 0.5])    # Element spacing in wavelengths
+ch_params.ue_antenna.spacing = 0.5    # Element spacing in wavelengths
 
-# Channel computation parameters
+# # Channel computation parameters
 ch_params.freq_domain = True     # Whether to compute frequency domain channels
-ch_params.bandwidth = 100e6      # Bandwidth in Hz
+ch_params.bandwidth = 0.1      # Bandwidth in GHz
 ch_params.num_subcarriers = 64   # Number of subcarriers
 
 # Generate channels
-dataset._compute_channels(ch_params)
+dataset.compute_channels(ch_params)
+dataset.channel.shape
 
 #%% Scene and Materials Example
 print("\nScene and Materials Example")
@@ -197,15 +156,32 @@ print(f"- Height (Z): {bb.height:.2f}m")
 print("\nVisualization Examples")
 print("-" * 50)
 
+dataset = dm.load_scenario('asu_campus', tx_sets=[1], rx_sets=[2])
+
 # Plot the full scene
 scene.plot()
 
-# Plot coverage map
-dm.visualization.plot_coverage(
-    dataset['rx_pos'],
-    dataset['aoa_az'][:, 0],
-    bs_pos=dataset['tx_pos'].T
-)
+# Plot the scene with triangular faces
+scene.plot(mode='tri_faces')
 
-# Add specific point highlight
-plt.scatter(dataset['rx_pos'][100,0], dataset['rx_pos'][100,1], c='k', s=20) 
+# Plot coverage map
+dm.plot_coverage(dataset.rx_pos, dataset.aoa_az[:,0], bs_pos=dataset.tx_pos.T)
+
+#%% Plot all coverage maps
+main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase', 
+             'los', 'distances', 'num_paths']
+for key in main_keys:
+    plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
+    dm.plot_coverage(dataset.rx_pos, plt_var, bs_pos=dataset.tx_pos.T, title=key)
+
+
+
+#%%
+idxs = dataset.get_uniform_idxs([4,4])
+dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
+
+#%%
+
+dm.plot_rays(dataset.rx_pos[10], dataset.tx_pos[0],
+             dataset.inter_pos[10], dataset.inter[10],
+             proj_3D=True, color_by_type=True)

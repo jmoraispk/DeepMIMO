@@ -11,7 +11,6 @@ import scipy.io
 from pprint import pformat
 from typing import Dict, Any, TypeVar, Mapping, Optional
 from . import consts as c
-from .scene import Scene
 
 K = TypeVar('K', bound=str)
 V = TypeVar('V')
@@ -299,26 +298,23 @@ def summary(scen_name: str) -> None:
     print(f"- Synthetic array: {rt_params[c.RT_PARAM_SYNTHETIC_ARRAY]}")
 
     print("\n[Scene]")
-    # Get scene object counts using Scene class method
-    scene = Scene.from_data(scene_params, scen_folder)
-    label_counts = scene.count_objects_by_label()
-    objects_summary = ', '.join(f'{count} {label}' for label, count in label_counts.items())
-
-    # Count faces from scene metadata
-    normal_faces = sum(len(obj.faces) for obj in scene.objects)
 
     print(f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}")
-    print(f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]} ({objects_summary})")
+    print(f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}")
+    # TODO: Put object label summary into scene dict (no. buildings, trees, etc)
     print(f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}")
+    # TODO: Put normal face count into scene dict
+    normal_faces = 332
     print(f"- Faces: {normal_faces:,} (decomposed into {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} triangular faces)")
 
     # Get scene boundaries from scene bounding box
-    bbox = scene.bounding_box
-    print("\nBoundaries:")
-    print(f"- X: {bbox.x_min:.2f}m to {bbox.x_max:.2f}m (width: {bbox.width:.2f}m)")
-    print(f"- Y: {bbox.y_min:.2f}m to {bbox.y_max:.2f}m (length: {bbox.length:.2f}m)")
-    print(f"- Z: {bbox.z_min:.2f}m to {bbox.z_max:.2f}m (height: {bbox.height:.2f}m)")
-    print(f"- Area: {bbox.width * bbox.length:,.2f}m²")
+    # TODO: print this into the scene dict
+    # bbox = scene.bounding_box
+    # print("\nBoundaries:")
+    # print(f"- X: {bbox.x_min:.2f}m to {bbox.x_max:.2f}m (width: {bbox.width:.2f}m)")
+    # print(f"- Y: {bbox.y_min:.2f}m to {bbox.y_max:.2f}m (length: {bbox.length:.2f}m)")
+    # print(f"- Z: {bbox.z_min:.2f}m to {bbox.z_max:.2f}m (height: {bbox.height:.2f}m)")
+    # print(f"- Area: {bbox.width * bbox.length:,.2f}m²")
 
     print("\n[Materials]")
     print(f"Total materials: {len(material_params)}")

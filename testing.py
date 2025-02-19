@@ -46,8 +46,9 @@ def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
 
 # Example usage
 # rt_folder = './P2Ms/asu_campus/study_area_asu5'
-rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
-# rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
+# rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
+rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
+# rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_test'
 
 # Convert using v4 converter
 scen_name = convert_scenario(rt_folder, use_v3=False)
@@ -152,6 +153,7 @@ dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.t
 import deepmimo as dm
 dataset = dm.load_scenario('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
 idxs = dataset.get_uniform_idxs([1,1])
+idxs = np.arange(dataset.rx_pos.shape[0])
 dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
 
 
