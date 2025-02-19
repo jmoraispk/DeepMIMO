@@ -4,9 +4,6 @@ DeepMIMO Python Package.
 
 __version__ = "4.0.0alpha"
 
-from .generator.python_old.generator import generate_data as generate_old
-from .generator.python_old.params import Parameters as Parameters_old
-
 # Core functionality
 from .generator.python.core import (
     generate,
@@ -34,6 +31,7 @@ from .generator.python.channel import ChannelGenParameters
 from .converter.converter import convert
 from .converter.wireless_insite.insite_converter_v3 import insite_rt_converter_v3
 from .info import info
+from .general_utilities import summary
 
 # Physical world representation
 from .scene import (
