@@ -35,7 +35,6 @@ organized into the following categories:
    - Channel parameters
    - OFDM configuration
    - Antenna settings
-   - Parameter aliases
 
 IMPORTANT: The string values of these constants MUST match exactly the field names 
 used in the respective files (params.mat, scene files, dataclasses, etc.). 
@@ -175,8 +174,6 @@ PHASE_PARAM_NAME = 'phase'
 DELAY_PARAM_NAME = 'delay'
 RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
-BOUNCE_POS_PARAM_NAME = 'bounce_pos'
-BOUNCE_TYPE_PARAM_NAME = 'bounce_type'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
@@ -227,52 +224,3 @@ PARAMSET_ANT_ROTATION = 'rotation'
 PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
 PARAMSET_ANT_FOV = 'fov'
-
-#------------------------------------------------------------------------------
-# Parameter Aliases
-#------------------------------------------------------------------------------
-
-# Channel aliases
-CHANNEL_PARAM_NAME_2 = 'channels'
-CHANNEL_PARAM_NAME_3 = 'ch'
-CHANNEL_PARAM_NAME_4 = 'chs'
-
-# Pathloss aliases
-PATHLOSS_PARAM_NAME_2 = 'path_loss'
-PATHLOSS_PARAM_NAME_3 = 'pl'
-
-# Distance aliases
-DIST_PARAM_NAME_2 = 'distances'
-DIST_PARAM_NAME_3 = 'dist'
-DIST_PARAM_NAME_4 = 'dists'
-
-# Number of paths aliases
-NUM_PATHS_PARAM_NAME_2 = 'n_paths'
-
-# Power aliases
-PWR_PARAM_NAME_2 = 'pwr'
-PWR_PARAM_NAME_3 = 'powers'
-PWR_LINEAR_PARAM_NAME_2 = 'pwr_lin'
-PWR_LINEAR_PARAM_NAME_3 = 'power_lin'
-PWR_LINEAR_PARAM_NAME_4 = 'pwr_linear'
-
-# Position aliases
-RX_POS_PARAM_NAME_2 = 'rx_loc'
-RX_POS_PARAM_NAME_3 = 'rx_position'
-RX_POS_PARAM_NAME_4 = 'rx_locations'
-TX_POS_PARAM_NAME_2 = 'tx_loc'
-TX_POS_PARAM_NAME_3 = 'tx_position'
-TX_POS_PARAM_NAME_4 = 'tx_locations'
-
-# Angle aliases
-AOA_AZ_PARAM_NAME_2 = 'aoa_azimuth'
-AOA_EL_PARAM_NAME_2 = 'aoa_elevation'
-AOD_AZ_PARAM_NAME_2 = 'aod_azimuth'
-AOD_EL_PARAM_NAME_2 = 'aod_elevation'
-
-# Time aliases
-TOA_PARAM_NAME_2 = 'time_of_arrival'
-
-# Interaction aliases
-INTERACTIONS_PARAM_NAME_2 = 'interactions'
-INTERACTIONS_POS_PARAM_NAME_2 = 'interaction_locations'
