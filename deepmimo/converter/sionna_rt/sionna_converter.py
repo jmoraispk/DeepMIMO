@@ -22,7 +22,7 @@ from .sionna_materials import read_materials
 from .sionna_scene import read_scene
 
 def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
-                        overwrite: bool = None, vis_scene: bool = False, 
+                        overwrite: bool = None, vis_scene: bool = True, 
                         scenario_name: str = '') -> str:
     """Convert Sionna ray-tracing data to DeepMIMO format.
 

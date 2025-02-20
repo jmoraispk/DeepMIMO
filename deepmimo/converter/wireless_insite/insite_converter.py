@@ -47,7 +47,7 @@ SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
 SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
 
 def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
-                        overwrite: Optional[bool] = None, vis_scene: bool = False, 
+                        overwrite: Optional[bool] = None, vis_scene: bool = True, 
                         scenario_name: str = '') -> str:
     """Convert Wireless InSite ray-tracing data to DeepMIMO format.
 
