@@ -33,6 +33,41 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
           in each paths dictionary (i.e., same set of TXs for different RX batches)
         - RX positions can vary across path dictionaries and are tracked using 
           sequential indices (e.g., first batch has RXs 0-9, second has 10-22, etc.)
+    
+    -- Information about the Sionna paths (from https://nvlabs.github.io/sionna/api/rt.html#paths) --
+
+    [Amplitude]
+    - paths_dict['a'] is the amplitude of the path
+        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths, num_time_steps]
+
+    [Delay]
+    - paths_dict['tau'] is the delay of the path
+        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
+        [batch_size, num_rx, num_tx, max_num_paths], float
+
+    [Angles]
+    - paths_dict['phi_r'] is the azimuth angle of the arrival of the path
+    - paths_dict['theta_r'] is the elevation angle of the arrival of the path
+    - paths_dict['phi_t'] is the azimuth angle of the departure of the path
+    - paths_dict['theta_t'] is the elevation angle of the departure of the path
+        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
+        [batch_size, num_rx, num_tx, max_num_paths], float
+
+    [Mask]
+    - paths_dict['mask'] is the mask that tells which paths are enabled for each receiver
+        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
+        [batch_size, num_rx, num_tx, max_num_paths], bool
+
+    [Types]
+    - paths_dict['types'] is the type of the path
+        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
+        [batch_size, num_rx, num_tx, max_num_paths], float
+
+    [Vertices]
+    - paths_dict['vertices'] is the vertices of the path
+        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
+        [batch_size, num_rx, num_tx, max_num_paths], float
+
     """
     path_dict_list = cu.load_pickle(load_folder + 'sionna_paths.pkl')
 
@@ -55,21 +90,20 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     
     # Pre-allocate matrices
     data = {
-        'rx_pos': rx_pos,
-        'tx_pos': tx_pos,
-        'aoa_az': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'aoa_el': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'aod_az': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'aod_el': np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'delay':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'power':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'phase':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'inter':  np.zeros((n_rx, c.MAX_PATHS), dtype=np.float32) * np.nan,
-        'inter_pos': np.zeros((n_rx, c.MAX_PATHS, max_inter, 3), dtype=np.float32) * np.nan,
+        c.RX_POS_PARAM_NAME: np.zeros((n_rx, 3), dtype=c.FP_TYPE),
+        c.TX_POS_PARAM_NAME: np.zeros((n_rx, 3), dtype=c.FP_TYPE),
+        c.AOA_AZ_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.AOA_EL_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.AOD_AZ_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.AOD_EL_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.DELAY_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.POWER_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.PHASE_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.INTERACTIONS_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS, max_inter, 3), dtype=c.FP_TYPE) * np.nan,
     }
 
-    # Squeeze and slice function to be applied to each Sionna array
-    ss = lambda array: array.squeeze()[..., :c.MAX_PATHS]
+    data[c.RX_POS_PARAM_NAME], data[c.TX_POS_PARAM_NAME] = rx_pos, tx_pos
 
     # Create progress bar
     pbar = tqdm(total=n_rx, desc="Processing receivers")
@@ -79,55 +113,53 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     # Process each batch of paths
     for paths_dict in path_dict_list:
         batch_size = paths_dict['a'].shape[1]
+        # Note: batch_size here is different from data batches. 
+        # This is the number of RXs in the current path dictionary.
 
         # Get absolute indices for this batch
         abs_idxs = np.arange(batch_size) + last_idx
         last_idx += batch_size
         
-        a = ss(paths_dict['a'])
-        not_nan_mask = a != 0
+        # Note: we opt for not using squeeze here to work for batch_size = 1
+        a = paths_dict['a'][0,:,0,0,0,:,0] # Get users and paths
 
         # Process each field with proper masking
-        for rel_idx, path_mask in enumerate(not_nan_mask):
+        for rel_idx in range(batch_size):
             if rel_idx >= batch_size:
                 break
-                
+            
+            path_idxs = np.where(a[rel_idx] != 0)[0][:c.MAX_PATHS]
+            
             abs_idx = abs_idxs[rel_idx]
-            n_paths = np.sum(path_mask)
+            n_paths = len(path_idxs)
 
             if n_paths == 0:
                 inactive_idxs.append(abs_idx)
                 continue
 
-            data['power'][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx][path_mask]))
-            data['phase'][abs_idx,:n_paths] = np.angle(a[rel_idx][path_mask], deg=True)
-            data['delay'][abs_idx,:n_paths] = ss(paths_dict['tau'])[rel_idx][path_mask]
-            data['aoa_az'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['phi_r'])[rel_idx][path_mask])
-            data['aod_az'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['phi_t'])[rel_idx][path_mask])
-            data['aoa_el'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['theta_r'])[rel_idx][path_mask])
-            data['aod_el'][abs_idx,:n_paths] = np.rad2deg(ss(paths_dict['theta_t'])[rel_idx][path_mask])
+            rad2deg = lambda x: np.rad2deg(x[0, rel_idx, 0, path_idxs])
+
+            data[c.POWER_PARAM_NAME][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
+            data[c.PHASE_PARAM_NAME][abs_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
+            data[c.DELAY_PARAM_NAME][abs_idx,:n_paths] = paths_dict['tau'][0, rel_idx, 0, path_idxs]
+            data[c.AOA_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_r'])
+            data[c.AOD_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_t'])
+            data[c.AOA_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_r'])
+            data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
 
             # Handle interactions for this receiver
-            types = ss(paths_dict['types'])[path_mask]
+            types = paths_dict['types'][0, path_idxs]
 
-            # TODO:ADD MASKING HERE
-
-            # Handle interactions for this receiver
-            # try:
-            #     types = np.squeeze(paths_dict['types'])[path_mask]
-            # except:
-            #     print('dafd')
-
-            inter_pos_rx = data['inter_pos'][abs_idx, :n_paths]
+            inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
             interactions = get_sionna_interaction_types(types, inter_pos_rx)
-            data['inter'][abs_idx, :n_paths] = interactions
+            data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
 
             # Update progress bar for each receiver processed
             pbar.update(1)
 
-        # Handle interaction positions (vertices: (depth, user, ?, path, pos))
-        inter_pos = paths_dict['vertices'][:max_inter, :, 0, :c.MAX_PATHS, :] 
-        data['inter_pos'][abs_idxs, :len(path_mask), :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
+        # Handle interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
+        inter_pos = paths_dict['vertices'][:max_inter, :, 0, path_idxs, :] 
+        data[c.INTERACTIONS_POS_PARAM_NAME][abs_idxs, :n_paths, :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
 
     pbar.close()
 
