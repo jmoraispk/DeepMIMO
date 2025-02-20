@@ -32,7 +32,7 @@ class RayTracingParameters:
     max_path_depth: int  # Maximum number of interactions (ideally, R + D + S + T)
     max_reflections: int  # Maximum number of reflections (R)
     max_diffractions: int  # Maximum number of diffractions (D)
-    max_scatterings: int  # Maximum number of scatterings (S)
+    max_scattering: int  # Maximum number of diffuse scattering events (S)
     max_transmissions: int  # Maximum number of transmissions (T)
 
     # Details on diffraction, scattering, and transmission

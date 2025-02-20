@@ -70,7 +70,7 @@ class SionnaRayTracingParameters(RayTracingParameters):
             'max_path_depth': raw_params['max_depth'],
             'max_reflections': raw_params['max_depth'] if raw_params['reflection'] else 0,
             'max_diffractions': int(raw_params['diffraction']),  # Sionna only supports 1 diffraction event
-            'max_scatterings': int(raw_params['scattering']),   # Sionna only supports 1 scattering event
+            'max_scattering': int(raw_params['scattering']),   # Sionna only supports 1 scattering event
             'max_transmissions': 0, # Sionna does not support transmissions
 
             # Terrain interaction settings

@@ -112,7 +112,7 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'max_path_depth': apg_accel_vals['path_depth'],
             'max_reflections': model_vals['max_reflections'],
             'max_diffractions': model_vals['max_wedge_diffractions'], ######
-            'max_scatterings': int(diffuse_scat_vals['enabled']) ,  # 1 if enabled, 0 if not
+            'max_scattering': int(diffuse_scat_vals['enabled']) ,  # 1 if enabled, 0 if not
             'max_transmissions': model_vals['max_transmissions'], # Insite does not support transmissions in our setup
 
             # Details on diffraction, scattering, and transmission
