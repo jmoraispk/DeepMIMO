@@ -270,12 +270,12 @@ def summary(scen_name: str) -> None:
     print(f"- Max path depth: {rt_params[c.RT_PARAM_PATH_DEPTH]}")
     print(f"- Max reflections: {rt_params[c.RT_PARAM_MAX_REFLECTIONS]}")
     print(f"- Max diffractions: {rt_params[c.RT_PARAM_MAX_DIFFRACTIONS]}")
-    print(f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERINGS]}")
+    print(f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERING]}")
     print(f"- Max transmissions: {rt_params[c.RT_PARAM_MAX_TRANSMISSIONS]}")
 
     # Diffuse scattering settings
     print("\nDiffuse Scattering")
-    is_diffuse_enabled = (rt_params[c.RT_PARAM_MAX_SCATTERINGS] > 0)
+    is_diffuse_enabled = (rt_params[c.RT_PARAM_MAX_SCATTERING] > 0)
     print(f"- Diffuse scattering: {'Enabled' if is_diffuse_enabled else 'Disabled'}")
     print(f"- Diffuse reflections: {rt_params[c.RT_PARAM_DIFFUSE_REFLECTIONS]}")
     print(f"- Diffuse diffractions: {rt_params[c.RT_PARAM_DIFFUSE_DIFFRACTIONS]}")

@@ -82,7 +82,7 @@ RT_PARAM_RAYTRACER_VERSION = 'raytracer_version'
 RT_PARAM_PATH_DEPTH = 'max_path_depth'
 RT_PARAM_MAX_REFLECTIONS = 'max_reflections'
 RT_PARAM_MAX_DIFFRACTIONS = 'max_diffractions'
-RT_PARAM_MAX_SCATTERINGS = 'max_scatterings'
+RT_PARAM_MAX_SCATTERING = 'max_scattering'
 RT_PARAM_MAX_TRANSMISSIONS = 'max_transmissions'
 
 # Diffuse scattering parameters
