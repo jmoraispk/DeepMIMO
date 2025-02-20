@@ -12,7 +12,7 @@ can be generated using (transpose) reciprocity.
 """
 
 # Standard library imports
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple
 
 # Third-party imports
 import numpy as np
