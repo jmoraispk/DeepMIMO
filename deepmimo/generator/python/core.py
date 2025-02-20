@@ -21,7 +21,7 @@ import scipy.io
 
 # Local imports
 from ... import consts as c
-from ...general_utilities import get_mat_filename, load_mat_file_as_dict
+from ...general_utilities import get_mat_filename, load_mat_file_as_dict, unzip
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
 from ...materials import MaterialList
@@ -30,7 +30,7 @@ from ...materials import MaterialList
 from .channel import ChannelGenParameters
 
 # Scenario management
-from .downloader import download_scenario_handler, extract_scenario
+from .downloader import download_scenario_handler
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
             ch_gen_params: Dict[str, Any] = {}) -> Dataset:
@@ -87,7 +87,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
         response = input().lower()
         if response in ['', 'y', 'yes']:
             zip_path = download_scenario_handler(scen_name)
-            extract_scenario(zip_path)
+            unzip(zip_path)
         else:
             raise ValueError(f'Scenario {scen_name} not found')
     

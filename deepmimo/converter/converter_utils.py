@@ -7,13 +7,12 @@ creating zip archives of folders, and managing scenario files.
 
 import os
 from typing import List, Dict, Optional, Any
-import zipfile
 import numpy as np
 import scipy.io
 import shutil
 import pickle
 
-from ..general_utilities import get_mat_filename
+from ..general_utilities import get_mat_filename, zip_folder
 from .. import consts as c
 
 def save_pickle(obj: Any, filename: str) -> None:
@@ -83,26 +82,6 @@ def ext_in_list(extension: str, file_list: List[str]) -> List[str]:
     return [el for el in file_list if el.endswith(extension)]
 
 
-def zip_folder(folder_path: str) -> None:
-    """Create zip archive of folder contents.
-    
-    This function creates a zip archive containing all files in the specified
-    folder. The archive is created in the same directory as the folder with
-    '.zip' appended to the folder name.
-    
-    Args:
-        folder_path (str): Path to folder to be zipped
-    """
-    files_in_folder = os.listdir(folder_path)
-    file_full_paths = [os.path.join(folder_path, file) 
-                       for file in files_in_folder]
-    
-    # Create a zip file
-    with zipfile.ZipFile(folder_path + '.zip', 'w') as zipf:
-        for file_path in file_full_paths:
-            zipf.write(file_path, os.path.basename(file_path))
-
-
 def save_rt_source_files(sim_folder: str, source_exts: List[str]) -> None:
     """Save raytracing source files to a new directory and create a zip archive.
     
@@ -127,7 +106,7 @@ def save_rt_source_files(sim_folder: str, source_exts: List[str]) -> None:
             shutil.copy(curr_file_path, new_file_path)
     
     # Zip the temp folder
-    zip_folder(zip_temp_folder)
+    zip(zip_temp_folder)
     
     # Delete the temp folder (not the zip)
     shutil.rmtree(zip_temp_folder)

@@ -91,9 +91,6 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     # Save scenario to deepmimo scenarios folder
     scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
     
-    print(f'Zipping DeepMIMO scenario (ready to upload!): {output_folder}')
-    cu.zip_folder(output_folder) # ready for upload
-    
     # Copy and zip ray tracing source files as well
     if copy_source:
         cu.save_rt_source_files(rt_folder, ['.pkl'])

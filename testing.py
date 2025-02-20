@@ -189,4 +189,54 @@ dm.upload('./asu_campus.zip', '<your-upload-key>')
 # download_url = dm.download('asu_campus')
 # print(download_url)
 
+
+#%%
+import shutil
+import deepmimo.consts as c
+import deepmimo.general_utilities as gu
+
+scen_name = 'asu_campus'
+scen_folder = c.SCENARIOS_FOLDER + '/' + scen_name
+
+# Get params.mat path
+params_path = scen_folder + f'/{c.PARAMS_FILENAME}.mat'
+
+# Zip scenario and get path
+zip_path = gu.zip(scen_folder)
+
+# Upload to DeepMIMO
+dm.upload(zip_path, '<your-upload-key>') # get key from DeepMIMO website 
+
+# Download from DeepMIMO
+#downloaded_zip_path = dm.download(scen_name)
+
+# (simulate a downloaded file while the download is not working)
+downloaded_zip_path = zip_path.replace('.zip', '_downloaded.zip') # a simulation folder
+shutil.copy(zip_path, downloaded_zip_path)
+
+# Unzip downloaded scenario
+unzipped_folder = gu.unzip(downloaded_zip_path)
+
+# Move unzipped folder to scenarios folder
+# shutil.move(unzipped_folder, scen_folder)
+import os
+basename = os.path.basename(unzipped_folder)
+
+# Try loading the scenario and check if: a) find the path b) 
+dataset = dm.load_scenario(basename)
+
+# Check if the original and downloaded scenarios are the same
+
+
+
+
+
+
+
+
+
+
+
+
+
 # %%

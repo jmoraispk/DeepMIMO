@@ -15,6 +15,7 @@ import os
 import requests
 from tqdm import tqdm
 import hashlib
+import zipfile
 
 K = TypeVar('K', bound=str)
 V = TypeVar('V')
@@ -546,4 +547,49 @@ def download(scenario_name: str) -> str:
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"Failed to get scenario URL: {str(e)}")
 
+def zip(folder_path: str) -> str:
+    """Create zip archive of folder contents.
+    
+    This function creates a zip archive containing all files in the specified
+    folder. The archive is created in the same directory as the folder with
+    '.zip' appended to the folder name.
+    
+    Args:
+        folder_path (str): Path to folder to be zipped
+        
+    Returns:
+        Path to the created zip file
+    """
+    files_in_folder = os.listdir(folder_path)
+    file_full_paths = [os.path.join(folder_path, file) 
+                       for file in files_in_folder]
+    
+    zip_path = folder_path + '.zip'
+    # Create a zip file
+    with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zipf:
+        for file_path in tqdm(file_full_paths, desc="Compressing", unit="file"):
+            zipf.write(file_path, os.path.basename(file_path))
+    
+    return zip_path
 
+def unzip(path_to_zip: str) -> str:
+    """Extract a zip file to its parent directory.
+    
+    This function extracts the contents of a zip file to the directory
+    containing the zip file.
+
+    Args:
+        path_to_zip (str): Path to the zip file to extract.
+        
+    Raises:
+        zipfile.BadZipFile: If zip file is corrupted.
+        OSError: If extraction fails due to file system issues.
+        
+    Returns:
+        Path to the extracted folder
+    """
+    extracted_path = path_to_zip.replace('.zip', '')
+    with zipfile.ZipFile(path_to_zip, 'r') as zip_ref:
+        zip_ref.extractall(extracted_path)
+    
+    return extracted_path
