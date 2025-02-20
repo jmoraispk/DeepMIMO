@@ -138,9 +138,8 @@ pprint(np.max(np.abs(a-b)))
 
 #%% Demo
 
-import deepmimo as dm
-scen_name = dm.convert(r'.\P2Ms\asu_campus\study_area_asu5')
-dataset = dm.generate(scen_name)
+
+
 
 #%% Visualization check
 import deepmimo as dm
@@ -180,5 +179,14 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 #####
 
 #%%
-
+import deepmimo as dm
 dm.summary('asu_campus')
+# %%
+import deepmimo as dm
+
+dm.upload('./asu_campus.zip', '<your-upload-key>')
+
+# download_url = dm.download('asu_campus')
+# print(download_url)
+
+# %%

@@ -11,6 +11,10 @@ import scipy.io
 from pprint import pformat
 from typing import Dict, Any, TypeVar, Mapping, Optional
 from . import consts as c
+import os
+import requests
+from tqdm import tqdm
+import hashlib
 
 K = TypeVar('K', bound=str)
 V = TypeVar('V')
@@ -349,5 +353,197 @@ def summary(scen_name: str) -> None:
 
     print(f"\n[Version]")
     print(f"- DeepMIMO Version: {params_dict[c.VERSION_PARAM_NAME]}")
+
+def _dm_upload_api_call(url: str, file_path: str, key: str, show_progress: bool = True) -> Dict[str, str]:
+    """Make an authenticated API call to upload a file.
+    
+    Args:
+        url: API endpoint URL
+        file_path: Path to file to upload
+        key: Upload authorization key
+        show_progress: Whether to show progress bar. Defaults to True.
+        
+    Returns:
+        Dict containing upload response data including 'downloadUrl'
+        
+    Raises:
+        ValueError: If file doesn't exist
+        RuntimeError: If server returns error, with specific messages for:
+            - Invalid upload key
+            - Daily upload limit reached
+            - Server errors during key validation
+            - Other upload failures
+    """
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        return None
+        
+    try:
+        # First get upload authorization with proper Bearer token
+        headers = {
+            'Authorization': f'Bearer {key}',
+            'Content-Type': 'application/json'
+        }
+        
+        auth_response = requests.get(url, headers=headers)
+        
+        # Extract error message directly from server response
+        try:
+            error_data = auth_response.json()
+            error_msg = error_data.get('error', auth_response.text)
+        except:
+            error_msg = auth_response.text
+
+        # Match exact server error messages from b2Middleware.js
+        if auth_response.status_code == 401:
+            print("Invalid upload key")  # Matches server's exact message
+            return None
+        elif auth_response.status_code == 429:
+            print("Daily upload limit reached")  # Matches server's exact message
+            return None
+        elif auth_response.status_code == 500:
+            print("Failed to validate key")  # Matches server's exact message
+            return None
+        elif auth_response.status_code != 200:
+            print(error_msg)  # For any other errors, show server message directly
+            return None
+            
+        auth_data = auth_response.json()
+        if not all(k in auth_data for k in ['uploadUrl', 'authorizationToken', 'bucketId', 'downloadUrl']):
+            print("Invalid server response")
+            return None
+
+        # Now upload the file to B2
+        file_name = os.path.basename(file_path)
+        with open(file_path, 'rb') as f:
+            file_data = f.read()
+            
+        # Calculate SHA1 hash
+        sha1 = hashlib.sha1(file_data).hexdigest()
+        
+        upload_headers = {
+            'Authorization': auth_data['authorizationToken'],
+            'X-Bz-File-Name': file_name,
+            'X-Bz-Content-Sha1': sha1,
+            'Content-Type': 'application/zip',
+            'Content-Length': str(len(file_data))
+        }
+
+        # Use tqdm for progress bar if requested
+        if show_progress:
+            with tqdm(total=len(file_data), unit='B', unit_scale=True) as pbar:
+                response = requests.post(
+                    auth_data['uploadUrl'],
+                    headers=upload_headers,
+                    data=file_data
+                )
+                pbar.update(len(file_data))
+        else:
+            response = requests.post(
+                auth_data['uploadUrl'],
+                headers=upload_headers,
+                data=file_data
+            )
+
+        if response.status_code != 200:
+            error_msg = response.text
+            try:
+                error_data = response.json()
+                if 'error' in error_data:
+                    error_msg = error_data['error']
+            except:
+                pass
+            raise RuntimeError(f"Upload failed: {error_msg}")
+            
+        return auth_data  # Return auth_data instead of response.json()
+        
+    except Exception as e:
+        print(f"Upload failed: {str(e)}")
+        return None
+
+def upload(scenario_path: str, key: str) -> str:
+    """Upload a DeepMIMO scenario to the server.
+    
+    This function handles the full upload flow:
+    1. Validate scenario files locally
+    2. Get upload URL from server using key
+    3. Upload to B2 via server
+    4. Return scenario URL
+    
+    Args:
+        scenario_path: Path to scenario ZIP file (absolute or relative)
+        key: Upload authorization key from dashboard
+        
+    Returns:
+        Public URL for the uploaded scenario
+        
+    Raises:
+        ValueError: If scenario files are invalid or not found
+        RuntimeError: If upload fails, with specific messages for:
+            - Invalid upload key
+            - Daily upload limit reached (1 upload per day)
+            - Server errors during key validation
+            - Failed B2 upload
+            - Invalid server response
+    """
+    # Basic validation first
+    if not scenario_path.endswith('.zip'):
+        print("Scenario must be a ZIP file")
+        return None
+    
+    # Convert relative path to absolute path
+    abs_path = os.path.abspath(scenario_path)
+    if not os.path.exists(abs_path):
+        print(f"File not found: {scenario_path}")
+        return None
+        
+    # Get upload authorization and perform upload
+    auth_response = _dm_upload_api_call(
+        "https://dev.deepmimo.net/api/b2/authorize-upload",
+        abs_path,
+        key
+    )
+    
+    # If auth_response is None, _dm_upload_api_call already printed the error
+    if auth_response and 'downloadUrl' in auth_response:
+        file_name = os.path.basename(abs_path)
+        return f"{auth_response['downloadUrl']}/{file_name}"
+    
+    return None  # Return None instead of raising an error
+
+def download(scenario_name: str) -> str:
+    """Get the download URL for a DeepMIMO scenario.
+    
+    Args:
+        scenario_name: Name of the scenario ZIP file
+        
+    Returns:
+        Public URL for downloading the scenario
+        
+    Raises:
+        ValueError: If scenario name is invalid
+        RuntimeError: If server returns error
+    """
+    if not scenario_name.endswith('.zip'):
+        scenario_name += '.zip'
+        
+    try:
+        # Get download URL from server
+        response = requests.get(
+            "https://dev.deepmimo.net/api/b2/download-url",
+            params={'filename': scenario_name}
+        )
+        
+        if response.status_code != 200:
+            raise ValueError(f"Scenario '{scenario_name}' not found")
+            
+        download_url = response.json().get('downloadUrl')
+        if not download_url:
+            raise RuntimeError("Invalid response from server")
+            
+        return download_url
+        
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Failed to get scenario URL: {str(e)}")
 
 
