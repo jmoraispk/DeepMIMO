@@ -20,6 +20,51 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
+from matplotlib.colors import ListedColormap
+
+
+def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
+                    cbar_title: str = '', cat_labels: Optional[List[str]] = None) -> Colorbar:
+    """Create a colorbar for the coverage plot, handling both continuous and categorical data.
+    
+    Args:
+        scatter_plot: The scatter plot object to create colorbar for
+        cov_map: The coverage map values used for coloring
+        cmap: Matplotlib colormap name
+        cbar_title: Title for the colorbar
+        cat_labels: Optional labels for categorical values
+        
+    Returns:
+        matplotlib Colorbar object
+    """
+    unique_vals = np.sort(np.unique(cov_map))
+    n_cats = len(unique_vals)
+    
+    if n_cats < 10:  # Use discrete colorbar for small number of unique values
+        # Create discrete colormap
+        if isinstance(cmap, str):
+            colors = plt.cm.get_cmap(cmap)(np.linspace(0, 1, n_cats))
+            cmap = ListedColormap(colors)
+        
+        # Set colorbar ticks at category centers
+        tick_locs = np.arange(n_cats)
+        scatter_plot.set_clim(-0.5, n_cats - 0.5)
+        
+        # Create colorbar with centered ticks
+        cbar = plt.colorbar(scatter_plot, label=cbar_title, ticks=tick_locs)
+        
+        # Set tick labels
+        if cat_labels is not None:
+            if len(cat_labels) != n_cats:
+                raise ValueError(f"Number of category labels ({len(cat_labels)}) "
+                               f"must match number of unique values ({n_cats})")
+            cbar.set_ticklabels(cat_labels)
+        else:
+            cbar.set_ticklabels([str(val) for val in unique_vals])
+    else:  # Use continuous colorbar for many unique values
+        cbar = plt.colorbar(scatter_plot, label=cbar_title)
+    
+    return cbar
 
 
 def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np.ndarray,
@@ -50,7 +95,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         equal_aspect (bool): Whether to maintain equal axis scaling. Defaults to False.
         tight (bool): Whether to set tight axis limits around data points. Defaults to True.
         cmap (str): Matplotlib colormap name. Defaults to 'viridis'.
-
+        
     Returns:
         Tuple containing:
         - matplotlib Figure object
@@ -69,8 +114,8 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
                            subplot_kw={'projection': '3d'} if proj_3D else {})
     
     im = plt.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
-
-    cbar = plt.colorbar(im, label=cbar_title)
+    
+    cbar = _create_colorbar(im, cov_map, cmap, cbar_title)
     
     plt.xlabel('x (m)')
     plt.ylabel('y (m)')
