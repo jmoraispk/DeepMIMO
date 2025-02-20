@@ -137,29 +137,30 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 inactive_idxs.append(abs_idx)
                 continue
 
-            rad2deg = lambda x: np.rad2deg(x[0, rel_idx, 0, path_idxs])
-
+            # Power, phase, delay
             data[c.POWER_PARAM_NAME][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
             data[c.PHASE_PARAM_NAME][abs_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
             data[c.DELAY_PARAM_NAME][abs_idx,:n_paths] = paths_dict['tau'][0, rel_idx, 0, path_idxs]
+            
+            # Angles
+            rad2deg = lambda x: np.rad2deg(x[0, rel_idx, 0, path_idxs])
             data[c.AOA_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_r'])
             data[c.AOD_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_t'])
             data[c.AOA_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_r'])
             data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
 
-            # Handle interactions for this receiver
+            # Interactions types
             types = paths_dict['types'][0, path_idxs]
-
             inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
             interactions = get_sionna_interaction_types(types, inter_pos_rx)
             data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
 
+            # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
+            data[c.INTERACTIONS_POS_PARAM_NAME][abs_idxs, :n_paths, :max_inter] = \
+                np.transpose(paths_dict['vertices'][:max_inter, :, 0, path_idxs, :], (1,2,0,3))
+
             # Update progress bar for each receiver processed
             pbar.update(1)
-
-        # Handle interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-        inter_pos = paths_dict['vertices'][:max_inter, :, 0, path_idxs, :] 
-        data[c.INTERACTIONS_POS_PARAM_NAME][abs_idxs, :n_paths, :inter_pos.shape[0]] = np.transpose(inter_pos, (1,2,0,3))
 
     pbar.close()
 
@@ -168,7 +169,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     
     # Save each data key
     for key in data.keys():
-        cu.save_mat(data[key], key, save_folder, 1, 0, 2) # Static for Sionna (for now - later use txrx_dict)
+        cu.save_mat(data[key], key, save_folder, 1, 0, 2) # Static for Sionna
 
     # Update txrx_dict with tx and rx numbers 
     
