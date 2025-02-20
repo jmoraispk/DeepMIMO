@@ -37,30 +37,46 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
     Returns:
         matplotlib Colorbar object
     """
-    unique_vals = np.sort(np.unique(cov_map))
+    # Remove NaN values for unique value calculation
+    valid_data = cov_map[~np.isnan(cov_map)]
+    unique_vals = np.sort(np.unique(valid_data))
     n_cats = len(unique_vals)
+    
+    if cat_labels is not None and len(cat_labels) != n_cats:
+                raise ValueError(f"Number of category labels ({len(cat_labels)}) "
+                               f"must match number of unique values ({n_cats})")
     
     if n_cats < 10:  # Use discrete colorbar for small number of unique values
         # Create discrete colormap
         if isinstance(cmap, str):
-            colors = plt.cm.get_cmap(cmap)(np.linspace(0, 1, n_cats))
+            # Get base colors from the colormap
+            base_cmap = plt.cm.get_cmap(cmap)
+            # Create discrete colors
+            colors = base_cmap(np.linspace(0, 1, n_cats))
+            # Create discrete colormap
             cmap = ListedColormap(colors)
+            
+            # Map data to discrete indices, handling NaN values
+            value_to_index = {val: i for i, val in enumerate(unique_vals)}
+            discrete_data = np.full_like(cov_map, np.nan, dtype=float)
+            valid_mask = ~np.isnan(cov_map)
+            discrete_data[valid_mask] = [value_to_index[val] for val in cov_map[valid_mask]]
+            
+            # Update scatter plot with discrete data and colormap
+            scatter_plot.set_array(discrete_data)
+            scatter_plot.set_cmap(cmap)
         
         # Set colorbar ticks at category centers
         tick_locs = np.arange(n_cats)
         scatter_plot.set_clim(-0.5, n_cats - 0.5)
         
         # Create colorbar with centered ticks
-        cbar = plt.colorbar(scatter_plot, label=cbar_title, ticks=tick_locs)
+        cbar = plt.colorbar(scatter_plot, label=cbar_title, ticks=tick_locs,
+                            boundaries=np.arange(-0.5, n_cats + 0.5),
+                            values=np.arange(n_cats))
         
         # Set tick labels
-        if cat_labels is not None:
-            if len(cat_labels) != n_cats:
-                raise ValueError(f"Number of category labels ({len(cat_labels)}) "
-                               f"must match number of unique values ({n_cats})")
-            cbar.set_ticklabels(cat_labels)
-        else:
-            cbar.set_ticklabels([str(val) for val in unique_vals])
+        cbar.set_ticklabels(cat_labels if cat_labels else [str(val) for val in unique_vals])
     else:  # Use continuous colorbar for many unique values
         cbar = plt.colorbar(scatter_plot, label=cbar_title)
     
