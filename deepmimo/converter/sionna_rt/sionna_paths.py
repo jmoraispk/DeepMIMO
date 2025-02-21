@@ -82,7 +82,9 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     # Get max number of interactions per path
     max_inter = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
     
+    # Initialize inactive indices list
     rx_inactive_idxs = []
+    
     for tx_idx, tx_pos_target in enumerate(all_tx_pos):
         # Pre-allocate matrices
         data = {
@@ -146,8 +148,9 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
 
                 # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :max_inter] = \
-                    np.transpose(paths_dict['vertices'][:max_inter, :, t, path_idxs, :], (1,2,0,3))
+                vertices = paths_dict['vertices'][:max_inter, rel_idx, t, path_idxs, :]
+                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :max_inter, :] = \
+                    np.transpose(vertices, (1,0,2))
 
                 # Interactions types
                 types = paths_dict['types'][b, path_idxs]
@@ -155,7 +158,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 interactions = get_sionna_interaction_types(types, inter_pos_rx)
                 data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
                 
-                # Update progress bar for each receiver processed
+                # Update progress bar only when we actually process a receiver
                 pbar.update(1)
             
             last_idx += batch_size
