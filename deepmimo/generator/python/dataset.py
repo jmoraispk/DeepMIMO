@@ -240,14 +240,14 @@ class Dataset(DotDict):
             INTERACTION_LOS = 0: Line-of-sight (direct path)
             INTERACTION_REFLECTION = 1: Reflection
             INTERACTION_DIFFRACTION = 2: Diffraction
-            INTERACTION_TRANSMISSION = 3: Transmission
-            INTERACTION_SCATTERING = 4: Scattering
-        
+            INTERACTION_SCATTERING = 3: Scattering
+            INTERACTION_TRANSMISSION = 4: Transmission
+
         Returns:
             numpy.ndarray: LoS status array, shape (n_users, n_paths) 
         """
         result = np.full(self.inter.shape[0], -1)
-        has_paths = np.any(self.inter > 0, axis=1)
+        has_paths = self.num_paths > 0
         result[has_paths] = 0
         
         first_path = self.inter[:, 0]
