@@ -108,6 +108,8 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     # Create progress bar
     pbar = tqdm(total=n_rx, desc="Processing receivers")
     
+    b = 0 # batch index 
+    t = 0 # tx index
     last_idx = 0
     inactive_idxs = []
     # Process each batch of paths
@@ -140,25 +142,25 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             # Power, phase, delay
             data[c.POWER_PARAM_NAME][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
             data[c.PHASE_PARAM_NAME][abs_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
-            data[c.DELAY_PARAM_NAME][abs_idx,:n_paths] = paths_dict['tau'][0, rel_idx, 0, path_idxs]
+            data[c.DELAY_PARAM_NAME][abs_idx,:n_paths] = paths_dict['tau'][b, rel_idx, t, path_idxs]
             
             # Angles
-            rad2deg = lambda x: np.rad2deg(x[0, rel_idx, 0, path_idxs])
+            rad2deg = lambda x: np.rad2deg(x[b, rel_idx, t, path_idxs])
             data[c.AOA_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_r'])
             data[c.AOD_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_t'])
             data[c.AOA_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_r'])
             data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
 
+            # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
+            data[c.INTERACTIONS_POS_PARAM_NAME][abs_idxs, :n_paths, :max_inter] = \
+                np.transpose(paths_dict['vertices'][:max_inter, :, t, path_idxs, :], (1,2,0,3))
+
             # Interactions types
-            types = paths_dict['types'][0, path_idxs]
+            types = paths_dict['types'][b, path_idxs]
             inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
             interactions = get_sionna_interaction_types(types, inter_pos_rx)
             data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
-
-            # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-            data[c.INTERACTIONS_POS_PARAM_NAME][abs_idxs, :n_paths, :max_inter] = \
-                np.transpose(paths_dict['vertices'][:max_inter, :, 0, path_idxs, :], (1,2,0,3))
-
+            
             # Update progress bar for each receiver processed
             pbar.update(1)
 
