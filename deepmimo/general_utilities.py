@@ -697,7 +697,7 @@ def upload(scenario_path: str, key: str) -> str:
                     "linkName": scenario_name.replace("_", " ")
                     .replace("-", " ")
                     .title(),
-                    "subMenu": "user",
+                    "subMenu": "v4",
                     "description": f"A scenario for {scenario_name}",
                     "details": None,
                     "images": [],
