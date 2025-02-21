@@ -537,7 +537,7 @@ def _process_params_data(params_dict: Dict) -> Dict:
             "dualPolarization": any(
                 set_info.get("dual_pol", False) for set_info in txrx_sets.values()
             ),
-            "bs2bs": any(
+            "BS2BS": any(
                 set_info.get("is_tx") and set_info.get("is_rx")
                 for set_info in txrx_sets.values()
             ) or None,
