@@ -28,11 +28,9 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         txrx_dict: Dictionary containing TX/RX set information from read_txrx
         
     Notes:
-        Current assumptions about TX/RX positions:
-        - Multiple TX positions are supported, but all TX positions must be present
-          in each paths dictionary (i.e., same set of TXs for different RX batches)
-        - RX positions can vary across path dictionaries and are tracked using 
-          sequential indices (e.g., first batch has RXs 0-9, second has 10-22, etc.)
+        - Each path dictionary can contain one or more transmitters
+        - Transmitters are identified by their positions across all path dictionaries
+        - RX positions maintain their relative order across path dictionaries
     
     -- Information about the Sionna paths (from https://nvlabs.github.io/sionna/api/rt.html#paths) --
 
@@ -71,25 +69,21 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     """
     path_dict_list = cu.load_pickle(load_folder + 'sionna_paths.pkl')
 
-    # Get TX positions from first paths dictionary
-    # NOTE: All paths dictionaries must contain the same TX positions
-    tx_pos = path_dict_list[0]['sources']
-    n_tx = tx_pos.shape[0]
+    # Collect all unique TX positions from all path dictionaries
+    all_tx_pos = np.unique(np.vstack([paths_dict['sources'] for paths_dict in path_dict_list]), axis=0)
+    n_tx = len(all_tx_pos)
 
-    # Verify all paths dictionaries have the same TX positions
-    for paths_dict in path_dict_list[1:]:
-        if not np.array_equal(paths_dict['sources'], tx_pos):
-            raise ValueError("Found different TX positions across paths. "
-                             "All paths must contain the same set of TX positions.")
-
-    # Concatenate all RX positions in order
-    rx_pos = np.vstack([paths_dict['targets'] for paths_dict in path_dict_list])
-    n_rx = rx_pos.shape[0]
+    # Collect all RX positions while maintaining order and removing duplicates
+    all_rx_pos = np.vstack([paths_dict['targets'] for paths_dict in path_dict_list])
+    _, unique_indices = np.unique(all_rx_pos, axis=0, return_index=True)
+    rx_pos = all_rx_pos[np.sort(unique_indices)]  # Sort indices to maintain original order
+    n_rx = len(rx_pos)
 
     # Get max number of interactions per path
     max_inter = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
     
-    for tx_idx in range(n_tx):
+    rx_inactive_idxs = []
+    for tx_idx, tx_pos_target in enumerate(all_tx_pos):
         # Pre-allocate matrices
         data = {
             c.RX_POS_PARAM_NAME: np.zeros((n_rx, 3), dtype=c.FP_TYPE),
@@ -105,40 +99,38 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS, max_inter, 3), dtype=c.FP_TYPE) * np.nan,
         }
 
-        data[c.RX_POS_PARAM_NAME], data[c.TX_POS_PARAM_NAME] = rx_pos, tx_pos[tx_idx]
+        data[c.RX_POS_PARAM_NAME], data[c.TX_POS_PARAM_NAME] = rx_pos, tx_pos_target
         
         # Create progress bar
         pbar = tqdm(total=n_rx, desc=f"Processing receivers for TX {tx_idx}")
         
         b = 0 # batch index 
-        t = tx_idx # tx index
         last_idx = 0
-        inactive_idxs = []
+        
         # Process each batch of paths
         for paths_dict in path_dict_list:
+            # Find if and where this TX exists in current paths_dict
+            tx_idx_in_dict = np.where(np.all(paths_dict['sources'] == tx_pos_target, axis=1))[0]
+            if len(tx_idx_in_dict) == 0:
+                continue
+                
+            t = tx_idx_in_dict[0]  # Get the index of this TX in current paths_dict
             batch_size = paths_dict['a'].shape[1]
-            # Note: batch_size here is different from data batches. 
-            # This is the number of RXs in the current path dictionary.
-
-            # Get absolute indices for this batch
-            abs_idxs = np.arange(batch_size) + last_idx
-            last_idx += batch_size
+            # batch_size is the number of RXs in the current path dictionary (not sionna batches)
             
             # Note: we opt for not using squeeze here to work for batch_size = 1
-            a = paths_dict['a'][0,:,0,0,0,:,0] # Get users and paths
+            a = paths_dict['a'][0,:,0,t,0,:,0] # Get users and paths for this TX
 
             # Process each field with proper masking
             for rel_idx in range(batch_size):
-                if rel_idx >= batch_size:
-                    break
+                abs_idx = last_idx + rel_idx
                 
                 path_idxs = np.where(a[rel_idx] != 0)[0][:c.MAX_PATHS]
-                
-                abs_idx = abs_idxs[rel_idx]
                 n_paths = len(path_idxs)
 
                 if n_paths == 0:
-                    inactive_idxs.append(abs_idx)
+                    if tx_idx == 0:
+                        rx_inactive_idxs.append(abs_idx)
                     continue
 
                 # Power, phase, delay
@@ -154,7 +146,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
 
                 # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idxs, :n_paths, :max_inter] = \
+                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :max_inter] = \
                     np.transpose(paths_dict['vertices'][:max_inter, :, t, path_idxs, :], (1,2,0,3))
 
                 # Interactions types
@@ -165,6 +157,8 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 
                 # Update progress bar for each receiver processed
                 pbar.update(1)
+            
+            last_idx += batch_size
 
         pbar.close()
 
@@ -176,14 +170,13 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             cu.save_mat(data[key], key, save_folder, 1, tx_idx, 2) # Static for Sionna
 
     # Update txrx_dict with tx and rx numbers 
-    
-    txrx_dict['txrx_set_1']['num_points'] = tx_pos.shape[0]
+    txrx_dict['txrx_set_1']['num_points'] = n_tx
     txrx_dict['txrx_set_1']['inactive_idxs'] = np.array([])
-    txrx_dict['txrx_set_1']['num_active_points'] = tx_pos.shape[0]
+    txrx_dict['txrx_set_1']['num_active_points'] = n_tx
     
     txrx_dict['txrx_set_2']['num_points'] = n_rx
-    txrx_dict['txrx_set_2']['inactive_idxs'] = np.array(inactive_idxs)
-    txrx_dict['txrx_set_2']['num_active_points'] = n_rx - len(inactive_idxs)
+    txrx_dict['txrx_set_2']['inactive_idxs'] = np.array(rx_inactive_idxs)
+    txrx_dict['txrx_set_2']['num_active_points'] = n_rx - len(rx_inactive_idxs)
 
 def get_sionna_interaction_types(types: np.ndarray, inter_pos: np.ndarray) -> np.ndarray:
     """
