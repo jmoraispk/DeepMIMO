@@ -522,16 +522,15 @@ def _process_params_data(params_dict: Dict) -> Dict:
             "environment": "outdoor",
         },
         "advancedParameters": {
-            "dynamic": scene_params.get("num_scenes", 1) > 1,
-            "dmVersion": params.get("version", "4"),
+            "dmVersion": params.get("version", "4.0.0a"),
             "numTx": num_tx,
             "multiRxAnt": any(
-                set_info.get("num_ant", 1) > 1
+                set_info.get("num_ant", 0) > 1
                 for set_info in txrx_sets.values()
                 if set_info.get("is_rx")
             ),
             "multiTxAnt": any(
-                set_info.get("num_ant", 1) > 1
+                set_info.get("num_ant", 0) > 1
                 for set_info in txrx_sets.values()
                 if set_info.get("is_tx")
             ),
@@ -541,15 +540,16 @@ def _process_params_data(params_dict: Dict) -> Dict:
             "bs2bs": any(
                 set_info.get("is_tx") and set_info.get("is_rx")
                 for set_info in txrx_sets.values()
-            ),
-            "pathDepth": rt_params.get("max_path_depth"),
+            ) or None,
+            "pathDepth": rt_params.get("max_path_depth", None),
             "diffraction": bool(rt_params.get("max_diffractions", 0)),
-            "scattering": bool(rt_params.get("max_scatterings", 0)),
+            "scattering": bool(rt_params.get("max_scattering", 0)),
             "transmission": bool(rt_params.get("max_transmissions", 0)),
-            "numRays": rt_params.get("num_rays", 1e6),
+            "numRays": rt_params.get("num_rays", 1000000),
             "city": None,
             "digitalTwin": False,
-        },
+            "dynamic": scene_params.get("num_scenes", 1) > 1
+        }
     }
 
 
