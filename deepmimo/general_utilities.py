@@ -643,113 +643,92 @@ def _generate_key_components(params_dict: Dict) -> Dict:
     }
 
 
-def upload(scenario_path: str, key: str) -> str:
+def upload(scenario_name: str, key: str) -> str:
     """Upload a DeepMIMO scenario to the server.
 
     Args:
-        scenario_path: Path to scenario ZIP file
+        scenario_name: Path to scenario ZIP file
         key: Upload authorization key
 
     Returns:
         Download URL if successful, None otherwise
     """
-    if not scenario_path.endswith(".zip"):
-        print("Error: Scenario must be a ZIP file")
-        return None
+    scen_folder = c.SCENARIOS_FOLDER + '/' + scenario_name
 
-    abs_path = os.path.abspath(scenario_path)
-    if not os.path.exists(abs_path):
-        print(f"Error: File not found: {scenario_path}")
-        return None
+    # Get params.mat path
+    params_path = scen_folder + f'/{c.PARAMS_FILENAME}.mat'
+
+    # Zip scenario
+    zip_path = zip(scen_folder)
+
+    print(f"Processing scenario: {scenario_name}")
 
     try:
-        print(f"Processing scenario: {os.path.basename(scenario_path)}")
-
-        with zipfile.ZipFile(abs_path, "r") as zip_ref:
-            params_file = next(
-                (f for f in zip_ref.namelist() if f.lower().endswith("params.mat")),
-                None,
-            )
-
-            if not params_file:
-                print("Error: No params.mat file found in zip")
-                return None
-
-            print("✓ Found params.mat file")
-
-            temp_dir = os.path.join("uploads", "temp")
-            os.makedirs(temp_dir, exist_ok=True)
-            params_path = os.path.join(temp_dir, params_file)
-            zip_ref.extract(params_file, temp_dir)
-
-            try:
-                print("Parsing scenario parameters...")
-                params_dict = load_mat_file_as_dict(params_path)
-                print("✓ Parameters parsed successfully")
-
-                # Process parameters and generate submission data
-                processed_params = _process_params_data(params_dict)
-                key_components = _generate_key_components(params_dict)
-
-                scenario_name = os.path.basename(scenario_path).replace(".zip", "")
-                submission_data = {
-                    "title": scenario_name.replace("_", " ").replace("-", " ").title(),
-                    "linkName": scenario_name.replace("_", " ")
-                    .replace("-", " ")
-                    .title(),
-                    "subMenu": "v4",
-                    "description": f"A scenario for {scenario_name}",
-                    "details": None,
-                    "images": [],
-                    "keyComponents": key_components["sections"],
-                    "download": [],
-                    "features": processed_params["primaryParameters"],
-                    "advancedParameters": processed_params["advancedParameters"],
-                }
-
-                print("Uploading to storage...")
-                upload_result = _dm_upload_api_call(
-                    "https://dev.deepmimo.net/api/b2/authorize-upload", abs_path, key
-                )
-
-                if not upload_result or "downloadUrl" not in upload_result:
-                    print("Error: Failed to upload to storage")
-                    raise RuntimeError("Failed to upload to B2")
-                print("✓ Upload successful")
-
-                submission_data["download"] = [
-                    {
-                        "version": f"v{processed_params['advancedParameters']['dmVersion']}",
-                        "description": "Initial version",
-                        "zip": f"{upload_result['downloadUrl']}",
-                        "folder": "",
-                        "fileId": upload_result.get("fileId"),
-                    }
-                ]
-
-                print("Creating submission...")
-                response = requests.post(
-                    "https://dev.deepmimo.net/api/submissions",
-                    json={"type": "scenario", "content": submission_data},
-                    headers={"Authorization": f"Bearer {key}"},
-                )
-                response.raise_for_status()
-                print("✓ Submission created successfully")
-
-                return submission_data["download"][0]["zip"]
-
-            finally:
-                try:
-                    os.remove(params_path)
-                    os.rmdir(temp_dir)
-                    print("✓ Temporary files cleaned up")
-                except:
-                    pass
-
+        print("Parsing scenario parameters...")
+        params_dict = load_mat_file_as_dict(params_path)
+        print("✓ Parameters parsed successfully")
     except Exception as e:
-        print(f"Error: Upload failed - {str(e)}")
+        print(f"Error: Failed to parse parameters - {str(e)}")
+        return None
+    
+    try:
+        # Process parameters and generate submission data
+        processed_params = _process_params_data(params_dict)
+        key_components = _generate_key_components(params_dict)
+    except Exception as e:
+        print(f"Error: Failed to generate key components - {str(e)}")
         return None
 
+    submission_data = {
+        "title": scenario_name.replace("_", " ").replace("-", " ").title(),
+        "linkName": scenario_name.replace("_", " ").replace("-", " ").title(),
+        "subMenu": "v4",
+        "description": f"A scenario for {scenario_name}",
+        "details": None,
+        "images": [],
+        "keyComponents": key_components["sections"],
+        "download": [],
+        "features": processed_params["primaryParameters"],
+        "advancedParameters": processed_params["advancedParameters"],
+    }
+
+    # abs_path = os.path.abspath(zip_path)
+
+    try:
+        print("Uploading to storage...")
+        upload_result = _dm_upload_api_call("https://dev.deepmimo.net/api/b2/authorize-upload", 
+                                            zip_path, key)
+
+        if not upload_result or "downloadUrl" not in upload_result:
+            print("Error: Failed to upload to storage")
+            raise RuntimeError("Failed to upload to B2")
+        print("✓ Upload successful")
+
+        submission_data["download"] = [
+            {
+                "version": f"v{processed_params['advancedParameters']['dmVersion']}",
+                "description": "Initial version",
+                "zip": f"{upload_result['downloadUrl']}",
+                "folder": "",
+                "fileId": upload_result.get("fileId"),
+            }
+        ]
+
+        print("Creating submission...")
+        response = requests.post(
+            "https://dev.deepmimo.net/api/submissions",
+            json={"type": "scenario", "content": submission_data},
+            headers={"Authorization": f"Bearer {key}"},
+        )
+        response.raise_for_status()
+        print("✓ Submission created successfully")
+
+        result = submission_data["download"][0]["zip"]
+    except Exception as e:
+        print(f"Error: Upload failed - {str(e)}")
+        result = None
+
+    return result
 
 def _download_url(scenario_name: str) -> str:
     """Get the download URL for a DeepMIMO scenario.
