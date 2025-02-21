@@ -182,8 +182,8 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, Dict]:
 
     return all_vertices, obj_index_map
 
-def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
-                              my_compute_path_params: Dict, save_folder: str):
+def export_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
+                       my_compute_path_params: Dict, save_folder: str):
     """ Export a complete Sionna simulation to a format that can be converted by DeepMIMO """
     
     paths_dict_list = export_paths(path_list)
