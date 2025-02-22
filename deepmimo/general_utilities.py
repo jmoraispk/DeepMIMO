@@ -254,8 +254,10 @@ def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
     return mat_struct  # Return the object as is for other types
 
 
-def summary(scen_name: str) -> None:
+def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     """Print a summary of the dataset."""
+    # Initialize empty string to collect output
+    summary_str = ""
 
     # Read params.mat and provide TXRX summary, total number of tx & rx, scene size,
     # and other relevant parameters, computed/extracted from the all dicts, not just rt_params
@@ -270,62 +272,60 @@ def summary(scen_name: str) -> None:
     material_params = params_dict[c.MATERIALS_PARAM_NAME]
     txrx_params = params_dict[c.TXRX_PARAM_NAME]
 
-    print("\n" + "=" * 50)
-    print(f"DeepMIMO {scen_name} Scenario Summary")
-    print("=" * 50)
+    summary_str += "\n" + "=" * 50 + "\n"
+    summary_str += f"DeepMIMO {scen_name} Scenario Summary\n"
+    summary_str += "=" * 50 + "\n"
 
-    print("\n[Ray-Tracing Configuration]")
-
-    print(
+    summary_str += "\n[Ray-Tracing Configuration]\n"
+    summary_str += (
         f"- Ray-tracer: {rt_params[c.RT_PARAM_RAYTRACER]} "
-        f"v{rt_params[c.RT_PARAM_RAYTRACER_VERSION]}"
+        f"v{rt_params[c.RT_PARAM_RAYTRACER_VERSION]}\n"
     )
-    print(f"- Frequency: {rt_params[c.RT_PARAM_FREQUENCY]/1e9:.1f} GHz")
+    summary_str += f"- Frequency: {rt_params[c.RT_PARAM_FREQUENCY]/1e9:.1f} GHz\n"
 
-    print("\n[Ray-tracing parameters]")
+    summary_str += "\n[Ray-tracing parameters]\n"
 
     # Interaction limits
-    print("\nMain interaction limits")
-    print(f"- Max path depth: {rt_params[c.RT_PARAM_PATH_DEPTH]}")
-    print(f"- Max reflections: {rt_params[c.RT_PARAM_MAX_REFLECTIONS]}")
-    print(f"- Max diffractions: {rt_params[c.RT_PARAM_MAX_DIFFRACTIONS]}")
-    print(f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERING]}")
-    print(f"- Max transmissions: {rt_params[c.RT_PARAM_MAX_TRANSMISSIONS]}")
+    summary_str += "\nMain interaction limits\n"
+    summary_str += f"- Max path depth: {rt_params[c.RT_PARAM_PATH_DEPTH]}\n"
+    summary_str += f"- Max reflections: {rt_params[c.RT_PARAM_MAX_REFLECTIONS]}\n"
+    summary_str += f"- Max diffractions: {rt_params[c.RT_PARAM_MAX_DIFFRACTIONS]}\n"
+    summary_str += f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERING]}\n"
+    summary_str += f"- Max transmissions: {rt_params[c.RT_PARAM_MAX_TRANSMISSIONS]}\n"
 
     # Diffuse scattering settings
-    print("\nDiffuse Scattering")
+    summary_str += "\nDiffuse Scattering\n"
     is_diffuse_enabled = rt_params[c.RT_PARAM_MAX_SCATTERING] > 0
-    print(f"- Diffuse scattering: {'Enabled' if is_diffuse_enabled else 'Disabled'}")
-    print(f"- Diffuse reflections: {rt_params[c.RT_PARAM_DIFFUSE_REFLECTIONS]}")
-    print(f"- Diffuse diffractions: {rt_params[c.RT_PARAM_DIFFUSE_DIFFRACTIONS]}")
-    print(f"- Diffuse transmissions: {rt_params[c.RT_PARAM_DIFFUSE_TRANSMISSIONS]}")
-    print(f"- Final interaction only: {rt_params[c.RT_PARAM_DIFFUSE_FINAL_ONLY]}")
-    print(f"- Random phases: {rt_params[c.RT_PARAM_DIFFUSE_RANDOM_PHASES]}")
+    summary_str += f"- Diffuse scattering: {'Enabled' if is_diffuse_enabled else 'Disabled'}\n"
+    summary_str += f"- Diffuse reflections: {rt_params[c.RT_PARAM_DIFFUSE_REFLECTIONS]}\n"
+    summary_str += f"- Diffuse diffractions: {rt_params[c.RT_PARAM_DIFFUSE_DIFFRACTIONS]}\n"
+    summary_str += f"- Diffuse transmissions: {rt_params[c.RT_PARAM_DIFFUSE_TRANSMISSIONS]}\n"
+    summary_str += f"- Final interaction only: {rt_params[c.RT_PARAM_DIFFUSE_FINAL_ONLY]}\n"
+    summary_str += f"- Random phases: {rt_params[c.RT_PARAM_DIFFUSE_RANDOM_PHASES]}\n"
 
     # Terrain settings
-    print("\nTerrain")
-    print(f"- Terrain reflection: {rt_params[c.RT_PARAM_TERRAIN_REFLECTION]}")
-    print(f"- Terrain diffraction: {rt_params[c.RT_PARAM_TERRAIN_DIFFRACTION]}")
-    print(f"- Terrain scattering: {rt_params[c.RT_PARAM_TERRAIN_SCATTERING]}")
+    summary_str += "\nTerrain\n"
+    summary_str += f"- Terrain reflection: {rt_params[c.RT_PARAM_TERRAIN_REFLECTION]}\n"
+    summary_str += f"- Terrain diffraction: {rt_params[c.RT_PARAM_TERRAIN_DIFFRACTION]}\n"
+    summary_str += f"- Terrain scattering: {rt_params[c.RT_PARAM_TERRAIN_SCATTERING]}\n"
 
     # Ray casting settings
-    print("\nRay Casting Settings")
-    print(f"- Number of rays: {rt_params[c.RT_PARAM_NUM_RAYS]:,}")
-    print(f"- Casting method: {rt_params[c.RT_PARAM_RAY_CASTING_METHOD]}")
-    print(f"- Casting range (az): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_AZ]:.1f}°")
-    print(f"- Casting range (el): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_EL]:.1f}°")
-    print(f"- Synthetic array: {rt_params[c.RT_PARAM_SYNTHETIC_ARRAY]}")
+    summary_str += "\nRay Casting Settings\n"
+    summary_str += f"- Number of rays: {rt_params[c.RT_PARAM_NUM_RAYS]:,}\n"
+    summary_str += f"- Casting method: {rt_params[c.RT_PARAM_RAY_CASTING_METHOD]}\n"
+    summary_str += f"- Casting range (az): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_AZ]:.1f}°\n"
+    summary_str += f"- Casting range (el): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_EL]:.1f}°\n"
+    summary_str += f"- Synthetic array: {rt_params[c.RT_PARAM_SYNTHETIC_ARRAY]}\n"
 
-    print("\n[Scene]")
-
-    print(f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}")
-    print(f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}")
+    summary_str += "\n[Scene]\n"
+    summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
+    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}\n"
     # TODO: Put object label summary into scene dict (no. buildings, trees, etc)
-    print(f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}")
+    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}\n"
     # TODO: Put normal face count into scene dict
     normal_faces = 332
-    print(
-        f"- Faces: {normal_faces:,} (decomposed into {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} triangular faces)"
+    summary_str += (
+        f"- Faces: {normal_faces:,} (decomposed into {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} triangular faces)\n"
     )
 
     # Get scene boundaries from scene bounding box
@@ -337,21 +337,21 @@ def summary(scen_name: str) -> None:
     # print(f"- Z: {bbox.z_min:.2f}m to {bbox.z_max:.2f}m (height: {bbox.height:.2f}m)")
     # print(f"- Area: {bbox.width * bbox.length:,.2f}m²")
 
-    print("\n[Materials]")
-    print(f"Total materials: {len(material_params)}")
+    summary_str += "\n[Materials]\n"
+    summary_str += f"Total materials: {len(material_params)}\n"
     for _, mat_props in material_params.items():
-        print(f"\n{mat_props[c.MATERIALS_PARAM_NAME_FIELD]}:")
-        print(f"- Permittivity: {mat_props[c.MATERIALS_PARAM_PERMITTIVITY]:.2f}")
-        print(f"- Conductivity: {mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]:.2f} S/m")
-        print(f"- Scattering model: {mat_props[c.MATERIALS_PARAM_SCATTERING_MODEL]}")
-        print(
-            f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}"
+        summary_str += f"\n{mat_props[c.MATERIALS_PARAM_NAME_FIELD]}:\n"
+        summary_str += f"- Permittivity: {mat_props[c.MATERIALS_PARAM_PERMITTIVITY]:.2f}\n"
+        summary_str += f"- Conductivity: {mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]:.2f} S/m\n"
+        summary_str += f"- Scattering model: {mat_props[c.MATERIALS_PARAM_SCATTERING_MODEL]}\n"
+        summary_str += (
+            f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
         )
-        print(
-            f"- Cross-polarization coefficient: {mat_props[c.MATERIALS_PARAM_CROSS_POL_COEF]:.2f}"
+        summary_str += (
+            f"- Cross-polarization coefficient: {mat_props[c.MATERIALS_PARAM_CROSS_POL_COEF]:.2f}\n"
         )
 
-    print("\n[TX/RX Configuration]")
+    summary_str += "\n[TX/RX Configuration]\n"
 
     # Sum total number of receivers and transmitters
     n_rx = sum(
@@ -364,24 +364,30 @@ def summary(scen_name: str) -> None:
         for set_info in txrx_params.values()
         if set_info[c.TXRX_PARAM_IS_TX]
     )
-    print(f"Total number of receivers: {n_rx}")
-    print(f"Total number of transmitters: {n_tx}")
+    summary_str += f"Total number of receivers: {n_rx}\n"
+    summary_str += f"Total number of transmitters: {n_tx}\n"
 
     for set_name, set_info in txrx_params.items():
-        print(f"\n{set_name} ({set_info[c.TXRX_PARAM_NAME_FIELD]}):")
+        summary_str += f"\n{set_name} ({set_info[c.TXRX_PARAM_NAME_FIELD]}):\n"
         role = []
         if set_info[c.TXRX_PARAM_IS_TX]:
             role.append("TX")
         if set_info[c.TXRX_PARAM_IS_RX]:
             role.append("RX")
-        print(f"- Role: {' & '.join(role)}")
-        print(f"- Total points: {set_info[c.TXRX_PARAM_NUM_POINTS]:,}")
-        print(f"- Active points: {set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS]:,}")
-        print(f"- Antennas per point: {set_info[c.TXRX_PARAM_NUM_ANT]}")
-        print(f"- Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}")
+        summary_str += f"- Role: {' & '.join(role)}\n"
+        summary_str += f"- Total points: {set_info[c.TXRX_PARAM_NUM_POINTS]:,}\n"
+        summary_str += f"- Active points: {set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS]:,}\n"
+        summary_str += f"- Antennas per point: {set_info[c.TXRX_PARAM_NUM_ANT]}\n"
+        summary_str += f"- Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}\n"
 
-    print(f"\n[Version]")
-    print(f"- DeepMIMO Version: {params_dict[c.VERSION_PARAM_NAME]}")
+    summary_str += f"\n[Version]\n"
+    summary_str += f"- DeepMIMO Version: {params_dict[c.VERSION_PARAM_NAME]}\n"
+    
+    if print_summary:
+        print(summary_str)
+        return None
+    
+    return summary_str
 
 
 # Upload and Download Scenarios
