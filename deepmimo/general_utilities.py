@@ -667,10 +667,10 @@ def _generate_key_components(params_dict: Dict) -> Dict:
     Returns:
         Key components sections for submission
     """
-    params = params_dict.get("params", {})
-    rt_params = params.get("rt_params", {})
-    txrx_sets = params.get("txrx", {})
-    scene_params = params.get("scene", {})
+    params = params_dict.get(c.PARAMS_FILENAME, {})
+    rt_params = params.get(c.RT_PARAMS_PARAM_NAME, {})
+    txrx_sets = params.get(c.TXRX_PARAM_NAME, {})
+    scene_params = params.get(c.SCENE_PARAM_NAME, {})
 
     frequency = float(rt_params.get("frequency", 3.5e9)) / 1e9
 
@@ -780,8 +780,8 @@ def upload(scenario_name: str, key: str) -> str:
         return None
 
     submission_data = {
-        "title": scenario_name.replace("_", " ").replace("-", " ").title(),
-        "linkName": scenario_name.replace("_", " ").replace("-", " ").title(),
+        "title": scenario_name,
+        "linkName": scenario_name,
         "subMenu": "v4",
         "description": f"A scenario for {scenario_name}",
         "details": None,
