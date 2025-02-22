@@ -289,12 +289,12 @@ def summary(scen_name: str) -> None:
     print(f"- Max path depth: {rt_params[c.RT_PARAM_PATH_DEPTH]}")
     print(f"- Max reflections: {rt_params[c.RT_PARAM_MAX_REFLECTIONS]}")
     print(f"- Max diffractions: {rt_params[c.RT_PARAM_MAX_DIFFRACTIONS]}")
-    print(f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERINGS]}")
+    print(f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERING]}")
     print(f"- Max transmissions: {rt_params[c.RT_PARAM_MAX_TRANSMISSIONS]}")
 
     # Diffuse scattering settings
     print("\nDiffuse Scattering")
-    is_diffuse_enabled = rt_params[c.RT_PARAM_MAX_SCATTERINGS] > 0
+    is_diffuse_enabled = rt_params[c.RT_PARAM_MAX_SCATTERING] > 0
     print(f"- Diffuse scattering: {'Enabled' if is_diffuse_enabled else 'Disabled'}")
     print(f"- Diffuse reflections: {rt_params[c.RT_PARAM_DIFFUSE_REFLECTIONS]}")
     print(f"- Diffuse diffractions: {rt_params[c.RT_PARAM_DIFFUSE_DIFFRACTIONS]}")
@@ -553,6 +553,28 @@ def _process_params_data(params_dict: Dict) -> Dict:
     }
 
 
+def _generate_key_components2(summary_str: str) -> Dict:
+    """Generate key components sections from summary string.
+
+    Args:
+        summary_str: Summary string from scenario
+    """
+    html_dict = { "sections": []}
+
+    for i in range(10):
+        html_dict["sections"].append({
+            "name": f"Section {i+1}",  # what is between []
+            "description":             # what is under [] and before the next []
+            f""" 
+                <p>This is the description for section {i+1}.</p>
+            """
+        })
+
+    return html_dict
+
+
+
+
 def _generate_key_components(params_dict: Dict) -> Dict:
     """Generate key components sections from params data.
 
@@ -587,7 +609,7 @@ def _generate_key_components(params_dict: Dict) -> Dict:
                         <li>Max path depth: {rt_params.get(c.RT_PARAM_PATH_DEPTH, 0)}</li>
                         <li>Max reflections: {rt_params.get(c.RT_PARAM_MAX_REFLECTIONS, 0)}</li>
                         <li>Max diffractions: {rt_params.get(c.RT_PARAM_MAX_DIFFRACTIONS, 0)}</li>
-                        <li>Max scatterings: {rt_params.get(c.RT_PARAM_MAX_SCATTERINGS, 0)}</li>
+                        <li>Max scatterings: {rt_params.get(c.RT_PARAM_MAX_SCATTERING, 0)}</li>
                         <li>Max transmissions: {rt_params.get(c.RT_PARAM_MAX_TRANSMISSIONS, 0)}</li>
                     </ul>
                     <h4>Ray Casting Settings:</h4>
