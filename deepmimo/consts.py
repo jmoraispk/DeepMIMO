@@ -52,8 +52,8 @@ VERSION_PARAM_NAME = 'version'
 VERSION = __version__
 
 # File and folder paths
-SCENARIOS_FOLDER = 'deepmimo_scenarios2'     # Folder with extracted scenarios
-SCENARIOS_ZIP = 'deepmimo_scenarios_zipped'  # Folder with downloaded ZIP files
+SCENARIOS_FOLDER = 'deepmimo_scenarios'  # Folder with extracted scenarios
+SCENARIOS_DOWNLOAD_FOLDER = 'deepmimo_scenarios_downloaded'  # Folder with downloaded ZIP files
 PARAMS_FILENAME = 'params'
 
 # Data types
