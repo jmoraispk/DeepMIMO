@@ -16,6 +16,7 @@ import requests
 from tqdm import tqdm
 import hashlib
 import zipfile
+import shutil
 
 K = TypeVar("K", bound=str)
 V = TypeVar("V")
@@ -25,6 +26,26 @@ HEADERS = {
     'User-Agent': 'DeepMIMO-Python/1.0',
     'Accept': '*/*'
 }
+
+def get_scenarios_dir() -> str:
+    """Get the absolute path to the scenarios directory.
+    
+    This directory contains the extracted scenario folders ready for use.
+    
+    Returns:
+        str: Absolute path to the scenarios directory
+    """
+    return os.path.join(os.getcwd(), c.SCENARIOS_FOLDER)
+
+def get_downloads_dir() -> str:
+    """Get the absolute path to the downloads directory.
+    
+    This directory contains downloaded scenario ZIP files before extraction.
+    
+    Returns:
+        str: Absolute path to the downloads directory
+    """
+    return os.path.join(os.getcwd(), c.SCENARIOS_DOWNLOAD_FOLDER)
 
 class DotDict(Mapping[K, V]):
     """A dictionary subclass that supports dot notation access to nested dictionaries.
@@ -495,7 +516,7 @@ def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
 
 
 def _process_params_data(params_dict: Dict) -> Dict:
-    """Process params.mat data into submission format.
+    """Process params.mat data into submission format - used in DeepMIMO database.
 
     Args:
         params_dict: Dictionary containing parsed params.mat data
@@ -715,10 +736,10 @@ def upload(scenario_name: str, key: str) -> str:
     Returns:
         Download URL if successful, None otherwise
     """
-    scen_folder = c.SCENARIOS_FOLDER + '/' + scenario_name
+    scen_folder = os.path.join(get_scenarios_dir(), scenario_name)
 
     # Get params.mat path
-    params_path = scen_folder + f'/{c.PARAMS_FILENAME}.mat'
+    params_path = os.path.join(scen_folder, f'{c.PARAMS_FILENAME}.mat')
 
     print(f"Processing scenario: {scenario_name}")
 
@@ -842,6 +863,17 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     Returns:
         Path to downloaded file if successful, None otherwise
     """
+    scenarios_dir = get_scenarios_dir()
+    download_dir = get_downloads_dir()
+
+    # TODO: when adding new scenario versions, change this check to read the version number
+    #       and ask for compatibility with the current version of DeepMIMO.
+    #       This may require downloading the zip again.
+    # Check if file already exists in scenarios folder
+    if os.path.exists(os.path.join(scenarios_dir, scenario_name)):
+        print(f'Scenario "{scenario_name}" already exists in {scenarios_dir}')
+        return None
+
     try:
         # Get download URL using existing helper
         url = _download_url(scenario_name)
@@ -849,51 +881,50 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
         print(f"Error: Failed to get download URL - {str(e)}")
         return None
     
-    # Extract filename from scenario name
-    if not scenario_name.endswith(".zip"):
-        scenario_name += ".zip"
-    # TODO: put scenarios in scenarios ZIP (or check if they already exist in main folder)
+    output_path = os.path.join(download_dir, f"{scenario_name}_downloaded.zip")
 
-    # Set output directory
-    if output_dir is None:
-        output_dir = os.getcwd()
-    else:
-        os.makedirs(output_dir, exist_ok=True)
+    # Check if file already exists in download folder
+    if not os.path.exists(output_path):
+        # Create download directory if it doesn't exist
+        os.makedirs(download_dir, exist_ok=True)
 
-    # Add '_downloaded' suffix before extension
-    base, ext = os.path.splitext(scenario_name)
-    output_path = os.path.join(output_dir, f"{base}_downloaded{ext}")
+        print(f"Downloading scenario '{scenario_name}'")
+        try:
+            response = requests.get(url, stream=True, headers=HEADERS)
+            response.raise_for_status()
 
-    # Check if file already exists
-    if os.path.exists(output_path):
+            # Get total file size for progress bar
+            total_size = int(response.headers.get("content-length", 0))
+
+            # Download with progress bar
+            with open(output_path, "wb") as file:
+                with tqdm(total=total_size, unit="B", unit_scale=True, 
+                        unit_divisor=1024, dynamic_ncols=True) as progress_bar:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            file.write(chunk)
+                            progress_bar.update(len(chunk))
+
+            print(f"✓ Downloaded to {output_path}")
+
+        except Exception as e:
+            print(f"Download failed: {str(e)}")
+            return None
+    else: # Extract the zip if it exists, don't download again
         print(f'Output path "{output_path}" already exists')
-        return output_path
+    
+    # Unzip downloaded scenario
+    unzipped_folder = unzip(output_path)
 
-    print(f"Downloading scenario '{scenario_name}'")
-        
+    # Move unzipped folder to scenarios folder
+    unzipped_folder_without_suffix = unzipped_folder.replace('_downloaded', '')
+    os.rename(unzipped_folder, unzipped_folder_without_suffix)
+    shutil.move(unzipped_folder_without_suffix, scenarios_dir)
+    print(f"✓ Unzipped and moved to {scenarios_dir}")
 
-    try:
-        response = requests.get(url, stream=True, headers=HEADERS)
-        response.raise_for_status()
+    print(f"✓ Scenario '{scenario_name}' ready to use!")
 
-        # Get total file size for progress bar
-        total_size = int(response.headers.get("content-length", 0))
-
-        # Download with progress bar
-        with open(output_path, "wb") as file:
-            with tqdm(total=total_size, unit="B", unit_scale=True, 
-                      unit_divisor=1024, dynamic_ncols=True) as progress_bar:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        file.write(chunk)
-                        progress_bar.update(len(chunk))
-
-        print(f"✓ Downloaded to {output_path}")
-        return output_path
-
-    except Exception as e:
-        print(f"Download failed: {str(e)}")
-        return None
+    return output_path
 
 # Zip and Unzip
 
@@ -940,7 +971,9 @@ def unzip(path_to_zip: str) -> str:
     """
     extracted_path = path_to_zip.replace(".zip", "")
     with zipfile.ZipFile(path_to_zip, "r") as zip_ref:
-        zip_ref.extractall(extracted_path)
+        files = zip_ref.namelist()
+        for file in tqdm(files, desc="Extracting", unit="file"):
+            zip_ref.extract(file, extracted_path)
 
     return extracted_path
 
