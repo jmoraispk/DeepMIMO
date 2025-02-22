@@ -424,38 +424,52 @@ def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
             return None
 
         # Calculate file hash
-        print("Calculating file hash...")
         sha1 = hashlib.sha1()
         with open(file, "rb") as f:
-            with tqdm(
-                total=file_size, unit="B", unit_scale=True, desc="Hashing"
-            ) as pbar:
-                for chunk in iter(lambda: f.read(8192), b""):
-                    sha1.update(chunk)
-                    pbar.update(len(chunk))
+            for chunk in iter(lambda: f.read(8192), b""):
+                sha1.update(chunk)
         file_hash = sha1.hexdigest()
 
         # Upload file to B2
         print(f"Uploading {filename} to B2...")
-        with open(file, "rb") as f:
-            with tqdm(
-                total=file_size, unit="B", unit_scale=True, desc="Uploading"
-            ) as pbar:
-                data = f.read()
-                pbar.update(len(data))
+        pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading")
+        
+        class ProgressFileReader:
+            def __init__(self, file_path, progress_bar):
+                self.file_path = file_path
+                self.progress_bar = progress_bar
+                self.file_object = open(file_path, 'rb')
+                self.len = os.path.getsize(file_path)
+                self.bytes_read = 0
 
-                upload_response = requests.post(
-                    auth_data["uploadUrl"],
-                    headers={
-                        "Authorization": auth_data["authorizationToken"],
-                        "X-Bz-File-Name": filename,
-                        "Content-Type": "application/zip",
-                        "X-Bz-Content-Sha1": file_hash,
-                        "Content-Length": str(file_size),
-                    },
-                    data=data,
-                )
-                upload_response.raise_for_status()
+            def read(self, size=-1):
+                data = self.file_object.read(size)
+                self.bytes_read += len(data)
+                self.progress_bar.n = self.bytes_read
+                self.progress_bar.refresh()
+                return data
+
+            def close(self):
+                self.file_object.close()
+
+        try:
+            progress_reader = ProgressFileReader(file, pbar)
+            
+            upload_response = requests.post(
+                auth_data["uploadUrl"],
+                headers={
+                    "Authorization": auth_data["authorizationToken"],
+                    "X-Bz-File-Name": filename,
+                    "Content-Type": "application/zip",
+                    "X-Bz-Content-Sha1": file_hash,
+                    "Content-Length": str(file_size),
+                },
+                data=progress_reader
+            )
+            upload_response.raise_for_status()
+        finally:
+            progress_reader.close()
+            pbar.close()
 
         # Get the proper download URL from the server
         download_response = requests.get(
