@@ -885,12 +885,13 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     """
     scenarios_dir = get_scenarios_dir()
     download_dir = get_downloads_dir()
-
+    scenario_folder = get_scenario_folder(scenario_name)
+    
     # TODO: when adding new scenario versions, change this check to read the version number
     #       and ask for compatibility with the current version of DeepMIMO.
     #       This may require downloading the zip again.
     # Check if file already exists in scenarios folder
-    if os.path.exists(get_scenario_folder(scenario_name)):
+    if os.path.exists(scenario_folder):
         print(f'Scenario "{scenario_name}" already exists in {scenarios_dir}')
         return None
 
@@ -931,7 +932,7 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
             print(f"Download failed: {str(e)}")
             return None
     else: # Extract the zip if it exists, don't download again
-        print(f'Output path "{output_path}" already exists')
+        print(f'Scenario zip file "{output_path}" already exists.')
     
     # Unzip downloaded scenario
     unzipped_folder = unzip(output_path)
@@ -939,7 +940,7 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     # Move unzipped folder to scenarios folder
     unzipped_folder_without_suffix = unzipped_folder.replace('_downloaded', '')
     os.rename(unzipped_folder, unzipped_folder_without_suffix)
-    shutil.move(unzipped_folder_without_suffix, scenarios_dir)
+    shutil.move(unzipped_folder_without_suffix, scenario_folder)
     print(f"✓ Unzipped and moved to {scenarios_dir}")
 
     print(f"✓ Scenario '{scenario_name}' ready to use!")
