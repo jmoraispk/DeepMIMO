@@ -21,7 +21,7 @@ import scipy.io
 
 # Local imports
 from ... import consts as c
-from ...general_utilities import get_mat_filename, load_mat_file_as_dict, unzip
+from ...general_utilities import get_mat_filename, load_mat_file_as_dict, unzip, get_scenario_folder
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
 from ...materials import MaterialList
@@ -79,7 +79,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
         scen_folder = scen_name
         scen_name = os.path.basename(scen_folder)
     else:
-        scen_folder = os.path.join(c.SCENARIOS_FOLDER, scen_name)
+        scen_folder = get_scenario_folder(scen_name)
     
     # Download scenario if needed
     if not os.path.exists(scen_folder):

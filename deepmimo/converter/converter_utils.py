@@ -12,7 +12,7 @@ import scipy.io
 import shutil
 import pickle
 
-from ..general_utilities import get_mat_filename, zip_folder
+from ..general_utilities import get_mat_filename, zip, get_scenario_folder
 from .. import consts as c
 
 def save_pickle(obj: Any, filename: str) -> None:
@@ -128,7 +128,7 @@ def save_scenario(sim_folder: str, scen_name: str = '',
     """
     default_scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
     scen_name = scen_name if scen_name else default_scen_name
-    scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
+    scen_path = get_scenario_folder(scen_name)
     if os.path.exists(scen_path):
         if overwrite is None:
             print(f'Scenario with name "{scen_name}" already exists in '
