@@ -3,6 +3,7 @@
 import time
 import numpy as np
 import deepmimo as dm
+import matplotlib.pyplot as plt
 
 from pprint import pprint
 
@@ -47,8 +48,8 @@ def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
 # Example usage
 # rt_folder = './P2Ms/asu_campus/study_area_asu5'
 # rt_folder = './P2Ms/simple_street_canyon_test/study_rays=0.25_res=2m_3ghz'
-rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
-# rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_test'
+# rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
+rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_test'
 
 # Convert using v4 converter
 scen_name = convert_scenario(rt_folder, use_v3=False)
@@ -99,14 +100,6 @@ dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
 # Other computations
 dataset.compute_channels(ch_params)
 
-var_names = ['channel', 'num_paths', 'distances', 'pathloss', 'grid_size', 
-             'grid_spacing', 'los']
-
-for var_name in list(dataset.keys())+var_names:
-    print(f'dataset.{var_name}: {dataset[var_name]}')
-
-dataset.info()
-
 # End timing
 end_time = time.time()
 print(f"Time elapsed: {end_time - start_time:.2f} seconds")
@@ -136,28 +129,35 @@ pprint(a.flatten()[-10:])
 pprint(b.flatten()[-10:])
 pprint(np.max(np.abs(a-b)))
 
-#%% Demo
-
-
-
-
-#%% Visualization check
-import deepmimo as dm
-dataset = dm.load_scenario('asu_campus', tx_sets={1: [0]}, rx_sets={2: 'all'})
-idxs = dm.uniform_sampling([8,4], 321, 411)
-dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
-
 #%%
-
 import deepmimo as dm
-dataset = dm.load_scenario('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
+# dataset = dm.load_scenario('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
+# dataset = dm.load_scenario('asu_campus', tx_sets={1: [0]}, rx_sets={2: 'all'})
+dataset = dm.load_scenario('sionna_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
 idxs = dataset.get_uniform_idxs([1,1])
-idxs = np.arange(dataset.rx_pos.shape[0])
+# idxs = np.arange(dataset.rx_pos.shape[0])
 dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
 
 
 # import matplotlib.pyplot as plt
 # plt.scatter(dataset['rx_pos'][10,0], dataset['rx_pos'][10,1], c='k', s=20)
+#%%
+
+idxs = dataset.get_uniform_idxs([1,1])
+
+#%%
+
+active_mask = dataset.num_paths > 0
+print(f"\nNumber of active positions: {np.sum(active_mask)}")
+print(f"Number of inactive positions: {np.sum(~active_mask)}")
+
+# Create scatter plot showing active vs inactive positions
+plt.figure(figsize=(12, 8))
+plt.scatter(dataset.rx_pos[~active_mask, 0], dataset.rx_pos[~active_mask, 1], 
+           alpha=0.5, s=10, c='red', label='Inactive')
+plt.scatter(dataset.rx_pos[active_mask, 0], dataset.rx_pos[active_mask, 1], 
+           alpha=0.5, s=10, c='green', label='Active')
+plt.legend()
 
 #%%
 
@@ -181,62 +181,9 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 #%%
 import deepmimo as dm
 dm.summary('asu_campus')
-# %%
-import deepmimo as dm
-
-dm.upload('./asu_campus.zip', '<your-upload-key>')
-
-# download_url = dm.download('asu_campus')
-# print(download_url)
-
-
-#%%
-import shutil
-import deepmimo.consts as c
-import deepmimo.general_utilities as gu
-
-scen_name = 'asu_campus'
-scen_folder = c.SCENARIOS_FOLDER + '/' + scen_name
-
-# Get params.mat path
-params_path = scen_folder + f'/{c.PARAMS_FILENAME}.mat'
-
-# Zip scenario and get path
-zip_path = gu.zip(scen_folder)
-
-# Upload to DeepMIMO
-dm.upload(zip_path, '<your-upload-key>') # get key from DeepMIMO website 
-
-# Download from DeepMIMO
-#downloaded_zip_path = dm.download(scen_name)
-
-# (simulate a downloaded file while the download is not working)
-downloaded_zip_path = zip_path.replace('.zip', '_downloaded.zip') # a simulation folder
-shutil.copy(zip_path, downloaded_zip_path)
-
-# Unzip downloaded scenario
-unzipped_folder = gu.unzip(downloaded_zip_path)
-
-# Move unzipped folder to scenarios folder
-# shutil.move(unzipped_folder, scen_folder)
-import os
-basename = os.path.basename(unzipped_folder)
-
-# Try loading the scenario and check if: a) find the path b) 
-dataset = dm.load_scenario(basename)
-
-# Check if the original and downloaded scenarios are the same
-
-
-
-
-
-
-
-
-
-
-
-
 
 # %%
+# import deepmimo as dm
+# dm.upload('asu_campus', '<your-upload-key>')
+# dm.download('asu_campus')
+

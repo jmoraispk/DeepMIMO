@@ -118,7 +118,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
 
     return dataset
 
-def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = 5,
+def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c.MAX_PATHS,
                          tx_sets: Dict[int, list | str] | list | str = 'all',
                          rx_sets: Dict[int, list | str] | list | str = 'all',
                          matrices: List[str] | str = 'all') -> Dataset:
