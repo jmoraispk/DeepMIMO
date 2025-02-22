@@ -47,6 +47,28 @@ def get_downloads_dir() -> str:
     """
     return os.path.join(os.getcwd(), c.SCENARIOS_DOWNLOAD_FOLDER)
 
+def get_scenario_folder(scenario_name: str) -> str:
+    """Get the absolute path to a specific scenario folder.
+    
+    Args:
+        scenario_name: Name of the scenario
+        
+    Returns:
+        str: Absolute path to the scenario folder
+    """
+    return os.path.join(get_scenarios_dir(), scenario_name)
+
+def get_params_path(scenario_name: str) -> str:
+    """Get the absolute path to a scenario's params.mat file.
+    
+    Args:
+        scenario_name: Name of the scenario
+        
+    Returns:
+        str: Absolute path to the scenario's params.mat file
+    """
+    return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}.mat')
+
 class DotDict(Mapping[K, V]):
     """A dictionary subclass that supports dot notation access to nested dictionaries.
 
@@ -736,10 +758,8 @@ def upload(scenario_name: str, key: str) -> str:
     Returns:
         Download URL if successful, None otherwise
     """
-    scen_folder = os.path.join(get_scenarios_dir(), scenario_name)
-
-    # Get params.mat path
-    params_path = os.path.join(scen_folder, f'{c.PARAMS_FILENAME}.mat')
+    scen_folder = get_scenario_folder(scenario_name)
+    params_path = get_params_path(scenario_name)
 
     print(f"Processing scenario: {scenario_name}")
 
@@ -870,7 +890,7 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     #       and ask for compatibility with the current version of DeepMIMO.
     #       This may require downloading the zip again.
     # Check if file already exists in scenarios folder
-    if os.path.exists(os.path.join(scenarios_dir, scenario_name)):
+    if os.path.exists(get_scenario_folder(scenario_name)):
         print(f'Scenario "{scenario_name}" already exists in {scenarios_dir}')
         return None
 
