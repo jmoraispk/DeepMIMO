@@ -31,7 +31,11 @@ from .generator.python.channel import ChannelGenParameters
 from .converter.converter import convert
 from .converter.wireless_insite.insite_converter_v3 import insite_rt_converter_v3
 from .info import info
-from .general_utilities import summary
+from .general_utilities import (
+    summary,
+    upload,
+    download,
+)
 
 # Physical world representation
 from .scene import (
@@ -40,6 +44,10 @@ from .scene import (
     PhysicalElementGroup,
     Scene
 )
+
+# Import immediate modules
+from . import consts
+from . import general_utilities
 
 __all__ = [
     # Core functionality
@@ -66,4 +74,13 @@ __all__ = [
     'PhysicalElement',
     'PhysicalElementGroup',
     'Scene',
+    
+    # General utilities
+    'summary',
+    'upload',
+    'download',
+    
+    # Constants
+    'consts',
+    'general_utilities',
 ]

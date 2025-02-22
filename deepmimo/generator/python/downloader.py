@@ -138,23 +138,6 @@ def download_scenario(name: str) -> Optional[str]:
         return None
 
 
-def extract_scenario(path_to_zip: str) -> None:
-    """Extract a downloaded scenario zip file.
-    
-    This function extracts the contents of a downloaded scenario zip file
-    to the appropriate directory.
-
-    Args:
-        path_to_zip (str): Path to the zip file to extract.
-        
-    Raises:
-        zipfile.BadZipFile: If zip file is corrupted.
-        OSError: If extraction fails due to file system issues.
-    """
-    with zipfile.ZipFile(path_to_zip, 'r') as zip_ref:
-        zip_ref.extractall(os.path.dirname(path_to_zip))
-
-
 def download_scenario_handler(name: str) -> str:
     """Handle scenario download with retry mechanism.
     

@@ -130,7 +130,6 @@ pprint(b.flatten()[-10:])
 pprint(np.max(np.abs(a-b)))
 
 #%%
-
 import deepmimo as dm
 # dataset = dm.load_scenario('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
 # dataset = dm.load_scenario('asu_campus', tx_sets={1: [0]}, rx_sets={2: 'all'})
@@ -180,5 +179,11 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 #####
 
 #%%
-
+import deepmimo as dm
 dm.summary('asu_campus')
+
+# %%
+# import deepmimo as dm
+# dm.upload('asu_campus', '<your-upload-key>')
+# dm.download('asu_campus')
+
