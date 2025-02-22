@@ -577,22 +577,42 @@ def _generate_key_components2(summary_str: str) -> Dict:
     """Generate key components sections from summary string.
 
     Args:
-        summary_str: Summary string from scenario
-    """
-    html_dict = { "sections": []}
+        summary_str: Summary string from scenario containing sections in [Section Name] format
+                    followed by their descriptions
 
-    for i in range(10):
-        html_dict["sections"].append({
-            "name": f"Section {i+1}",  # what is between []
-            "description":             # what is under [] and before the next []
-            f""" 
-                <p>This is the description for section {i+1}.</p>
+    Returns:
+        Dictionary containing sections with their names and HTML-formatted descriptions
+    """
+    def create_section(name: str, desc_lines: list) -> dict:
+        """Helper to create a section with consistent HTML formatting."""
+        return {
+            "name": name,
+            "description": f"""
+                <div class="section-content">
+                    {' '.join(line.replace('- ', '<li>').replace(':', '</li>') 
+                             for line in desc_lines)}
+                </div>
             """
-        })
+        }
+
+    html_dict = {"sections": []}
+    current_section = None
+    current_description = []
+    
+    for line in [l.strip() for l in summary_str.split('\n') if l.strip()]:
+        if line.startswith('[') and line.endswith(']'):
+            if current_section:
+                html_dict["sections"].append(create_section(current_section, current_description))
+            current_section = line[1:-1]
+            current_description = []
+        elif current_section:
+            current_description.append(line)
+    
+    # Add the last section if exists
+    if current_section:
+        html_dict["sections"].append(create_section(current_section, current_description))
 
     return html_dict
-
-
 
 
 def _generate_key_components(params_dict: Dict) -> Dict:
@@ -700,9 +720,6 @@ def upload(scenario_name: str, key: str) -> str:
     # Get params.mat path
     params_path = scen_folder + f'/{c.PARAMS_FILENAME}.mat'
 
-    # Zip scenario
-    zip_path = zip(scen_folder)
-
     print(f"Processing scenario: {scenario_name}")
 
     try:
@@ -734,29 +751,32 @@ def upload(scenario_name: str, key: str) -> str:
         "advancedParameters": processed_params["advancedParameters"],
     }
 
-    # abs_path = os.path.abspath(zip_path)
+    # Zip scenario
+    zip_path = zip(scen_folder)
 
     try:
         print("Uploading to storage...")
         upload_result = _dm_upload_api_call("https://dev.deepmimo.net/api/b2/authorize-upload", 
                                             zip_path, key)
+    except Exception as e:
+        print(f"Error: Failed to upload to storage - {str(e)}")
 
-        if not upload_result or "downloadUrl" not in upload_result:
-            print("Error: Failed to upload to storage")
-            raise RuntimeError("Failed to upload to B2")
-        print("✓ Upload successful")
+    if not upload_result or "downloadUrl" not in upload_result:
+        raise RuntimeError("Failed to upload to B2")
+    print("✓ Upload successful")
+    
+    submission_data["download"] = [
+        {
+            "version": f"v{processed_params['advancedParameters']['dmVersion']}",
+            "description": "Initial version",
+            "zip": f"{upload_result['downloadUrl']}",
+            "folder": "",
+            "fileId": upload_result.get("fileId"),
+        }
+    ]
 
-        submission_data["download"] = [
-            {
-                "version": f"v{processed_params['advancedParameters']['dmVersion']}",
-                "description": "Initial version",
-                "zip": f"{upload_result['downloadUrl']}",
-                "folder": "",
-                "fileId": upload_result.get("fileId"),
-            }
-        ]
-
-        print("Creating submission...")
+    print("Creating website submission...")
+    try:
         response = requests.post(
             "https://dev.deepmimo.net/api/submissions",
             json={"type": "scenario", "content": submission_data},
@@ -770,6 +790,10 @@ def upload(scenario_name: str, key: str) -> str:
         print(f"Error: Upload failed - {str(e)}")
         result = None
 
+    print('Thank you for your submission!')
+    print('Head over to deepmimo.net/dashboard?tab=submissions to add any additional details. ')
+    print('The admins have been notified and will get to it ASAP.')
+    
     return result
 
 def _download_url(scenario_name: str) -> str:
@@ -812,7 +836,7 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     """Download a DeepMIMO scenario from B2 storage.
 
     Args:
-        scenario_name: Name of the scenario (with or without .zip extension)
+        scenario_name: Name of the scenario
         output_dir: Directory to save file (defaults to current directory)
 
     Returns:
@@ -821,26 +845,34 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     try:
         # Get download URL using existing helper
         url = _download_url(scenario_name)
+    except Exception as e:
+        print(f"Error: Failed to get download URL - {str(e)}")
+        return None
+    
+    # Extract filename from scenario name
+    if not scenario_name.endswith(".zip"):
+        scenario_name += ".zip"
+    # TODO: put scenarios in scenarios ZIP (or check if they already exist in main folder)
 
-        # Extract filename from scenario name
-        if not scenario_name.endswith(".zip"):
-            scenario_name += ".zip"
-
-        # Set output directory
-        if output_dir is None:
-            output_dir = os.getcwd()
+    # Set output directory
+    if output_dir is None:
+        output_dir = os.getcwd()
+    else:
         os.makedirs(output_dir, exist_ok=True)
 
-        # Add '_downloaded' suffix before extension
-        base, ext = os.path.splitext(scenario_name)
-        output_path = os.path.join(output_dir, f"{base}_downloaded{ext}")
+    # Add '_downloaded' suffix before extension
+    base, ext = os.path.splitext(scenario_name)
+    output_path = os.path.join(output_dir, f"{base}_downloaded{ext}")
 
-        # Check if file already exists
-        if os.path.exists(output_path):
-            print(f'Output path "{output_path}" already exists')
-            return output_path
+    # Check if file already exists
+    if os.path.exists(output_path):
+        print(f'Output path "{output_path}" already exists')
+        return output_path
 
-        print(f"Downloading scenario '{scenario_name}'")
+    print(f"Downloading scenario '{scenario_name}'")
+        
+
+    try:
         response = requests.get(url, stream=True, headers=HEADERS)
         response.raise_for_status()
 
@@ -849,13 +881,8 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
 
         # Download with progress bar
         with open(output_path, "wb") as file:
-            with tqdm(
-                total=total_size,
-                unit="B",
-                unit_scale=True,
-                unit_divisor=1024,
-                dynamic_ncols=True,
-            ) as progress_bar:
+            with tqdm(total=total_size, unit="B", unit_scale=True, 
+                      unit_divisor=1024, dynamic_ncols=True) as progress_bar:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         file.write(chunk)
@@ -961,3 +988,4 @@ def zip_folder(folder_path: str) -> str:
                 zipf.write(file_path, archive_path)
 
     return zip_path
+
