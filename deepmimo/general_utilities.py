@@ -569,24 +569,85 @@ def _process_params_data(params_dict: Dict) -> Dict:
 
 def _generate_key_components2(summary_str: str) -> Dict:
     """Generate key components sections from summary string.
-
+    
     Args:
-        summary_str: Summary string from scenario
+        summary_str: Summary string from scenario summary() function
+        
+    Returns:
+        Dictionary containing parsed sections with HTML formatting
     """
-    html_dict = { "sections": []}
-
-    for i in range(10):
+    # Initialize return structure
+    html_dict = {"sections": []}
+    
+    # Split into sections based on [...] headers
+    sections = summary_str.split("\n[")
+    
+    # Skip the first split since it contains the title banner
+    for section in sections[1:]:
+        # Split section into name and content
+        section_parts = section.split("]\n")
+        if len(section_parts) != 2:
+            continue
+            
+        section_name, content = section_parts
+        
+        # Convert content to HTML
+        html_content = []
+        subsection = []
+        
+        for line in content.strip().split("\n"):
+            if line.strip():
+                if line.startswith("- "):
+                    # Regular list item
+                    if subsection:
+                        # Add accumulated subsection
+                        html_content.append(f"<h4>{subsection[0]}</h4>")
+                        html_content.append("<ul>")
+                        html_content.extend([f"<li>{item[2:]}</li>" for item in subsection[1:]])
+                        html_content.append("</ul>")
+                        subsection = []
+                    
+                    if not subsection:
+                        if not any(tag in "".join(html_content) for tag in ["</ul>", "</h4>"]):
+                            # Start new list if not in subsection and no list exists
+                            html_content.append("<ul>")
+                        html_content.append(f"<li>{line[2:]}</li>")
+                        
+                elif not line.startswith(" "):
+                    # New subsection header
+                    if subsection:
+                        # Add previous subsection
+                        html_content.append(f"<h4>{subsection[0]}</h4>")
+                        html_content.append("<ul>")
+                        html_content.extend([f"<li>{item[2:]}</li>" for item in subsection[1:]])
+                        html_content.append("</ul>")
+                    subsection = [line]
+                else:
+                    # Subsection content
+                    if subsection:
+                        subsection.append(line)
+                    else:
+                        # Regular content
+                        html_content.append(f"<p>{line.strip()}</p>")
+        
+        # Add final subsection if exists
+        if subsection:
+            html_content.append(f"<h4>{subsection[0]}</h4>")
+            html_content.append("<ul>")
+            html_content.extend([f"<li>{item[2:]}</li>" for item in subsection[1:]])
+            html_content.append("</ul>")
+            
+        # Close any open lists
+        if html_content and "<ul>" in html_content[-4:] and "</ul>" not in html_content[-3:]:
+            html_content.append("</ul>")
+            
+        # Add section to result
         html_dict["sections"].append({
-            "name": f"Section {i+1}",  # what is between []
-            "description":             # what is under [] and before the next []
-            f""" 
-                <p>This is the description for section {i+1}.</p>
-            """
+            "name": section_name,
+            "description": "\n".join(html_content)
         })
-
+    
     return html_dict
-
-
 
 
 def _generate_key_components(params_dict: Dict) -> Dict:
