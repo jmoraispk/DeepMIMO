@@ -45,6 +45,10 @@ from .scene import (
     Scene
 )
 
+# Import immediate modules
+from . import consts
+from . import general_utilities
+
 __all__ = [
     # Core functionality
     'generate',
@@ -75,4 +79,8 @@ __all__ = [
     'summary',
     'upload',
     'download',
+    
+    # Constants
+    'consts',
+    'general_utilities',
 ]
