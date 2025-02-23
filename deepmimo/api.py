@@ -217,36 +217,79 @@ def _generate_key_components2(summary_str: str) -> Dict:
     Returns:
         Dictionary containing sections with their names and HTML-formatted descriptions
     """
-    def create_section(name: str, desc_lines: list) -> dict:
-        """Helper to create a section with consistent HTML formatting."""
-        return {
-            "name": name,
-            "description": f"""
-                <div class="section-content">
-                    {' '.join(line.replace('- ', '<li>').replace(':', '</li>') 
-                             for line in desc_lines)}
-                </div>
-            """
-        }
-
     html_dict = {"sections": []}
     current_section = None
-    current_description = []
+    current_lines = []
     
-    for line in [l.strip() for l in summary_str.split('\n') if l.strip()]:
+    for line in summary_str.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('='):  # Skip empty lines and separator lines
+            continue
+            
         if line.startswith('[') and line.endswith(']'):
+            # Process previous section if it exists
             if current_section:
-                html_dict["sections"].append(create_section(current_section, current_description))
+                html_dict["sections"].append(_format_section(current_section, current_lines))
+            
+            # Start new section
             current_section = line[1:-1]
-            current_description = []
+            current_lines = []
         elif current_section:
-            current_description.append(line)
+            current_lines.append(line)
     
-    # Add the last section if exists
+    # Add the final section
     if current_section:
-        html_dict["sections"].append(create_section(current_section, current_description))
+        html_dict["sections"].append(_format_section(current_section, current_lines))
 
     return html_dict
+
+def _format_section(name: str, lines: list) -> dict:
+    """Format a section's content into proper HTML with consistent styling.
+
+    Args:
+        name: Section name
+        lines: List of content lines for the section
+
+    Returns:
+        Formatted section dictionary with name and HTML description
+    """
+    # Group content by subsections (lines starting with newline)
+    subsections = []
+    current_subsection = []
+    
+    for line in lines:
+        if line and not line.startswith('-'):  # New subsection header
+            if current_subsection:
+                subsections.append(current_subsection)
+            current_subsection = [line]
+        elif line:  # Content line
+            current_subsection.append(line)
+    
+    if current_subsection:
+        subsections.append(current_subsection)
+
+    # Build HTML content
+    html_parts = []
+    for subsection in subsections:
+        if len(subsection) == 1:  # Single line - use paragraph
+            html_parts.append(f"<p>{subsection[0]}</p>")
+        else:  # Multiple lines - use header and list
+            header = subsection[0]
+            items = [line[2:] for line in subsection[1:]]  # Remove "- " prefix
+            
+            html_parts.append(f"<h4>{header}</h4>")
+            html_parts.append("<ul>")
+            html_parts.extend(f"<li>{item}</li>" for item in items)
+            html_parts.append("</ul>")
+
+    return {
+        "name": name,
+        "description": f"""
+            <div class="section-content">
+                {''.join(html_parts)}
+            </div>
+        """
+    }
 
 
 def _generate_key_components(params_dict: Dict) -> Dict:
@@ -258,10 +301,9 @@ def _generate_key_components(params_dict: Dict) -> Dict:
     Returns:
         Key components sections for submission
     """
-    params = params_dict.get(c.PARAMS_FILENAME, {})
-    rt_params = params.get(c.RT_PARAMS_PARAM_NAME, {})
-    txrx_sets = params.get(c.TXRX_PARAM_NAME, {})
-    scene_params = params.get(c.SCENE_PARAM_NAME, {})
+    rt_params = params_dict.get(c.RT_PARAMS_PARAM_NAME, {})
+    txrx_sets = params_dict.get(c.TXRX_PARAM_NAME, {})
+    scene_params = params_dict.get(c.SCENE_PARAM_NAME, {})
 
     frequency = float(rt_params.get("frequency", 3.5e9)) / 1e9
 
@@ -332,7 +374,7 @@ def _generate_key_components(params_dict: Dict) -> Dict:
             {
                 "name": "Version",
                 "description": f"""
-                    <p><strong>DeepMIMO Version:</strong> {params.get(c.VERSION_PARAM_NAME, 'Unknown')}</p>
+                    <p><strong>DeepMIMO Version:</strong> {params_dict.get(c.VERSION_PARAM_NAME, 'Unknown')}</p>
                 """,
             },
         ]
