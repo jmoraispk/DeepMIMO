@@ -83,7 +83,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     max_inter = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
     
     # Initialize inactive indices list
-    rx_inactive_idxs = []
+    rx_inactive_idxs_count = 0
     
     for tx_idx, tx_pos_target in enumerate(all_tx_pos):
         # Pre-allocate matrices
@@ -132,7 +132,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
 
                 if n_paths == 0:
                     if tx_idx == 0:
-                        rx_inactive_idxs.append(abs_idx)
+                        rx_inactive_idxs_count += 1
                     continue
 
                 # Power, phase, delay
@@ -174,12 +174,10 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
 
     # Update txrx_dict with tx and rx numbers 
     txrx_dict['txrx_set_1']['num_points'] = n_tx
-    txrx_dict['txrx_set_1']['inactive_idxs'] = np.array([])
     txrx_dict['txrx_set_1']['num_active_points'] = n_tx
     
     txrx_dict['txrx_set_2']['num_points'] = n_rx
-    txrx_dict['txrx_set_2']['inactive_idxs'] = np.array(rx_inactive_idxs)
-    txrx_dict['txrx_set_2']['num_active_points'] = n_rx - len(rx_inactive_idxs)
+    txrx_dict['txrx_set_2']['num_active_points'] = n_rx - rx_inactive_idxs_count
 
 def get_sionna_interaction_types(types: np.ndarray, inter_pos: np.ndarray) -> np.ndarray:
     """

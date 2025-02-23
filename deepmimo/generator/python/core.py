@@ -21,7 +21,7 @@ import scipy.io
 
 # Local imports
 from ... import consts as c
-from ...general_utilities import get_mat_filename, load_mat_file_as_dict, unzip, get_scenario_folder
+from ...general_utilities import get_mat_filename, load_dict_from_json, unzip, get_scenario_folder
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
 from ...materials import MaterialList
@@ -95,7 +95,7 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
     params_mat_file = os.path.join(scen_folder, 'params.mat')
     if not os.path.exists(params_mat_file):
         raise ValueError(f'Parameters file not found in {scen_folder}')
-    params = load_mat_file_as_dict(params_mat_file)['params']
+    params = load_dict_from_json(params_mat_file)['params']
     
     # Load scenario data
     n_snapshots = params[c.SCENE_PARAM_NAME][c.SCENE_PARAM_NUMBER_SCENES]
@@ -213,7 +213,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         invalid = set(matrices_to_load) - valid_matrices
         if invalid:
             raise ValueError(f"Invalid matrix names: {invalid}. "
-                           f"Valid names are: {valid_matrices}")
+                             f"Valid names are: {valid_matrices}")
         
     for key in tx_dict.keys():
         if key not in matrices_to_load:
@@ -291,10 +291,6 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             elif type(idxs) is str:
                 if idxs == 'all':
                     sets[set_idx] = all_idxs_available
-                elif idxs == 'active':
-                    inactive_idx = txrx_set['inactive_idxs']
-                    sets[set_idx] = np.array(list(set(all_idxs_available.tolist()) - 
-                                                set(inactive_idx.tolist())))
                 else:
                     raise Exception(f"String '{idxs}' not recognized for tx/rx indices " )
             else:
@@ -303,7 +299,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             # check that the specific tx/rx indices inside the sets are valid
             if not set(sets[set_idx]).issubset(set(all_idxs_available.tolist())):
                 raise Exception(f'Some indices of {idxs} are not in {all_idxs_available}. '
-                              + info_str)
+                                 + info_str)
             
         sets_dict = sets
     elif type(sets) is list:

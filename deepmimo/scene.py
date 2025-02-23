@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from .materials import MaterialList
 from .consts import SCENE_PARAM_NUMBER_SCENES
-from .general_utilities import load_mat_file_as_dict
+from .general_utilities import load_dict_from_json
 #------------------------------------------------------------------------------
 # Constants
 #------------------------------------------------------------------------------
@@ -649,7 +649,7 @@ class Scene:
         vertices = loadmat(f"{base_folder}/vertices.mat")['vertices']
         tri_faces = loadmat(f"{base_folder}/faces.mat")['faces']
         materials = loadmat(f"{base_folder}/materials.mat")['materials'].flatten()
-        objects_metadata = load_mat_file_as_dict(f"{base_folder}/objects.mat")['objects']
+        objects_metadata = load_dict_from_json(f"{base_folder}/objects.mat")['objects']
         
         scene = cls()
         

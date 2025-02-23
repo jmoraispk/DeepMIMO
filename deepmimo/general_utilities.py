@@ -14,6 +14,7 @@ from . import consts as c
 import os
 from tqdm import tqdm
 import zipfile
+import json
 
 K = TypeVar("K", bound=str)
 V = TypeVar("V")
@@ -55,16 +56,54 @@ def get_scenario_folder(scenario_name: str) -> str:
     """
     return os.path.join(get_scenarios_dir(), scenario_name)
 
-def get_params_path(scenario_name: str) -> str:
-    """Get the absolute path to a scenario's params.mat file.
+def get_params_path(scenario_name: str, use_json: bool = True) -> str:
+    """Get the absolute path to a scenario's params file.
     
     Args:
         scenario_name: Name of the scenario
+        use_json: Whether to return path for JSON file (True) or MAT file (False)
         
     Returns:
-        str: Absolute path to the scenario's params.mat file
+        str: Absolute path to the scenario's params file
     """
-    return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}.mat')
+    ext = '.json' if use_json else '.mat'
+    return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}{ext}')
+
+def get_objects_path(scenario_name: str, use_json: bool = True) -> str:
+    """Get the absolute path to a scenario's objects file.
+    
+    Args:
+        scenario_name: Name of the scenario
+        use_json: Whether to return path for JSON file (True) or MAT file (False)
+        
+    Returns:
+        str: Absolute path to the scenario's objects file
+    """
+    ext = '.json' if use_json else '.mat'
+    return os.path.join(get_scenario_folder(scenario_name), f'objects{ext}')
+
+def save_dict_as_json(data_dict: Dict[str, Any], output_path: str) -> None:
+    """Save dictionary as JSON, handling NumPy arrays and other non-JSON types.
+    
+    Args:
+        data_dict: Dictionary to save
+        output_path: Path to save JSON file
+    """
+    with open(output_path, 'w') as f:
+        json.dump(data_dict, f, indent=2, 
+                 default=lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x))
+
+def load_dict_from_json(file_path: str) -> Dict[str, Any]:
+    """Load dictionary from JSON file.
+    
+    Args:
+        file_path: Path to JSON file
+        
+    Returns:
+        Dictionary containing loaded data
+    """
+    with open(file_path, 'r') as f:
+        return json.load(f)
 
 class DotDict(Mapping[K, V]):
     """A dictionary subclass that supports dot notation access to nested dictionaries.
@@ -304,7 +343,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
 
     mat_file = get_params_path(scen_name)
 
-    params_dict = load_mat_file_as_dict(mat_file)[c.PARAMS_FILENAME]
+    params_dict = load_dict_from_json(mat_file)[c.PARAMS_FILENAME]
     rt_params = params_dict[c.RT_PARAMS_PARAM_NAME]
     scene_params = params_dict[c.SCENE_PARAM_NAME]
     material_params = params_dict[c.MATERIALS_PARAM_NAME]

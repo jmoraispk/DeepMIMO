@@ -16,7 +16,7 @@ from .general_utilities import (
     get_downloads_dir,
     get_scenario_folder,
     get_params_path,
-    load_mat_file_as_dict,
+    load_dict_from_json,
     zip,
     unzip
 )
@@ -358,7 +358,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
 
     try:
         print("Parsing scenario parameters...")
-        params_dict = load_mat_file_as_dict(params_path)
+        params_dict = load_dict_from_json(params_path)
         print("✓ Parameters parsed successfully")
     except Exception as e:
         print(f"Error: Failed to parse parameters - {str(e)}")
