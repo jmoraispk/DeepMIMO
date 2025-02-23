@@ -380,7 +380,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     for _, mat_props in material_params.items():
         summary_str += f"\n{mat_props[c.MATERIALS_PARAM_NAME_FIELD]}:\n"
         summary_str += f"- Permittivity: {mat_props[c.MATERIALS_PARAM_PERMITTIVITY]:.2f}\n"
-        summary_str += f"- Conductivity: {mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]:.2f} S/m\n"
+        summary_str += f"- Conductivity: {float(mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]):.2f} S/m\n"
         summary_str += f"- Scattering model: {mat_props[c.MATERIALS_PARAM_SCATTERING_MODEL]}\n"
         summary_str += (
             f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
