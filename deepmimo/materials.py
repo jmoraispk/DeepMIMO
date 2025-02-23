@@ -135,6 +135,13 @@ class MaterialList:
         materials = []
         
         for _, mat_data in materials_dict.items():
+            # Convert string numeric values to float
+            for key, value in mat_data.items():
+                if isinstance(value, str) and any(c in value for c in 'e+-0123456789.'):
+                    try:
+                        mat_data[key] = float(value)
+                    except ValueError:
+                        pass  # Keep as string if conversion fails
             materials.append(Material(**mat_data))
         
         materials_list.add_materials(materials)
