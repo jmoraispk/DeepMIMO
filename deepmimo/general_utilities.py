@@ -302,9 +302,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     # Read params.mat and provide TXRX summary, total number of tx & rx, scene size,
     # and other relevant parameters, computed/extracted from the all dicts, not just rt_params
 
-    scen_folder = get_scenario_folder(scen_name)
-
-    mat_file = f"./{scen_folder}/{c.PARAMS_FILENAME}.mat"
+    mat_file = get_params_path(scen_name)
 
     params_dict = load_mat_file_as_dict(mat_file)[c.PARAMS_FILENAME]
     rt_params = params_dict[c.RT_PARAMS_PARAM_NAME]
