@@ -44,7 +44,7 @@ class InsiteMaterial:
     directive_beta: float = 4.0   # 1-10, defines how broad backscatter beam is
     directive_lambda: float = 0.5 # 0-1, fraction of the scattered power in forward direction (vs back)
     conductivity: float = 0.0     # >=0, conductivity
-    permittivity: float = 1.0     # >=0, permittivity
+    permittivity: float = 0.0     # >=0, permittivity
     roughness: float = 0.0        # >=0, roughness
     thickness: float = 0.0        # >=0, thickness [m]
     
@@ -74,6 +74,34 @@ class InsiteMaterial:
         )
 
 
+@dataclass
+class InsiteFoliage:
+    """
+    Foliage Material in Wireless InSite.
+    
+    Sources:
+        [1] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
+    """
+    id: int = -1
+    name: str = ''
+    thickness: float = 0.0
+    density: float = 0.0
+    vertical_attenuation: float = 0.0
+    horizontal_attenuation: float = 0.0
+    permittivity_vr: float = 0.0
+    permittivity_hr: float = 0.0
+
+    def to_material(self) -> Material:
+        """Convert InsiteMaterial to base Material."""
+        
+        return Material(
+            id=self.id,
+            name=self.name,
+            permittivity=self.permittivity_vr,
+            thickness=self.thickness,
+            scattering_model=Material.SCATTERING_NONE,
+        )
+
 def parse_materials_from_file(file: Path) -> List[Material]:
     """Parse materials from a single Wireless Insite file.
     
@@ -91,20 +119,32 @@ def parse_materials_from_file(file: Path) -> List[Material]:
         mat_entries = [mat_entries] if not isinstance(mat_entries, list) else mat_entries
         
         for mat in mat_entries:
-            # Create InsiteMaterial object
-            insite_mat = InsiteMaterial(
-                name=mat.name,
-                diffuse_scattering_model=mat.values['diffuse_scattering_model'],
-                fields_diffusively_scattered=mat.values['fields_diffusively_scattered'],
-                cross_polarized_power=mat.values['cross_polarized_power'],
-                directive_alpha=mat.values['directive_alpha'],
-                directive_beta=mat.values['directive_beta'],
-                directive_lambda=mat.values['directive_lambda'],
-                conductivity=mat.values['DielectricLayer'].values['conductivity'],
-                permittivity=mat.values['DielectricLayer'].values['permittivity'],
-                roughness=mat.values['DielectricLayer'].values['roughness'],
-                thickness=mat.values['DielectricLayer'].values['thickness']
-            )
+            if 'diffuse_scattering_model' not in mat.values:
+                # Foliage!
+                insite_mat = InsiteFoliage(
+                    name=mat.name,
+                    thickness=mat.values['thickness'],
+                    density=mat.values['density'],
+                    vertical_attenuation=mat.values['VerticalAttenuation'],
+                    horizontal_attenuation=mat.values['HorizontalAttenuation'],
+                    permittivity_vr=mat.values['permittivity_vr'],
+                    permittivity_hr=mat.values['permittivity_hr']
+                )
+            else:
+                # Create InsiteMaterial object
+                insite_mat = InsiteMaterial(
+                    name=mat.name,
+                    diffuse_scattering_model=mat.values['diffuse_scattering_model'],
+                    fields_diffusively_scattered=mat.values['fields_diffusively_scattered'],
+                    cross_polarized_power=mat.values['cross_polarized_power'],
+                    directive_alpha=mat.values['directive_alpha'],
+                    directive_beta=mat.values['directive_beta'],
+                    directive_lambda=mat.values['directive_lambda'],
+                    conductivity=mat.values['DielectricLayer'].values['conductivity'],
+                    permittivity=mat.values['DielectricLayer'].values['permittivity'],
+                    roughness=mat.values['DielectricLayer'].values['roughness'],
+                    thickness=mat.values['DielectricLayer'].values['thickness']
+                )
             
             # Convert to base Material
             materials.append(insite_mat.to_material())
