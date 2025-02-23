@@ -103,7 +103,7 @@ class PhysicalObjectParser:
         # Read file content
         with open(self.file_path, 'r') as f:
             content = f.read()
-            
+        
         # Extract objects using extract_objects
         object_vertices = extract_objects(content)
         
@@ -112,6 +112,9 @@ class PhysicalObjectParser:
         for i, vertices in enumerate(object_vertices):
             # Get faces for this object
             object_faces = get_object_faces(vertices)
+            
+            if object_faces is None:
+                continue # may happen when vertices are collinear
             
             # Convert faces to Face objects
             faces = [Face(vertices=face) for face in object_faces]

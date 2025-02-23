@@ -22,7 +22,7 @@ from .sionna_materials import read_materials
 from .sionna_scene import read_scene
 
 def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
-                        overwrite: bool = None, vis_scene: bool = False, 
+                        overwrite: bool = None, vis_scene: bool = True, 
                         scenario_name: str = '') -> str:
     """Convert Sionna ray-tracing data to DeepMIMO format.
 
@@ -46,11 +46,9 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     """
     print('converting from sionna RT')
 
-    # Setup scenario name
-    scen_name = os.path.basename(rt_folder) 
-    if scenario_name:
-        scen_name = scenario_name
-
+    # Get scenario name from folder if not provided
+    scen_name = scenario_name if scenario_name else os.path.basename(rt_folder)
+    
     # Setup output folder
     output_folder = os.path.join(rt_folder, scen_name + '_deepmimo')
     if os.path.exists(output_folder):
@@ -77,7 +75,7 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
     if vis_scene and scene:
         scene.plot()
     
-    # Save parameters to params.mat
+    # Save parameters to params.json
     params = {
         c.VERSION_PARAM_NAME: c.VERSION,
         c.RT_PARAMS_PARAM_NAME: rt_params,
@@ -85,7 +83,7 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
         c.MATERIALS_PARAM_NAME: materials_dict,
         c.SCENE_PARAM_NAME: scene_dict
     }
-    cu.save_mat(params, c.PARAMS_FILENAME, output_folder)
+    cu.save_params(params, output_folder)
     pprint(params)
 
     # Save scenario to deepmimo scenarios folder

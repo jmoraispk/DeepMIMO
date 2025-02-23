@@ -57,7 +57,6 @@ def update_txrx_points(txrx_dict: Dict, rx_set_idx: int, rx_pos: np.ndarray, pat
     
     # Find inactive points (those with path loss of 250 dB)
     inactive_idxs = np.where(path_loss == 250.)[0]
-    txrx_dict[f'txrx_set_{rx_set_idx}']['inactive_idxs'] = inactive_idxs
     txrx_dict[f'txrx_set_{rx_set_idx}']['num_active_points'] = n_points - len(inactive_idxs)
 
 

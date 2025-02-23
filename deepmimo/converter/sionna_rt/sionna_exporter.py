@@ -11,16 +11,13 @@ ray tracing simulations.
 
 This has been tested with Sionna v0.19.1 and may work with earlier versions.
 
-Note:
-- DeepMIMO does not require sionna to be installed. To keep it this way AND use
-  this module, you need to import it explicitly:
+DeepMIMO does not require sionna to be installed.
+To keep it this way AND use this module, you need to import it explicitly:
 
-  # Import the module:
-  from deepmimo.converter.sionna_rt import sionna_exporter
+# Import the module:
+from deepmimo.converter.sionna_rt import sionna_exporter
 
-  # Usage:
-  sionna_exporter.export_to_deepmimo(scene, path_list, 
-                                     my_compute_path_params, save_folder)
+sionna_exporter.export_to_deepmimo(scene, path_list, my_compute_path_params, save_folder)
 
 """
 
@@ -185,8 +182,8 @@ def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, Dict]:
 
     return all_vertices, obj_index_map
 
-def export_sionna_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
-                              my_compute_path_params: Dict, save_folder: str):
+def export_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths, 
+                       my_compute_path_params: Dict, save_folder: str):
     """ Export a complete Sionna simulation to a format that can be converted by DeepMIMO """
     
     paths_dict_list = export_paths(path_list)

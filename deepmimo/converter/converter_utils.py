@@ -12,7 +12,12 @@ import scipy.io
 import shutil
 import pickle
 
-from ..general_utilities import get_mat_filename, zip_folder
+from ..general_utilities import (
+    get_mat_filename, 
+    zip, 
+    get_scenario_folder,
+    save_dict_as_json
+)
 from .. import consts as c
 
 def save_pickle(obj: Any, filename: str) -> None:
@@ -128,7 +133,7 @@ def save_scenario(sim_folder: str, scen_name: str = '',
     """
     default_scen_name = os.path.basename(os.path.dirname(sim_folder.replace('_deepmimo', '')))
     scen_name = scen_name if scen_name else default_scen_name
-    scen_path = c.SCENARIOS_FOLDER + f'/{scen_name}'
+    scen_path = get_scenario_folder(scen_name)
     if os.path.exists(scen_path):
         if overwrite is None:
             print(f'Scenario with name "{scen_name}" already exists in '
@@ -219,4 +224,20 @@ def get_max_paths(arr: Dict[str, np.ndarray], angle_key: str = c.AOA_AZ_PARAM_NA
     all_nans_per_path_idx = np.all(np.isnan(arr[angle_key]), axis=0)
     n_max_paths = np.where(all_nans_per_path_idx)[0]
     return n_max_paths[0] if len(n_max_paths) else max_paths
+
+def save_params(params_dict: Dict[str, Any], output_folder: str) -> None:
+    """Save parameters dictionary to JSON format.
+    
+    This function saves the parameters dictionary to a standardized location
+    using the proper JSON serialization for numeric types.
+    
+    Args:
+        params_dict: Dictionary containing all parameters
+        output_folder: Output directory path
+    """
+    # Get standardized path for params.json
+    params_path = os.path.join(output_folder, c.PARAMS_FILENAME + '.json')
+    
+    # Save using JSON serializer that properly handles numeric types
+    save_dict_as_json(params_path, params_dict)
             

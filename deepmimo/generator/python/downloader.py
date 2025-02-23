@@ -15,7 +15,6 @@ the complete download and extraction process.
 
 # Standard library imports
 import os
-import zipfile
 from typing import Optional, Dict
 
 # Third-party imports
@@ -24,7 +23,7 @@ from tqdm import tqdm
 
 # Local imports
 from ... import consts as c
-
+from ...general_utilities import get_scenario_folder
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -34,8 +33,8 @@ HEADERS = {
 # Mapping of current scenarios names and their dropbox links
 NAME_TO_LINK: Dict[str, str] = {
     # ASU Campus
-    #'asu_campus1': 'https://www.dropbox.com/scl/fi/unldvnar22cuxjh7db2rf/ASU_Campus1.zip?rlkey=rs2ofv3pt4ctafs2zi3vwogrh&dl=1', 
-    'asu_campus': 'https://www.dropbox.com/scl/fi/ujeyo5fg6akbl4ic0gghd/asu_campus.zip?rlkey=8bctahqn1rdinsnljh3urdi5x&st=vlri3krf&dl=1',
+    'asu_campus1': 'https://www.dropbox.com/scl/fi/unldvnar22cuxjh7db2rf/ASU_Campus1.zip?rlkey=rs2ofv3pt4ctafs2zi3vwogrh&dl=1', 
+    'asu_campus_v4': 'https://www.dropbox.com/scl/fi/ujeyo5fg6akbl4ic0gghd/asu_campus.zip?rlkey=8bctahqn1rdinsnljh3urdi5x&st=vlri3krf&dl=1',
     
     # O1 variants
     'O1_3p4': 'https://www.dropbox.com/s/2zj4xk3oo9lh07n/O1_3p4.zip?dl=1',
@@ -109,7 +108,7 @@ def download_scenario(name: str) -> Optional[str]:
     """
     os.makedirs(c.SCENARIOS_FOLDER, exist_ok=True)
     url = NAME_TO_LINK[name]
-    output_path = os.path.join(c.SCENARIOS_FOLDER, name + '.zip')
+    output_path = get_scenario_folder(name) + '.zip'
 
     if os.path.exists(output_path):
         print(f'output path "{output_path}" already exists')

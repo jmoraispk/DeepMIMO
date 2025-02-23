@@ -2,7 +2,7 @@
 DeepMIMO Python Package.
 """
 
-__version__ = "4.0.0a1"
+__version__ = "4.0.0a2"
 
 # Core functionality
 from .generator.python.core import (
@@ -33,6 +33,9 @@ from .converter.wireless_insite.insite_converter_v3 import insite_rt_converter_v
 from .info import info
 from .general_utilities import (
     summary,
+)
+
+from .api import (
     upload,
     download,
 )
@@ -44,6 +47,10 @@ from .scene import (
     PhysicalElementGroup,
     Scene
 )
+
+# Import immediate modules
+from . import consts
+from . import general_utilities
 
 __all__ = [
     # Core functionality
@@ -75,4 +82,8 @@ __all__ = [
     'summary',
     'upload',
     'download',
+    
+    # Constants
+    'consts',
+    'general_utilities',
 ]

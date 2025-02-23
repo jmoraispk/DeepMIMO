@@ -240,14 +240,14 @@ class Dataset(DotDict):
             INTERACTION_LOS = 0: Line-of-sight (direct path)
             INTERACTION_REFLECTION = 1: Reflection
             INTERACTION_DIFFRACTION = 2: Diffraction
-            INTERACTION_TRANSMISSION = 3: Transmission
-            INTERACTION_SCATTERING = 4: Scattering
-        
+            INTERACTION_SCATTERING = 3: Scattering
+            INTERACTION_TRANSMISSION = 4: Transmission
+
         Returns:
             numpy.ndarray: LoS status array, shape (n_users, n_paths) 
         """
         result = np.full(self.inter.shape[0], -1)
-        has_paths = np.any(self.inter > 0, axis=1)
+        has_paths = self.num_paths > 0
         result[has_paths] = 0
         
         first_path = self.inter[:, 0]
@@ -449,6 +449,22 @@ class Dataset(DotDict):
             'grid_spacing': grid_spacing
         }
 
+    def _is_valid_grid(self) -> bool:
+        """Check if the dataset has a valid grid structure.
+        
+        A valid grid means that:
+        1. The total number of points in the grid matches the number of receivers
+        2. The receivers are arranged in a regular grid pattern
+        
+        Returns:
+            bool: True if dataset has valid grid structure, False otherwise
+        """
+        # Check if total grid points match number of receivers
+        n_rxs = self.rx_pos.shape[0]
+        grid_points = np.prod(self.grid_size)
+        
+        return grid_points == n_rxs
+
     def get_uniform_idxs(self, steps: List[int]) -> np.ndarray:
         """Return indices of users at uniform intervals.
         
@@ -457,12 +473,28 @@ class Dataset(DotDict):
             
         Returns:
             Array of indices for uniformly sampled users
+            
+        Raises:
+            ValueError: If dataset does not have a valid grid structure
         """
+        
         grid_size = self.grid_size  # [x_size, y_size] = [n_cols, n_rows]
-        cols = np.arange(grid_size[0], step=steps[0])
-        rows = np.arange(grid_size[1], step=steps[1])
-        uniform_idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
-        return uniform_idxs
+        
+        # Check if dataset has valid grid structure
+        if not self._is_valid_grid():
+            n_rx = self.rx_pos.shape[0]
+            print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {n_rx} users in rx_pos")
+            if steps == [1, 1]:
+                idxs = np.arange(n_rx)
+            else:
+                raise ValueError("Dataset does not have a valid grid structure. Cannot perform uniform sampling.")
+        else:
+            # Get indices of users at uniform intervals
+            cols = np.arange(grid_size[0], step=steps[0])
+            rows = np.arange(grid_size[1], step=steps[1])
+            idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
+        
+        return idxs
 
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)

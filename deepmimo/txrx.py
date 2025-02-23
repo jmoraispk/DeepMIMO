@@ -29,7 +29,6 @@ class TxRxSet:
     is_rx: bool = False
     
     num_points: int = 0    # all points
-    inactive_idxs: tuple = ()  # list of indices of points with at least one path
     num_active_points: int = 0  # number of points with at least one path
     
     num_ant: int = 1  # number of antenna elements

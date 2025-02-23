@@ -20,8 +20,8 @@ RE_BOOL_TRUE = re.compile(r"yes")
 RE_BOOL_FALSE = re.compile(r"no")
 RE_BEGIN_NODE = re.compile(r"begin_<(?P<node_name>\S*)>")
 RE_END_NODE = re.compile(r"end_<(?P<node_name>\S*)>")
-RE_INT = re.compile(r"-?\d+")
-RE_FLOAT = re.compile(r"-?\d+[.]\d+")
+RE_INT = re.compile(r"^-?\d+$")
+RE_FLOAT = re.compile(r"^-?\d+[.]\d+$")
 RE_LABEL = re.compile(r"\S+")
 
 NL_TOKEN = "\n"
@@ -209,6 +209,7 @@ def parse_line_value(tokens):
         elif RE_INT.match(tok):
             values.append(int(tok))
         else:
+            # If it doesn't match any pattern exactly, treat as string
             values.append(tok)
     eat(tokens, NL_TOKEN)
     return tuple(values)

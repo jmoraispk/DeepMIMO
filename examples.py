@@ -65,15 +65,15 @@ ch_params = dm.ChannelGenParameters()
 
 # Base station antenna parameters
 ch_params.bs_antenna.rotation = np.array([30, 40, 30])  # [az, el, pol] in degrees
-ch_params.bs_antenna.fov = np.array([360, 180])        # [az, el] in degrees
-ch_params.bs_antenna.array_size = np.array([8, 8])     # [horizontal, vertical] elements
-ch_params.bs_antenna.spacing = 0.5    # Element spacing in wavelengths
+ch_params.bs_antenna.fov = np.array([360, 180])         # [az, el] in degrees
+ch_params.bs_antenna.shape = np.array([8, 8])           # [horizontal, vertical] elements
+ch_params.bs_antenna.spacing = 0.5                      # Element spacing in wavelengths
 
-# # User equipment antenna parameters
-ch_params.ue_antenna.rotation = np.array([0, 0, 0])    # [az, el, pol] in degrees
-ch_params.ue_antenna.fov = np.array([120, 180])        # [az, el] in degrees
-ch_params.ue_antenna.array_size = np.array([4, 4])     # [horizontal, vertical] elements
-ch_params.ue_antenna.spacing = 0.5    # Element spacing in wavelengths
+# User equipment antenna parameters
+ch_params.ue_antenna.rotation = np.array([0, 0, 0])  # [az, el, pol] in degrees
+ch_params.ue_antenna.fov = np.array([120, 180])      # [az, el] in degrees
+ch_params.ue_antenna.shape = np.array([4, 4])        # [horizontal, vertical] elements
+ch_params.ue_antenna.spacing = 0.5                   # Element spacing in wavelengths
 
 # # Channel computation parameters
 ch_params.freq_domain = True     # Whether to compute frequency domain channels

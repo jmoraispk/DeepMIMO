@@ -183,7 +183,34 @@ def extract_tx_pos(filename: str) -> np.ndarray:
             tx_pos = np.array([float(i) for i in tx_pos_line.split()], dtype=np.float32)
             break
     
-    print('Found it!')
+    try:
+        a = tx_pos
+    except:
+        print('Not found tx_pos. Using hack...')
+        
+        # Step 1 - swapping tx and rx indices in the filename
+        import os
+        basename = os.path.basename(filename)
+        # print(basename)
+        str_list = list(basename)
+        aux = str_list[24]
+        str_list[24] = str_list[19]
+        str_list[19] = aux
+        # (same for tenths)
+        aux = str_list[23]
+        str_list[23] = str_list[18]
+        str_list[18] = aux
+        
+        new_basename = ''.join(str_list)
+        # print(new_basename)
+        new_filename = os.path.join(os.path.dirname(filename), new_basename)
+        
+        # Step 2 - parse pl file to get tx pos
+        xyz_matrix, _, _ = read_pl_p2m_file(new_filename.replace('.paths', '.pl'))
+        tx_pos = xyz_matrix[0]
+        if tx_pos is None or len(tx_pos) == 0:
+            raise Exception('TX position not found')
+    
     return tx_pos
 
 def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -200,7 +227,7 @@ def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
     """
     assert filename.endswith('.p2m') # should be a .p2m file
     assert '.pl.' in filename        # should be the pathloss p2m
-
+    
     # Initialize empty lists for matrices
     xyz_list = []
     dist_list = []
