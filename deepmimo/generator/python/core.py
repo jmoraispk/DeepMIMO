@@ -229,6 +229,9 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         else:
             print(f'File {mat_path} could not be found')
         
+        if tx_dict[key] is None:
+            continue
+
         # Filter by selected rx indices (all but tx positions)
         if key != c.TX_POS_PARAM_NAME: 
             tx_dict[key] = tx_dict[key][rx_idxs]
