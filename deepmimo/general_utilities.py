@@ -279,7 +279,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
 
     mat_file = get_params_path(scen_name)
 
-    params_dict = load_dict_from_json(mat_file)[c.PARAMS_FILENAME]
+    params_dict = load_dict_from_json(mat_file)
     rt_params = params_dict[c.RT_PARAMS_PARAM_NAME]
     scene_params = params_dict[c.SCENE_PARAM_NAME]
     material_params = params_dict[c.MATERIALS_PARAM_NAME]
