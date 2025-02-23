@@ -862,8 +862,15 @@ def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tu
     base_height = min(heights)
     
     # Create convex hull for base shape
-    hull = ConvexHull(points_2d)
-    base_shape = points_2d[hull.vertices]
+    try:
+        hull = ConvexHull(points_2d)
+        base_shape = points_2d[hull.vertices]
+    except Exception as e:
+        if np.linalg.matrix_rank(points_2d - points_2d[0]) < 2:
+            print('Convex hull failed - collinear vertices')
+            return None
+        else:
+            raise e
     
     # Create top and bottom faces
     bottom_face = [(x, y, base_height) for x, y in base_shape]
