@@ -100,6 +100,8 @@ class InsiteFoliage:
             permittivity=self.permittivity_vr,
             thickness=self.thickness,
             scattering_model=Material.SCATTERING_NONE,
+            vertical_attenuation=self.vertical_attenuation,
+            horizontal_attenuation=self.horizontal_attenuation,
         )
 
 def parse_materials_from_file(file: Path) -> List[Material]:
@@ -128,7 +130,7 @@ def parse_materials_from_file(file: Path) -> List[Material]:
                     vertical_attenuation=mat.values['VerticalAttenuation'],
                     horizontal_attenuation=mat.values['HorizontalAttenuation'],
                     permittivity_vr=mat.values['permittivity_vr'],
-                    permittivity_hr=mat.values['permittivity_hr']
+                    permittivity_hr=mat.values['permittivity_hr'],
                 )
             else:
                 # Create InsiteMaterial object

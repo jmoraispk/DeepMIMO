@@ -47,6 +47,10 @@ class Material:
     roughness: float = -1.0  # Surface roughness (m)
     thickness: float = -1.0  # Material thickness (m)
 
+    # Attenuation properties
+    vertical_attenuation: float = 0.0  # Vertical attenuation (dB/m)
+    horizontal_attenuation: float = 0.0  # Horizontal attenuation (dB/m)
+
 class MaterialList:
     """Container for managing a collection of materials."""
     
