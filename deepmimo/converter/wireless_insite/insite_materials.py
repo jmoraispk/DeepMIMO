@@ -181,6 +181,7 @@ def read_materials(sim_folder: str, verbose: bool = False) -> Dict:
     
     # Parse materials from each file
     for file in material_files:
+        print(f"Parsing materials from {file}")
         materials = parse_materials_from_file(file)
         material_list.add_materials(materials)
             
