@@ -138,10 +138,9 @@ def _process_params_data(params_dict: Dict) -> Dict:
     Returns:
         Processed parameters in submission format
     """
-    params = params_dict.get("params", {})
-    rt_params = params.get("rt_params", {})
-    txrx_sets = params.get("txrx", {})
-    scene_params = params.get("scene", {})
+    rt_params = params_dict.get(c.RT_PARAMS_PARAM_NAME, {})
+    txrx_sets = params_dict.get(c.TXRX_PARAM_NAME, {})
+    scene_params = params_dict.get(c.SCENE_PARAM_NAME, {})
 
     # Convert frequency from Hz to GHz
     frequency = float(rt_params.get("frequency", 3.5e9)) / 1e9
@@ -177,7 +176,7 @@ def _process_params_data(params_dict: Dict) -> Dict:
             "environment": "outdoor",
         },
         "advancedParameters": {
-            "dmVersion": params.get("version", "4.0.0a"),
+            "dmVersion": params_dict.get("version", "4.0.0a"),
             "numTx": num_tx,
             "multiRxAnt": any(
                 set_info.get("num_ant", 0) > 1
