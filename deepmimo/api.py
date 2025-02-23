@@ -340,7 +340,8 @@ def _generate_key_components(params_dict: Dict) -> Dict:
     }
 
 
-def upload(scenario_name: str, key: str) -> str:
+def upload(scenario_name: str, key: str, description: Optional[str] = None,
+           details: Optional[list[str]] = None) -> str:
     """Upload a DeepMIMO scenario to the server.
 
     Args:
@@ -375,8 +376,8 @@ def upload(scenario_name: str, key: str) -> str:
         "title": scenario_name,
         "linkName": scenario_name,
         "subMenu": "v4",
-        "description": f"A scenario for {scenario_name}",
-        "details": None,
+        "description": description if description else f"A scenario for {scenario_name}",
+        "details": details,
         "images": [],
         "keyComponents": key_components["sections"],
         "download": [],
