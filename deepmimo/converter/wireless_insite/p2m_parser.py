@@ -196,6 +196,11 @@ def extract_tx_pos(filename: str) -> np.ndarray:
         aux = str_list[24]
         str_list[24] = str_list[19]
         str_list[19] = aux
+        # (same for tenths)
+        aux = str_list[23]
+        str_list[23] = str_list[18]
+        str_list[18] = aux
+        
         new_basename = ''.join(str_list)
         # print(new_basename)
         new_filename = os.path.join(os.path.dirname(filename), new_basename)
