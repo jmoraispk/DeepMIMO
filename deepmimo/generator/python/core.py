@@ -21,7 +21,8 @@ import scipy.io
 
 # Local imports
 from ... import consts as c
-from ...general_utilities import get_mat_filename, load_dict_from_json, unzip, get_scenario_folder
+from ...general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
+                                  get_scenario_folder, get_params_path)
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
 from ...materials import MaterialList
@@ -92,10 +93,10 @@ def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
             raise ValueError(f'Scenario {scen_name} not found')
     
     # Load parameters file
-    params_mat_file = os.path.join(scen_folder, 'params.mat')
-    if not os.path.exists(params_mat_file):
+    params_file = get_params_path(scen_name)
+    if not os.path.exists(params_file):
         raise ValueError(f'Parameters file not found in {scen_folder}')
-    params = load_dict_from_json(params_mat_file)['params']
+    params = load_dict_from_json(params_file)
     
     # Load scenario data
     n_snapshots = params[c.SCENE_PARAM_NAME][c.SCENE_PARAM_NUMBER_SCENES]
@@ -273,7 +274,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
     
     info_str = "To see supported TX/RX sets and indices run dm.info(<scenario_name>)"
     if type(sets) is dict:
-        for set_idx, idxs in sets.items():    
+        for set_idx, idxs in sets.items():
             # check the the tx/rx_set indices are valid
             if set_idx not in valid_set_idxs:
                 raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"

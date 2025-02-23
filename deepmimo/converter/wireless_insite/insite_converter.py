@@ -29,6 +29,7 @@ Main Entry Point:
 import os
 import shutil
 from typing import Optional
+from pprint import pprint
 
 # Local imports
 from .. import converter_utils as cu
@@ -70,23 +71,25 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         ValueError: If transmitter or receiver IDs are invalid.
     """
 
-    # Setup output folder
-    insite_sim_folder = os.path.dirname(p2m_folder)
-    p2m_basename = os.path.basename(p2m_folder)
-    out_fold_name = scenario_name if scenario_name else p2m_basename 
+    # Get scenario name from folder if not provided
+    scen_name = scenario_name if scenario_name else os.path.basename(p2m_folder)
     
-    output_folder = os.path.join(insite_sim_folder, out_fold_name + '_deepmimo')
+    # Get paths for input and output folders
+    insite_sim_folder = os.path.dirname(p2m_folder)
+    output_folder = os.path.join(insite_sim_folder, scen_name + '_deepmimo')
+    
+    # Create output folder
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
-    os.makedirs(output_folder, exist_ok=True)
-
-    # Read setup (.setup)
+    os.makedirs(output_folder)
+    
+    # Read ray tracing parameters
     rt_params = read_rt_params(insite_sim_folder)
 
     # Read TXRX (.txrx)
     txrx_dict = read_txrx(insite_sim_folder, p2m_folder)
     
-    # Read and save path data
+    # Read Paths (.paths)
     read_paths(p2m_folder, output_folder, txrx_dict)
     
     # Read Materials of all objects (.city, .ter, .veg)
@@ -99,7 +102,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     # Visualize if requested
     if vis_scene: scene.plot()
     
-    # Save parameters to params.mat
+    # Save parameters to params.json
     params = {
         c.VERSION_PARAM_NAME: c.VERSION,
         c.RT_PARAMS_PARAM_NAME: rt_params,
@@ -107,10 +110,10 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
         c.MATERIALS_PARAM_NAME: materials_dict,
         c.SCENE_PARAM_NAME: scene_dict
     }
-    cu.save_mat(params, c.PARAMS_FILENAME, output_folder)
+    cu.save_params(params, output_folder)
     
-    from pprint import pprint
-    pprint(params)
+    if True:
+        pprint(params)
 
     # Save scenario to deepmimo scenarios folder
     scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)

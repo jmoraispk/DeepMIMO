@@ -125,27 +125,27 @@ def parse_materials_from_file(file: Path) -> List[Material]:
                 # Foliage!
                 insite_mat = InsiteFoliage(
                     name=mat.name,
-                    thickness=mat.values['thickness'],
-                    density=mat.values['density'],
-                    vertical_attenuation=mat.values['VerticalAttenuation'],
-                    horizontal_attenuation=mat.values['HorizontalAttenuation'],
-                    permittivity_vr=mat.values['permittivity_vr'],
-                    permittivity_hr=mat.values['permittivity_hr'],
+                    thickness=float(mat.values['thickness']),
+                    density=float(mat.values['density']),
+                    vertical_attenuation=float(mat.values['VerticalAttenuation']),
+                    horizontal_attenuation=float(mat.values['HorizontalAttenuation']),
+                    permittivity_vr=float(mat.values['permittivity_vr']),
+                    permittivity_hr=float(mat.values['permittivity_hr']),
                 )
             else:
                 # Create InsiteMaterial object
                 insite_mat = InsiteMaterial(
                     name=mat.name,
                     diffuse_scattering_model=mat.values['diffuse_scattering_model'],
-                    fields_diffusively_scattered=mat.values['fields_diffusively_scattered'],
-                    cross_polarized_power=mat.values['cross_polarized_power'],
-                    directive_alpha=mat.values['directive_alpha'],
-                    directive_beta=mat.values['directive_beta'],
-                    directive_lambda=mat.values['directive_lambda'],
-                    conductivity=mat.values['DielectricLayer'].values['conductivity'],
-                    permittivity=mat.values['DielectricLayer'].values['permittivity'],
-                    roughness=mat.values['DielectricLayer'].values['roughness'],
-                    thickness=mat.values['DielectricLayer'].values['thickness']
+                    fields_diffusively_scattered=float(mat.values['fields_diffusively_scattered']),
+                    cross_polarized_power=float(mat.values['cross_polarized_power']),
+                    directive_alpha=float(mat.values['directive_alpha']),
+                    directive_beta=float(mat.values['directive_beta']),
+                    directive_lambda=float(mat.values['directive_lambda']),
+                    conductivity=float(mat.values['DielectricLayer'].values['conductivity']),
+                    permittivity=float(mat.values['DielectricLayer'].values['permittivity']),
+                    roughness=float(mat.values['DielectricLayer'].values['roughness']),
+                    thickness=float(mat.values['DielectricLayer'].values['thickness'])
                 )
             
             # Convert to base Material

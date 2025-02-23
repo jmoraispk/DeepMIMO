@@ -7,7 +7,6 @@ the DeepMIMO toolkit.
 """
 
 import numpy as np
-import scipy.io
 from pprint import pformat
 from typing import Dict, Any, TypeVar, Mapping, Optional
 from . import consts as c
@@ -56,38 +55,23 @@ def get_scenario_folder(scenario_name: str) -> str:
     """
     return os.path.join(get_scenarios_dir(), scenario_name)
 
-def get_params_path(scenario_name: str, use_json: bool = True) -> str:
+def get_params_path(scenario_name: str) -> str:
     """Get the absolute path to a scenario's params file.
     
     Args:
         scenario_name: Name of the scenario
-        use_json: Whether to return path for JSON file (True) or MAT file (False)
         
     Returns:
         str: Absolute path to the scenario's params file
     """
-    ext = '.json' if use_json else '.mat'
-    return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}{ext}')
+    return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}.json')
 
-def get_objects_path(scenario_name: str, use_json: bool = True) -> str:
-    """Get the absolute path to a scenario's objects file.
-    
-    Args:
-        scenario_name: Name of the scenario
-        use_json: Whether to return path for JSON file (True) or MAT file (False)
-        
-    Returns:
-        str: Absolute path to the scenario's objects file
-    """
-    ext = '.json' if use_json else '.mat'
-    return os.path.join(get_scenario_folder(scenario_name), f'objects{ext}')
-
-def save_dict_as_json(data_dict: Dict[str, Any], output_path: str) -> None:
+def save_dict_as_json(output_path: str, data_dict: Dict[str, Any]) -> None:
     """Save dictionary as JSON, handling NumPy arrays and other non-JSON types.
     
     Args:
-        data_dict: Dictionary to save
         output_path: Path to save JSON file
+        data_dict: Dictionary to save
     """
     with open(output_path, 'w') as f:
         json.dump(data_dict, f, indent=2, 
@@ -285,54 +269,6 @@ def get_mat_filename(key: str, tx_set_idx: int, tx_idx: int, rx_set_idx: int) ->
     return f"{key}_{str_id}.mat"
 
 
-def load_mat_file_as_dict(file_path: str) -> Dict[str, Any]:
-    """Load MATLAB .mat file as Python dictionary.
-
-    Args:
-        file_path (str): Path to .mat file to load
-
-    Returns:
-        dict: Dictionary containing loaded MATLAB data
-
-    Raises:
-        ValueError: If file cannot be loaded
-    """
-    mat_data = scipy.io.loadmat(file_path, squeeze_me=True, struct_as_record=False)
-    return {
-        key: mat_struct_to_dict(value)
-        for key, value in mat_data.items()
-        if not key.startswith("__")
-    }
-
-
-def mat_struct_to_dict(mat_struct: Any) -> Dict[str, Any]:
-    """Convert MATLAB structure to Python dictionary.
-
-    This function recursively converts MATLAB structures and arrays to
-    Python dictionaries and numpy arrays.
-
-    Args:
-        mat_struct (any): MATLAB structure to convert
-
-    Returns:
-        dict: Dictionary containing converted data
-    """
-    if isinstance(mat_struct, scipy.io.matlab.mat_struct):
-        result = {}
-        for field in mat_struct._fieldnames:
-            result[field] = mat_struct_to_dict(getattr(mat_struct, field))
-        return result
-    elif isinstance(mat_struct, np.ndarray):
-        # Process arrays recursively in case they contain mat_structs
-        try:
-            # First try to convert directly to numpy array
-            return np.array([mat_struct_to_dict(item) for item in mat_struct])
-        except ValueError:
-            # If that fails due to inhomogeneous shapes, return as list instead
-            return [mat_struct_to_dict(item) for item in mat_struct]
-    return mat_struct  # Return the object as is for other types
-
-
 def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     """Print a summary of the dataset."""
     # Initialize empty string to collect output
@@ -419,7 +355,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     for _, mat_props in material_params.items():
         summary_str += f"\n{mat_props[c.MATERIALS_PARAM_NAME_FIELD]}:\n"
         summary_str += f"- Permittivity: {mat_props[c.MATERIALS_PARAM_PERMITTIVITY]:.2f}\n"
-        summary_str += f"- Conductivity: {float(mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]):.2f} S/m\n"
+        summary_str += f"- Conductivity: {mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]:.2f} S/m\n"
         summary_str += f"- Scattering model: {mat_props[c.MATERIALS_PARAM_SCATTERING_MODEL]}\n"
         summary_str += (
             f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
