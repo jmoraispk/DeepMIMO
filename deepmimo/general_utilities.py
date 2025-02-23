@@ -12,11 +12,8 @@ from pprint import pformat
 from typing import Dict, Any, TypeVar, Mapping, Optional
 from . import consts as c
 import os
-import requests
 from tqdm import tqdm
-import hashlib
 import zipfile
-import shutil
 
 K = TypeVar("K", bound=str)
 V = TypeVar("V")

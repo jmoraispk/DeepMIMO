@@ -10,8 +10,6 @@ import requests
 import hashlib
 from tqdm import tqdm
 from typing import Dict, Any, Optional
-import numpy as np
-import scipy.io
 from . import consts as c
 from .general_utilities import (
     get_scenarios_dir,
