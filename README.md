@@ -16,6 +16,30 @@ deepmimo/
     └── matlab/
 ```
 
+# Getting Started
+
+Install:
+```bash
+pip install deepmimo
+```
+
+Generate a dataset:
+```python
+import deepmimo as dm
+dm.summary('asu_campus')  # Print summary of the dataset
+dm.generate('asu_campus')  # Load and generate the dataset
+```
+
+Try it out on Colab: ......
+
+# Building the docs
+
+| Step    | Command                                           | Description                       |
+|---------|---------------------------------------------------|-----------------------------------|
+| Install | `pip install sphinx sphinx-rtd-theme`             | Install required dependencies     |
+| Build   | `cd docs`<br>`sphinx-build -b html . _build/html` | Generate HTML documentation       |
+| Serve   | `cd docs/_build/html`<br>`python -m http.server`  | View docs at http://localhost:8000|
+
 # Contributing
 
 To contribute, fork the repository and make a pull request. It will get a reply in <24 hours. 
