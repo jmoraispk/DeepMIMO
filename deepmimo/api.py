@@ -359,12 +359,6 @@ def _generate_key_components(params_dict: Dict) -> Dict:
                     ''' for set_name, set_info in txrx_sets.items())}
                 """,
             },
-            {
-                "name": "Version",
-                "description": f"""
-                    <p><strong>DeepMIMO Version:</strong> {params_dict.get(c.VERSION_PARAM_NAME, 'Unknown')}</p>
-                """,
-            },
         ]
     }
 
