@@ -18,22 +18,21 @@ from ...materials import Material, MaterialList  # Base material classes
 
 @dataclass
 class InsiteMaterial:
-    """
-    Materials in Wireless InSite.
+    """Materials in Wireless InSite.
     
     Notes:
-    - Diffuse model implemented from [1] + extended with cross-polarization scattering terms
-    - Diffuse scattering models explained in [2], slides 29-31. 
+        - Diffuse model implemented from [1] + extended with cross-polarization scattering terms
+        - Diffuse scattering models explained in [2], slides 29-31
+        - At present, all MATERIALS in Wireless InSite are nonmagnetic, 
+          and the permeability for all materials is that of free space 
+          (µ0 = 4π x 10e-7 H/m) [3]
     
-    - At present, all MATERIALS in Wireless InSite are nonmagnetic, 
-      and the permeability for all materials is that of free space 
-      (µ0 = 4π x 10e-7 H/m) [3]. 
-
     Sources:
         [1] A Diffuse Scattering Model for Urban Propagation Prediction - Vittorio Degli-Esposti 2001
             https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=933491
         [2] https://x.webdo.cc/userfiles/Qiwell/files/Remcom_Wireless%20InSite_5G_final.pdf
         [3] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
+        
     """
     id: int = -1
     name: str = ''

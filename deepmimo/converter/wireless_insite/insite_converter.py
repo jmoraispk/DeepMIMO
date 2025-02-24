@@ -11,12 +11,12 @@ outputs into DeepMIMO-compatible scenario files. It orchestrates the conversion 
 6. Saving all data in DeepMIMO format
 
 Module Dependencies:
-- insite_materials.py: Material property handling
-- insite_setup.py: Setup file parsing
-- insite_scene.py: Scene geometry conversion
-- insite_txrx.py: TX/RX configuration handling
-- insite_paths.py: Path data processing
-  - p2m_parser.py: Low-level .p2m file parsing
+    insite_rt_params.py: Ray tracing parameters parsing
+    insite_materials.py: Material property handling
+    insite_scene.py: Scene geometry conversion
+    insite_txrx.py: TX/RX configuration handling
+    insite_paths.py: Path data processing
+    p2m_parser.py: Low-level .p2m file parsing
 
 The adapter assumes BSs are transmitters and users are receivers. Uplink channels
 can be generated using (transpose) reciprocity.
