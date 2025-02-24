@@ -1,5 +1,5 @@
 Welcome to DeepMIMO's documentation!
-==================================
+====================================
 
 DeepMIMO is a generic deep learning-based MIMO channels dataset generation framework. It provides tools for converting ray-tracing simulation results into standardized formats suitable for machine learning applications in wireless communications.
 
