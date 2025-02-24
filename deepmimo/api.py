@@ -146,22 +146,19 @@ def _process_params_data(params_dict: Dict) -> Dict:
     frequency = float(rt_params.get("frequency", 3.5e9)) / 1e9
 
     # Count total Tx and Rx
-    num_tx = (
-        sum(
-            set_info.get("num_active_points", 0)
-            for set_info in txrx_sets.values()
-            if set_info.get("is_tx")
-        )
-        or 1
-    )
-    num_rx = (
-        sum(
-            set_info.get("num_active_points", 0)
-            for set_info in txrx_sets.values()
-            if set_info.get("is_rx")
-        )
-        or 1
-    )
+    num_tx = sum(set_info.get("num_active_points", 0)
+                 for set_info in txrx_sets.values()
+                 if set_info.get("is_tx")) or 1
+    
+    num_rx = sum(set_info.get("num_active_points", 0)
+                 for set_info in txrx_sets.values()
+                 if set_info.get("is_rx")) or 1
+
+    raytracer_map = {
+        c.RAYTRACER_NAME_WIRELESS_INSITE: "Insite",
+        c.RAYTRACER_NAME_SIONNA: "Sionna",
+        c.RAYTRACER_NAME_AODT: "AODT",
+    }
 
     return {
         "primaryParameters": {
@@ -172,29 +169,20 @@ def _process_params_data(params_dict: Dict) -> Dict:
             },
             "numRx": num_rx,
             "maxReflections": rt_params.get("max_reflections", 1),
-            "raytracerName": rt_params.get("raytracer_name", "Insite"),
+            "raytracerName": raytracer_map.get(rt_params["raytracer_name"], "Insite"),
             "environment": "outdoor",
         },
         "advancedParameters": {
             "dmVersion": params_dict.get("version", "4.0.0a"),
             "numTx": num_tx,
-            "multiRxAnt": any(
-                set_info.get("num_ant", 0) > 1
-                for set_info in txrx_sets.values()
-                if set_info.get("is_rx")
-            ),
-            "multiTxAnt": any(
-                set_info.get("num_ant", 0) > 1
-                for set_info in txrx_sets.values()
-                if set_info.get("is_tx")
-            ),
-            "dualPolarization": any(
-                set_info.get("dual_pol", False) for set_info in txrx_sets.values()
-            ),
-            "BS2BS": any(
-                set_info.get("is_tx") and set_info.get("is_rx")
-                for set_info in txrx_sets.values()
-            ) or None,
+            "multiRxAnt": any(set_info.get("num_ant", 0) > 1 for set_info in txrx_sets.values()
+                              if set_info.get("is_rx")),
+            "multiTxAnt": any(set_info.get("num_ant", 0) > 1 for set_info in txrx_sets.values()
+                              if set_info.get("is_tx")),
+            "dualPolarization": any(set_info.get("dual_pol", False)
+                                    for set_info in txrx_sets.values()),
+            "BS2BS": any(set_info.get("is_tx") and set_info.get("is_rx")
+                         for set_info in txrx_sets.values()) or None,
             "pathDepth": rt_params.get("max_path_depth", None),
             "diffraction": bool(rt_params.get("max_diffractions", 0)),
             "scattering": bool(rt_params.get("max_scattering", 0)),
