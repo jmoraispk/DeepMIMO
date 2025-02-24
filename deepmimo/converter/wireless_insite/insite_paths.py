@@ -60,7 +60,7 @@ def update_txrx_points(txrx_dict: Dict, rx_set_idx: int, rx_pos: np.ndarray, pat
     txrx_dict[f'txrx_set_{rx_set_idx}']['num_active_points'] = n_points - len(inactive_idxs)
 
 
-def read_paths(p2m_folder: str, output_folder: str, txrx_dict: Dict) -> None:
+def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     """Create path data from a folder containing Wireless Insite files.
     
     This function:
@@ -71,14 +71,14 @@ def read_paths(p2m_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     5. Updates TX/RX point information
     
     Args:
-        p2m_folder: Path to folder containing .p2m files
+        rt_folder: Path to folder containing .setup, .txrx, and material files
         txrx_dict: Dictionary containing TX/RX set information from read_txrx
         output_folder: Path to folder where .mat files will be saved
 
     Raises:
         ValueError: If folder doesn't exist or required files not found
     """
-    p2m_folder = Path(p2m_folder)
+    p2m_folder = next(p for p in Path(rt_folder).iterdir() if p.is_dir())
     if not p2m_folder.exists():
         raise ValueError(f"Folder does not exist: {p2m_folder}")
     

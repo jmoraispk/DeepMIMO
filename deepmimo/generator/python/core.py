@@ -325,7 +325,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
         for set_idx in valid_set_idxs:
             sets_dict[set_idx] = np.arange(txrx_dict[f'txrx_set_{set_idx}']['num_points'])
     return sets_dict
-        
+
 def validate_ch_gen_params(params: ChannelGenParameters, n_active_ues: int) -> ChannelGenParameters:
     """Validate channel generation parameters.
         

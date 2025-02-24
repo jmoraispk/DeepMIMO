@@ -13,7 +13,7 @@ from .setup_parser import parse_file
 from ...txrx import TxRxSet
 
 
-def read_txrx(sim_folder: str, p2m_folder: str) -> Dict:
+def read_txrx(rt_folder: str) -> Dict:
     """Create TX/RX information from a folder containing Wireless Insite files.
     
     This function:
@@ -21,9 +21,7 @@ def read_txrx(sim_folder: str, p2m_folder: str) -> Dict:
     2. Returns a dictionary with all TX/RX information
     
     Args:
-        sim_folder: Path to simulation folder containing .txrx file
-        p2m_folder: Path to folder containing .p2m files
-        output_folder: Path to folder where .mat files will be saved
+        rt_folder: Path to simulation folder containing .txrx file
 
     Returns:
         Dictionary containing TX/RX set information and indices
@@ -31,8 +29,8 @@ def read_txrx(sim_folder: str, p2m_folder: str) -> Dict:
     Raises:
         ValueError: If folders don't exist or required files not found
     """
-    sim_folder = Path(sim_folder)
-    p2m_folder = Path(p2m_folder)
+    sim_folder = Path(rt_folder)
+    p2m_folder = next(p for p in sim_folder.iterdir() if p.is_dir())
     if not sim_folder.exists():
         raise ValueError(f"Simulation folder does not exist: {sim_folder}")
     if not p2m_folder.exists():
@@ -46,7 +44,7 @@ def read_txrx(sim_folder: str, p2m_folder: str) -> Dict:
         raise ValueError(f"Multiple .txrx files found in {sim_folder}")
     
     # Parse TX/RX sets
-    tx_ids, rx_ids, txrx_dict = read_txrx_file(str(txrx_files[0]))
+    _, _, txrx_dict = read_txrx_file(str(txrx_files[0]))
     
     return txrx_dict
 

@@ -47,7 +47,7 @@ MATERIAL_FILES = ['.city', '.ter', '.veg']
 SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
 SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
 
-def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
+def insite_rt_converter(rt_folder: str, copy_source: bool = False,
                         overwrite: Optional[bool] = None, vis_scene: bool = True, 
                         scenario_name: str = '') -> str:
     """Convert Wireless InSite ray-tracing data to DeepMIMO format.
@@ -57,7 +57,7 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     and transmitter/receiver configurations to generate channel matrices and metadata.
 
     Args:
-        p2m_folder (str): Path to folder containing .p2m path files.
+        rt_folder (str): Path to folder containing .setup, .txrx, and material files.
         copy_source (bool): Whether to copy ray-tracing source files to output.
         overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
         vis_scene (bool): Whether to visualize the scene layout. Defaults to False.
@@ -72,11 +72,10 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     """
 
     # Get scenario name from folder if not provided
-    scen_name = scenario_name if scenario_name else os.path.basename(p2m_folder)
+    scen_name = scenario_name if scenario_name else os.path.basename(rt_folder)
     
     # Get paths for input and output folders
-    insite_sim_folder = os.path.dirname(p2m_folder)
-    output_folder = os.path.join(insite_sim_folder, scen_name + '_deepmimo')
+    output_folder = os.path.join(os.path.dirname(rt_folder), scen_name + '_deepmimo')
     
     # Create output folder
     if os.path.exists(output_folder):
@@ -84,19 +83,19 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     os.makedirs(output_folder)
     
     # Read ray tracing parameters
-    rt_params = read_rt_params(insite_sim_folder)
+    rt_params = read_rt_params(rt_folder)
 
     # Read TXRX (.txrx)
-    txrx_dict = read_txrx(insite_sim_folder, p2m_folder)
+    txrx_dict = read_txrx(rt_folder)
     
-    # Read Paths (.paths)
-    read_paths(p2m_folder, output_folder, txrx_dict)
+    # Read Paths (.p2m)
+    read_paths(rt_folder, output_folder, txrx_dict)
     
     # Read Materials of all objects (.city, .ter, .veg)
-    materials_dict = read_materials(insite_sim_folder)
+    materials_dict = read_materials(rt_folder)
     
     # Read scene objects
-    scene = read_scene(insite_sim_folder)
+    scene = read_scene(rt_folder)
     scene_dict = scene.export_data(output_folder)
     
     # Visualize if requested
@@ -120,6 +119,6 @@ def insite_rt_converter(p2m_folder: str, copy_source: bool = False,
     
     # Copy and zip ray tracing source files as well
     if copy_source:
-        cu.save_rt_source_files(insite_sim_folder, SOURCE_EXTS)
+        cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
     
     return scen_name

@@ -14,7 +14,7 @@ from ... import consts as c
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
 
-def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int] | None = None, rx_ids: List[int] | None = None, 
+def insite_rt_converter_v3(insite_sim_folder: str, tx_ids: List[int] | None = None, rx_ids: List[int] | None = None, 
                           params_dict: Dict | None = None, scenario_name: str = '') -> str:
     """Convert Wireless Insite files to DeepMIMO format using legacy v3 converter.
 
@@ -30,10 +30,10 @@ def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int] | None = None, rx_
     """
     # Loads P2Ms (.cir, .doa, .dod, .paths[.t001_{tx_id}.r{rx_id}.p2m] eg: .t001_01.r001.p2m)
     
-    insite_sim_folder = os.path.dirname(p2m_folder)
+    p2m_folder = next(p for p in os.scandir(insite_sim_folder) if p.is_dir()).path
 
-    intermediate_folder = os.path.join(insite_sim_folder, 'intermediate_files')
-    output_folder = os.path.join(insite_sim_folder, 'mat_files') # SCEN_NAME!
+    intermediate_folder = os.path.join(p2m_folder, 'intermediate_files')
+    output_folder = os.path.join(p2m_folder, 'mat_files') # SCEN_NAME!
     
     os.makedirs(intermediate_folder, exist_ok=True)
     os.makedirs(output_folder, exist_ok=True)
