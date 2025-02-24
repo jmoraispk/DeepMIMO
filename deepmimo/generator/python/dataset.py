@@ -13,7 +13,7 @@ from typing import Dict, Optional, Any, List
 import numpy as np
 
 # Base utilities
-from ...general_utilities import DotDict
+from ...general_utilities import DotDict, compare_two_dicts
 from ... import consts as c
 from ...info import info
 
@@ -215,6 +215,12 @@ class Dataset(DotDict):
         """
         if params is None:
             params = ChannelGenParameters()
+        else:
+            # validate params 
+            additional_keys = compare_two_dicts(params, ChannelGenParameters())
+            if len(additional_keys):
+                print('The following parameters seem unnecessary:')
+                print(additional_keys)
         
         # Store params for use by other compute functions
         self._ch_params = params

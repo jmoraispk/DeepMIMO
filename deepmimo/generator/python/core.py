@@ -22,7 +22,7 @@ import scipy.io
 # Local imports
 from ... import consts as c
 from ...general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
-                                  get_scenario_folder, get_params_path)
+                                  get_scenario_folder, get_params_path, compare_two_dicts)
 from ...scene import Scene
 from .dataset import Dataset, MacroDataset
 from ...materials import MaterialList
@@ -392,7 +392,8 @@ def validate_ch_gen_params(params: ChannelGenParameters, n_active_ues: int) -> C
         params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
         
     # UE Antenna Radiation Pattern
-    if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_UE].keys():
+    if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_UE].keys() and \
+        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None:
         assert_str = ("The UE antenna radiation pattern must have one of the " + 
                      f"following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
         assert params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
@@ -400,24 +401,4 @@ def validate_ch_gen_params(params: ChannelGenParameters, n_active_ues: int) -> C
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
                                              
     return params
-        
-def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
-    """Compare two dictionaries for equality.
-            
-    This function performs a deep comparison of two dictionaries, handling
-    nested dictionaries and numpy arrays.
-        
-    Args:
-        dict1 (dict): First dictionary to compare
-        dict2 (dict): Second dictionary to compare
-
-    Returns:
-        set: Set of keys in dict1 that are not in dict2
-    """
-    additional_keys = dict1.keys() - dict2.keys()
-    for key, item in dict1.items():
-        if isinstance(item, dict):
-            if key in dict2:
-                additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
-    return additional_keys
-
+    
