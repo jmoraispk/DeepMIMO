@@ -26,8 +26,8 @@ pip install deepmimo
 Generate a dataset:
 ```python
 import deepmimo as dm
-dm.summary('asu_campus')  # Print summary of the dataset
-dm.generate('asu_campus')  # Load and generate the dataset
+dm.summary('asu_campus_3p5')  # Print summary of the dataset
+dataset = dm.generate('asu_campus_3p5')  # Load and generate the dataset
 ```
 
 Try it out on Colab: ......
@@ -36,7 +36,7 @@ Try it out on Colab: ......
 
 | Step    | Command                                           | Description                       |
 |---------|---------------------------------------------------|-----------------------------------|
-| Install | `pip install sphinx sphinx-rtd-theme`             | Install required dependencies     |
+| Install | `pip install sphinx furo`             | Install required dependencies     |
 | Build   | `cd docs`<br>`sphinx-build -b html . _build/html` | Generate HTML documentation       |
 | Serve   | `cd docs/_build/html`<br>`python -m http.server`  | View docs at http://localhost:8000|
 
