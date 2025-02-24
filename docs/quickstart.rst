@@ -6,7 +6,7 @@ This guide will help you get started with DeepMIMO quickly.
 Basic Usage
 -----------
 
-Here's a simple end-to-end example:
+Load a scenario and generate channels with default settings:
 
 .. code-block:: python
 
@@ -18,43 +18,39 @@ Here's a simple end-to-end example:
     # Generate channels with default parameters
     dataset.compute_channels()
 
+    # Print channel dimensions: [n_users, n_bs_ant, n_ue_ant, n_freqs]
+    print(dataset.channels.shape)  # e.g., (1000, 64, 16, 1) for 1000 users, 
+                                   # 8x8 BS array, 4x4 UE array, 1 subcarrier
+    # Plot the scene
+    dataset.scene.plot()
+
 .. image:: _static/basic_scene.png
    :alt: Basic scene visualization
    :align: center
 
-Loading Data
------------
+Customize Loading
+-----------------
 
 DeepMIMO offers flexible ways to load specific parts of a scenario:
 
 .. code-block:: python
 
-    # Option 1: Load specific TX-RX points using dictionaries
-    tx_sets = {1: [0]}  # First point from TX set 1
-    rx_sets = {2: [0,1,3]}  # Points (users) 0, 1, and 3 from RX set 2
-    dataset1 = dm.load_scenario('asu_campus_3p5', 
-                              tx_sets=tx_sets, 
-                              rx_sets=rx_sets)
+    # Load first base station and all users
+    dataset1 = dm.load_scenario('asu_campus_3p5',
+                              tx_sets={1: [0]},      # First BS from set 1
+                              rx_sets={2: 'all'})    # All users from set 2
 
-    # Option 2: Load entire sets using lists
-    dataset2 = dm.load_scenario('asu_campus_3p5', 
-                              tx_sets=[1], 
-                              rx_sets=[2])
-
-    # Option 3: Load all points from all tx and rx sets (default)
-    dataset3 = dm.load_scenario('asu_campus_3p5', 
-                              tx_sets='all', 
-                              rx_sets='all')
-
-    # Load specific matrices and limit paths
-    dataset4 = dm.load_scenario(
+    # Load specific users and channel matrices
+    dataset2 = dm.load_scenario(
         'asu_campus_3p5',
-        matrices=['aoa_az', 'aoa_el', 'inter_pos', 'delay'],
-        max_paths=10
+        tx_sets={1: [0]},                           # First BS
+        rx_sets={2: [0,1,3]},                       # Users 0, 1, and 3
+        matrices=['aoa_az', 'aoa_el', 'power'],     # Specific matrices
+        max_paths=10                                # Limit paths per user
     )
 
-Channel Generation
-----------------
+Flexible Channel Generation
+---------------------------
 
 Customize channel generation with detailed parameters:
 
@@ -63,93 +59,72 @@ Customize channel generation with detailed parameters:
     # Create channel parameters
     ch_params = dm.ChannelGenParameters()
 
-    # Base station antenna configuration
-    ch_params.bs_antenna.rotation = [30, 40, 30]  # [az, el, pol] in degrees
-    ch_params.bs_antenna.fov = [360, 180]        # [az, el] in degrees
-    ch_params.bs_antenna.shape = [8, 8]          # [horizontal, vertical] elements
-    ch_params.bs_antenna.spacing = 0.5           # Element spacing in wavelengths
+    # Base station antenna parameters
+    ch_params.bs_antenna.shape = [8, 8]          # 8x8 array
+    ch_params.bs_antenna.spacing = 0.5           # Half-wavelength spacing
+    ch_params.bs_antenna.rotation = [30,40,30]   # [az,el,pol] rotation
+    ch_params.bs_antenna.fov = [360, 180]        # Full azimuth coverage
 
-    # User equipment antenna configuration
-    ch_params.ue_antenna.rotation = [0, 0, 0]    # [az, el, pol] in degrees
-    ch_params.ue_antenna.fov = [120, 180]        # [az, el] in degrees
-    ch_params.ue_antenna.shape = [4, 4]          # [horizontal, vertical] elements
-    ch_params.ue_antenna.spacing = 0.5           # Element spacing in wavelengths
+    # User equipment antenna parameters
+    ch_params.ue_antenna.shape = [4, 4]          # 4x4 array
+    ch_params.ue_antenna.fov = [120, 180]        # 120° azimuth coverage
 
     # Frequency domain parameters
-    ch_params.freq_domain = True                 # Enable frequency domain channels
-    ch_params.bandwidth = 0.1                    # Bandwidth in GHz
-    ch_params.num_subcarriers = 64               # Number of subcarriers
+    ch_params.freq_domain = True
+    ch_params.bandwidth = 0.1                    # 100 MHz
+    ch_params.num_subcarriers = 64
 
     # Generate channels
     dataset.compute_channels(ch_params)
 
-Scene Analysis
--------------
+Download, Convert and Upload
+----------------------------
 
-Explore the physical environment and materials:
+Work with your own ray-tracing data:
 
 .. code-block:: python
 
-    # Access scene objects
-    scene = dataset.scene
-    buildings = scene.get_objects('buildings')
-    terrain = scene.get_objects('terrain')
-    vegetation = scene.get_objects('vegetation')
-
-    # Analyze materials
-    materials = dataset.materials
-    building_materials = buildings.get_materials()
-
-    # Filter objects
-    material_idx = building_materials[0]
-    buildings_with_material = scene.get_objects(
-        label='buildings', 
-        material=material_idx
+    # Convert ray-tracing data to DeepMIMO format
+    scen_name = dm.convert(
+        './ray_tracing/my_scenario',     # Ray-tracing folder
+        scenario_name='my_scenario',     # Custom name
+        vis_scene=True                   # Visualize after conversion
     )
 
-    # Get object properties
-    building = buildings[0]
-    print(f"Building height: {building.height:.2f}m")
-    print(f"Building volume: {building.volume:.2f}m³")
-    print(f"Building footprint area: {building.footprint_area:.2f}m²")
+    # Upload to DeepMIMO server (requires free API key)
+    dm.upload(scen_name, 'your-api-key',
+             details=['Custom scenario at 3.5 GHz'])
+    
+    # The scenario becomes available in the DeepMIMO library is accessible by other users
+    dm.download(scen_name)
 
-.. image:: _static/scene_analysis.png
-   :alt: Scene analysis visualization
-   :align: center
 
-Visualization
-------------
+Visualization Examples
+----------------------
 
-DeepMIMO provides rich visualization tools:
+Plot coverage maps and ray paths:
 
 .. code-block:: python
 
-    # Plot the scene
-    scene.plot()  # Basic view
-    scene.plot(mode='tri_faces')  # With triangular faces
-
-    # Plot coverage maps
-    dm.plot_coverage(dataset.rx_pos, dataset.aoa_az[:,0], 
-                    bs_pos=dataset.tx_pos.T)
-
-    # Plot ray paths for a specific user
-    dm.plot_rays(dataset.rx_pos[10], dataset.tx_pos[0],
-                dataset.inter_pos[10], dataset.inter[10],
-                proj_3D=True, color_by_type=True)
-
-    # Plot various channel properties
-    properties = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 
-                 'delay', 'power', 'phase', 'los', 
-                 'distances', 'num_paths']
-    
-    for prop in properties:
-        values = dataset[prop][:,0] if dataset[prop].ndim == 2 else dataset[prop]
-        dm.plot_coverage(dataset.rx_pos, values, 
-                        bs_pos=dataset.tx_pos.T, title=prop)
+    # Plot power coverage map
+    dm.plot_coverage(dataset.rx_pos, dataset.power[:,0], 
+                    bs_pos=dataset.tx_pos.T,
+                    title="Power Coverage Map (dB)")
 
 .. image:: _static/coverage_map.png
    :alt: Coverage map visualization
    :align: center
+
+.. code-block:: python
+
+    # Plot ray paths for user with most paths
+    user_idx = np.argmax(dataset.num_paths)
+    dm.plot_rays(dataset.rx_pos[user_idx], 
+                dataset.tx_pos[0],
+                dataset.inter_pos[user_idx], 
+                dataset.inter[user_idx],
+                proj_3D=True, 
+                color_by_type=True)
 
 .. image:: _static/ray_paths.png
    :alt: Ray paths visualization
