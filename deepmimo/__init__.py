@@ -5,20 +5,20 @@ DeepMIMO Python Package.
 __version__ = "4.0.0a2"
 
 # Core functionality
-from .generator.python.core import (
+from .generator.core import (
     generate,
     load_scenario,
 )
-from .generator.python.dataset import Dataset
+from .generator.dataset import Dataset
 
 # Visualization
-from .generator.python.visualization import (
+from .generator.visualization import (
     plot_coverage,
     plot_rays,
 )
 
 # Utilities
-from .generator.python.utils import (
+from .generator.utils import (
     dbm2watt,
     uniform_sampling,
     LinearPath,
@@ -26,7 +26,7 @@ from .generator.python.utils import (
 )
 
 # Channel parameters
-from .generator.python.channel import ChannelGenParameters
+from .generator.channel import ChannelGenParameters
 
 from .converter.converter import convert
 from .info import info
