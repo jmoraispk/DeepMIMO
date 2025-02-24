@@ -2,12 +2,11 @@ import os
 import copy
 import numpy as np
 
-from ... import consts_v3 as c
+from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
 from .utils import safe_print
 from .params import Parameters
 from .downloader import download_scenario_handler
-from ...general_utilities import unzip
 
 def generate_data(params_obj=None):
     
@@ -282,3 +281,27 @@ def compare_two_dicts(dict1, dict2):
 
     return additional_keys
 
+
+def unzip(path_to_zip: str) -> str:
+    """Extract a zip file to its parent directory.
+
+    This function extracts the contents of a zip file to the directory
+    containing the zip file.
+
+    Args:
+        path_to_zip (str): Path to the zip file to extract.
+
+    Raises:
+        zipfile.BadZipFile: If zip file is corrupted.
+        OSError: If extraction fails due to file system issues.
+
+    Returns:
+        Path to the extracted folder
+    """
+    extracted_path = path_to_zip.replace(".zip", "")
+    with zipfile.ZipFile(path_to_zip, "r") as zip_ref:
+        files = zip_ref.namelist()
+        for file in tqdm(files, desc="Extracting", unit="file"):
+            zip_ref.extract(file, extracted_path)
+
+    return extracted_path

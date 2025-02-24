@@ -1,6 +1,6 @@
 import os 
 import numpy as np
-from ... import consts_v3 as c
+from ... import consts as c
 from pprint import pformat # returns pprint string
 
 class Parameters():

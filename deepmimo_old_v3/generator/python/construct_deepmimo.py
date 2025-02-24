@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from ... import consts_v3 as c
+from ... import consts as c
 from .ant_patterns import AntennaPattern
 
 # Generates common parameters first. The output is a numpy matrix.

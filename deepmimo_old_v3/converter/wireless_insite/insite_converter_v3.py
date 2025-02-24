@@ -10,7 +10,7 @@ from typing import List, Dict
 import numpy as np
 import scipy.io
 
-from ... import consts_v3 as c
+from ... import consts as c
 from .ChannelDataLoader import WIChannelConverter
 from .ChannelDataFormatter import DeepMIMODataFormatter
 
@@ -64,4 +64,4 @@ def insite_rt_converter_v3(p2m_folder: str, tx_ids: List[int] | None = None, rx_
         shutil.rmtree(scen_path)
     shutil.copytree(output_folder, './' + scen_path)
     
-    return output_folder 
+    return scen_name 
