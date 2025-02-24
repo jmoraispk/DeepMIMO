@@ -394,9 +394,6 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
         summary_str += f"- Antennas per point: {set_info[c.TXRX_PARAM_NUM_ANT]}\n"
         summary_str += f"- Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}\n"
 
-    summary_str += f"\n[Version]\n"
-    summary_str += f"- DeepMIMO Version: {params_dict[c.VERSION_PARAM_NAME]}\n"
-    
     if print_summary:
         print(summary_str)
         return None
