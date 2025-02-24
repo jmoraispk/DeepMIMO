@@ -12,11 +12,8 @@ Here's a simple end-to-end example:
 
     import deepmimo as dm
     
-    # Convert ray-tracing data to DeepMIMO format
-    scen_name = dm.convert('./ray_tracing/scenario', vis_scene=True)
-    
-    # Load the scenario
-    dataset = dm.load_scenario(scen_name)
+    # Load a pre-built scenario
+    dataset = dm.load_scenario('asu_campus_3p5')
     
     # Generate channels with default parameters
     dataset.compute_channels()
@@ -32,21 +29,27 @@ DeepMIMO offers flexible ways to load specific parts of a scenario:
 
 .. code-block:: python
 
-    # Option 1: Load specific points using dictionaries
+    # Option 1: Load specific TX-RX points using dictionaries
     tx_sets = {1: [0]}  # First point from TX set 1
-    rx_sets = {2: 'all'}  # All points from RX set 2
-    dataset1 = dm.load_scenario(scen_name, tx_sets=tx_sets, rx_sets=rx_sets)
+    rx_sets = {2: [0,1,3]}  # Points (users) 0, 1, and 3 from RX set 2
+    dataset1 = dm.load_scenario('asu_campus_3p5', 
+                              tx_sets=tx_sets, 
+                              rx_sets=rx_sets)
 
     # Option 2: Load entire sets using lists
-    dataset2 = dm.load_scenario(scen_name, tx_sets=[1], rx_sets=[2])
+    dataset2 = dm.load_scenario('asu_campus_3p5', 
+                              tx_sets=[1], 
+                              rx_sets=[2])
 
-    # Option 3: Load everything
-    dataset3 = dm.load_scenario(scen_name, tx_sets='all', rx_sets='all')
+    # Option 3: Load all points from all tx and rx sets (default)
+    dataset3 = dm.load_scenario('asu_campus_3p5', 
+                              tx_sets='all', 
+                              rx_sets='all')
 
     # Load specific matrices and limit paths
     dataset4 = dm.load_scenario(
-        scen_name,
-        matrices=['aoa_az', 'aoa_el', 'inter_pos', 'inter'],
+        'asu_campus_3p5',
+        matrices=['aoa_az', 'aoa_el', 'inter_pos', 'delay'],
         max_paths=10
     )
 
