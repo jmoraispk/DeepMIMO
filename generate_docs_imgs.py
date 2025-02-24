@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Create _static directory if it doesn't exist
-static_dir = os.path.join(os.path.dirname(__file__), '_static')
+static_dir = os.path.join('docs', '_static')
 os.makedirs(static_dir, exist_ok=True)
 
 def save_fig(name, tight=True, dpi=300):
@@ -34,28 +34,7 @@ _, ax = dataset.scene.plot(show=False)
 ax.set_title(f"DeepMIMO Scene Example: ASU Campus 3.5 GHz ({ax.get_title()})")
 save_fig('basic_scene')
 
-# 2. Scene Analysis with Materials
-print("Generating scene analysis visualization...")
-scene = dataset.scene
-buildings = scene.get_objects('buildings')
-
-# Plot buildings colored by material
-fig = plt.figure(figsize=(12, 8))
-ax = fig.add_subplot(111, projection='3d')
-
-# Get unique materials
-materials = buildings.get_materials()
-colors = plt.cm.tab10(np.linspace(0, 1, len(materials)))
-
-for mat_idx, color in zip(materials, colors):
-    buildings_mat = scene.get_objects(label='buildings', material=mat_idx)
-    if len(buildings_mat) > 0:
-        buildings_mat.plot(ax=ax, color=color, alpha=0.7)
-
-ax.set_title("Buildings Colored by Material")
-save_fig('scene_analysis')
-
-# 3. Coverage Map
+# 2. Coverage Map
 print("Generating coverage map...")
 plt.figure(figsize=(10, 8))
 dm.plot_coverage(dataset.rx_pos, dataset.power[:,0], 
@@ -63,7 +42,7 @@ dm.plot_coverage(dataset.rx_pos, dataset.power[:,0],
                 title="Power Coverage Map (dB)")
 save_fig('coverage_map')
 
-# 4. Ray Paths
+# 3. Ray Paths
 print("Generating ray paths visualization...")
 # Find a user with multiple paths for better visualization
 user_idx = np.argmax(dataset.num_paths)
