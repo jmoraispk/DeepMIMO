@@ -22,8 +22,8 @@ import requests
 from tqdm import tqdm
 
 # Local imports
-from ... import consts as c
-from ...general_utilities import get_scenario_folder
+from .. import consts as c
+from ..general_utilities import get_scenario_folder
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

@@ -13,9 +13,9 @@ from typing import Dict, Optional, Any, List
 import numpy as np
 
 # Base utilities
-from ...general_utilities import DotDict, compare_two_dicts
-from ... import consts as c
-from ...info import info
+from ..general_utilities import DotDict, compare_two_dicts
+from .. import consts as c
+from ..info import info
 
 # Channel generation
 from .channel import generate_MIMO_channel, ChannelGenParameters

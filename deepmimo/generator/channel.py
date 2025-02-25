@@ -13,8 +13,8 @@ based on path information from ray-tracing and antenna configurations.
 import numpy as np
 from tqdm import tqdm
 from typing import Dict
-from ... import consts as c
-from ...general_utilities import DotDict
+from .. import consts as c
+from ..general_utilities import DotDict
 
 class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.
