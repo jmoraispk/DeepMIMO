@@ -20,12 +20,12 @@ import numpy as np
 import scipy.io
 
 # Local imports
-from ... import consts as c
-from ...general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
-                                  get_scenario_folder, get_params_path, compare_two_dicts)
-from ...scene import Scene
+from .. import consts as c
+from ..general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
+                                 get_scenario_folder, get_params_path, compare_two_dicts)
+from ..scene import Scene
 from .dataset import Dataset, MacroDataset
-from ...materials import MaterialList
+from ..materials import MaterialList
 
 # Channel generation
 from .channel import ChannelGenParameters
