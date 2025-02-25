@@ -1,6 +1,7 @@
 import os
 import copy
 import numpy as np
+import zipfile
 
 from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
