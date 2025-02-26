@@ -112,4 +112,4 @@ PARAMSET_ANT_FOV = 'fov'
 LIGHTSPEED = 299792458  # Speed of light in m/s
 
 # Scenarios folder
-SCENARIOS_FOLDER = 'deepmimo_scenarios2' 
+SCENARIOS_FOLDER = 'deepmimo_scenarios_v3' 
