@@ -167,12 +167,13 @@ class OFDM_PathGenerator:
         power[paths_over_FFT] = 0
         delay_n[paths_over_FFT] = self.OFDM_params[c.PARAMSET_OFDM_SC_NUM]
         
+        # Reshape path_const to be compatible with broadcasting
         path_const = np.sqrt(power / self.total_subcarriers) * np.exp(1j * np.deg2rad(phase))
         if self.OFDM_params[c.PARAMSET_OFDM_LPF]: # Low-pass filter (LPF) convolution
             path_const = path_const * np.sinc(self.delay_d - delay_n) @ self.delay_to_OFDM
         else: # Path construction without LPF
-            path_const *= np.exp(-1j * (2 * np.pi / self.total_subcarriers) * 
-                               np.outer(delay_n, self.subcarriers))
+            path_const = path_const * np.exp(-1j * (2 * np.pi / self.total_subcarriers) * 
+                                           np.outer(delay_n.ravel(), self.subcarriers))
         return path_const
 
 def generate_MIMO_channel(array_response_product: np.ndarray,

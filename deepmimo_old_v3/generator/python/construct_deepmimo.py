@@ -262,7 +262,7 @@ class OFDM_PathGenerator:
         if use_LPF: # LPF convolution
             path_const = path_const * np.sinc(self.delay_d - delay_n)
         else: # Path construction without LPF
-            path_const *= np.exp(-1j * (2 * np.pi / self.total_subcarriers) * np.outer(delay_n, self.subcarriers))
+            path_const = path_const * np.exp(-1j * (2 * np.pi / self.total_subcarriers) * np.outer(delay_n, self.subcarriers))
     
         # Apply Doppler effect if enabled
         doppler_available = self.params[c.PARAMSET_SCENARIO_PARAMS][c.PARAMSET_SCENARIO_PARAMS_DOPPLER_EN]
