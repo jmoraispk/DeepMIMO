@@ -6,9 +6,6 @@ This module provides functionality to convert ray-tracing simulation results int
 Wireless InSite Converter
 -------------------------
 
-Core Converter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. automodule:: deepmimo.converter.wireless_insite.insite_converter
    :members:
    :undoc-members:
@@ -16,41 +13,13 @@ Core Converter
 
    Main converter functionality for Wireless InSite ray-tracing data.
 
-Data Structures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sionna Converter
+-------------------------
 
-.. automodule:: deepmimo.converter.wireless_insite.insite_paths
+.. automodule:: deepmimo.converter.sionna_rt.sionna_converter
    :members:
    :undoc-members:
    :show-inheritance:
 
-   Path information data structures.
-
-.. automodule:: deepmimo.converter.wireless_insite.insite_scene
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-   Scene geometry and object data structures.
-
-.. automodule:: deepmimo.converter.wireless_insite.insite_txrx
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-   Transmitter and receiver data structures.
-
-.. automodule:: deepmimo.converter.wireless_insite.insite_materials
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-   Material properties data structures.
-
-.. automodule:: deepmimo.converter.wireless_insite.insite_rt_params
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-   Ray-tracing parameters data structures.
+   Main converter functionality for Sionna ray-tracing data.
 

@@ -59,4 +59,4 @@ html_static_path = ['_static']
 
 # Other settings
 autodoc_member_order = 'bysource'
-#autodoc_typehints = 'description'
+# autodoc_typehints = 'description'

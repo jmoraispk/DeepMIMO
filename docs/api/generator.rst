@@ -128,20 +128,3 @@ Sionna Integration
    * Channel format conversion
    * Parameter mapping
    * Dataset compatibility
-
-Data Management
-------------------
-
-Scenario Download
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: deepmimo.generator.downloader
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-   Scenario management:
-   
-   * Scenario downloading
-   * Version control
-   * Cache management 
