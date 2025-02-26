@@ -8,4 +8,3 @@ DeepMIMO API Reference
    converter
    api
    utils
-   visualization
