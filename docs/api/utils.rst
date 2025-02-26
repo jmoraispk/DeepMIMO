@@ -1,13 +1,13 @@
 Utilities
 =========
 
-.. automodule:: deepmimo.generator.python.utils
+.. automodule:: deepmimo.generator.utils
    :members:
    :undoc-members:
    :show-inheritance:
    :noindex:
 
-.. automodule:: deepmimo.generator.python.visualization
+.. automodule:: deepmimo.generator.visualization
    :members:
    :undoc-members:
    :show-inheritance:

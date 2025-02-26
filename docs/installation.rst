@@ -8,7 +8,7 @@ You can install DeepMIMO using pip:
    pip install deepmimo
 
 Requirements
-------------
+-----------------------
 
 DeepMIMO requires Python 3.10 or later. The main dependencies are:
 
@@ -26,7 +26,7 @@ For development installation, clone the repository and install in editable mode:
    pip install -e .
 
 Documentation Dependencies
--------------------------
+---------------------------------
 
 To build the documentation locally, you'll need:
 
