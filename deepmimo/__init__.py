@@ -15,6 +15,7 @@ from .generator.dataset import Dataset
 from .generator.visualization import (
     plot_coverage,
     plot_rays,
+    plot_power_discarding,
 )
 
 # Utilities
