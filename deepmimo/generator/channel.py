@@ -59,7 +59,7 @@ class ChannelGenParameters(DotDict):
             c.PARAMSET_OFDM: {
                 c.PARAMSET_OFDM_SC_NUM: 512, # Number of total subcarriers
                 c.PARAMSET_OFDM_SC_SAMP: np.arange(1), # Select subcarriers to generate
-                c.PARAMSET_OFDM_BW: 0.05, # GHz
+                c.PARAMSET_OFDM_BANDWIDTH: 50e6, # Hz
                 c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
             }
         })
@@ -85,7 +85,7 @@ class PathVerifier:
         """
         self.params = params
         if self.params[c.PARAMSET_FD_CH]: # IF OFDM
-            Ts = 1 / (params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BW]*c.PARAMSET_OFDM_BW_MULT)
+            Ts = 1 / (params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BANDWIDTH])
             self.FFT_duration = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_NUM] * Ts
             self.max_ToA = 0
             self.path_ratio_FFT = []
@@ -199,8 +199,7 @@ def generate_MIMO_channel(array_response_product: np.ndarray,
     Returns:
         numpy.ndarray: MIMO channel matrices with shape (n_users, n_rx_ant, n_tx_ant, n_paths/subcarriers)
     """
-    bandwidth = ofdm_params[c.PARAMSET_OFDM_BW] * c.PARAMSET_OFDM_BW_MULT
-    Ts = 1 / bandwidth
+    Ts = 1 / ofdm_params[c.PARAMSET_OFDM_BANDWIDTH]
     subcarriers = ofdm_params[c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(ofdm_params, subcarriers)
 

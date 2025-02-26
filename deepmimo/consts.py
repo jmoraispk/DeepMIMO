@@ -213,8 +213,7 @@ PARAMSET_NUM_PATHS = 'num_paths'  # Number of paths to consider for channel gene
 PARAMSET_OFDM = 'ofdm'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'
 PARAMSET_OFDM_SC_SAMP = 'selected_subcarriers'
-PARAMSET_OFDM_BW = 'bandwidth'
-PARAMSET_OFDM_BW_MULT = 1e9  # Bandwidth input is GHz, multiply by this
+PARAMSET_OFDM_BANDWIDTH = 'bandwidth'
 PARAMSET_OFDM_LPF = 'rx_filter'
 
 # Antenna parameters
