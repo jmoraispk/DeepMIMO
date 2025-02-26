@@ -72,6 +72,19 @@ DATASET_HELP_MESSAGES = {
         'Transmitter/receiver parameters',
 }
 
+CHANNEL_HELP_MESSAGES = {
+    c.PARAMSET_OFDM_SC_NUM:
+        'Number of subcarriers in OFDM',
+    c.PARAMSET_OFDM_SC_SAMP:
+        'Subcarriers to generate in OFDM',
+    c.PARAMSET_OFDM_BANDWIDTH:
+        'Bandwidth of OFDM',
+    c.PARAMSET_OFDM_LPF:
+        'Whether to apply a low-pass filter to the OFDM signal',
+}
+
+
+
 def info(param_name: str | object | None = None) -> None:
     """Display help information about DeepMIMO dataset parameters and materials.
     
@@ -86,19 +99,19 @@ def info(param_name: str | object | None = None) -> None:
     """
     if not isinstance(param_name, (str, type(None))):
         help(param_name)
-        return
-
-    if param_name is None or param_name == 'all':
+    elif param_name is None or param_name == 'all':
         print("DeepMIMO Dataset Parameters:")
         print("=" * 30)
         for param, msg in sorted(DATASET_HELP_MESSAGES.items()):
             print(f"{param}: {msg}")
-        return
-
-
-    try:
-        print(DATASET_HELP_MESSAGES[param_name])
-    except KeyError:
+    elif param_name in ['ch_params', 'channel_params']:
+        print("Channel Generation Parameters:")
+        print("=" * 30)
+        for param, msg in sorted(CHANNEL_HELP_MESSAGES.items()):
+            print(f"{param}: {msg}")
+    else:
         print(f"Unknown parameter: {param_name}")
         print("Use info() or info('all') to see all available parameters")
+    
+    return
             
