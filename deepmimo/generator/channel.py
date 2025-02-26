@@ -64,59 +64,6 @@ class ChannelGenParameters(DotDict):
             }
         })
 
-class PathVerifier:
-    """Class for verifying and validating paths based on configuration parameters.
-    
-    This class checks path validity against OFDM parameters and provides warnings
-    when paths exceed the OFDM symbol duration.
-    
-    Attributes:
-        params (dict): Channel generation parameters
-        FFT_duration (float): OFDM symbol duration
-        max_ToA (float): Maximum time of arrival seen
-        path_ratio_FFT (list): Ratios of clipped path powers
-    """
-    
-    def __init__(self, params: Dict):
-        """Initialize path verifier.
-        
-        Args:
-            params (dict): Channel generation parameters
-        """
-        self.params = params
-        if self.params[c.PARAMSET_FD_CH]: # IF OFDM
-            Ts = 1 / (params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_BANDWIDTH])
-            self.FFT_duration = params[c.PARAMSET_OFDM][c.PARAMSET_OFDM_SC_NUM] * Ts
-            self.max_ToA = 0
-            self.path_ratio_FFT = []
-    
-    def verify_path(self, ToA: float, power: float) -> None:
-        """Verify a path's time of arrival against OFDM parameters.
-        
-        Args:
-            ToA (float): Time of arrival
-            power (float): Path power
-        """
-        if self.params[c.PARAMSET_FD_CH]: # OFDM CH
-            m_toa = np.max(ToA)
-            self.max_ToA = max(self.max_ToA, m_toa)
-            
-            if m_toa > self.FFT_duration:
-                violating_paths = ToA > self.FFT_duration
-                self.path_ratio_FFT.append(sum(power[violating_paths])/sum(power))
-                        
-    def notify(self) -> None:
-        """Print notification about paths exceeding OFDM duration if needed."""
-        if self.params[c.PARAMSET_FD_CH]:
-            avg_ratio_FFT = 0
-            if len(self.path_ratio_FFT) != 0:
-                avg_ratio_FFT = np.mean(self.path_ratio_FFT)*100
-                
-            if self.max_ToA > self.FFT_duration and avg_ratio_FFT >= 1.:
-                print(f'ToA of some paths of {len(self.path_ratio_FFT)} channels '
-                      f'with an average total power of {avg_ratio_FFT:.2f}% exceed '
-                      'the useful OFDM symbol duration and are clipped.')
-
 class OFDM_PathGenerator:
     """Class for generating OFDM paths with specified parameters.
     
@@ -202,6 +149,31 @@ def generate_MIMO_channel(array_response_product: np.ndarray,
     Ts = 1 / ofdm_params[c.PARAMSET_OFDM_BANDWIDTH]
     subcarriers = ofdm_params[c.PARAMSET_OFDM_SC_SAMP]
     path_gen = OFDM_PathGenerator(ofdm_params, subcarriers)
+
+    # Check if any paths exceed OFDM symbol duration
+    if freq_domain:
+        ofdm_symbol_duration = ofdm_params[c.PARAMSET_OFDM_SC_NUM] * Ts
+        subcarrier_spacing = ofdm_params[c.PARAMSET_OFDM_BANDWIDTH] / ofdm_params[c.PARAMSET_OFDM_SC_NUM]  # Hz
+        max_delay = np.nanmax(delays)
+        
+        if max_delay > ofdm_symbol_duration:
+            print("\nWarning: Some path delays exceed OFDM symbol duration")
+            print("-" * 50)
+            print(f"OFDM Configuration:")
+            print(f"- Number of subcarriers (N): {ofdm_params[c.PARAMSET_OFDM_SC_NUM]}")
+            print(f"- Bandwidth (B): {ofdm_params[c.PARAMSET_OFDM_BANDWIDTH]/1e6:.1f} MHz")
+            print(f"- Subcarrier spacing (Δf = B/N): {subcarrier_spacing/1e3:.1f} kHz")
+            print(f"- Symbol duration (T = 1/Δf = N/B): {ofdm_symbol_duration*1e6:.1f} μs")
+            print(f"\nPath Information:")
+            print(f"- Maximum path delay: {max_delay*1e6:.1f} μs")
+            print(f"- Excess delay: {(max_delay - ofdm_symbol_duration)*1e6:.1f} μs")
+            print("\nPaths arriving after the symbol duration will be clipped.")
+            print("To avoid clipping, either:")
+            print("1. Increase the number of subcarriers (N)")
+            print("2. Decrease the bandwidth (B)")
+            print(f"3. Switch to time-domain channel generation (set ch_params['{c.PARAMSET_FD_CH}'] = 0)")
+            # print(f"4. (not recommended) Turn off OFDM path trimming (set ch_params['{c.PARAMSET_OFDM_PATH_TRIM}'] = False)")
+            print("-" * 50)
 
     n_ues = powers.shape[0]
     max_paths = powers.shape[1]
