@@ -1,6 +1,16 @@
 """
-Parses Wireless Insite setup files (.setup, .txrx, .city, .ter, .veg) into 
-Python objects that can be easily queried.
+Wireless Insite Setup File Parser.
+
+This module provides functionality to parse Wireless Insite setup files into Python objects.
+
+This module provides:
+- File tokenization and parsing utilities
+- Node representation for setup file elements
+- Document-level parsing functionality
+- Type conversion and validation
+
+The module serves as the interface between Wireless Insite's file formats and DeepMIMO's
+internal data structures.
 
 The processed file looks like a list of nodes, and nodes are dictionaries with 
 certain fields. Print the document to see all the elements.
@@ -15,6 +25,7 @@ line_value := (STR | "yes" | "no" | INT | FLOAT)+ NL
 
 from dataclasses import dataclass, field
 import re
+from typing import Any, Dict, Tuple
 
 RE_BOOL_TRUE = re.compile(r"yes")
 RE_BOOL_FALSE = re.compile(r"no")
@@ -26,8 +37,18 @@ RE_LABEL = re.compile(r"\S+")
 
 NL_TOKEN = "\n"
 
-def tokenize_file(path):
-    """Breaks a TXRX file into whitespace-separated tokens."""
+def tokenize_file(path: str) -> str:
+    """Break a Wireless Insite file into whitespace-separated tokens.
+    
+    Args:
+        path (str): Path to the file to tokenize
+        
+    Returns:
+        str: Generator yielding tokens from the file
+        
+    Notes:
+        Special handling is applied to the first line if it contains format information.
+    """
 
     with open(path, "r") as f:
         first_line = f.readline()
@@ -77,17 +98,25 @@ class peekable:
 
 @dataclass
 class Node:
-    """Node to represent a section delimited by begin_<...> / end_<...>.
+    """Node representation for Wireless Insite setup file sections.
+    
+    This class represents a section in a Wireless Insite setup file delimited by 
+    begin_<...> and end_<...> tags. It provides structured access to section data
+    through dictionary-like interface.
 
-    Provides the attributes name, values, labels, and data.
+    Attributes:
+        name (str): Optional name in front of the begin_<...> tag. Defaults to ''.
+        kind (str): Type of node from the tag name. Defaults to ''.
+        values (dict): Dictionary mapping labels to values. Defaults to empty dict.
+        labels (list): List of unlabeled identifiers. Defaults to empty list.
+        data (list): List of tuples with unlabeled data. Defaults to empty list.
 
-    - name is the optional name in front of the tag begin_<...>;
-    - values is a dictionary mapping labels to values;
-    - labels is a list of labels; and
-    - data is a list of tuples with unlabeled data.
-
-    The dictionary `values` can be accessed directly by keying the node instance
-    itself, e.g., node["xyz"] is equivalent to node["values"]["xyz"].
+    Example:
+        >>> node = Node()
+        >>> node.name = "antenna1"
+        >>> node["frequency"] = 28e9
+        >>> node.values["frequency"]
+        28000000000.0
     """
 
     name: str = ''
@@ -96,16 +125,38 @@ class Node:
     labels: list = field(default_factory=list)
     data: list = field(default_factory=list)
 
-    def __getitem__(self, key):
-        """Dispatch `node[key]` to `node.values[key]`."""
+    def __getitem__(self, key: str) -> Any:
+        """Access node values using dictionary notation.
+        
+        Args:
+            key (str): Key to look up in values dictionary
+            
+        Returns:
+            Any: Value associated with key
+            
+        Raises:
+            KeyError: If key not found in values dictionary
+        """
         return self.values.__getitem__(key)
 
-    def __setitem__(self, key, value):
-        """Dispatch `node[key] = value` to `node.values[key] = value`."""
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Set node values using dictionary notation.
+        
+        Args:
+            key (str): Key to set in values dictionary
+            value (Any): Value to associate with key
+        """
         return self.values.__setitem__(key, value)
 
-    def __delitem__(self, key):
-        """Dispatch `del node[key]` to `del node.values[key]`."""
+    def __delitem__(self, key: str) -> None:
+        """Delete node values using dictionary notation.
+        
+        Args:
+            key (str): Key to delete from values dictionary
+            
+        Raises:
+            KeyError: If key not found in values dictionary
+        """
         return self.values.__delitem__(key)
 
 def eat(tokens, expected):
@@ -113,8 +164,18 @@ def eat(tokens, expected):
     if (tok := next(tokens)) != expected:
         raise RuntimeError(f"Expected token {expected!r}, got {tok!r}.")
 
-def parse_document(tokens):
-    """Parse a TXRX document."""
+def parse_document(tokens) -> Dict[str, Node]:
+    """Parse a Wireless Insite setup document into a dictionary of nodes.
+    
+    Args:
+        tokens: Iterator of tokens from tokenize_file()
+        
+    Returns:
+        Dict[str, Node]: Dictionary mapping node names to Node objects
+        
+    Raises:
+        RuntimeError: If document structure is invalid or contains duplicate nodes
+    """
     if not isinstance(tokens, peekable):
         tokens = peekable(tokens)
 
@@ -133,10 +194,18 @@ def parse_document(tokens):
         document[node_name] = node
     return document
 
-def parse_node(tokens):
-    """Parse a begin_<...> / end_<...> node.
-
-    Returns the node name and the node.
+def parse_node(tokens) -> Tuple[str, Node]:
+    """Parse a node section from a Wireless Insite setup file.
+    
+    Args:
+        tokens: Iterator of tokens from tokenize_file()
+        
+    Returns:
+        Tuple[str, Node]: Node name and parsed Node object
+        
+    Notes:
+        A node section starts with begin_<name> and ends with end_<name>.
+        The node may have an optional identifier after the begin tag.
     """
     node = Node()
     begin_tag = next(tokens)
@@ -191,10 +260,21 @@ def parse_values(tokens):
 
     return lines
 
-def parse_line_value(tokens):
-    """Parse a line with a single-line value.
-
-    Returns a tuple with all the values in that line.
+def parse_line_value(tokens) -> Tuple:
+    """Parse a single line value from a Wireless Insite setup file.
+    
+    Args:
+        tokens: Iterator of tokens from tokenize_file()
+        
+    Returns:
+        Tuple: Tuple of parsed values with appropriate types (bool, int, float, str)
+        
+    Notes:
+        Values are converted to appropriate types based on their format:
+        - "yes"/"no" -> bool
+        - Integer strings -> int
+        - Float strings -> float
+        - Other strings -> str
     """
     values = []
 
@@ -214,15 +294,18 @@ def parse_line_value(tokens):
     eat(tokens, NL_TOKEN)
     return tuple(values)
 
-def parse_file(file_path: str) -> dict:
-    """
-    Wrapper function to tokenize and parse a file.
+def parse_file(file_path: str) -> Dict[str, Node]:
+    """Parse a Wireless Insite setup file into a dictionary of nodes.
     
     Args:
-        file_path: Path to the file to parse
+        file_path (str): Path to the setup file to parse
         
     Returns:
-        Parsed document as a dictionary
+        Dict[str, Node]: Dictionary mapping node names to Node objects
+        
+    Raises:
+        FileNotFoundError: If file_path does not exist
+        RuntimeError: If file structure is invalid
     """
     return parse_document(tokenize_file(file_path))
 

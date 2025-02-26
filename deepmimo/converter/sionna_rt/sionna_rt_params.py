@@ -1,12 +1,20 @@
 """
-Sionna Ray Tracing Parameters Module.
+Sionna Ray Tracing Parameters.
 
-This module handles loading and converting ray tracing parameters from Sionna's format.
+This module provides parameter handling for Sionna ray tracing simulations.
+
+This module provides:
+- Parameter parsing from Sionna configuration files
+- Standardized parameter representation
+- Parameter validation and conversion utilities
+- Default parameter configuration
+
+The module serves as the interface between Sionna's parameter format
+and DeepMIMO's standardized ray tracing parameters.
 """
 
 from dataclasses import dataclass
 from typing import Dict
-import numpy as np
 
 from .. import converter_utils as cu
 from ...rt_params import RayTracingParameters
@@ -20,14 +28,39 @@ def read_rt_params(load_folder: str) -> Dict:
 
 @dataclass
 class SionnaRayTracingParameters(RayTracingParameters):
-    """Class representing Sionna Ray Tracing parameters.
+    """Sionna ray tracing parameter representation.
     
-    This class extends the base RayTracingParameters with Sionna-specific settings
-    for array configurations and ray launching.
+    This class extends the base RayTracingParameters with Sionna-specific
+    settings for ray tracing configuration and interaction handling.
     
-    Note: All required parameters must come before optional ones in dataclasses.
-    First come the base class required parameters (inherited), then the class-specific
-    required parameters, then all optional parameters.
+    Attributes:
+        raytracer_name (str): Name of ray tracing engine (from constants)
+        raytracer_version (str): Version of ray tracing engine
+        frequency (float): Center frequency in Hz
+        max_path_depth (int): Maximum number of interactions (R + D + S + T)
+        max_reflections (int): Maximum number of reflections (R)
+        max_diffractions (int): Maximum number of diffractions (D)
+        max_scattering (int): Maximum number of diffuse scattering events (S)
+        max_transmissions (int): Maximum number of transmissions (T)
+        diffuse_reflections (int): Reflections allowed in paths with diffuse scattering
+        diffuse_diffractions (int): Diffractions allowed in paths with diffuse scattering
+        diffuse_transmissions (int): Transmissions allowed in paths with diffuse scattering
+        diffuse_final_interaction_only (bool): Whether to only consider diffuse scattering at final interaction
+        diffuse_random_phases (bool): Whether to use random phases for diffuse scattering
+        terrain_reflection (bool): Whether to allow reflections on terrain
+        terrain_diffraction (bool): Whether to allow diffractions on terrain
+        terrain_scattering (bool): Whether to allow scattering on terrain
+        num_rays (int): Number of rays to launch per antenna
+        ray_casting_method (str): Method for casting rays ('uniform' or other)
+        synthetic_array (bool): Whether to use a synthetic array
+        ray_casting_range_az (float): Ray casting range in azimuth (degrees)
+        ray_casting_range_el (float): Ray casting range in elevation (degrees)
+        raw_params (Dict): Original parameters from Sionna
+        
+    Notes:
+        All required parameters must come before optional ones in dataclasses.
+        First come the base class required parameters (inherited), then the class-specific
+        required parameters, then all optional parameters.
     """
     
     @classmethod
@@ -35,10 +68,14 @@ class SionnaRayTracingParameters(RayTracingParameters):
         """Read Sionna RT parameters and return a parameters object.
         
         Args:
-            load_folder: Path to folder containing setup file
+            load_folder (str): Path to folder containing Sionna parameter files
             
         Returns:
-            SionnaRayTracingParameters object containing standardized parameters
+            SionnaRayTracingParameters: Object containing standardized parameters
+            
+        Raises:
+            FileNotFoundError: If parameter files not found
+            ValueError: If required parameters are missing or invalid
         """
         # Load original parameters
         raw_params = cu.load_pickle(load_folder + 'sionna_rt_params.pkl')
