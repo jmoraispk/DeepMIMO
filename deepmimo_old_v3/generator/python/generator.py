@@ -2,12 +2,14 @@ import os
 import copy
 import numpy as np
 import zipfile
+from tqdm import tqdm
 
 from ... import consts as c
 from .construct_deepmimo import generate_MIMO_channel, generate_MIMO_channel_rx_ind
 from .utils import safe_print
 from .params import Parameters
 from .downloader import download_scenario_handler
+
 
 def generate_data(params_obj=None):
     
