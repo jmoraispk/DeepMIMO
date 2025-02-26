@@ -50,7 +50,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     Raises:
         ValueError: If scenario name is invalid or required files are missing
     """
-    dataset = load_scenario(scen_name, **load_params)
+    dataset = load(scen_name, **load_params)
     
     # Create channel generation parameters
     ch_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
@@ -60,7 +60,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
 
     return dataset
 
-def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
+def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     """Load a DeepMIMO scenario.
     
     This function loads raytracing data and creates a Dataset or MacroDataset instance.

@@ -56,7 +56,7 @@ def test_end_to_end_simple():
         'matrices': None
     }
     
-    dataset = dm.load_scenario(scen_name_new, **load_params)
+    dataset = dm.load(scen_name_new, **load_params)
     
     # Verify basic dataset structure
     assert 'tx_pos' in dataset

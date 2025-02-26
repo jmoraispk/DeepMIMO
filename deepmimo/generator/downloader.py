@@ -90,7 +90,7 @@ NAME_TO_LINK: Dict[str, str] = {
 }
 
 
-def download_scenario(name: str) -> Optional[str]:
+def download(name: str) -> Optional[str]:
     """Download a specific DeepMIMO scenario file.
     
     This function downloads a scenario file from remote storage, creating the
@@ -157,7 +157,7 @@ def download_scenario_handler(name: str) -> str:
     while attempt < 3:
         attempt += 1
         try: 
-            zip_path = download_scenario(name)
+            zip_path = download(name)
             break
         except ConnectionError:
             print(f'Attempt {attempt}/3 failed..')
