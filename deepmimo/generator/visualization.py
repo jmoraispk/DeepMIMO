@@ -16,6 +16,7 @@ from typing import Optional, Tuple, Dict, Any, List
 
 # Third-party imports
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
@@ -426,7 +427,8 @@ def plot_power_discarding(dataset, trim_delay: Optional[float] = None) -> Tuple[
 
     # Calculate discarded power ratios for each user
     discarded_power_ratios = []
-    for user_idx in range(len(dataset.delay)):
+    n_users = len(dataset.delay)
+    for user_idx in tqdm(range(n_users), desc="Calculating discarded power ratios per user"):
         user_delays = dataset.delay[user_idx]
         user_powers = dataset.power_linear[user_idx]
         
