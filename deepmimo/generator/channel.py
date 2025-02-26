@@ -51,6 +51,7 @@ class ChannelGenParameters(DotDict):
             
             c.PARAMSET_DOPPLER_EN: 0,
             c.PARAMSET_POLAR_EN: 0,
+            c.PARAMSET_NUM_PATHS: c.MAX_PATHS, 
             
             c.PARAMSET_FD_CH: 1, # OFDM channel if 1, Time domain if 0
             
@@ -175,11 +176,11 @@ class OFDM_PathGenerator:
         return path_const
 
 def generate_MIMO_channel(array_response_product: np.ndarray,
-                         powers: np.ndarray,
-                         delays: np.ndarray,
-                         phases: np.ndarray,
-                         ofdm_params: Dict,
-                         freq_domain: bool = True) -> np.ndarray:
+                          powers: np.ndarray,
+                          delays: np.ndarray,
+                          phases: np.ndarray,
+                          ofdm_params: Dict,
+                          freq_domain: bool = True) -> np.ndarray:
     """Generate MIMO channel matrices.
     
     This function generates MIMO channel matrices based on path information and

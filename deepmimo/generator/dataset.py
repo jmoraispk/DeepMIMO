@@ -230,11 +230,13 @@ class Dataset(DotDict):
         # Compute array response product
         array_response_product = self._compute_array_response_product()
         
+        n_paths_to_gen = params.num_paths
+        
         return generate_MIMO_channel(
-            array_response_product=array_response_product,
-            powers=self.power_linear_ant_gain,
-            delays=self.delay,
-            phases=self.phase,
+            array_response_product=array_response_product[..., :n_paths_to_gen],
+            powers=self.power_linear_ant_gain[..., :n_paths_to_gen],
+            delays=self.delay[..., :n_paths_to_gen],
+            phases=self.phase[..., :n_paths_to_gen],
             ofdm_params=params.ofdm,
             freq_domain=params.freq_domain
         )

@@ -52,7 +52,7 @@ VERSION_PARAM_NAME = 'version'
 VERSION = __version__
 
 # File and folder paths
-SCENARIOS_FOLDER = 'deepmimo_scenarios'  # Folder with extracted scenarios
+SCENARIOS_FOLDER = 'deepmimo_scenarios3'  # Folder with extracted scenarios
 SCENARIOS_DOWNLOAD_FOLDER = 'deepmimo_scenarios_downloaded'  # Folder with downloaded ZIP files
 PARAMS_FILENAME = 'params'
 
@@ -207,6 +207,7 @@ PWR_LINEAR_ANT_GAIN_PARAM_NAME = 'power_linear_ant_gain'
 PARAMSET_POLAR_EN = 'enable_dual_polar'
 PARAMSET_DOPPLER_EN = 'enable_doppler'  # Doppler from Ray Tracer
 PARAMSET_FD_CH = 'freq_domain'  # Time Domain / Frequency Domain (OFDM)
+PARAMSET_NUM_PATHS = 'num_paths'  # Number of paths to consider for channel generation
 
 # OFDM parameters
 PARAMSET_OFDM = 'ofdm'
