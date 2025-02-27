@@ -24,7 +24,11 @@ PARAM_COMBINATIONS = {
     'selected_subcarriers': [np.arange(1), np.arange(3)*3],
     'antenna_shape': [np.array([1,1]), np.array([3,2])],
     'freq_domain': [True, False],
-    'bs_rotation': [None, np.array([30,40,30])],
+    'bs_rotation': [
+        None, 
+        np.array([30,40,30]),  # Single rotation for all users
+        'per_user'  # Special value to indicate per-user rotation
+    ],
     'bs_fov': [None, np.array([140, 120])],
     'ue_fov': [None, np.array([90, 80])]
 }
@@ -58,6 +62,19 @@ def convert_scenario(rt_folder: str, use_v3: bool = False) -> str:
     else:
         return dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=True)
 
+def generate_per_user_rotations(num_users: int) -> np.ndarray:
+    """Generate random rotations for each user.
+    
+    Args:
+        num_users (int): Number of users to generate rotations for
+        
+    Returns:
+        np.ndarray: Array of shape (num_users, 3) with random rotations
+    """
+    np.random.seed(42)  # For reproducibility
+    # Use a more controlled range: [0, 45] degrees for each angle
+    return np.random.uniform(0, 45, (num_users, 3))
+
 def generate_v4_dataset(scen_name: str, params: Dict[str, Any]):
     """Generate dataset using DeepMIMO v4.
     
@@ -90,11 +107,20 @@ def generate_v4_dataset(scen_name: str, params: Dict[str, Any]):
     if params['freq_domain'] is not None:
         ch_params.freq_domain = params['freq_domain']
     if params['bs_rotation'] is not None:
-        ch_params.bs_antenna.rotation = params['bs_rotation']
-    if params['bs_fov'] is not None:
-        ch_params.bs_antenna.fov = params['bs_fov']
-    if params['ue_fov'] is not None:
-        ch_params.ue_antenna.fov = params['ue_fov']
+        if isinstance(params['bs_rotation'], str) and params['bs_rotation'] == 'per_user':
+            # Generate per-user rotations
+            num_users = len(dataset.rx_pos)
+            rotations = generate_per_user_rotations(num_users)
+            # Validate rotation shape
+            if not (len(rotations.shape) == 2 and rotations.shape[1] == 3):
+                raise ValueError("Per-user rotations must be a (N,3) array")
+            ch_params.bs_antenna.rotation = rotations
+        else:
+            # Validate single rotation shape
+            rotation = np.array(params['bs_rotation'])
+            if not (len(rotation.shape) == 1 and rotation.shape[0] == 3):
+                raise ValueError("Single rotation must be a 3D vector")
+            ch_params.bs_antenna.rotation = rotation
     
     # Compute channels
     dataset.power_linear *= 1000  # For compatibility with v3
@@ -128,12 +154,22 @@ def generate_v3_dataset(scen_name: str, params: Dict[str, Any]):
     if params['freq_domain'] is not None:
         ch_params['freq_domain'] = params['freq_domain']
     if params['bs_rotation'] is not None:
-        ch_params['bs_antenna']['rotation'] = params['bs_rotation']
-    if params['bs_fov'] is not None:
-        ch_params['bs_antenna']['fov'] = params['bs_fov']
-    if params['ue_fov'] is not None:
-        ch_params['ue_antenna']['fov'] = params['ue_fov']
-    
+        if isinstance(params['bs_rotation'], str) and params['bs_rotation'] == 'per_user':
+            # Generate per-user rotations
+            # Note: We need to load the dataset first to get num_users
+            temp_dataset = dm.load(scen_name, tx_sets={1: [0]}, rx_sets={2: 'all'})
+            num_users = len(temp_dataset.rx_pos)
+            rotations = generate_per_user_rotations(num_users)
+            print("\nWARNING: V3 doesn't support per-user rotations. Using first rotation for all users.")
+            # For v3, we need to ensure it's a single 3D vector
+            ch_params['bs_antenna']['rotation'] = rotations[0]  # Use first user's rotation
+        else:
+            # Ensure rotation is a 3D vector
+            rotation = np.array(params['bs_rotation'])
+            if not (len(rotation.shape) == 1 and rotation.shape[0] == 3):
+                raise ValueError("For v3, BS antenna rotation must be a 3D vector")
+            ch_params['bs_antenna']['rotation'] = rotation
+           
     # Generate dataset
     dataset = generate_old(ch_params)
     
@@ -295,6 +331,7 @@ def run_single_test(scen_name: str, params: Dict[str, Any]) -> Dict:
         }
         
     except Exception as e:
+        raise e
         print(f"Error during test: {str(e)}")
         result = {
             'params': params,
@@ -321,25 +358,42 @@ if __name__ == "__main__":
     # Example usage
     rt_folder = r'.\P2Ms\asu_campus'  # Change this to your scenario path
     scen_name = 'asu_campus'  # Change this to your scenario name
-    
     # Convert scenario if not yet converted
     # convert_scenario(rt_folder, use_v3=False)
     # convert_scenario(rt_folder, use_v3=True)
-      
+    
     # Option 1: Run all tests
     results = run_test_suite(scen_name)
     
-    # Option 4: Run a single specific parameter combination
-    single_params = {
-        'num_paths': 5,
-        'subcarriers': 32,
-        'selected_subcarriers': np.arange(1),
-        'antenna_shape': np.array([3,2]),
-        'freq_domain': True,
-        'bs_rotation': np.array([30,40,30]),
-        'bs_fov': np.array([140, 120]),
-        'ue_fov': None
-    }
-    # result = run_single_test(scen_name, single_params)
+    # # Test with different rotation scenarios
+    # rotation_tests = [
+    #     # Test 1: Single fixed rotation
+    #     {
+    #         'num_paths': 5,
+    #         'subcarriers': 64,
+    #         'selected_subcarriers': np.arange(1),
+    #         'antenna_shape': np.array([1,1]),
+    #         'freq_domain': True,
+    #         'bs_rotation': np.array([30, 30, 30]),  # Ensure 3D vector
+    #         'bs_fov': np.array([140, 120]),
+    #         'ue_fov': None
+    #     },
+    #     # Test 2: Per-user rotation (Note: v3 will use first rotation only)
+    #     {
+    #         'num_paths': 5,
+    #         'subcarriers': 64,
+    #         'selected_subcarriers': np.arange(1),
+    #         'antenna_shape': np.array([1,1]),
+    #         'freq_domain': True,
+    #         'bs_rotation': 'per_user',
+    #         'bs_fov': np.array([140, 120]),
+    #         'ue_fov': None
+    #     }
+    # ]
+    
+    # # Run each test
+    # for i, test_params in enumerate(rotation_tests, 1):
+    #     print(f"\n{'='*80}\nRunning rotation test {i}\n{'='*80}")
+    #     result = run_single_test(scen_name, test_params)
 
 #%%
