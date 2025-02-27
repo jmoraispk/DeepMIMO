@@ -203,34 +203,25 @@ def apply_FoV_batch(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray
 
 def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float, 
                  phi: float) -> Tuple[float, float]:
-    """Rotate angles according to specified rotation angles.
+    """Rotate angles based on array rotation.
     
-    This function applies 3D rotation to direction angles using rotation matrix
-    decomposition with Euler angles. The rotation sequence is:
-    1. First rotation (gamma) around z-axis
-    2. Second rotation (beta) around y-axis
-    3. Third rotation (alpha) around x-axis
-    
-    The rotation is applied as: R = R_x(alpha) * R_y(beta) * R_z(gamma)
+    This function applies array rotation to incoming angles. The rotation is specified
+    as Euler angles in the order [alpha, beta, gamma] representing rotations around
+    the x, y, and z axes respectively.
     
     Args:
-        rotation (Optional[Tuple[float, float, float]]): Rotation angles [alpha, beta, gamma] 
-            around x, y, z axes in degrees. If None, no rotation is applied.
-        theta (float): Elevation angle in degrees
-        phi (float): Azimuth angle in degrees
+        rotation (tuple): Rotation angles [alpha, beta, gamma] in radians for x,y,z axes
+        theta (float): Original elevation angle in radians
+        phi (float): Original azimuth angle in radians
         
     Returns:
-        Tuple[float, float]: Tuple of rotated angles (theta, phi) in radians
+        tuple: (theta_rot, phi_rot) - Rotated elevation and azimuth angles in radians
         
     Note:
+        The rotation is applied in the order: z-axis (gamma), y-axis (beta), x-axis (alpha)
+        For no rotation, pass None or [0,0,0]. 
         The function uses a specific formulation for rotation that directly computes
         the final angles without intermediate Cartesian coordinate transformations.
-        The formulation is:
-        theta_rot = arccos(cos_beta*cos_gamma*cos_theta + 
-                         sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha))
-        phi_rot = angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta +
-                       1j*(cos_beta*sin_gamma*cos_theta + 
-                           sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
     """
     theta = np.deg2rad(theta)
     phi = np.deg2rad(phi)
@@ -257,40 +248,23 @@ def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float,
 
 
 def rotate_angles_batch(rotation: np.ndarray, theta: np.ndarray, phi: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """Rotate angles for batched inputs.
+    """Rotate angles for multiple paths/users simultaneously.
     
-    This is a vectorized version of rotate_angles() that can process multiple users
-    and paths simultaneously. It uses the same rotation sequence and mathematical
-    formulation as rotate_angles():
-    1. First rotation (gamma) around z-axis
-    2. Second rotation (beta) around y-axis
-    3. Third rotation (alpha) around x-axis
-    
-    The rotation is applied as: R = R_x(alpha) * R_y(beta) * R_z(gamma)
+    This is a vectorized version of rotate_angles() that can process multiple angles
+    at once. It handles NaN values by masking them out.
     
     Args:
-        rotation: Rotation angles [alpha, beta, gamma] with shape [3] for single rotation
-            or [batch_size, 3] for per-user rotations. Angles in degrees.
-        theta: Elevation angles with shape [n_paths] for single user or 
-            [batch_size, n_paths] for multiple users. Angles in degrees.
-        phi: Azimuth angles with shape [n_paths] for single user or
-            [batch_size, n_paths] for multiple users. Angles in degrees.
+        rotation (ndarray): Rotation angles [alpha, beta, gamma] in radians for x,y,z axes
+        theta (ndarray): Original elevation angles with shape [batch_size, n_paths]
+        phi (ndarray): Original azimuth angles with shape [batch_size, n_paths]
         
     Returns:
-        Tuple of rotated angles (theta, phi) with same shape as input in radians:
-        - If input is [n_paths]: output is [n_paths]
-        - If input is [batch_size, n_paths]: output is [batch_size, n_paths]
+        tuple: (theta_rot, phi_rot) - Rotated elevation and azimuth angles
+               Both arrays have shape [batch_size, n_paths]
         
     Note:
-        The function uses the same direct angle computation as rotate_angles():
-        theta_rot = arccos(cos_beta*cos_gamma*cos_theta + 
-                         sin_theta*(sin_beta*cos_gamma*cos_alpha-sin_gamma*sin_alpha))
-        phi_rot = angle(cos_beta*sin_theta*cos_alpha-sin_beta*cos_theta +
-                       1j*(cos_beta*sin_gamma*cos_theta + 
-                           sin_theta*(sin_beta*sin_gamma*cos_alpha + cos_gamma*sin_alpha)))
-                           
-        Broadcasting is used to handle both single rotations applied to all users
-        and per-user rotations efficiently.
+        The rotation is applied in the order: z-axis (gamma), y-axis (beta), x-axis (alpha)
+        NaN values in input angles are preserved in the output
     """
     is_batched = theta.ndim == 2
     if not is_batched:

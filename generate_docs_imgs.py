@@ -26,7 +26,7 @@ def save_fig(name, tight=True, dpi=300):
 
 # Load a sample scenario (ASU campus or simple street canyon)
 print("Loading scenario...")
-dataset = dm.load_scenario('asu_campus_3p5', tx_sets={1: [0]}, rx_sets={2: 'all'})
+dataset = dm.load('asu_campus_3p5', tx_sets={1: [0]}, rx_sets={2: 'all'})
 
 # 1. Basic Scene Visualization
 print("Generating basic scene visualization...")

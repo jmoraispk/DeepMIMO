@@ -22,8 +22,8 @@ import requests
 from tqdm import tqdm
 
 # Local imports
-from ... import consts as c
-from ...general_utilities import get_scenario_folder
+from .. import consts as c
+from ..general_utilities import get_scenario_folder
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -90,7 +90,7 @@ NAME_TO_LINK: Dict[str, str] = {
 }
 
 
-def download_scenario(name: str) -> Optional[str]:
+def download(name: str) -> Optional[str]:
     """Download a specific DeepMIMO scenario file.
     
     This function downloads a scenario file from remote storage, creating the
@@ -157,7 +157,7 @@ def download_scenario_handler(name: str) -> str:
     while attempt < 3:
         attempt += 1
         try: 
-            zip_path = download_scenario(name)
+            zip_path = download(name)
             break
         except ConnectionError:
             print(f'Attempt {attempt}/3 failed..')

@@ -15,7 +15,7 @@ calculations in MIMO channel generation.
 import numpy as np
 
 # Local imports
-from ... import consts as c
+from .. import consts as c
 
 
 def pattern_isotropic(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:

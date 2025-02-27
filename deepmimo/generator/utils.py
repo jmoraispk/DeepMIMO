@@ -14,7 +14,7 @@ dataset generation process.
 
 # Standard library imports
 import time
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Optional, Dict, Any
 
 # Third-party imports
 import numpy as np
@@ -49,27 +49,6 @@ def dbm2watt(val: float | np.ndarray) -> float | np.ndarray:
         Power value(s) in Watts
     """
     return 10**(val/10 - 3)
-
-def steering_vec(array: Tuple[int, ...] | List[int] | np.ndarray, phi: float = 0, theta: float = 0,
-                spacing: float = 0.5) -> np.ndarray:
-    """Create array steering vector for uniform arrays.
-    
-    This function computes the normalized array steering vector for a uniform
-    antenna array with specified geometry and steering direction.
-
-    Args:
-        array: Array dimensions as tuple/list/array (Mx, My, Mz)
-        phi: Azimuth angle in degrees. Defaults to 0.
-        theta: Elevation angle in degrees. Defaults to 0.
-        spacing: Antenna spacing in wavelengths. Defaults to 0.5.
-
-    Returns:
-        Normalized steering vector for the array
-    """
-    idxs = ant_indices(array)
-    resp = array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
-    return resp / np.linalg.norm(resp)
-
 
 def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.ndarray:
     """Return indices of users at uniform intervals.

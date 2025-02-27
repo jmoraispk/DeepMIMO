@@ -1,8 +1,16 @@
 """
-Materials handling for Wireless Insite conversion.
+Wireless Insite Material Representation.
 
-This module provides functionality for parsing materials from Wireless Insite files
-and converting them to the base Material format.
+This module provides classes for representing materials and their properties as defined
+in Wireless Insite ray tracing software.
+
+This module provides:
+- Base material class with electromagnetic properties
+- Foliage material class with attenuation properties
+- Conversion utilities to standard DeepMIMO material format
+
+The module serves as the interface between Wireless Insite's material definitions
+and DeepMIMO's standardized material representation.
 """
 # Standard library imports
 import os
@@ -18,43 +26,69 @@ from ...materials import Material, MaterialList  # Base material classes
 
 @dataclass
 class InsiteMaterial:
-    """Materials in Wireless InSite.
+    """Wireless Insite material representation.
     
+    This class represents materials as defined in Wireless Insite, including their
+    electromagnetic and scattering properties.
+
+    Attributes:
+        id (int): Material identifier. Defaults to -1.
+        name (str): Material name. Defaults to ''.
+        conductivity (float): Conductivity in S/m. Defaults to 0.0.
+        permittivity (float): Relative permittivity. Defaults to 0.0.
+        roughness (float): Surface roughness in meters. Defaults to 0.0.
+        thickness (float): Material thickness in meters. Defaults to 0.0.
+        diffuse_scattering_model (str): Scattering model type. Defaults to ''.
+        fields_diffusively_scattered (float): Fraction of scattered power. Defaults to 0.0.
+        cross_polarized_power (float): Cross-polarization ratio. Defaults to 0.0.
+        directive_alpha (float): Forward scattering width. Defaults to 4.0.
+        directive_beta (float): Backward scattering width. Defaults to 4.0.
+        directive_lambda (float): Forward/backward ratio. Defaults to 0.5.
+
     Notes:
-        - Diffuse model implemented from [1] + extended with cross-polarization scattering terms
-        - Diffuse scattering models explained in [2], slides 29-31
-        - At present, all MATERIALS in Wireless InSite are nonmagnetic, 
-          and the permeability for all materials is that of free space 
-          (µ0 = 4π x 10e-7 H/m) [3]
+        Scattering model parameters based on [1] and extended with cross-polarization terms.
+        At present, according to the Wireless InSite 3.3.0 Reference Manual, section 10.5,
+        all materials are nonmagnetic, and their permeability is that of free space (µ0 = 4π x 10e-7 H/m). 
     
     Sources:
         [1] A Diffuse Scattering Model for Urban Propagation Prediction - Vittorio Degli-Esposti 2001
-            https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=933491
-        [2] https://x.webdo.cc/userfiles/Qiwell/files/Remcom_Wireless%20InSite_5G_final.pdf
-        [3] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
+            https://ieeexplore.ieee.org/document/4052607
         
     """
+    
     id: int = -1
     name: str = ''
-    diffuse_scattering_model: str = ''    # 'labertian', 'directive', 'directive_w_backscatter'
-    fields_diffusively_scattered: float = 0.0  # 0-1, fraction of incident fields that are scattered
-    cross_polarized_power: float = 0.0    # 0-1, fraction of the scattered field that is cross pol
-    directive_alpha: float = 4.0  # 1-10, defines how broad forward beam is
-    directive_beta: float = 4.0   # 1-10, defines how broad backscatter beam is
-    directive_lambda: float = 0.5 # 0-1, fraction of the scattered power in forward direction (vs back)
-    conductivity: float = 0.0     # >=0, conductivity
-    permittivity: float = 0.0     # >=0, permittivity
-    roughness: float = 0.0        # >=0, roughness
-    thickness: float = 0.0        # >=0, thickness [m]
+    conductivity: float = 0.0
+    permittivity: float = 0.0
+    roughness: float = 0.0
+    thickness: float = 0.0
     
+    # Scattering properties
+    diffuse_scattering_model: str = ''
+    fields_diffusively_scattered: float = 0.0
+    cross_polarized_power: float = 0.0
+    directive_alpha: float = 4.0
+    directive_beta: float = 4.0
+    directive_lambda: float = 0.5
+
     def to_material(self) -> Material:
-        """Convert InsiteMaterial to base Material."""
+        """Convert InsiteMaterial to standard DeepMIMO Material.
+        
+        Returns:
+            Material: Standardized material representation
+            
+        Notes:
+            Maps Wireless Insite scattering models to standard DeepMIMO models:
+            - '' -> none
+            - 'lambertian' -> lambertian
+            - 'directive'/'directive_with_backscatter' -> directive
+        """
         # Map scattering model names
         model_mapping = {
             '': Material.SCATTERING_NONE,
             'lambertian': Material.SCATTERING_LAMBERTIAN,
             'directive': Material.SCATTERING_DIRECTIVE,
-            'directive_with_backscatter': Material.SCATTERING_DIRECTIVE  # Map both directive models to same type
+            'directive_with_backscatter': Material.SCATTERING_DIRECTIVE
         }
         
         return Material(
@@ -75,12 +109,25 @@ class InsiteMaterial:
 
 @dataclass
 class InsiteFoliage:
-    """
-    Foliage Material in Wireless InSite.
+    """Wireless Insite foliage material representation.
     
-    Sources:
-        [1] Wireless InSite 3.3.0 Reference Manual, section 10.5 - Dielectric Parameters
+    This class represents vegetation/foliage materials in Wireless Insite, including
+    their attenuation and electromagnetic properties.
+
+    Attributes:
+        id (int): Material identifier. Defaults to -1.
+        name (str): Material name. Defaults to ''.
+        thickness (float): Material thickness in meters. Defaults to 0.0.
+        density (float): Material density in kg/m³. Defaults to 0.0.
+        vertical_attenuation (float): Vertical attenuation in dB/m. Defaults to 0.0.
+        horizontal_attenuation (float): Horizontal attenuation in dB/m. Defaults to 0.0.
+        permittivity_vr (float): Vertical relative permittivity. Defaults to 0.0.
+        permittivity_hr (float): Horizontal relative permittivity. Defaults to 0.0.
+
+    Notes:
+        Implementation based on Wireless InSite 3.3.0 Reference Manual, section 10.5
     """
+    
     id: int = -1
     name: str = ''
     thickness: float = 0.0
@@ -91,8 +138,11 @@ class InsiteFoliage:
     permittivity_hr: float = 0.0
 
     def to_material(self) -> Material:
-        """Convert InsiteMaterial to base Material."""
+        """Convert InsiteFoliage to standard DeepMIMO Material.
         
+        Returns:
+            Material: Standardized material representation with foliage properties
+        """
         return Material(
             id=self.id,
             name=self.name,

@@ -13,9 +13,9 @@ from typing import Dict, Optional, Any, List
 import numpy as np
 
 # Base utilities
-from ...general_utilities import DotDict, compare_two_dicts
-from ... import consts as c
-from ...info import info
+from ..general_utilities import DotDict, compare_two_dicts
+from .. import consts as c
+from ..info import info
 
 # Channel generation
 from .channel import generate_MIMO_channel, ChannelGenParameters
@@ -81,7 +81,6 @@ class Dataset(DotDict):
             data: Initial dataset dictionary. If None, creates empty dataset.
         """
         super().__init__(data or {})
-        self._ch_params = None  # Internal storage for channel parameters
 
     def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
         """Compute MIMO channel matrices for all users.
@@ -222,19 +221,21 @@ class Dataset(DotDict):
                 print('The following parameters seem unnecessary:')
                 print(additional_keys)
         
-        # Store params for use by other compute functions
-        self._ch_params = params
+        # Store params directly in dictionary
+        self.ch_params = params
         
         np.random.seed(1001)
         
         # Compute array response product
         array_response_product = self._compute_array_response_product()
         
+        n_paths_to_gen = params.num_paths
+        
         return generate_MIMO_channel(
-            array_response_product=array_response_product,
-            powers=self.power_linear_ant_gain,
-            delays=self.delay,
-            phases=self.phase,
+            array_response_product=array_response_product[..., :n_paths_to_gen],
+            powers=self.power_linear_ant_gain[..., :n_paths_to_gen],
+            delays=self.delay[..., :n_paths_to_gen],
+            phases=self.phase[..., :n_paths_to_gen],
             ofdm_params=params.ofdm,
             freq_domain=params.freq_domain
         )
@@ -275,9 +276,9 @@ class Dataset(DotDict):
         """
         # Use stored channel parameters if none provided
         if tx_ant_params is None:
-            tx_ant_params = self._ch_params[c.PARAMSET_ANT_BS]
+            tx_ant_params = self.ch_params[c.PARAMSET_ANT_BS]
         if rx_ant_params is None:
-            rx_ant_params = self._ch_params[c.PARAMSET_ANT_UE]
+            rx_ant_params = self.ch_params[c.PARAMSET_ANT_UE]
             
         # Create antenna pattern object
         antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
@@ -303,9 +304,9 @@ class Dataset(DotDict):
         """
         # Use stored channel parameters if none provided
         if tx_ant_params is None:
-            tx_ant_params = self._ch_params[c.PARAMSET_ANT_BS]
+            tx_ant_params = self.ch_params.bs_antenna
         if rx_ant_params is None:
-            rx_ant_params = self._ch_params[c.PARAMSET_ANT_UE]
+            rx_ant_params = self.ch_params.ue_antenna
             
         # Rotate angles for all users at once
         aod_theta_rot, aod_phi_rot = rotate_angles_batch(
@@ -342,9 +343,9 @@ class Dataset(DotDict):
         """
         # Use stored channel parameters if none provided
         if bs_params is None:
-            bs_params = self._ch_params[c.PARAMSET_ANT_BS]
+            bs_params = self.ch_params.bs_antenna
         if ue_params is None:
-            ue_params = self._ch_params[c.PARAMSET_ANT_UE]
+            ue_params = self.ch_params.ue_antenna
             
         # Get rotated angles from dataset
         aod_theta = self[c.AOD_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
@@ -415,8 +416,8 @@ class Dataset(DotDict):
             Array response product matrix
         """
         # Get antenna parameters from ch_params
-        tx_ant_params = self._ch_params.bs_antenna
-        rx_ant_params = self._ch_params.ue_antenna
+        tx_ant_params = self.ch_params.bs_antenna
+        rx_ant_params = self.ch_params.ue_antenna
         
         # Compute individual responses
         array_response_TX = self._compute_single_array_response(
@@ -544,6 +545,9 @@ class Dataset(DotDict):
         'ch': 'channel',
         'chs': 'channel',
         'channels': 'channel',
+
+        # Channel parameters aliases
+        'channel_params': 'ch_params',
         
         # Power aliases
         'pwr': 'power',

@@ -1,8 +1,16 @@
 """
-Setup handling for Wireless Insite conversion.
+Wireless Insite Ray Tracing Parameters.
 
-This module provides functionality for parsing setup files (.setup) from Wireless Insite
-into a standardized parameter format.
+This module provides parameter handling for Wireless Insite ray tracing simulations.
+
+This module provides:
+- Parameter parsing from Wireless Insite setup files
+- Standardized parameter representation
+- Parameter validation and conversion utilities
+- Default parameter configuration
+
+The module serves as the interface between Wireless Insite's parameter format
+and DeepMIMO's standardized ray tracing parameters.
 """
 import os
 from pathlib import Path
@@ -22,14 +30,39 @@ def read_rt_params(sim_folder: str | Path) -> Dict:
 
 @dataclass
 class InsiteRayTracingParameters(RayTracingParameters):
-    """Class representing Wireless Insite Ray Tracing parameters.
+    """Wireless Insite ray tracing parameter representation.
     
     This class extends the base RayTracingParameters with Wireless Insite-specific
     settings for antenna configuration, APG acceleration, and diffuse scattering.
     
-    Note: All required parameters must come before optional ones in dataclasses.
-    First come the base class required parameters (inherited), then the class-specific
-    required parameters, then all optional parameters.
+    Attributes:
+        raytracer_name (str): Name of ray tracing engine (from constants)
+        raytracer_version (str): Version of ray tracing engine
+        frequency (float): Center frequency in Hz
+        max_path_depth (int): Maximum number of interactions (R + D + S + T)
+        max_reflections (int): Maximum number of reflections (R)
+        max_diffractions (int): Maximum number of diffractions (D)
+        max_scattering (int): Maximum number of diffuse scattering events (S)
+        max_transmissions (int): Maximum number of transmissions (T)
+        diffuse_reflections (int): Reflections allowed in paths with diffuse scattering
+        diffuse_diffractions (int): Diffractions allowed in paths with diffuse scattering
+        diffuse_transmissions (int): Transmissions allowed in paths with diffuse scattering
+        diffuse_final_interaction_only (bool): Whether to only consider diffuse scattering at final interaction
+        diffuse_random_phases (bool): Whether to use random phases for diffuse scattering
+        terrain_reflection (bool): Whether to allow reflections on terrain
+        terrain_diffraction (bool): Whether to allow diffractions on terrain
+        terrain_scattering (bool): Whether to allow scattering on terrain
+        num_rays (int): Number of rays to launch per antenna
+        ray_casting_method (str): Method for casting rays ('uniform' or other)
+        synthetic_array (bool): Whether to use a synthetic array
+        ray_casting_range_az (float): Ray casting range in azimuth (degrees)
+        ray_casting_range_el (float): Ray casting range in elevation (degrees)
+        raw_params (Dict): Original parameters from Wireless Insite
+        
+    Notes:
+        All required parameters must come before optional ones in dataclasses.
+        First come the base class required parameters (inherited), then the class-specific
+        required parameters, then all optional parameters.
     """
     
     @classmethod
@@ -37,13 +70,14 @@ class InsiteRayTracingParameters(RayTracingParameters):
         """Read a Wireless Insite setup file and return a parameters object.
         
         Args:
-            sim_folder: Path to simulation folder containing .setup file
+            sim_folder (str | Path): Path to simulation folder containing .setup file
             
         Returns:
-            InsiteRayTracingParameters object containing standardized parameters
+            InsiteRayTracingParameters: Object containing standardized parameters
             
         Raises:
             ValueError: If no .setup file found or multiple .setup files found
+            FileNotFoundError: If simulation folder does not exist
         """
         sim_folder = Path(sim_folder)
         if not sim_folder.exists():
@@ -111,7 +145,7 @@ class InsiteRayTracingParameters(RayTracingParameters):
             # Ray tracing interaction settings
             'max_path_depth': apg_accel_vals['path_depth'],
             'max_reflections': model_vals['max_reflections'],
-            'max_diffractions': model_vals['max_wedge_diffractions'], ######
+            'max_diffractions': model_vals['max_wedge_diffractions'],
             'max_scattering': int(diffuse_scat_vals['enabled']) ,  # 1 if enabled, 0 if not
             'max_transmissions': model_vals['max_transmissions'], # Insite does not support transmissions in our setup
 

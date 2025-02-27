@@ -52,7 +52,7 @@ VERSION_PARAM_NAME = 'version'
 VERSION = __version__
 
 # File and folder paths
-SCENARIOS_FOLDER = 'deepmimo_scenarios'  # Folder with extracted scenarios
+SCENARIOS_FOLDER = 'deepmimo_scenarios3'  # Folder with extracted scenarios
 SCENARIOS_DOWNLOAD_FOLDER = 'deepmimo_scenarios_downloaded'  # Folder with downloaded ZIP files
 PARAMS_FILENAME = 'params'
 
@@ -207,13 +207,13 @@ PWR_LINEAR_ANT_GAIN_PARAM_NAME = 'power_linear_ant_gain'
 PARAMSET_POLAR_EN = 'enable_dual_polar'
 PARAMSET_DOPPLER_EN = 'enable_doppler'  # Doppler from Ray Tracer
 PARAMSET_FD_CH = 'freq_domain'  # Time Domain / Frequency Domain (OFDM)
+PARAMSET_NUM_PATHS = 'num_paths'  # Number of paths to consider for channel generation
 
 # OFDM parameters
 PARAMSET_OFDM = 'ofdm'
 PARAMSET_OFDM_SC_NUM = 'subcarriers'
 PARAMSET_OFDM_SC_SAMP = 'selected_subcarriers'
-PARAMSET_OFDM_BW = 'bandwidth'
-PARAMSET_OFDM_BW_MULT = 1e9  # Bandwidth input is GHz, multiply by this
+PARAMSET_OFDM_BANDWIDTH = 'bandwidth'
 PARAMSET_OFDM_LPF = 'rx_filter'
 
 # Antenna parameters

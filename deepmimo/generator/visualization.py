@@ -16,6 +16,7 @@ from typing import Optional, Tuple, Dict, Any, List
 
 # Third-party imports
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
@@ -389,6 +390,93 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
     if not proj_3D:
         ax.set_aspect('equal')
     
+    return fig, ax
+
+def plot_power_discarding(dataset, trim_delay: Optional[float] = None) -> Tuple[Figure, Axes]:
+    """Analyze and visualize power discarding due to path delays.
+    
+    This function analyzes what percentage of power would be discarded for each user
+    if paths arriving after a certain delay are trimmed. It provides both statistical
+    analysis and visualization of the power discarding distribution.
+    
+    Args:
+        dataset: DeepMIMO dataset containing delays and powers
+        trim_delay (Optional[float]): Delay threshold in seconds. Paths arriving after
+            this delay will be considered discarded. If None, uses OFDM symbol duration
+            from dataset's channel parameters. Defaults to None.
+        figsize (tuple): Figure size in inches. Defaults to (12, 5).
+        
+    Returns:
+        Tuple containing:
+        - matplotlib Figure object
+        - List of matplotlib Axes objects [stats_ax, hist_ax]
+    """
+    # Get the trim delay - either provided or from OFDM parameters
+    if trim_delay is None:
+        if not hasattr(dataset, 'channel_params'):
+            raise ValueError("Dataset has no channel parameters. Please provide trim_delay explicitly.")
+        trim_delay = (dataset.channel_params.ofdm.subcarriers / 
+                     dataset.channel_params.ofdm.bandwidth)
+    
+    # check if the maximum path delay is greater than the trim delay
+    if np.nanmax(dataset.delay) < trim_delay:
+        print(f"Maximum path delay: {np.nanmax(dataset.delay)*1e6:.1f} μs")
+        print(f"Trim delay: {trim_delay*1e6:.1f} μs")
+        print("No paths will be discarded.")
+        return None, None
+
+    # Calculate discarded power ratios for each user
+    discarded_power_ratios = []
+    n_users = len(dataset.delay)
+    for user_idx in tqdm(range(n_users), desc="Calculating discarded power ratios per user"):
+        user_delays = dataset.delay[user_idx]
+        user_powers = dataset.power_linear[user_idx]
+        
+        # Find valid (non-NaN) paths
+        valid_mask = ~np.isnan(user_delays) & ~np.isnan(user_powers)
+        if not np.any(valid_mask):
+            discarded_power_ratios.append(0)
+            continue
+            
+        valid_delays = user_delays[valid_mask]
+        valid_powers = user_powers[valid_mask]
+        
+        # Find paths exceeding trim delay
+        discarded_mask = valid_delays > trim_delay
+        if not np.any(discarded_mask):
+            discarded_power_ratios.append(0)
+            continue
+        
+        # Calculate power ratio
+        total_power = np.sum(valid_powers)
+        discarded_power = np.sum(valid_powers[discarded_mask])
+        discarded_power_ratios.append((discarded_power / total_power) * 100)
+    
+    discarded_power_ratios = np.array(discarded_power_ratios)
+
+    # Calculate statistics
+    max_discard_idx = np.argmax(discarded_power_ratios)
+    max_discard_ratio = discarded_power_ratios[max_discard_idx]
+    mean_discard_ratio = np.mean(discarded_power_ratios)
+    affected_users = np.sum(discarded_power_ratios > 0)
+    non_zero_ratios = discarded_power_ratios[discarded_power_ratios > 0]
+
+    # Print statistics
+    print("\nPower Discarding Analysis")
+    print("="*50)
+    print(f"\nTrim delay: {trim_delay*1e6:.1f} μs")
+    print(f"Maximum delay: {np.nanmax(dataset.delay)*1e6:.1f} μs\n")
+    print(f"Maximum power discarded: {max_discard_ratio:.1f}%")
+    print(f"Average power discarded: {mean_discard_ratio:.1f}%")
+    print(f"Users with discarded paths: {affected_users}")
+
+    fig, ax = plt.subplots(dpi=200, figsize=(6, 4))
+    ax.hist(non_zero_ratios, bins=20)
+    ax.set_title("Distribution of Discarded Power")
+    ax.set_xlabel("Discarded Power (%)")
+    ax.set_ylabel("Number of Users")
+    ax.grid(True)
+    plt.tight_layout()
     return fig, ax
 
 

@@ -7,7 +7,7 @@ __version__ = "4.0.0a2"
 # Core functionality
 from .generator.core import (
     generate,
-    load_scenario,
+    load,
 )
 from .generator.dataset import Dataset
 
@@ -15,6 +15,7 @@ from .generator.dataset import Dataset
 from .generator.visualization import (
     plot_coverage,
     plot_rays,
+    plot_power_discarding,
 )
 
 # Utilities
@@ -56,7 +57,7 @@ __all__ = [
     'generate',
     'convert', 
     'info',
-    'load_scenario',
+    'load',
     'Dataset',
     'ChannelGenParameters',
     

@@ -13,6 +13,7 @@ deepmimo_scenarios*
 # Artifacts
 manuals/*
 *.pptx
+my_api_key.py
 
 # Development:
 #   For wireless insite outputs

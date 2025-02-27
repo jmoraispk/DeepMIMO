@@ -25,7 +25,7 @@ scen_name = dm.convert(rt_folder,
 
 #%%
 
-dataset = dm.load_scenario('asu_campus')
+dataset = dm.load('asu_campus')
 
 #%%
 
@@ -42,7 +42,7 @@ print("-" * 50)
 tx_sets_dict = {1: [0]}  # Load first 2 points from set 1 and first 3 from set 2
 rx_sets_dict = {2: np.arange(10)}  # Load first point from set 1 and first 10 from set 2
 
-dataset1 = dm.load_scenario(
+dataset1 = dm.load(
     scen_name,
     tx_sets=tx_sets_dict,
     rx_sets=rx_sets_dict,
@@ -51,10 +51,10 @@ dataset1 = dm.load_scenario(
 )
 
 # Example 2: Load specific TX/RX sets using lists
-dataset = dm.load_scenario(scen_name, tx_sets=[1], rx_sets=[2])
+dataset = dm.load(scen_name, tx_sets=[1], rx_sets=[2])
 
 # Example 3: Load all TX/RX sets
-dataset3 = dm.load_scenario(scen_name, tx_sets='all', rx_sets='all')
+dataset3 = dm.load(scen_name, tx_sets='all', rx_sets='all')
 
 #%% Channel Generation Example
 print("\nChannel Generation Example")
@@ -89,7 +89,7 @@ print("\nScene and Materials Example")
 print("-" * 50)
 
 # Load a scenario
-dataset = dm.load_scenario('simple_street_canyon_test')
+dataset = dm.load('simple_street_canyon_test')
 scene = dataset.scene
 
 # 1. Basic scene information
@@ -156,7 +156,7 @@ print(f"- Height (Z): {bb.height:.2f}m")
 print("\nVisualization Examples")
 print("-" * 50)
 
-dataset = dm.load_scenario('asu_campus', tx_sets=[1], rx_sets=[2])
+dataset = dm.load('asu_campus', tx_sets=[1], rx_sets=[2])
 
 # Plot the full scene
 scene.plot()

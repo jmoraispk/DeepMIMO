@@ -13,7 +13,7 @@ Load a scenario and generate channels with default settings:
     import deepmimo as dm
     
     # Load a pre-built scenario
-    dataset = dm.load_scenario('asu_campus_3p5')
+    dataset = dm.load('asu_campus_3p5')
     
     # Generate channels with default parameters
     dataset.compute_channels()
@@ -36,12 +36,12 @@ DeepMIMO offers flexible ways to load specific parts of a scenario:
 .. code-block:: python
 
     # Load first base station and all users
-    dataset1 = dm.load_scenario('asu_campus_3p5',
+    dataset1 = dm.load('asu_campus_3p5',
                               tx_sets={1: [0]},      # First BS from set 1
                               rx_sets={2: 'all'})    # All users from set 2
 
     # Load specific users and channel matrices
-    dataset2 = dm.load_scenario(
+    dataset2 = dm.load(
         'asu_campus_3p5',
         tx_sets={1: [0]},                           # First BS
         rx_sets={2: [0,1,3]},                       # Users 0, 1, and 3

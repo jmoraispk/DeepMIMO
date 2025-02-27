@@ -28,7 +28,21 @@ HEADERS = {
 }
 
 def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
-    """Upload file to server endpoint with progress bar."""
+    """Upload a file to the DeepMIMO API server.
+    
+    Args:
+        link (str): API endpoint URL
+        file (str): Path to file to upload
+        key (str): API authentication key
+        
+    Returns:
+        Optional[Dict]: Response data containing downloadUrl and fileId if successful,
+                       None if upload fails
+        
+    Notes:
+        Uses chunked upload with progress bar for large files.
+        Handles both file upload and download URL generation.
+    """
     try:
         # Get file info first
         filename = os.path.basename(file)

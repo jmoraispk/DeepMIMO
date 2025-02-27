@@ -1,8 +1,15 @@
 """
-Utility functions for file operations and compression.
+DeepMIMO Converter Utilities.
 
-This module provides helper functions for working with file extensions,
-creating zip archives of folders, and managing scenario files.
+This module provides common utilities used by various ray tracing converters.
+
+This module provides:
+- File I/O operations for different formats
+- Data type conversion and validation
+- Path manipulation and validation
+- Common mathematical operations
+
+The module serves as a shared utility library for all DeepMIMO converters.
 """
 
 import os
@@ -21,23 +28,30 @@ from ..general_utilities import (
 from .. import consts as c
 
 def save_pickle(obj: Any, filename: str) -> None:
-    """Saves an object to a pickle file.
+    """Save an object to a pickle file.
     
     Args:
-        obj: Object to save
-        filename: Path to save the pickle file
+        obj (Any): Object to save
+        filename (str): Path to save pickle file
+        
+    Raises:
+        IOError: If file cannot be written
     """
     with open(filename, 'wb') as file:
         pickle.dump(obj, file)
 
 def load_pickle(filename: str) -> Any:
-    """Loads an object from a pickle file.
+    """Load an object from a pickle file.
     
     Args:
-        filename: Path to the pickle file
+        filename (str): Path to pickle file
         
     Returns:
-        The unpickled object
+        Any: Unpickled object
+        
+    Raises:
+        FileNotFoundError: If file does not exist
+        pickle.UnpicklingError: If file cannot be unpickled
     """
     with open(filename, 'rb') as file:
         return pickle.load(file)

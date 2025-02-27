@@ -20,12 +20,12 @@ import numpy as np
 import scipy.io
 
 # Local imports
-from ... import consts as c
-from ...general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
-                                  get_scenario_folder, get_params_path, compare_two_dicts)
-from ...scene import Scene
+from .. import consts as c
+from ..general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
+                                 get_scenario_folder, get_params_path, compare_two_dicts)
+from ..scene import Scene
 from .dataset import Dataset, MacroDataset
-from ...materials import MaterialList
+from ..materials import MaterialList
 
 # Channel generation
 from .channel import ChannelGenParameters
@@ -50,7 +50,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
     Raises:
         ValueError: If scenario name is invalid or required files are missing
     """
-    dataset = load_scenario(scen_name, **load_params)
+    dataset = load(scen_name, **load_params)
     
     # Create channel generation parameters
     ch_params = ch_gen_params if ch_gen_params else ChannelGenParameters()
@@ -60,7 +60,7 @@ def generate(scen_name: str, load_params: Dict[str, Any] = {},
 
     return dataset
 
-def load_scenario(scen_name: str, **load_params) -> Dataset | MacroDataset:
+def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     """Load a DeepMIMO scenario.
     
     This function loads raytracing data and creates a Dataset or MacroDataset instance.

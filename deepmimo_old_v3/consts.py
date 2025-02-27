@@ -78,7 +78,7 @@ LOAD_FILE_SP_VERSION = 'version'
 LOAD_FILE_SP_RAYTRACER = 'raytracer'
 LOAD_FILE_SP_RAYTRACER_VERSION = 'raytracer_version'
 LOAD_FILE_SP_EXT = '.params.mat'
-LOAD_FILE_SP_CF = 'frequency'
+LOAD_FILE_SP_CF = 'carrier_freq'
 LOAD_FILE_SP_TX_POW = 'transmit_power'
 LOAD_FILE_SP_NUM_BS = 'num_BS'
 LOAD_FILE_SP_USER_GRIDS = 'user_grids'
@@ -112,4 +112,4 @@ PARAMSET_ANT_FOV = 'fov'
 LIGHTSPEED = 299792458  # Speed of light in m/s
 
 # Scenarios folder
-SCENARIOS_FOLDER = 'deepmimo_scenarios2' 
+SCENARIOS_FOLDER = 'deepmimo_scenarios_v3' 
