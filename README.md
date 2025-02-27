@@ -36,7 +36,7 @@ Try it out on Colab: ......
 
 | Step    | Command                                           | Description                       |
 |---------|---------------------------------------------------|-----------------------------------|
-| Install | `pip install sphinx furo`             | Install required dependencies     |
+| Install | `pip install sphinx nbsphinx furo`                | Install dependencies              |
 | Build   | `cd docs`<br>`sphinx-build -b html . _build/html` | Generate HTML documentation       |
 | Serve   | `cd docs/_build/html`<br>`python -m http.server`  | View docs at http://localhost:8000|
 
