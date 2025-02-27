@@ -468,6 +468,14 @@ class Dataset(DotDict):
         
         return grid_points == n_rxs
 
+    def get_active_idxs(self) -> np.ndarray:
+        """Return indices of active users.
+        
+        Returns:
+            Array of indices of active users
+        """
+        return np.where(self.num_paths > 0)[0]
+
     def get_uniform_idxs(self, steps: List[int]) -> np.ndarray:
         """Return indices of users at uniform intervals.
         
