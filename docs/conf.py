@@ -38,8 +38,8 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # Theme configuration
-# html_theme = 'furo'
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
+# html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 # Furo theme options
@@ -59,4 +59,4 @@ html_static_path = ['_static']
 
 # Other settings
 autodoc_member_order = 'bysource'
-# autodoc_typehints = 'description'
+autodoc_typehints = 'description'
