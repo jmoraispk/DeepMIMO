@@ -4,7 +4,7 @@ Test case for rotate_angles and rotate_angles_batch
 
 #%% rotate angles test case
 import numpy as np
-from deepmimo.generator.python.geometry import rotate_angles, rotate_angles_batch
+from deepmimo.generator.geometry import rotate_angles, rotate_angles_batch
 import time
 
 def run_correctness_tests():
