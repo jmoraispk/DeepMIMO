@@ -331,7 +331,6 @@ def run_single_test(scen_name: str, params: Dict[str, Any]) -> Dict:
         }
         
     except Exception as e:
-        raise e
         print(f"Error during test: {str(e)}")
         result = {
             'params': params,

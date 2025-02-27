@@ -13,12 +13,12 @@ from typing import Dict, Optional, Any, List
 import numpy as np
 
 # Base utilities
-from ..general_utilities import DotDict, compare_two_dicts
+from ..general_utilities import DotDict
 from .. import consts as c
 from ..info import info
 
 # Channel generation
-from .channel import generate_MIMO_channel, ChannelGenParameters
+from .channel import generate_MIMO_channel, ChannelGenParameters, validate_ch_gen_params
 
 # Antenna patterns and geometry
 from .ant_patterns import AntennaPattern
@@ -215,11 +215,7 @@ class Dataset(DotDict):
         if params is None:
             params = ChannelGenParameters()
         else:
-            # validate params 
-            additional_keys = compare_two_dicts(params, ChannelGenParameters())
-            if len(additional_keys):
-                print('The following parameters seem unnecessary:')
-                print(additional_keys)
+            validate_ch_gen_params(params, self.rx_pos.shape[0])
         
         # Store params directly in dictionary
         self.ch_params = params
