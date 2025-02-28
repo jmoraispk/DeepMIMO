@@ -131,7 +131,7 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
         max_paths (int): Maximum number of paths to load. Defaults to 5
         tx_sets (dict or list or str): Transmitter sets to load. Defaults to 'all'
         rx_sets (dict or list or str): Receiver sets to load. Defaults to 'all'
-        matrices (list of str): List of matrix names to load. Defaults to None
+        matrices (list of str): List of matrix names to load. Defaults to 'all'
 
     Returns:
         Dataset: Dataset containing the requested matrices for each tx-rx pair
@@ -199,9 +199,9 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
                c.AOA_EL_PARAM_NAME: None,
                c.AOD_AZ_PARAM_NAME: None,
                c.AOD_EL_PARAM_NAME: None,
-               c.DELAY_PARAM_NAME: None,
                c.POWER_PARAM_NAME: None,
                c.PHASE_PARAM_NAME: None,
+               c.DELAY_PARAM_NAME: None,
                c.RX_POS_PARAM_NAME: None,
                c.TX_POS_PARAM_NAME: None,
                c.INTERACTIONS_PARAM_NAME: None,
@@ -210,6 +210,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
     if matrices_to_load == 'all':
         matrices_to_load = tx_dict.keys()
     else:
+        matrices_to_load = [] if matrices_to_load is None else matrices_to_load
         valid_matrices = set(tx_dict.keys())
         invalid = set(matrices_to_load) - valid_matrices
         if invalid:
