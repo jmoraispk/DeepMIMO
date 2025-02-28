@@ -518,9 +518,10 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
     download_dir = get_downloads_dir()
     scenario_folder = get_scenario_folder(scenario_name)
     
-    # TODO: when adding new scenario versions, change this check to read the version number
+    # Joao: when adding new scenario versions, change this check to read the version number
     #       and ask for compatibility with the current version of DeepMIMO.
-    #       This may require downloading the zip again.
+    #       This may require downloading the zip again if the version is not compatible.
+    
     # Check if file already exists in scenarios folder
     if os.path.exists(scenario_folder):
         print(f'Scenario "{scenario_name}" already exists in {scenarios_dir}')
