@@ -6,6 +6,8 @@ import deepmimo as dm
 import matplotlib.pyplot as plt
 import os
 from pprint import pprint
+import json
+from pathlib import Path
 
 from my_api_key import API_KEY as MY_API_KEY
 
@@ -65,58 +67,72 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 
 #%% CONVERSION (and UPLOAD) LOOP
 
-import os
+# Main execution
+EXECUTION_MODE = 'retry_errors' # 'collect_errors' or 'retry_errors'
+ERROR_LOG_FILE = 'conversion_errors.json'
+
 base_path = "F:/deepmimo_loop_ready"
 subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
-subfolders = subfolders[31:]
 
-start_time = time.time()
-timing_results = {}  # Dictionary to store scenario timing results
+# Load previous errors if in retry mode
 error_scenarios = []
-for subfolder in subfolders:
-    iter_start_time = time.time()  # Start timing for this iteration
+if EXECUTION_MODE == 'retry_errors' and os.path.exists(ERROR_LOG_FILE):
+    with open(ERROR_LOG_FILE, 'r') as f:
+        error_scenarios_to_retry = {item[0] for item in json.load(f)}
+    subfolders = [f for f in subfolders if os.path.basename(f) in error_scenarios_to_retry]
+#%%
+import json
+
+timing_results = {}
+
+for subfolder in subfolders[:25]:
     scen_name = os.path.basename(subfolder)
-    if scen_name not in error_scenarios:
+    print(f"\nProcessing: {scen_name}")
+    if 'boston' in scen_name:
+        print('Skipping Boston')
         continue
-    print(scen_name)
-    print(subfolder)
-    
-    sub_subfolders = [f.path for f in os.scandir(subfolder) if f.is_dir()]
-    
-    if not sub_subfolders:
-        print(f"No subfolders found in {subfolder}")
-        continue
-    
-    possible_rt_folders = [sub_subfolder for sub_subfolder in sub_subfolders
-                            if not sub_subfolder.endswith('_deepmimo')]
-    if len(possible_rt_folders) > 1:
-        print(f"Warning: Multiple subfolders found in {subfolder}, using last one")    
-    
-    rt_folder = possible_rt_folders[-1]
-    
+    start = time.time()
     try:
-        scen_name = dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=False)
+        scen_name = dm.convert(subfolder, overwrite=True, 
+                             scenario_name=scen_name, 
+                             vis_scene=False)
     except Exception as e:
-        print(f"Error converting {scen_name}: {e}")
-        # error_scenarios.append(scen_name)
-        raise e
-        # break
-        continue
+        if EXECUTION_MODE == 'retry_errors':
+            raise  # Re-raise the exception in retry mode
+        error_scenarios.append((scen_name, str(e)))
+        if EXECUTION_MODE == 'collect_errors' and error_scenarios:
+            with open(ERROR_LOG_FILE, 'w') as f:
+                json.dump(error_scenarios, f, indent=2)
+    timing_results[scen_name] = time.time() - start
+
+if timing_results:
+    print("\nPer-scenario timing:")
+    print("-" * 50)
+    print(f"{'Scenario':<30} | {'Time (s)':<10}")
+    print("-" * 50)
+    for scen, duration in sorted(timing_results.items(), key=lambda x: x[1], reverse=True):
+        print(f"{scen:<30} | {duration:>10.2f}")
     
-    timing_results[scen_name] = time.time() - iter_start_time
-    print(f"Time for {scen_name}: {timing_results[scen_name]:.2f} seconds")
-    #dm.upload(scen_name, MY_API_KEY)
+if error_scenarios:
+    print(f"\nErrors ({len(error_scenarios)}):")
+    for name, err in error_scenarios:
+        print(f"{name:<30} | {err[:47]}")
+    print(f"\nError scenarios saved to {ERROR_LOG_FILE}")
 
-print(f"\nTotal time elapsed: {time.time() - start_time:.2f} seconds")
+# Cleanup in retry mode if all successful
+if EXECUTION_MODE == 'retry_errors' and not error_scenarios and os.path.exists(ERROR_LOG_FILE):
+    os.remove(ERROR_LOG_FILE)
+    print("All retries successful - error log removed")
 
-# Print timing results table
-print("\nTiming Results:")
-print("-" * 50)
-print(f"{'Scenario Name':<30} | {'Time (seconds)':<15}")
-print("-" * 50)
-for scen_name, time_taken in timing_results.items():
-    if scen_name:
-        print(f"{scen_name:<30} | {time_taken:>15.2f}")
+#%% LOOP for zip (no upload)
+
+# Get all available scenarios using function
+scenarios = dm.get_available_scenarios(base_path)
+
+# Zip the filtered scenarios
+for scenario in scenarios:
+    scen_path = dm.get_scenario_folder(scenario)
+    dm.zip(scen_path)
 
 #%% UPLOAD cities bboxes coordinates LOOP
 base_path = "./deepmimo_scenarios3"

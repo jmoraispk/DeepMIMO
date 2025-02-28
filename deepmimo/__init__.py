@@ -35,6 +35,8 @@ from .general_utilities import (
     get_available_scenarios,
     get_params_path,
     load_dict_from_json,
+    zip,
+    get_scenario_folder,
 )
 
 from .api import (
