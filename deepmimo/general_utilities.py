@@ -334,22 +334,9 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     summary_str += "\n[Scene]\n"
     summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
     summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}\n"
-    # TODO: Put object label summary into scene dict (no. buildings, trees, etc)
     summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}\n"
-    # TODO: Put normal face count into scene dict
-    normal_faces = 332
-    summary_str += (
-        f"- Faces: {normal_faces:,} (decomposed into {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} triangular faces)\n"
-    )
-
-    # Get scene boundaries from scene bounding box
-    # TODO: print this into the scene dict
-    # bbox = scene.bounding_box
-    # print("\nBoundaries:")
-    # print(f"- X: {bbox.x_min:.2f}m to {bbox.x_max:.2f}m (width: {bbox.width:.2f}m)")
-    # print(f"- Y: {bbox.y_min:.2f}m to {bbox.y_max:.2f}m (length: {bbox.length:.2f}m)")
-    # print(f"- Z: {bbox.z_min:.2f}m to {bbox.z_max:.2f}m (height: {bbox.height:.2f}m)")
-    # print(f"- Area: {bbox.width * bbox.length:,.2f}m²")
+    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,} "
+    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} "
 
     summary_str += "\n[Materials]\n"
     summary_str += f"Total materials: {len(material_params)}\n"
@@ -358,12 +345,8 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
         summary_str += f"- Permittivity: {mat_props[c.MATERIALS_PARAM_PERMITTIVITY]:.2f}\n"
         summary_str += f"- Conductivity: {mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]:.2f} S/m\n"
         summary_str += f"- Scattering model: {mat_props[c.MATERIALS_PARAM_SCATTERING_MODEL]}\n"
-        summary_str += (
-            f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
-        )
-        summary_str += (
-            f"- Cross-polarization coefficient: {mat_props[c.MATERIALS_PARAM_CROSS_POL_COEF]:.2f}\n"
-        )
+        summary_str += f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
+        summary_str += f"- Cross-polarization coefficient: {mat_props[c.MATERIALS_PARAM_CROSS_POL_COEF]:.2f}\n"
 
     summary_str += "\n[TX/RX Configuration]\n"
 

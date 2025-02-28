@@ -116,6 +116,7 @@ SCENE_PARAM_OBJECTS = 'objects'
 SCENE_PARAM_FACES = 'faces'
 SCENE_PARAM_N_OBJECTS = 'n_objects'
 SCENE_PARAM_N_VERTICES = 'n_vertices'
+SCENE_PARAM_N_FACES = 'n_faces'
 SCENE_PARAM_N_TRIANGULAR_FACES = 'n_triangular_faces'
 
 #==============================================================================

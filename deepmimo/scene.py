@@ -634,6 +634,7 @@ class Scene:
             SCENE_PARAM_NUMBER_SCENES: 1,
             'n_objects': len(self.objects),
             'n_vertices': len(vertices),
+            'n_faces': sum(len(obj.faces) for obj in self.objects),
             'n_triangular_faces': len(tri_faces)
         }
     
