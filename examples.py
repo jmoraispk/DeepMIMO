@@ -204,3 +204,36 @@ active_dataset.scene.plot()
 
 dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0], 
                  bs_pos=active_dataset.tx_pos.T)
+
+
+#%% Loop through all scenarios and calculate interaction sums
+
+# Get all available scenarios
+scenarios = dm.get_available_scenarios()
+print(f"Found {len(scenarios)} scenarios\n")
+
+for scen_name in scenarios:
+    try:
+        params_json_path = dm.get_params_path(scen_name)
+        
+        # Skip if params file doesn't exist
+        if not os.path.exists(params_json_path):
+            print(f"Skipping {scen_name} - no params file found")
+            continue
+            
+        params_dict = dm.load_dict_from_json(params_json_path)
+        rt_params = params_dict[dm.consts.RT_PARAMS_PARAM_NAME]
+        
+        # Calculate sums
+        max_reflections = rt_params[dm.consts.RT_PARAM_MAX_REFLECTIONS]
+        max_diffractions = rt_params[dm.consts.RT_PARAM_MAX_DIFFRACTIONS]
+        total_interactions = max_reflections + max_diffractions
+        
+        print(f"\nScenario: {scen_name}")
+        print(f"Max Reflections: {max_reflections}")
+        print(f"Max Diffractions: {max_diffractions}")
+        print(f"Total Interactions: {total_interactions}")
+        
+    except Exception as e:
+        print(f"Error processing {scen_name}: {str(e)}")
+        continue
