@@ -32,6 +32,14 @@ from .geometry import (
 # Utilities
 from .utils import dbm2watt
 
+# Parameters that should remain consistent across datasets in a MacroDataset
+SHARED_PARAMS = [
+    c.SCENE_PARAM_NAME,           # Scene object
+    c.MATERIALS_PARAM_NAME,       # MaterialList object
+    c.LOAD_PARAMS_PARAM_NAME,     # Loading parameters
+    c.RT_PARAMS_PARAM_NAME,       # Ray-tracing parameters
+]
+
 class Dataset(DotDict):
     """Class for managing DeepMIMO datasets.
     
@@ -168,6 +176,10 @@ class Dataset(DotDict):
         nan_count_matrix = np.isnan(self.aoa_az).sum(axis=1)
         return max_paths - nan_count_matrix
 
+    def _compute_n_ue(self) -> int:
+        """Return the number of UEs/receivers in the dataset."""
+        return self.rx_pos.shape[0]
+
     def _compute_num_interactions(self) -> np.ndarray:
         """Compute number of interactions for each path of each user."""
         result = np.zeros_like(self.inter, dtype=int)
@@ -215,7 +227,7 @@ class Dataset(DotDict):
         if params is None:
             params = ChannelGenParameters()
         else:
-            validate_ch_gen_params(params, self.rx_pos.shape[0])
+            validate_ch_gen_params(params, self.n_ue)
         
         # Store params directly in dictionary
         self.ch_params = params
@@ -417,10 +429,10 @@ class Dataset(DotDict):
         
         # Compute individual responses
         array_response_TX = self._compute_single_array_response(
-            tx_ant_params, self.aod_el_rot_fov, self.aod_az_rot_fov)
+            tx_ant_params, self[c.AOD_EL_FOV_PARAM_NAME], self[c.AOD_AZ_FOV_PARAM_NAME])
             
         array_response_RX = self._compute_single_array_response(
-            rx_ant_params, self.aoa_el_rot_fov, self.aoa_az_rot_fov)
+            rx_ant_params, self[c.AOA_EL_FOV_PARAM_NAME], self[c.AOA_AZ_FOV_PARAM_NAME])
         
         # Compute product with proper broadcasting
         # [n_users, M_rx, M_tx, n_paths]
@@ -463,10 +475,47 @@ class Dataset(DotDict):
             bool: True if dataset has valid grid structure, False otherwise
         """
         # Check if total grid points match number of receivers
-        n_rxs = self.rx_pos.shape[0]
         grid_points = np.prod(self.grid_size)
         
-        return grid_points == n_rxs
+        return grid_points == self.n_ue
+
+    def subset(self, idxs: np.ndarray) -> 'Dataset':
+        """Create a new dataset containing only the selected indices.
+        
+        Args:
+            idxs: Array of indices to include in the new dataset
+            
+        Returns:
+            Dataset: A new dataset containing only the selected indices
+        """
+        # Create a new dataset with initial data
+        initial_data = {}
+        
+        # Copy shared parameters that should remain consistent across datasets
+        for param in SHARED_PARAMS:
+            if hasattr(self, param):
+                initial_data[param] = getattr(self, param)
+            
+        # Directly set n_ue
+        initial_data['n_ue'] = len(idxs)
+        
+        # Create new dataset with initial data
+        new_dataset = Dataset(initial_data)
+        
+        # Copy all attributes
+        for attr, value in self.to_dict().items():
+            # skip private and already handled attributes
+            if not attr.startswith('_') and attr not in SHARED_PARAMS + ['n_ue']:
+                print(f"attr: {attr}")
+                if isinstance(value, np.ndarray) and value.shape[0] == self.n_ue:
+                    # Copy and index arrays with UE dimension
+                    print(f"value.shape: {value.shape}")
+                    setattr(new_dataset, attr, value[idxs])
+                else:
+                    # Copy other attributes as is
+                    setattr(new_dataset, attr, value)
+                
+        return new_dataset
 
     def get_active_idxs(self) -> np.ndarray:
         """Return indices of active users.
@@ -493,10 +542,9 @@ class Dataset(DotDict):
         
         # Check if dataset has valid grid structure
         if not self._is_valid_grid():
-            n_rx = self.rx_pos.shape[0]
-            print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {n_rx} users in rx_pos")
+            print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {self.n_ue} users in rx_pos")
             if steps == [1, 1]:
-                idxs = np.arange(n_rx)
+                idxs = np.arange(self.n_ue)
             else:
                 raise ValueError("Dataset does not have a valid grid structure. Cannot perform uniform sampling.")
         else:
@@ -511,6 +559,7 @@ class Dataset(DotDict):
     # (in order of computation)
     _computed_attributes = {
         'num_paths': '_compute_num_paths',
+        'n_ue': '_compute_n_ue',
         'num_interactions': '_compute_num_interactions',
         'distances': '_compute_distances',
         'pathloss': '_compute_pathloss',
@@ -632,13 +681,6 @@ class MacroDataset:
     it will return single value instead of a list with a single element.
     """
     
-    # Keys that should return single values from first dataset instead of lists
-    SINGLE_ACCESS_KEYS = {
-        c.LOAD_PARAMS_PARAM_NAME,  # Load parameters are shared
-        c.SCENE_PARAM_NAME,        # Scene parameters are shared
-        c.MATERIALS_PARAM_NAME,    # Materials are shared
-    }
-    
     # Methods that should only be called on the first dataset
     SINGLE_ACCESS_METHODS = {
         'info',  # Parameter info should only be shown once
@@ -659,13 +701,13 @@ class MacroDataset:
         self.datasets = datasets if datasets is not None else []
         
     def get_single(self, key):
-        """Get a single value from the first dataset for special keys.
+        """Get a single value from the first dataset for shared parameters.
         
         Args:
             key: Key to get value for
             
         Returns:
-            Single value from first dataset if key is in SINGLE_ACCESS_KEYS,
+            Single value from first dataset if key is in SHARED_PARAMS,
             otherwise returns list of values from all datasets
         """
         if not self.datasets:
@@ -676,7 +718,7 @@ class MacroDataset:
         """Propagate any attribute/method access to all datasets.
         
         If the attribute is a method in PROPAGATE_METHODS, call it on all children.
-        If the attribute is in SINGLE_ACCESS_KEYS, return from first dataset.
+        If the attribute is in SHARED_PARAMS, return from first dataset.
         If there is only one dataset, return single value instead of lists.
         Otherwise, return list of results from all datasets.
         """
@@ -694,8 +736,8 @@ class MacroDataset:
                     return results[0] if len(results) == 1 else results
                 return propagated_method
             
-        # Handle single access keys
-        if name in self.SINGLE_ACCESS_KEYS:
+        # Handle shared parameters
+        if name in SHARED_PARAMS:
             return self.get_single(name)
             
         # Default: propagate to all datasets
@@ -710,12 +752,12 @@ class MacroDataset:
             
         Returns:
             Dataset instance if idx is integer,
-            single value if idx is in SINGLE_ACCESS_KEYS or if there is only one dataset,
+            single value if idx is in SHARED_PARAMS or if there is only one dataset,
             or list of results if idx is string and there are multiple datasets
         """
         if isinstance(idx, (int, slice)):
             return self.datasets[idx]
-        if idx in self.SINGLE_ACCESS_KEYS:
+        if idx in SHARED_PARAMS:
             return self.get_single(idx)
         results = [dataset[idx] for dataset in self.datasets]
         return results[0] if len(results) == 1 else results
@@ -741,6 +783,5 @@ class MacroDataset:
             dataset: Dataset instance to add
         """
         self.datasets.append(dataset)
-    
-    
+        
         
