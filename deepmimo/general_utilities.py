@@ -471,3 +471,19 @@ def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
                 additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
     return additional_keys
 
+
+def get_available_scenarios() -> list:
+    """Get a list of all available scenarios in the scenarios directory.
+    
+    Returns:
+        list: List of scenario names (folder names in the scenarios directory)
+    """
+    scenarios_dir = get_scenarios_dir()
+    if not os.path.exists(scenarios_dir):
+        return []
+    
+    # Get all subdirectories in the scenarios folder
+    scenarios = [f for f in os.listdir(scenarios_dir) 
+                if os.path.isdir(os.path.join(scenarios_dir, f))]
+    return sorted(scenarios)
+

@@ -33,6 +33,9 @@ from .converter.converter import convert
 from .info import info
 from .general_utilities import (
     summary,
+    get_available_scenarios,
+    get_params_path,
+    load_dict_from_json,
 )
 
 from .api import (
@@ -81,6 +84,9 @@ __all__ = [
     'summary',
     'upload',
     'download',
+    'get_available_scenarios',
+    'get_params_path',
+    'load_dict_from_json',
     
     # Constants
     'consts',
