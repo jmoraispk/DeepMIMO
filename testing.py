@@ -23,9 +23,6 @@ dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=True)
 
 #%% V4 Generation
 
-# Start timing
-start_time = time.time()
-
 # scen_name = 'DeepMIMO_folder'
 # scen_name = 'simple_street_canyon_test'
 scen_name = 'asu_campus'
@@ -34,7 +31,7 @@ scen_name = 'asu_campus'
 tx_sets = {1: [0]}
 rx_sets = {2: 'all'}
 
-load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 25}
+load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 25}#, 'matrices': None}
 dataset = dm.load(scen_name, **load_params)
 
 # Create channel generation parameters
@@ -52,41 +49,7 @@ dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
 # Other computations
 dataset.compute_channels(ch_params)
 
-# End timing
-end_time = time.time()
-print(f"Time elapsed: {end_time - start_time:.2f} seconds")
-
-#%%
-import deepmimo as dm
-# dataset = dm.load('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
-# dataset = dm.load('asu_campus', tx_sets={1: [0]}, rx_sets={2: 'all'})
-dataset = dm.load('sionna_export_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
-idxs = dataset.get_uniform_idxs([1,1])
-# idxs = np.arange(dataset.rx_pos.shape[0])
-dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
-
-
-# import matplotlib.pyplot as plt
-# plt.scatter(dataset['rx_pos'][10,0], dataset['rx_pos'][10,1], c='k', s=20)
-#%%
-
-idxs = dataset.get_uniform_idxs([1,1])
-
-#%%
-
-active_mask = dataset.num_paths > 0
-print(f"\nNumber of active positions: {np.sum(active_mask)}")
-print(f"Number of inactive positions: {np.sum(~active_mask)}")
-
-# Create scatter plot showing active vs inactive positions
-plt.figure(figsize=(12, 8))
-plt.scatter(dataset.rx_pos[~active_mask, 0], dataset.rx_pos[~active_mask, 1], 
-           alpha=0.5, s=10, c='red', label='Inactive')
-plt.scatter(dataset.rx_pos[active_mask, 0], dataset.rx_pos[active_mask, 1], 
-           alpha=0.5, s=10, c='green', label='Active')
-plt.legend()
-
-#%%
+#%% PLOT RAYS
 
 dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
              dataset['inter_pos'][10], dataset['inter'][10],
@@ -105,18 +68,7 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 # buildings_scene.plot()
 #####
 
-#%%
-import deepmimo as dm
-dm.summary('i1_2p4')
-d = dm.load('i1_2p4')
-
-#%%
-
-d = dm.load('city_0_newyork_3p5', tx_sets={1: [0]}, rx_sets={4: 'all'})
-
-dm.plot_coverage(d.rx_pos, d.aoa_az[:,0], bs_pos=d.tx_pos.T, proj_3D=True)
-
-#%%
+#%% CONVERSION (and UPLOAD) LOOP
 
 import os
 base_path = "F:/deepmimo_loop_ready"
@@ -171,7 +123,7 @@ for scen_name, time_taken in timing_results.items():
     if scen_name:
         print(f"{scen_name:<30} | {time_taken:>15.2f}")
 
-#%%
+#%% UPLOAD cities bboxes coordinates LOOP
 base_path = "./deepmimo_scenarios3"
 subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
 
@@ -223,23 +175,9 @@ for subfolder in subfolders[25:26]:
         
     dm.upload(scen_name, MY_API_KEY,
               details=[desc] if desc else None)
-    
-#%%
-subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
 
-# Print summary of all scenarios
-for subfolder in subfolders[:-5]:
-    scen_name = os.path.basename(subfolder)
-    dm.summary(scen_name)
-    # break
+#%% LOOP all scenarios (summary, load, plot)
 
-#%%
-scen_name = 'asu_campus_3p5'
-dm.summary(scen_name)
-
-dataset = dm.load(scen_name, tx_sets={1: [0]}, rx_sets={2: 'all'})
-
-#%% auto load and plot
 import deepmimo as dm
 import matplotlib.pyplot as plt
 base_path = 'F:/deepmimo_loop_ready'
@@ -248,7 +186,11 @@ subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
 # Load all scenarios
 for subfolder in subfolders[:-5]:
     scen_name = os.path.basename(subfolder)
+    
+    # dm.summary(scen_name)
+
     # dm.load(scen_name)
+
     try:
         d = dm.load(scen_name, tx_sets={1: []}, rx_sets={2: []})
     except Exception as e:
@@ -256,3 +198,7 @@ for subfolder in subfolders[:-5]:
     _, ax = d.scene.plot(show=False)
     ax.set_title(scen_name + ': ' + ax.get_title())
     plt.show()
+
+# TODO: Make this work for loaidng only the first tx and rx set
+
+# TODO: Give argument to also not load any matrices (only scene)

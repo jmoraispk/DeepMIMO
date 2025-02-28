@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import deepmimo as dm
+import matplotlib.pyplot as plt
 
 #%% Basic End-to-End Example
 
@@ -239,3 +240,21 @@ for scen_name in scenarios:
     except Exception as e:
         print(f"Error processing {scen_name}: {str(e)}")
         continue
+
+
+#%% Visualizing active and inactive positions
+
+active_mask = dataset.num_paths > 0
+print(f"\nNumber of active positions: {np.sum(active_mask)}")
+print(f"Number of inactive positions: {np.sum(~active_mask)}")
+
+# Create scatter plot showing active vs inactive positions
+plt.figure(figsize=(12, 8))
+plt.scatter(dataset.rx_pos[~active_mask, 0], dataset.rx_pos[~active_mask, 1], 
+           alpha=0.5, s=3, c='red', label='Inactive')
+plt.scatter(dataset.rx_pos[active_mask, 0], dataset.rx_pos[active_mask, 1], 
+           alpha=0.5, s=3, c='green', label='Active')
+plt.legend()
+plt.show()
+
+dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
