@@ -13,27 +13,11 @@ dataset generation process.
 """
 
 # Standard library imports
-import time
 from typing import List, Optional, Dict, Any
 
 # Third-party imports
 import numpy as np
 
-################################# Internal ####################################
-
-def safe_print(text: str, stop_dur: float = 0.3) -> None:
-    """Print text with a delay for better display compatibility.
-    
-    This function adds a delay after printing to ensure compatibility with
-    progress bars and other dynamic terminal output.
-
-    Args:
-        text: The text to print
-        stop_dur: Delay duration in seconds. Defaults to 0.3.
-    """
-    print(text)
-    time.sleep(stop_dur)
-        
 ################################## For User ###################################
 
 def dbm2watt(val: float | np.ndarray) -> float | np.ndarray:
