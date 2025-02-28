@@ -159,7 +159,8 @@ def save_scenario(sim_folder: str, scen_name: str = '',
         else:
             return None
     
-    shutil.copytree(sim_folder, scen_path)
+    # Move simulation folder to scenarios folder
+    shutil.move(sim_folder, scen_path)
     return scen_name
 
 ################################################################################
