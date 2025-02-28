@@ -133,6 +133,24 @@ class InsiteRayTracingParameters(RayTracingParameters):
 
         num_rays = 360 // model_vals['ray_spacing'] * 180  
 
+        # Compute the path depth from the number of interactions
+        computed_path_depth_no_scattering = sum([
+            model_vals['max_reflections'],
+            model_vals['max_wedge_diffractions'],
+            model_vals['max_transmissions']])
+        
+        # When scattering is enabled, the number of interactions may be smaller
+        computed_path_depth_scattering = 0
+        if diffuse_scat_vals['enabled']:
+            computed_path_depth_scattering = sum([
+                diffuse_scat_vals['diffuse_reflections'],
+                diffuse_scat_vals['diffuse_diffractions'],
+                diffuse_scat_vals['diffuse_transmissions']])
+
+        actual_max_path_depth = min(apg_accel_vals['path_depth'], 
+                                    max(computed_path_depth_no_scattering, 
+                                        computed_path_depth_scattering))
+        
         # Build standardized parameter dictionary
         params_dict = {
             # Ray Tracing Engine info
@@ -143,7 +161,7 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'frequency': waveform_vals['CarrierFrequency'],
             
             # Ray tracing interaction settings
-            'max_path_depth': apg_accel_vals['path_depth'],
+            'max_path_depth': actual_max_path_depth,
             'max_reflections': model_vals['max_reflections'],
             'max_diffractions': model_vals['max_wedge_diffractions'],
             'max_scattering': int(diffuse_scat_vals['enabled']) ,  # 1 if enabled, 0 if not
