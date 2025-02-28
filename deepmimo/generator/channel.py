@@ -14,7 +14,7 @@ import numpy as np
 from tqdm import tqdm
 from typing import Dict
 from .. import consts as c
-from ..general_utilities import DotDict
+from ..general_utilities import DotDict, compare_two_dicts
 
 class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.
@@ -80,7 +80,6 @@ def validate_ch_gen_params(params: ChannelGenParameters, n_ues: int) -> ChannelG
         ValueError: If parameters are invalid or inconsistent
     """
     # Notify the user if some keyword is not used (likely set incorrectly)
-    from ..general_utilities import compare_two_dicts
     additional_keys = compare_two_dicts(params, ChannelGenParameters())
     if len(additional_keys):
         print('The following parameters seem unnecessary:')
@@ -119,7 +118,6 @@ def validate_ch_gen_params(params: ChannelGenParameters, n_ues: int) -> ChannelG
         params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
             np.array([None] * n_ues) # List of None
     
-    # TODO: Remove the None option from here
     # BS Antenna Radiation Pattern
     if (c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys() and \
         params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] is not None):

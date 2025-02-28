@@ -8,7 +8,7 @@ from math import cos, sin, radians
 import re
 import scipy.io
 
-EXTS = ['cir', 'doa', 'dod', 'paths', 'pl'] # JTODO: remove pl & parse second
+EXTS = ['cir', 'doa', 'dod', 'paths', 'pl']
 PARSE_FUNCS = ['parse_first', 'parse_first', 'parse_first', 'parse_third', 'parse_second']
 
 
