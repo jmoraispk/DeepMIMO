@@ -30,7 +30,7 @@ from .geometry import (
 )
 
 # Utilities
-from .utils import dbm2watt
+from .utils import dbw2watt
 
 # Parameters that should remain consistent across datasets in a MacroDataset
 SHARED_PARAMS = [
@@ -440,7 +440,7 @@ class Dataset(DotDict):
 
     def _compute_power_linear(self) -> np.ndarray:
         """Internal method to compute linear power from power in dBm"""
-        return dbm2watt(self.power) 
+        return dbw2watt(self.power) 
 
     def _compute_grid_info(self) -> Dict[str, np.ndarray]:
         """Internal method to compute grid size and spacing information from receiver positions.

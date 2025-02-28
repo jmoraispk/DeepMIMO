@@ -20,19 +20,19 @@ import numpy as np
 
 ################################## For User ###################################
 
-def dbm2watt(val: float | np.ndarray) -> float | np.ndarray:
-    """Convert power from dBm to Watts.
+def dbw2watt(val: float | np.ndarray) -> float | np.ndarray:
+    """Convert power from dBW to Watts.
     
-    This function performs the standard conversion from decibel-milliwatts (dBm)
+    This function performs the standard conversion from decibel-watts (dBW)
     to linear power in Watts.
 
     Args:
-        val: Power value(s) in dBm
+        val: Power value(s) in dBW
 
     Returns:
         Power value(s) in Watts
     """
-    return 10**(val/10 - 3)
+    return 10**(val/10)
 
 def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.ndarray:
     """Return indices of users at uniform intervals.

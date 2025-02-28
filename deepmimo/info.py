@@ -22,8 +22,8 @@ DATASET_HELP_MESSAGES = {
         'Angle of departure (elevation) for each path in degrees\n'
         '\t[num_rx, num_paths]',
     c.POWER_PARAM_NAME:
-        'Tap power. Received power in dBm for each path. \n'
-        '|a|², where a is the complex channel amplitude\n'
+        'Tap power. Received power in dBW for each path, assuming 0 dBW transmitted power. \n'
+        '10*log10(|a|²), where a is the complex channel amplitude\n'
         '\t[num_rx, num_paths]',
     c.PHASE_PARAM_NAME:
         'Tap phase. Phase of received signal for each path in degrees. \n'

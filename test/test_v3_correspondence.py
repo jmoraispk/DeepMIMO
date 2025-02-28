@@ -123,7 +123,6 @@ def generate_v4_dataset(scen_name: str, params: Dict[str, Any]):
             ch_params.bs_antenna.rotation = rotation
     
     # Compute channels
-    dataset.power_linear *= 1000  # For compatibility with v3
     dataset.compute_channels(ch_params)
     
     print(f"Time elapsed: {time.time() - start_time:.2f} seconds")

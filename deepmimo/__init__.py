@@ -20,7 +20,6 @@ from .generator.visualization import (
 
 # Utilities
 from .generator.utils import (
-    dbm2watt,
     uniform_sampling,
     LinearPath,
     get_idxs_with_limits
@@ -71,7 +70,6 @@ __all__ = [
     # Utilities
     'LinearPath',
     'uniform_sampling',
-    'dbm2watt',
     'get_idxs_with_limits',
     
     # Physical world representation

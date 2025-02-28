@@ -72,11 +72,6 @@ ch_params.ofdm.subcarriers = 64
 # ch_params.ofdm.selected_subcarriers = np.arange(11)
 ch_params.ue_antenna.shape = np.array([1,1])
 
-# Basic computations
-p = dataset.power_linear  # Will be computed from dataset.power
-
-dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
-
 # Other computations
 dataset.compute_channels(ch_params)
 

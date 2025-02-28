@@ -31,7 +31,7 @@ scen_name = 'asu_campus'
 tx_sets = {1: [0]}
 rx_sets = {2: 'all'}
 
-load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 25}#, 'matrices': None}
+load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 25}
 dataset = dm.load(scen_name, **load_params)
 
 # Create channel generation parameters
@@ -40,11 +40,6 @@ ch_params = dm.ChannelGenParameters()
 # Using direct dot notation for parameters
 ch_params.num_paths = 5
 ch_params.ue_antenna.shape = np.array([1,1])
-
-# Basic computations
-p = dataset.power_linear  # Will be computed from dataset.power
-
-dataset.power_linear *= 1000  # JUST TO BE COMPATIBLE WITH V3
 
 # Other computations
 dataset.compute_channels(ch_params)
@@ -189,7 +184,7 @@ for subfolder in subfolders[:-5]:
     
     # dm.summary(scen_name)
 
-    # dm.load(scen_name)
+    # dm.load(scen_name, 'matrices': None)
 
     try:
         d = dm.load(scen_name, tx_sets={1: []}, rx_sets={2: []})
@@ -199,6 +194,6 @@ for subfolder in subfolders[:-5]:
     ax.set_title(scen_name + ': ' + ax.get_title())
     plt.show()
 
-# TODO: Make this work for loaidng only the first tx and rx set
+# TODO: Make this work for loading only the first tx and rx set
 
 # TODO: Give argument to also not load any matrices (only scene)

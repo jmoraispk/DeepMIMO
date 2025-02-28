@@ -55,17 +55,21 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
         
     Returns:
         Dict[str, np.ndarray]: Dictionary containing path information with keys:
-            - aoa_az/el: Angles of arrival (azimuth/elevation)
-            - aod_az/el: Angles of departure (azimuth/elevation)
-            - toa: Time of arrival
-            - power: Received power
-            - phase: Path phase
+            - aoa_az/el: Angles of arrival (azimuth/elevation) (degrees)
+            - aod_az/el: Angles of departure (azimuth/elevation) (degrees)
+            - toa: Time of arrival (s)
+            - power: Received power (dBW)
+            - phase: Path phase (degrees)
             - inter: Interaction codes
             - inter_pos: Interaction point positions
             
     Note:
-        The function limits the maximum number of paths per receiver to MAX_PATHS(25)
+        1- The function limits the maximum number of paths per receiver to MAX_PATHS(25)
         and the maximum interactions per path to MAX_INTER_PER_PATH(10).
+        2- Wireless Insite assumes 0 dBm transmitted power and measures the received power
+        in dBm. In DeepMIMO, we assume 0 dBW transmitted power and measure the received
+        power in dBW. The relative power values are the same in both cases, so the 
+        conversion is straightforward.
     """
     
     # Read file
@@ -109,9 +113,9 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
             i1, i2, i3, i4, i5, i6, i7, i8, i9 = tuple(line.split())
             # (no need) i1 = <path number>
     		# (no need) i2 = <total interactions for path> (not including Tx and Rx)
-            data[c.POWER_PARAM_NAME][rx_i, path_idx]   = np.float32(i3) # i3 = <received power(dBm)>
-            data[c.PHASE_PARAM_NAME][rx_i, path_idx] = np.float32(i4) # i4 = <phase(deg)>
-            data[c.DELAY_PARAM_NAME][rx_i, path_idx]   = np.float32(i5) # i5 = <time of arrival(sec)>
+            data[c.POWER_PARAM_NAME][rx_i, path_idx]  = np.float32(i3) # i3 = <received power(dBm)>
+            data[c.PHASE_PARAM_NAME][rx_i, path_idx]  = np.float32(i4) # i4 = <phase(deg)>
+            data[c.DELAY_PARAM_NAME][rx_i, path_idx]  = np.float32(i5) # i5 = <time of arrival(sec)>
             data[c.AOA_EL_PARAM_NAME][rx_i, path_idx] = np.float32(i6) # i6 = <arrival theta(deg)>
             data[c.AOA_AZ_PARAM_NAME][rx_i, path_idx] = np.float32(i7) # i7 = <arrival phi(deg)>
             data[c.AOD_EL_PARAM_NAME][rx_i, path_idx] = np.float32(i8) # i8 = <departure theta(deg)>
