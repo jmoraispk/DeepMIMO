@@ -35,16 +35,16 @@ def convert(path_to_rt_folder: str, **conversion_params: Dict[str, Any]) -> Opti
     
     files_in_dir = os.listdir(path_to_rt_folder)
     if cu.ext_in_list('.aodt', files_in_dir):
-        print("Using AODT generator")
+        print("Using AODT converter")
         rt_converter = aodt_rt_converter
     elif cu.ext_in_list('.pkl', files_in_dir):
-        print("Using Sionna_RT generator")
+        print("Using Sionna RT converter")
         rt_converter = sionna_rt_converter
     elif cu.ext_in_list('.setup', files_in_dir):
-        print("Using Wireless Insite generator")
+        print("Using Wireless Insite converter")
         rt_converter = insite_rt_converter
     else:
-        print("Unknown raytracer type")
+        print("Unknown ray tracer type")
         return None
     
     scenario = rt_converter(path_to_rt_folder, **conversion_params)
