@@ -29,12 +29,15 @@ organized into the following categories:
    - Interaction codes
    - Path processing limits
 
-7. DeepMIMO Parameters
-   - Fundamental parameters (angles, power, positions)
-   - Computed parameters
-   - Channel parameters
+7. DeepMIMO Matrices
+   - Fundamental quantities (power, phase, delay, angles, tx/rx positions, interactions)
+   - Derived quantities (channel, number of paths, pathloss, distance)
+   - Rotated and filtered quantities (after antenna rotation and FoV filtering)
+
+8. Channel Generation Parameters
+   - Basic channel parameters
    - OFDM configuration
-   - Antenna settings
+   - Antenna configuration
 
 IMPORTANT: The string values of these constants MUST match exactly the field names 
 used in the respective files (params.mat, scene files, dataclasses, etc.). 
@@ -59,12 +62,15 @@ PARAMS_FILENAME = 'params'
 # Data types
 FP_TYPE = np.float32  # floating point precision for saving values
 
+# Utility/Configuration parameters
+LOAD_PARAMS_PARAM_NAME = 'load_params'
+
 # Supported ray tracers and their versions
 RAYTRACER_NAME_WIRELESS_INSITE = 'Remcom Wireless Insite'
 RAYTRACER_VERSION_WIRELESS_INSITE = '3.3'
 RAYTRACER_NAME_SIONNA = 'Sionna Ray Tracing'
 RAYTRACER_VERSION_SIONNA = '0.19.1'
-RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'  # not supported yet
+RAYTRACER_NAME_AODT = 'Aerial Omniverse Digital Twin'
 RAYTRACER_VERSION_AODT = '1.x'
 
 #==============================================================================
@@ -162,23 +168,21 @@ MAX_PATHS = 25  # Maximum number of paths per receiver
 MAX_INTER_PER_PATH = 10  # Maximum number of interactions per path
 
 #==============================================================================
-# 7. DeepMIMO Dataset Parameters
+# 7. DeepMIMO Matrices
 #==============================================================================
 
-# Fundamental Parameters
+# Fundamental quantities (11 matrices)
+POWER_PARAM_NAME = 'power'
+PHASE_PARAM_NAME = 'phase'
+DELAY_PARAM_NAME = 'delay'
 AOA_AZ_PARAM_NAME = 'aoa_az'
 AOA_EL_PARAM_NAME = 'aoa_el'
 AOD_AZ_PARAM_NAME = 'aod_az'
 AOD_EL_PARAM_NAME = 'aod_el'
-
-POWER_PARAM_NAME = 'power'
-PHASE_PARAM_NAME = 'phase'
-DELAY_PARAM_NAME = 'delay'
 RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
 INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
-LOAD_PARAMS_PARAM_NAME = 'load_params'
 
 # Computed Parameters
 CHANNEL_PARAM_NAME = 'channel'
@@ -204,7 +208,11 @@ FOV_MASK_PARAM_NAME = 'fov_mask'      # Boolean mask for FoV filtering
 # Power with antenna gain
 PWR_LINEAR_ANT_GAIN_PARAM_NAME = 'power_linear_ant_gain'
 
-# Channel parameters
+#==============================================================================
+# 8. Channel Generation Parameters
+#==============================================================================
+
+# Base channel parameters
 PARAMSET_POLAR_EN = 'enable_dual_polar'
 PARAMSET_DOPPLER_EN = 'enable_doppler'  # Doppler from Ray Tracer
 PARAMSET_FD_CH = 'freq_domain'  # Time Domain / Frequency Domain (OFDM)
