@@ -10,25 +10,27 @@ from . import consts as c
 # Dictionary of help messages for DeepMIMO dataset parameters
 DATASET_HELP_MESSAGES = {
     c.AOA_AZ_PARAM_NAME: 
-        'Angle of arrival in azimuth for each path in radians\n'
+        'Angle of arrival (azimuth) for each path in degrees\n'
         '\t[num_rx, num_paths]',
     c.AOA_EL_PARAM_NAME: 
-        'Angle of arrival in elevation for each path in radians\n'
+        'Angle of arrival (elevation) for each path in degrees\n'
         '\t[num_rx, num_paths]',
     c.AOD_AZ_PARAM_NAME:
-        'Angle of departure in azimuth for each path in radians\n'
+        'Angle of departure (azimuth) for each path in degrees\n'
         '\t[num_rx, num_paths]',
     c.AOD_EL_PARAM_NAME:
-        'Angle of departure in elevation for each path in radians\n'
-        '\t[num_rx, num_paths]',
-    c.DELAY_PARAM_NAME:
-        'Propagation delay for each path in seconds\n'
+        'Angle of departure (elevation) for each path in degrees\n'
         '\t[num_rx, num_paths]',
     c.POWER_PARAM_NAME:
-        'Received power in dBm for each path\n'
+        'Tap power. Received power in dBm for each path. \n'
+        '|a|², where a is the complex channel amplitude\n'
         '\t[num_rx, num_paths]',
     c.PHASE_PARAM_NAME:
-        'Phase of received signal for each path in radians\n'
+        'Tap phase. Phase of received signal for each path in degrees. \n'
+        '∠a (angle of a), where a is the complex channel amplitude\n'
+        '\t[num_rx, num_paths]',
+    c.DELAY_PARAM_NAME:
+        'Tap delay. Propagation delay for each path in seconds\n'
         '\t[num_rx, num_paths]',
     c.RX_POS_PARAM_NAME:
         'Receiver positions in 3D coordinates in meters\n'
