@@ -1,4 +1,5 @@
 #%%
+import os
 import numpy as np
 import deepmimo as dm
 
@@ -207,6 +208,7 @@ dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0],
 
 
 #%% Loop through all scenarios and calculate interaction sums
+
 
 # Get all available scenarios
 scenarios = dm.get_available_scenarios()
