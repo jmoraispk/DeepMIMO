@@ -256,24 +256,3 @@ for subfolder in subfolders[:-5]:
     _, ax = d.scene.plot(show=False)
     ax.set_title(scen_name + ': ' + ax.get_title())
     plt.show()
-
-#%% Test subset functionality
-# Load a dataset
-dataset = dm.load('simple_street_canyon_test', tx_sets={1: [0]}, rx_sets={2: 'all'})
-
-# Get indices of active users (those with paths)
-active_idxs = dataset.get_active_idxs()
-print(f"Original dataset has {dataset.n_ue} UEs")
-print(f"Found {len(active_idxs)} active UEs")
-
-# Create new dataset with only active users
-active_dataset = dataset.subset(active_idxs)
-print(f"New dataset has {active_dataset.n_ue} UEs")
-
-active_dataset.scene.plot()
-
-#%%
-dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0], 
-                 bs_pos=active_dataset.tx_pos.T)
-
-#%%

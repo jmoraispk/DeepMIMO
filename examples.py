@@ -185,3 +185,22 @@ dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.t
 dm.plot_rays(dataset.rx_pos[10], dataset.tx_pos[0],
              dataset.inter_pos[10], dataset.inter[10],
              proj_3D=True, color_by_type=True)
+
+#%% Active Users and Dataset Subsetting (Trimming) Example
+
+print("\nActive Users and Dataset Subsetting (Trimming) Example")
+print("-" * 50)
+
+# Get indices of active users (those with paths)
+active_idxs = dataset.get_active_idxs()
+print(f"Original dataset has {dataset.n_ue} UEs")
+print(f"Found {len(active_idxs)} active UEs")
+
+# Create new dataset with only active users
+active_dataset = dataset.subset(active_idxs)
+print(f"New dataset has {active_dataset.n_ue} UEs")
+
+active_dataset.scene.plot()
+
+dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0], 
+                 bs_pos=active_dataset.tx_pos.T)
