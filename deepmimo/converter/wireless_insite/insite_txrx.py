@@ -107,20 +107,6 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
     return tx_ids, rx_ids, txrx_sets
 
 
-def get_id_to_idx_map(txrx_dict: Dict) -> Dict[int, int]:
-    """Create mapping from Wireless Insite IDs to indices.
-    
-    Args:
-        txrx_dict: Dictionary containing TX/RX set information
-        
-    Returns:
-        Dictionary mapping original IDs to indices
-    """
-    ids = [txrx_dict[key]['id_orig'] for key in txrx_dict.keys()]
-    idxs = [i + 1 for i in range(len(ids))]
-    return {key:val for key, val in zip(ids, idxs)}
-
-
 if __name__ == "__main__":
     # Test directory with TX/RX files
     test_dir = r"./P2Ms/simple_street_canyon_test/"
