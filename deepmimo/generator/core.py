@@ -31,7 +31,7 @@ from ..materials import MaterialList
 from .channel import ChannelGenParameters
 
 # Scenario management
-from .downloader import download_scenario_handler
+from ..api import download
 
 def generate(scen_name: str, load_params: Dict[str, Any] = {},
             ch_gen_params: Dict[str, Any] = {}) -> Dataset:
@@ -87,8 +87,7 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
         print('Scenario not found. Would you like to download it? [Y/n]')
         response = input().lower()
         if response in ['', 'y', 'yes']:
-            zip_path = download_scenario_handler(scen_name)
-            unzip(zip_path)
+            download(scen_name)
         else:
             raise ValueError(f'Scenario {scen_name} not found')
     

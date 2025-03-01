@@ -6,6 +6,7 @@ from the DeepMIMO server.
 """
 
 import os
+import shutil
 import requests
 import hashlib
 from tqdm import tqdm
@@ -504,7 +505,7 @@ def _download_url(scenario_name: str) -> str:
         raise RuntimeError(f"Failed to get scenario URL: {str(e)}")
 
 
-def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
+def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[str]:
     """Download a DeepMIMO scenario from B2 storage.
 
     Args:
@@ -515,7 +516,7 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
         Path to downloaded file if successful, None otherwise
     """
     scenarios_dir = get_scenarios_dir()
-    download_dir = get_downloads_dir()
+    download_dir = output_dir if output_dir else get_downloads_dir()
     scenario_folder = get_scenario_folder(scenario_name)
     
     # DEV NOTE: when adding new scenario versions, change this check to read the version number
@@ -532,7 +533,9 @@ def download(scenario_name: str, output_dir: str = None) -> Optional[str]:
         url = _download_url(scenario_name)
     except Exception as e:
         print(f"Error: Failed to get download URL - {str(e)}")
-        return None
+        print(f"Attempting to backup link to B2 storage...")
+        url =  f"http://f005.backblazeb2.com/file/deepmimo-scenarios/{scenario_name}.zip"
+        
     
     output_path = os.path.join(download_dir, f"{scenario_name}_downloaded.zip")
 
