@@ -143,7 +143,7 @@ MATERIALS_PARAM_CROSS_POL_COEF = 'cross_polarization_coefficient'
 #==============================================================================
 
 # TXRX configuration
-TXRX_PARAM_NAME = 'txrx'
+TXRX_PARAM_NAME = 'txrx_sets'
 TXRX_PARAM_NAME_FIELD = 'name'
 TXRX_PARAM_IS_TX = 'is_tx'
 TXRX_PARAM_IS_RX = 'is_rx'
@@ -151,6 +151,8 @@ TXRX_PARAM_NUM_POINTS = 'num_points'
 TXRX_PARAM_NUM_ACTIVE_POINTS = 'num_active_points'
 TXRX_PARAM_NUM_ANT = 'num_ant'
 TXRX_PARAM_DUAL_POL = 'dual_pol'
+TXRX_PARAM_ANT_REL_POS = 'ant_rel_pos'
+TXRX_PARAM_ANT_ARRAY_ORIENTATION = 'ant_array_orientation'
 
 #==============================================================================
 # 6. Paths Parameters
