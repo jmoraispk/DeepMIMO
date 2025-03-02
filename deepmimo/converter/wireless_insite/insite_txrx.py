@@ -8,7 +8,7 @@ and converting them to the base TxRxSet format.
 import os
 from pathlib import Path
 from typing import Dict, List, Tuple
-
+from pprint import pprint
 from .setup_parser import parse_file
 from ...txrx import TxRxSet
 
@@ -74,10 +74,9 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
         # Insite ID is used during ray tracing
         insite_id = (int(txrx.name[-1]) if txrx.name.startswith('project_id')
                      else txrx.values['project_id'])
-        txrx_obj.id_orig = insite_id 
-        # TX/RX set ID is used to abstract from the ray tracing configurations
-        # (how the DeepMIMO dataset will be saved and generated)
-        txrx_obj.idx = txrx_set_idx + 1 # 1-indexed
+        txrx_obj.id_orig = insite_id  # Needed to load path matrices
+        
+        txrx_obj.id = txrx_set_idx
         
         # Is TX or RX?
         txrx_obj.is_tx = txrx.values['is_transmitter']
@@ -102,7 +101,7 @@ def read_txrx_file(txrx_file: str) -> Tuple[List[int], List[int], Dict]:
     # Create txrx_sets dictionary with idx-based keys (as integers)
     txrx_sets = {}
     for obj in txrx_objs:
-        txrx_sets[f'txrx_set_{obj.idx}'] = obj.to_dict()
+        txrx_sets[f'txrx_set_{obj.id}'] = obj.to_dict()
 
     return tx_ids, rx_ids, txrx_sets
 
@@ -114,30 +113,8 @@ if __name__ == "__main__":
     output_folder = r"./P2Ms/simple_street_canyon_test/mat_files"
     
     print(f"\nTesting TX/RX set extraction from: {test_dir}")
-    print("-" * 50)
     
     # Create TX/RX information
     txrx_dict = read_txrx(test_dir, p2m_folder, output_folder)
     
-    # Print summary
-    print("\nSummary:")
-    tx_ids = []
-    rx_ids = []
-    for key, set_info in txrx_dict.items():
-        if set_info['is_tx']:
-            tx_ids.append(set_info['id_orig'])
-        if set_info['is_rx']:
-            rx_ids.append(set_info['id_orig'])
-            
-    print(f"Found {len(tx_ids)} transmitter sets: {tx_ids}")
-    print(f"Found {len(rx_ids)} receiver sets: {rx_ids}")
-    print("\nTX/RX Sets Details:")
-    for set_key, set_info in txrx_dict.items():
-        print(f"\n{set_key}:")
-        print(f"  Original ID: {set_info['id_orig']}")
-        print(f"  Is TX: {set_info.get('is_tx', False)}")
-        print(f"  Is RX: {set_info.get('is_rx', False)}")
-        if 'tx_num_ant' in set_info:
-            print(f"  TX antennas: {set_info['tx_num_ant']}")
-        if 'rx_num_ant' in set_info:
-            print(f"  RX antennas: {set_info['rx_num_ant']}") 
+    pprint(txrx_dict)

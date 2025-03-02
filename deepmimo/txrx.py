@@ -8,6 +8,9 @@ to represent transmitter and receiver configurations.
 from dataclasses import dataclass, asdict, field
 from typing import Dict, List
 
+from .general_utilities import get_params_path, load_dict_from_json
+from . import consts as c
+    
 @dataclass
 class TxRxSet:
     """
@@ -18,13 +21,13 @@ class TxRxSet:
     TX/RX configuration information during conversion.
     
     Example:
-        Wireless Insite IDXs = [3, 7, 8]
-        DeepMIMO (after conversion) TX/RX Sets: [1, 2, 3]
+        Wireless Insite IDs = [3, 7, 8]
+        DeepMIMO (after conversion) TX/RX Sets: [0, 1, 2]
         DeepMIMO (after generation): only individual tx and rx indices
     """
     name: str = ''
-    id_orig: int = 0   # Original ray tracer ID 
-    idx: int = 0       # TxRxSet index for saving after conversion and generation
+    id_orig: int = 0   # Original ray tracer txrx ID (mainly for Wireless Insite)
+    id: int = 0        # TxRxSet index for saving after conversion and generation
     is_tx: bool = False
     is_rx: bool = False
     
@@ -39,10 +42,107 @@ class TxRxSet:
     array_orientation: List = field(default_factory=lambda: [0,0,0]) # [azimuth, elevation, roll]
     
     def to_dict(self) -> Dict:
-        """Convert TxRxSet to a dictionary, filtering out None values.
+        """Convert TxRxSet to a dictionary.
         
         Returns:
-            Dictionary containing all non-None attributes of the TxRxSet.
+            Dictionary containing all attributes of the TxRxSet.
         """
-        return {key: val for key, val in asdict(self).items() if val is not None}
+        return asdict(self)
+    
+    def __repr__(self) -> str:
+        """String representation of TxRxSet."""
+        role = "TX" if self.is_tx else ""
+        role += "RX" if self.is_rx else ""
+        role = "Unknown" if not role else role
+        return f"{role}Set(name='{self.name}', id={self.id}, points={self.num_points})"
+
+@dataclass
+class TxRxPair:
+    """
+    Represents a pair of transmitter and receiver in a ray tracing simulation.
+    
+    This class is used to store the configuration of a transmitter and receiver pair,
+    including their positions, antenna properties, and other relevant information.
+    
+    """
+    tx: TxRxSet = field(default_factory=TxRxSet)
+    rx: TxRxSet = field(default_factory=TxRxSet)
+    tx_idx: int = 0
+    
+    def __repr__(self) -> str:
+        """String representation of TxRxPair."""
+        return f"TxRxPair(tx={self.tx.name}[{self.tx_idx}], rx={self.rx.name})"
+
+def get_txrx_pairs(txrx_sets: List[TxRxSet]) -> List[TxRxPair]:
+    """
+    Create all possible transmitter-receiver pairs from a list of TxRxSet objects.
+    
+    This function pairs all transmitter sets with all receiver sets, decoupling
+    individual transmitters from sets that have multiple transmitters.
+    
+    Args:
+        txrx_sets: List of TxRxSet objects to create pairs from
+        
+    Returns:
+        List of TxRxPair objects representing all valid transmitter-receiver combinations
+        
+    Example:
+        If we have:
+        - TxRxSet1 with 2 TXs
+        - TxRxSet2 with 1 TX
+        - TxRxSet3 with only RXs
+        
+        The function will create pairs:
+        - TX1 from Set1 with all RXs from Set3
+        - TX2 from Set1 with all RXs from Set3
+        - TX from Set2 with all RXs from Set3
+    """
+    tx_sets = [s for s in txrx_sets if s.is_tx]
+    rx_sets = [s for s in txrx_sets if s.is_rx]
+    
+    pairs = []
+    
+    # For each TX set
+    for tx_set in tx_sets:
+        # For each individual TX point in the set
+        for tx_idx in range(tx_set.num_points):
+            # Pair this TX with all RX sets
+            for rx_set in rx_sets:
+                pairs.append(TxRxPair(tx=tx_set, rx=rx_set, tx_idx=tx_idx))
+    
+    return pairs
+
+def get_txrx_sets(scenario_name: str) -> List[TxRxSet]:
+    """
+    Get all available transmitter-receiver sets for a given scenario.
+    
+    This function reads the scenario parameters file and creates a list of TxRxSet objects
+    based on the available transmitter and receiver sets.
+
+    Args:
+        scenario_name: Name of the DeepMIMO scenario
+        
+    Returns:
+        List of TxRxSet objects representing all available transmitter-receiver sets
+
+    Example:
+        >>> txrx_sets = dm.get_txrx_sets('O1_60')
+        >>> for txrx_set in txrx_sets:
+        ...     print(txrx_set)
+        TxRxSet(name='tx_array', idx=1, points=2)
+        TxRxSet(name='rx_array', idx=2, points=1)
+    """
+    # Load parameters file
+    params_file = get_params_path(scenario_name)
+    params = load_dict_from_json(params_file)
+    
+    # Extract TxRxSets from parameters
+    txrx_sets = []
+    for key, val in params[c.TXRX_PARAM_NAME].items():
+        if key.startswith('txrx_set_'):
+            txrx_sets.append(TxRxSet(**val))
+    
+    return txrx_sets
+
+
 

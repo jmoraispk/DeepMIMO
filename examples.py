@@ -258,3 +258,19 @@ plt.legend()
 plt.show()
 
 dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
+
+
+#%% TXRX SETS & PAIRS Information
+
+
+# Get all available TX-RX pairs
+txrx_sets = dm.get_txrx_sets(scen_name)
+pairs = dm.get_txrx_pairs(txrx_sets)
+
+print(txrx_sets)
+print(pairs)
+
+#%%
+
+
+

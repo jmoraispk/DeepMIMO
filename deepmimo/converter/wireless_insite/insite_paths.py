@@ -15,7 +15,6 @@ Dependencies:
 
 Main Functions:
     read_paths(): Process and save path data for all TX/RX pairs
-    get_id_to_idx_map(): Map Wireless Insite IDs to DeepMIMO indices
     update_txrx_points(): Update TX/RX point information with path data
 """
 
@@ -28,36 +27,22 @@ from .. import converter_utils as cu
 from ... import consts as c
 
 
-def get_id_to_idx_map(txrx_dict: Dict) -> Dict[int, int]:
-    """Create mapping from Wireless Insite IDs to indices.
-    
-    Args:
-        txrx_dict: Dictionary containing TX/RX set information
-        
-    Returns:
-        Dictionary mapping original IDs to indices
-    """
-    ids = [txrx_dict[key]['id_orig'] for key in txrx_dict.keys()]
-    idxs = [i + 1 for i in range(len(ids))]
-    return {key:val for key, val in zip(ids, idxs)}
-
-
-def update_txrx_points(txrx_dict: Dict, rx_set_idx: int, rx_pos: np.ndarray, path_loss: np.ndarray) -> None:
+def update_txrx_points(txrx_dict: Dict, rx_set_id: int, rx_pos: np.ndarray, path_loss: np.ndarray) -> None:
     """Update TxRx set information with point counts and inactive indices.
     
     Args:
         txrx_dict: Dictionary containing TxRx set information
-        rx_set_idx: Index of the receiver set to update
+        rx_set_id: Index of the receiver set to update
         rx_pos: Array of receiver positions
         path_loss: Array of path loss values
     """
     # Update number of points
     n_points = rx_pos.shape[0]
-    txrx_dict[f'txrx_set_{rx_set_idx}']['num_points'] = n_points
+    txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] = n_points
     
     # Find inactive points (those with path loss of 250 dB)
     inactive_idxs = np.where(path_loss == 250.)[0]
-    txrx_dict[f'txrx_set_{rx_set_idx}']['num_active_points'] = n_points - len(inactive_idxs)
+    txrx_dict[f'txrx_set_{rx_set_id}']['num_active_points'] = n_points - len(inactive_idxs)
 
 
 def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
@@ -82,34 +67,28 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     if not p2m_folder.exists():
         raise ValueError(f"Folder does not exist: {p2m_folder}")
     
-    # Get TX/RX IDs from dictionary
-    tx_ids = []
-    rx_ids = []
-    for key, set_info in txrx_dict.items():
-        if set_info['is_tx']:
-            tx_ids.append(set_info['id_orig'])
-        if set_info['is_rx']:
-            rx_ids.append(set_info['id_orig'])
-    
-    # Get ID to index mapping
-    id_to_idx_map = get_id_to_idx_map(txrx_dict)
+    # Get TX/RX sets from dictionary in a deterministic order
+    tx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_tx']]
+    rx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_rx']]
     
     # Find any p2m file to extract project name
     # Format is: project_name.paths.t001_01.r001.p2m
     proj_name = list(p2m_folder.glob("*.p2m"))[0].name.split('.')[0]
     
     # Process each TX/RX pair
-    for tx_id in tx_ids:
-        for rx_id in rx_ids:
-            # Generate filenames
-            for tx_idx, tx_num in enumerate([1]):  # We assume each TX/RX SET only has one BS
-                # Generate paths filename
-                base_filename = f'{proj_name}.paths.t{tx_num:03}_{tx_id:02}.r{rx_id:03}.p2m'
+    for tx_set in tx_sets:
+        # Discover number of TX points by checking file existence
+        tx_idx = 0
+        while True:
+            # Process this TX point with all RX sets
+            n_rx_files_left = len(rx_sets)
+            for rx_set in rx_sets:
+                base_filename = f'{proj_name}.paths.t{tx_set["id_orig"]:03}_{tx_idx+1:02}.r{rx_set["id_orig"]:03}.p2m'
                 paths_p2m_file = p2m_folder / base_filename
                 
                 if not paths_p2m_file.exists():
                     print(f"Warning: Path file not found: {paths_p2m_file}")
-                    continue
+                    break
                 
                 # Parse path data
                 data = paths_parser(str(paths_p2m_file))
@@ -121,16 +100,18 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
                 pl_p2m_file = str(paths_p2m_file).replace('.paths.', '.pl.')
                 data[c.RX_POS_PARAM_NAME], _, path_loss = read_pl_p2m_file(pl_p2m_file)
                 
-                # Get indices for saving
-                tx_set_idx = id_to_idx_map[tx_id]
-                rx_set_idx = id_to_idx_map[rx_id]
-                
-                # Update TX/RX point information
-                update_txrx_points(txrx_dict, rx_set_idx, data[c.RX_POS_PARAM_NAME], path_loss)
+                # Update TX/RX point information using the set's id
+                update_txrx_points(txrx_dict, rx_set['id'], data[c.RX_POS_PARAM_NAME], path_loss)
 
-                # Save each data key
+                # Save each data key using the set's id
                 for key in data.keys():
-                    cu.save_mat(data[key], key, output_folder, tx_set_idx, tx_idx, rx_set_idx)
+                    cu.save_mat(data[key], key, output_folder, tx_set['id'], tx_idx, rx_set['id'])
+                n_rx_files_left -= 1
+
+            if n_rx_files_left == len(rx_sets):
+                print(f"Warning: No path files found for TX index {tx_idx+1} of TX set {tx_set['id']}")
+                break  # didn't find any files for this TX point -> likely not a point!
+            tx_idx += 1
 
 
 if __name__ == "__main__":

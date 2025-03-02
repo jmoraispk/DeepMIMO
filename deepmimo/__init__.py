@@ -11,6 +11,14 @@ from .generator.core import (
 )
 from .generator.dataset import Dataset
 
+# TX/RX handling
+from .txrx import (
+    TxRxSet,
+    TxRxPair,
+    get_txrx_sets,
+    get_txrx_pairs,
+)
+
 # Visualization
 from .generator.visualization import (
     plot_coverage,
@@ -64,6 +72,11 @@ __all__ = [
     'load',
     'Dataset',
     'ChannelGenParameters',
+    
+    # TX/RX handling
+    'TxRxSet',
+    'TxRxPair',
+    'available_txrx_pairs',
     
     # Visualization
     'plot_coverage',

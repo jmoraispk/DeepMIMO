@@ -23,6 +23,7 @@ Note:
     functions in insite_paths.py.
 """
 
+import os
 import numpy as np
 from tqdm import tqdm
 from typing import Dict, Tuple
@@ -193,7 +194,6 @@ def extract_tx_pos(filename: str) -> np.ndarray:
         print('Not found tx_pos. Using hack...')
         
         # Step 1 - swapping tx and rx indices in the filename
-        import os
         basename = os.path.basename(filename)
         # print(basename)
         str_list = list(basename)

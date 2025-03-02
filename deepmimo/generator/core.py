@@ -137,31 +137,28 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
     """
     tx_sets = validate_txrx_sets(tx_sets, txrx_dict, 'tx')
     rx_sets = validate_txrx_sets(rx_sets, txrx_dict, 'rx')
-    
     dataset_list = []
-    bs_idxs = []
+    bs_idx = 0
     
-    for tx_set_idx, tx_idxs in tx_sets.items():
-        for rx_set_idx, rx_idxs in rx_sets.items():
+    for tx_set_id, tx_idxs in tx_sets.items():
+        for rx_set_id, rx_idxs in rx_sets.items():
             dataset_list.append({})
             for tx_idx in tx_idxs:
-                bs_idx = len(bs_idxs)
-                bs_idxs.append(bs_idx)
-
-                print(f'\nTX set: {tx_set_idx} (basestation)')
-                rx_id_str = 'basestation' if rx_set_idx == tx_set_idx else 'users'
-                print(f'RX set: {rx_set_idx} ({rx_id_str})')
+                print(f'\nTX set: {tx_set_id} (basestation)')
+                rx_id_str = 'basestation' if rx_set_id == tx_set_id else 'users'
+                print(f'RX set: {rx_set_id} ({rx_id_str})')
                 dataset_list[bs_idx] = load_tx_rx_raydata(scene_folder,
-                                                          tx_set_idx, rx_set_idx,
+                                                          tx_set_id, rx_set_id,
                                                           tx_idx, rx_idxs,
                                                           max_paths, matrices)
 
                 dataset_list[bs_idx]['info'] = {
-                    'tx_set_idx': tx_set_idx,
-                    'rx_set_idx': rx_set_idx,
+                    'tx_set_id': tx_set_id,
+                    'rx_set_id': rx_set_id,
                     'tx_idx': tx_idx,
                     'rx_idxs': rx_idxs
                 }
+                bs_idx += 1
 
     # Convert dictionary to Dataset at the end
     if len(dataset_list):
@@ -171,7 +168,7 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
     return final_dataset
 
 
-def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx: int, 
+def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: int, 
                         rx_idxs: np.ndarray | List, max_paths: int, 
                         matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
     """Load raytracing data for a transmitter-receiver pair.
@@ -181,8 +178,8 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
 
     Args:
         rayfolder (str): Path to folder containing raytracing data
-        tx_set_idx (int): Index of transmitter set
-        rx_set_idx (int): Index of receiver set
+        tx_set_id (int): Index of transmitter set
+        rx_set_id (int): Index of receiver set
         tx_idx (int): Index of transmitter within set
         rx_idxs (numpy.ndarray or list): Indices of receivers to load
         max_paths (int): Maximum number of paths to load
@@ -220,7 +217,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_idx: int, rx_set_idx: int, tx_idx:
         if key not in matrices_to_load:
             continue
         
-        mat_filename = get_mat_filename(key, tx_set_idx, tx_idx, rx_set_idx)
+        mat_filename = get_mat_filename(key, tx_set_id, tx_idx, rx_set_id)
         mat_path = os.path.join(rayfolder, mat_filename)
     
         if os.path.exists(mat_path):
@@ -262,46 +259,43 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
     Raises:
         ValueError: If invalid TX/RX sets are specified
     """
-    valid_tx_set_idxs = []
-    valid_rx_set_idxs = []
+    # Get valid TX/RX sets in a deterministic order
+    tx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_tx']]
+    rx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_rx']]
     
-    for key, val in txrx_dict.items():
-        if key.startswith('txrx_set_'):
-            if val['is_tx']:
-                valid_tx_set_idxs.append(val['idx'])
-            if val['is_rx']:
-                valid_rx_set_idxs.append(val['idx'])
+    valid_tx_set_ids = [tx_set['id'] for tx_set in tx_sets]
+    valid_rx_set_ids = [rx_set['id'] for rx_set in rx_sets]
     
-    valid_set_idxs = valid_tx_set_idxs if tx_or_rx == 'tx' else valid_rx_set_idxs
+    valid_set_ids = valid_tx_set_ids if tx_or_rx == 'tx' else valid_rx_set_ids
     set_str = 'Tx' if tx_or_rx == 'tx' else 'Rx'
     
     info_str = "To see supported TX/RX sets and indices run dm.info(<scenario_name>)"
     if type(sets) is dict:
-        for set_idx, idxs in sets.items():
+        for set_id, idxs in sets.items():
             # check the the tx/rx_set indices are valid
-            if set_idx not in valid_set_idxs:
-                raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
+            if set_id not in valid_set_ids:
+                raise Exception(f"{set_str} set {set_id} not in allowed sets {valid_set_ids}\n"
                               + info_str)
             
             # Get the txrx_set info for this index
-            txrx_set_key = f'txrx_set_{set_idx}'
+            txrx_set_key = f'txrx_set_{set_id}'  # Use id for internal operations
             txrx_set = txrx_dict[txrx_set_key]
             all_idxs_available = np.arange(txrx_set['num_points'])
             
             if type(idxs) is np.ndarray:
                 pass # correct
             elif type(idxs) is list:
-                sets[set_idx] = np.array(idxs)
+                sets[set_id] = np.array(idxs)
             elif type(idxs) is str:
                 if idxs == 'all':
-                    sets[set_idx] = all_idxs_available
+                    sets[set_id] = all_idxs_available
                 else:
                     raise Exception(f"String '{idxs}' not recognized for tx/rx indices " )
             else:
                 raise Exception('Only <list> of <np.ndarray> allowed as tx/rx indices')
             
             # check that the specific tx/rx indices inside the sets are valid
-            if not set(sets[set_idx]).issubset(set(all_idxs_available.tolist())):
+            if not set(sets[set_id]).issubset(set(all_idxs_available.tolist())):
                 raise Exception(f'Some indices of {idxs} are not in {all_idxs_available}. '
                                  + info_str)
             
@@ -309,12 +303,12 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
     elif type(sets) is list:
         # Generate all user indices
         sets_dict = {}
-        for set_idx in sets:
-            if set_idx not in valid_set_idxs:
-                raise Exception(f"{set_str} set {set_idx} not in allowed sets {valid_set_idxs}\n"
+        for set_id in sets:
+            if set_id not in valid_set_ids:
+                raise Exception(f"{set_str} set {set_id} not in allowed sets {valid_set_ids}\n"
                               + info_str)
         
-            sets_dict[set_idx] = np.arange(txrx_dict[f'txrx_set_{set_idx}']['num_points'])
+            sets_dict[set_id] = np.arange(txrx_dict[f'txrx_set_{set_id}']['num_points'])
     elif type(sets) is str:
         if sets != 'all':
             raise Exception(f"String '{sets}' not understood. Only string allowed "
@@ -322,7 +316,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
         
         # Generate dict with all sets and indices available
         sets_dict = {}
-        for set_idx in valid_set_idxs:
-            sets_dict[set_idx] = np.arange(txrx_dict[f'txrx_set_{set_idx}']['num_points'])
+        for set_id in valid_set_ids:
+            sets_dict[set_id] = np.arange(txrx_dict[f'txrx_set_{set_id}']['num_points'])
     return sets_dict
     
