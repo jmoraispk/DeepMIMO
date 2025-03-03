@@ -191,7 +191,7 @@ class Dataset(DotDict):
         """Compute Euclidean distances between receivers and transmitter."""
         return np.linalg.norm(self.rx_pos - self.tx_pos, axis=1)
 
-    def _compute_pathloss(self, coherent: bool = True) -> np.ndarray:
+    def compute_pathloss(self, coherent: bool = True) -> np.ndarray:
         """Compute path loss in dB, assuming 0 dBm transmitted power.
         
         Args:
@@ -248,7 +248,7 @@ class Dataset(DotDict):
             freq_domain=params.freq_domain
         )
 
-    def _compute_los(self) -> np.ndarray:
+    def compute_los(self) -> np.ndarray:
         """Calculate Line of Sight status (1: LoS, 0: NLoS, -1: No paths) for each receiver.
 
         Uses the interaction codes defined in consts.py:
@@ -562,9 +562,9 @@ class Dataset(DotDict):
         'n_ue': '_compute_n_ue',
         'num_interactions': '_compute_num_interactions',
         'distances': '_compute_distances',
-        'pathloss': '_compute_pathloss',
+        'pathloss': 'compute_pathloss',
         'channel': '_compute_channels',
-        'los': '_compute_los',
+        'los': 'compute_los',
         
         # Power linear
         'power_linear': '_compute_power_linear',
