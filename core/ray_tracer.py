@@ -6,7 +6,7 @@ from tqdm import tqdm
 from scipy.io import savemat
 import tensorflow as tf
 from sionna.rt import Transmitter, Receiver
-from config.simulation_params import BATCH_SIZE, GRID_SPACING
+from constants import BATCH_SIZE, GRID_SPACING
 from utils.geo_utils import *
 from utils.sionna_utils import create_base_scene, set_materials
 
@@ -65,6 +65,7 @@ class RayTracer:
 
         with open(os.path.join(scene_folder, "osm_gps_origin.txt"), "r") as f:
             origin_lat, origin_lon = map(float, f.read().split())
+        print(f"origin_lat: {origin_lat}, origin_lon: {origin_lon}")
 
         num_bs = len(bs_lats)
         bs_pos_xyz = [[convert_Gps2RelativeCartesian(bs_lats[i], bs_lons[i], origin_lat, origin_lon)[0],
@@ -72,11 +73,17 @@ class RayTracer:
                       for i in range(num_bs)]
 
         user_grid = self.generate_user_grid(row, origin_lat, origin_lon)
+        print(f"User grid shape: {user_grid.shape}")
         scene = create_base_scene(os.path.join(scene_folder, "scene.xml"), carrier_freq)
         scene = set_materials(scene)
 
-        # indices = np.arange(user_grid.shape[0])
-        indices = np.arange(100)
+        for i in range(num_bs): 
+            tx = Transmitter(position=bs_pos_xyz[i], name=f"BS_{i}")
+            scene.add(tx)
+            print(f"Added BS_{i} at position {bs_pos_xyz[i]}")
+
+        indices = np.arange(user_grid.shape[0])
+        indices = np.arange(1500)
         data_loader = DataLoader(indices, BATCH_SIZE)
         raytracing_results = {f"BS_{i}": [] for i in range(num_bs)}
 
@@ -84,36 +91,43 @@ class RayTracer:
             for i in batch:
                 scene.add(Receiver(name=f"rx_{i}", position=user_grid[i]))
 
+            # Ray tracing
+            paths = scene.compute_paths(max_depth=n_reflections, diffraction=diffraction, scattering=scattering)
+            paths.normalize_delays = False
+
+            mask, (a, tau) = paths.mask.numpy(), paths.cir()
+            a, tau = a.numpy(), tau.numpy()
+            doa_phi, doa_theta = paths.phi_r.numpy(), paths.theta_r.numpy()
+            dod_phi, dod_theta = paths.phi_t.numpy(), paths.theta_t.numpy()
+            types = paths.types.numpy()
+
+            mask, a, tau = np.squeeze(mask), np.squeeze(a), np.squeeze(tau)
+            doa_phi, doa_theta = np.squeeze(doa_phi), np.squeeze(doa_theta)
+            dod_phi, dod_theta = np.squeeze(dod_phi), np.squeeze(dod_theta)
+            types = np.squeeze(types)
+            power = np.abs(a)**2
+            phase = np.angle(a, deg=True)
+            
             for bs_idx in range(num_bs):
-                tx = Transmitter(name=f"BS_{bs_idx}", position=bs_pos_xyz[bs_idx])
-                scene.add(tx)
-                paths = scene.compute_paths(max_depth=n_reflections, diffraction=diffraction, scattering=scattering)
-                paths.normalize_delays = False
-
-                mask, (a, tau) = paths.mask.numpy(), paths.cir()
-                a, tau = a.numpy(), tau.numpy()
-                doa_phi, doa_theta = paths.phi_r.numpy(), paths.theta_r.numpy()
-                dod_phi, dod_theta = paths.phi_t.numpy(), paths.theta_t.numpy()
-                types = paths.types.numpy()
-
-                mask, a, tau = np.squeeze(mask), np.squeeze(a), np.squeeze(tau)
-                doa_phi, doa_theta = np.squeeze(doa_phi), np.squeeze(doa_theta)
-                dod_phi, dod_theta = np.squeeze(dod_phi), np.squeeze(dod_theta)
-                types = np.squeeze(types)
-                power = np.abs(a)**2
-                phase = np.angle(a, deg=True)
-
                 raytracing_results[f"BS_{bs_idx}"].append({
-                    'a': a, 'mask': mask, 'phase': phase, 'delay': tau, 'power': power,
-                    'doa_phi': doa_phi, 'doa_theta': doa_theta, 'dod_phi': dod_phi,
-                    'dod_theta': dod_theta, 'Tx_loc': bs_pos_xyz[bs_idx], 'Rx_locs': user_grid[batch],
+                    'a': a[:, bs_idx], 
+                    'mask': mask[:, bs_idx], 
+                    'phase': phase[:, bs_idx], 
+                    'delay': tau[:, bs_idx], 
+                    'power': power[:, bs_idx],
+                    'doa_phi': doa_phi[:, bs_idx], 
+                    'doa_theta': doa_theta[:, bs_idx], 
+                    'dod_phi': dod_phi[:, bs_idx],
+                    'dod_theta': dod_theta[:, bs_idx], 
+                    'Tx_loc': bs_pos_xyz[bs_idx], 
+                    'Rx_locs': user_grid[batch],
                     'types': types
                 })
-                scene.remove(f"BS_{bs_idx}")
+            
             for i in batch:
                 scene.remove(f"rx_{i}")
 
-        return self.process_results(carrier_freq, raytracing_results, scene_folder, num_bs, bs_pos_xyz, user_grid.shape[0])
+        return self.process_results(carrier_freq, raytracing_results, scene_folder, num_bs, bs_pos_xyz, indices.shape[0])
 
     def process_results(self, carrier_freq, results, scene_folder, num_bs, bs_pos_xyz, num_ue):
         """Process ray tracing results into DeepMIMO format."""
@@ -126,7 +140,7 @@ class RayTracer:
                 num_sample = batch['phase'].shape[0]
                 for i in range(num_sample):
                     Rx_loc = batch['Rx_locs'][i, :]
-                    mask = np.squeeze(batch['mask'][i, :])
+                    mask = np.squeeze(batch['mask'][i])
                     num_paths = np.sum(mask)
 
                     if num_paths == 0:

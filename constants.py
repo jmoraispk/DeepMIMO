@@ -13,3 +13,7 @@ ADDONS = {
     "blosm": "blosm_2.7.11.zip",
     "mitsuba-blender": "mitsuba-blender.zip",
 }
+
+# Ray-tracing parameters
+BATCH_SIZE = 50
+GRID_SPACING = 1.0  # meters
