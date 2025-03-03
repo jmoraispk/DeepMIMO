@@ -74,7 +74,7 @@ def paths_parser(file: str) -> Dict[str, np.ndarray]:
     """
     
     # Read file
-    print('Reading file...')
+    print(f'Reading p2m paths file: {os.path.basename(file)}...')
     with open(file, 'r') as file:
         lines = file.readlines()
         
@@ -186,6 +186,7 @@ def extract_tx_pos(filename: str) -> np.ndarray:
             # Read position
             tx_pos_line = file.readline()
             tx_pos = np.array([float(i) for i in tx_pos_line.split()], dtype=np.float32)
+            print(f'Tx pos found!')
             break
     
     try:

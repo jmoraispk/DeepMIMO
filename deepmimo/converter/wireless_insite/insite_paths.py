@@ -74,22 +74,31 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     tx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_tx']]
     rx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_rx']]
 
-    # Find any p2m file to extract project name
-    # Format is: project_name.paths.t001_01.r001.p2m
+    # Find any p2m file to extract project name (e.g. project_name.paths.t001_01.r001.p2m)
     proj_name = list(p2m_folder.glob("*.p2m"))[0].name.split('.')[0]
     
-    # Process each TX/RX pair
+    # Calculate total number of TX/RX pairs (for progress tracking)
+    n_tot_txs = sum(tx_set['num_points'] for tx_set in tx_sets)
+    total_pairs = n_tot_txs * len(rx_sets)
+    print(f'Found {n_tot_txs} TXs (across {len(tx_sets)} TX sets) and {len(rx_sets)} RXs '
+          f'= {total_pairs} TX-RX set pairs')
+    processed_pairs = 0
+    
     for tx_set in tx_sets:
         # Discover number of TX points by checking file existence
         for tx_idx in range(tx_set['num_points']):
             # Process this TX point with all RX sets
             n_rx_files_left = len(rx_sets)
             for rx_set in rx_sets:
+                processed_pairs += 1
+                print(f"\rProcessing TX/RX pairs: {processed_pairs}/{total_pairs} "
+                      f"({(processed_pairs/total_pairs)*100:.1f}%)")
+                
                 base_filename = f'{proj_name}.paths.t{tx_idx+1:03}_{tx_set["id_orig"]:02}.r{rx_set["id_orig"]:03}.p2m'
                 paths_p2m_file = p2m_folder / base_filename
                 
                 if not paths_p2m_file.exists():
-                    print(f"Warning: Path file not found: {paths_p2m_file}")
+                    print(f"\nWarning: Path file not found: {paths_p2m_file}")
                     continue
                 
                 # Parse path data
@@ -111,8 +120,10 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
                 n_rx_files_left -= 1
 
             if n_rx_files_left == len(rx_sets):
-                print(f"Warning: No path files found for TX index {tx_idx+1} of TX set {tx_set['id']}")
+                print(f"\nWarning: No path files found for TX index {tx_idx+1} of TX set {tx_set['id']}")
                 break  # didn't find any files for this TX point -> likely not a point!
+    
+    print("\nPath processing completed!")
 
 
 if __name__ == "__main__":
