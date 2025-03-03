@@ -75,6 +75,9 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     # Format is: project_name.paths.t001_01.r001.p2m
     proj_name = list(p2m_folder.glob("*.p2m"))[0].name.split('.')[0]
     
+    print(f'tx_sets = {tx_sets}')
+    print(f'rx_sets = {rx_sets}')
+
     # Process each TX/RX pair
     for tx_set in tx_sets:
         # Discover number of TX points by checking file existence
@@ -83,12 +86,12 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
             # Process this TX point with all RX sets
             n_rx_files_left = len(rx_sets)
             for rx_set in rx_sets:
-                base_filename = f'{proj_name}.paths.t{tx_set["id_orig"]:03}_{tx_idx+1:02}.r{rx_set["id_orig"]:03}.p2m'
+                base_filename = f'{proj_name}.paths.t{tx_idx+1:03}_{tx_set["id_orig"]:02}.r{rx_set["id_orig"]:03}.p2m'
                 paths_p2m_file = p2m_folder / base_filename
                 
                 if not paths_p2m_file.exists():
                     print(f"Warning: Path file not found: {paths_p2m_file}")
-                    break
+                    continue
                 
                 # Parse path data
                 data = paths_parser(str(paths_p2m_file))

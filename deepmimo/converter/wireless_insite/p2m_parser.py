@@ -191,10 +191,11 @@ def extract_tx_pos(filename: str) -> np.ndarray:
     try:
         a = tx_pos
     except:
-        print('Not found tx_pos. Using hack...')
+        print('Not found tx_pos. Using hack of finding for tx pos in pl file...')
         
         # Step 1 - swapping tx and rx indices in the filename
         basename = os.path.basename(filename)
+        # NOTE: the flipped filename may have the wrong indices (e.g. t001_01.r004.p2m)
         # print(basename)
         str_list = list(basename)
         aux = str_list[24]
@@ -216,6 +217,7 @@ def extract_tx_pos(filename: str) -> np.ndarray:
             raise Exception('TX position not found')
     
     return tx_pos
+
 
 def read_pl_p2m_file(filename: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Read position and path loss data from a .p2m file.
