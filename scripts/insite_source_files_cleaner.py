@@ -112,9 +112,10 @@ def find_files_to_delete(base_path, safe_mode=True,
                             os.remove(file.path)
         break
 
-# Run the script with safe mode on
-base_path = r"F:\city_1m_3r_diff+scat_28"
-find_files_to_delete(base_path, safe_mode=True,
-                     delete_extra_deepmimo=False, 
-                     delete_extra_p2m=True,
-                     delete_extra_objs=False)
+if __name__ == "__main__":
+    # Run the script with safe mode on
+    base_path = r"F:\city_1m_3r_diff+scat_28"
+    find_files_to_delete(base_path, safe_mode=True,
+                        delete_extra_deepmimo=False, 
+                        delete_extra_p2m=True,
+                        delete_extra_objs=False)
