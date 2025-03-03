@@ -37,12 +37,10 @@ dm.info()
 
 
 #%% Loading Example
-print("\nLoading Example")
-print("-" * 50)
+scen_name = 'city_0_newyork_3p5'
 
-# Example 1: Load specific TX/RX sets using dictionaries
-tx_sets_dict = {1: [0]}  # Load first 2 points from set 1 and first 3 from set 2
-rx_sets_dict = {2: np.arange(10)}  # Load first point from set 1 and first 10 from set 2
+tx_sets_dict = {1: [0]}  # Load first points from set 1
+rx_sets_dict = {4: np.arange(10)}  # Load first 10 points from set 4
 
 dataset1 = dm.load(
     scen_name,
@@ -52,10 +50,10 @@ dataset1 = dm.load(
     max_paths=10
 )
 
-# Example 2: Load specific TX/RX sets using lists
-dataset = dm.load(scen_name, tx_sets=[1], rx_sets=[2])
+# Example 2: Load all points of specific TX/RX sets using lists
+dataset2 = dm.load(scen_name, tx_sets=[1], rx_sets=[2])
 
-# Example 3: Load all TX/RX sets
+# Example 3: Load all TX/RX sets (default)
 dataset3 = dm.load(scen_name, tx_sets='all', rx_sets='all')
 
 #%% Channel Generation Example
