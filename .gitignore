@@ -4,3 +4,4 @@ old_files/
 DeepMIMO-matlab-new-data-format/
 *.txt
 **/__pycache__/
+*.ipynb
