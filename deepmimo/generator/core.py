@@ -242,7 +242,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: i
 
 # Helper functions
 def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
-                      txrx_dict: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
+                       txrx_dict: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
     """Validate and process TX/RX set specifications.
 
     This function validates and processes transmitter/receiver set specifications,
@@ -275,7 +275,7 @@ def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
             # check the the tx/rx_set indices are valid
             if set_id not in valid_set_ids:
                 raise Exception(f"{set_str} set {set_id} not in allowed sets {valid_set_ids}\n"
-                              + info_str)
+                                + info_str)
             
             # Get the txrx_set info for this index
             txrx_set_key = f'txrx_set_{set_id}'  # Use id for internal operations

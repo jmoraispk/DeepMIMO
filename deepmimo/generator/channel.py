@@ -15,6 +15,7 @@ from tqdm import tqdm
 from typing import Dict
 from .. import consts as c
 from ..general_utilities import DotDict, compare_two_dicts
+from pprint import pformat
 
 class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.
@@ -63,7 +64,7 @@ class ChannelGenParameters(DotDict):
                 c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
             }
         })
-
+    
 def validate_ch_gen_params(params: ChannelGenParameters, n_ues: int) -> ChannelGenParameters:
     """Validate channel generation parameters.
         
