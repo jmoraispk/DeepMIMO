@@ -30,11 +30,6 @@ def read_txrx(rt_folder: str) -> Dict:
         ValueError: If folders don't exist or required files not found
     """
     sim_folder = Path(rt_folder)
-    p2m_folder = next(p for p in sim_folder.iterdir() if p.is_dir())
-    if not sim_folder.exists():
-        raise ValueError(f"Simulation folder does not exist: {sim_folder}")
-    if not p2m_folder.exists():
-        raise ValueError(f"P2M folder does not exist: {p2m_folder}")
     
     # Find .txrx file
     txrx_files = list(sim_folder.glob("*.txrx"))
