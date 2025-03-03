@@ -379,7 +379,7 @@ def _generate_key_components(params_dict: Dict) -> Dict:
 
 
 def upload(scenario_name: str, key: str, description: Optional[str] = None,
-           details: Optional[list[str]] = None) -> str:
+           details: Optional[list[str]] = None, skip_zip: bool = False) -> str:
     """Upload a DeepMIMO scenario to the server.
 
     Args:
@@ -424,7 +424,8 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     }
 
     # Zip scenario
-    zip_path = zip(scen_folder)
+    if not skip_zip:
+        zip_path = zip(scen_folder)
 
     try:
         print("Uploading to storage...")
