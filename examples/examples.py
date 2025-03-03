@@ -79,7 +79,7 @@ ch_params.ue_antenna.spacing = 0.5                   # Element spacing in wavele
 
 # # Channel computation parameters
 ch_params.freq_domain = True     # Whether to compute frequency domain channels
-ch_params.bandwidth = 0.1      # Bandwidth in GHz
+ch_params.bandwidth = 1e6        # Bandwidth in Hz
 ch_params.num_subcarriers = 64   # Number of subcarriers
 
 # Generate channels
