@@ -38,7 +38,10 @@ def update_txrx_points(txrx_dict: Dict, rx_set_id: int, rx_pos: np.ndarray, path
     """
     # Update number of points
     n_points = rx_pos.shape[0]
-    txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] = n_points
+    if txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] != n_points:
+        print(f'Warning: Number of points in {rx_set_id} does not match number of points in '
+              f'{txrx_dict[f"txrx_set_{rx_set_id}"]["id_orig"]}')
+        txrx_dict[f'txrx_set_{rx_set_id}']['num_points'] = n_points
     
     # Find inactive points (those with path loss of 250 dB)
     inactive_idxs = np.where(path_loss == 250.)[0]
@@ -70,19 +73,15 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
     # Get TX/RX sets from dictionary in a deterministic order
     tx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_tx']]
     rx_sets = [txrx_dict[key] for key in sorted(txrx_dict.keys()) if txrx_dict[key]['is_rx']]
-    
+
     # Find any p2m file to extract project name
     # Format is: project_name.paths.t001_01.r001.p2m
     proj_name = list(p2m_folder.glob("*.p2m"))[0].name.split('.')[0]
     
-    print(f'tx_sets = {tx_sets}')
-    print(f'rx_sets = {rx_sets}')
-
     # Process each TX/RX pair
     for tx_set in tx_sets:
         # Discover number of TX points by checking file existence
-        tx_idx = 0
-        while True:
+        for tx_idx in range(tx_set['num_points']):
             # Process this TX point with all RX sets
             n_rx_files_left = len(rx_sets)
             for rx_set in rx_sets:
@@ -114,7 +113,6 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
             if n_rx_files_left == len(rx_sets):
                 print(f"Warning: No path files found for TX index {tx_idx+1} of TX set {tx_set['id']}")
                 break  # didn't find any files for this TX point -> likely not a point!
-            tx_idx += 1
 
 
 if __name__ == "__main__":
