@@ -424,8 +424,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     }
 
     # Zip scenario
-    if not skip_zip:
-        zip_path = zip(scen_folder)
+    zip_path = scen_folder + ".zip" if skip_zip else zip(scen_folder)
 
     try:
         print("Uploading to storage...")
