@@ -37,10 +37,10 @@ FUNDAMENTAL_MATRICES_HELP = {
         '\t[num_rx, num_paths]',
     # Interactions
     c.INTERACTIONS_PARAM_NAME:
-        'Type of interaction for each path segment\n'
+        'Type of interactions along each path\n'
         '\tCodes: 0: LOS, 1: Reflection, 2: Diffraction, 3: Scattering, 4: Transmission\n'
         '\tCode meaning: 121 -> Tx-R-D-R-Rx\n'
-        '\t[num_rx, num_paths, max_interactions]',
+        '\t[num_rx, num_paths]',
     c.INTERACTIONS_POS_PARAM_NAME:
         '3D coordinates in meters of each interaction point along paths\n'
         '\t[num_rx, num_paths, max_interactions, 3]',
