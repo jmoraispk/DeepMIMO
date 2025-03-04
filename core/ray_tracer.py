@@ -78,12 +78,16 @@ class RayTracer:
         scene = set_materials(scene)
 
         for i in range(num_bs): 
-            tx = Transmitter(position=bs_pos_xyz[i], name=f"BS_{i}")
+            tx = Transmitter(
+                position=bs_pos_xyz[i], 
+                name=f"BS_{i}",
+                power_dbm=tf.Variable(0, dtype=tf.float32)
+            )
             scene.add(tx)
             print(f"Added BS_{i} at position {bs_pos_xyz[i]}")
 
         indices = np.arange(user_grid.shape[0])
-        indices = np.arange(1500)
+        # indices = np.arange(1500)
         data_loader = DataLoader(indices, BATCH_SIZE)
         raytracing_results = {f"BS_{i}": [] for i in range(num_bs)}
 
@@ -178,9 +182,19 @@ class RayTracer:
         os.makedirs(mat_folder, exist_ok=True)
 
         for b in range(num_bs):
-            savemat(os.path.join(mat_folder, f'BS{b+1}_BS.mat'), {'channels': [{'p': []}], 'rx_locs': bs_pos_xyz[b] + [0, 0]})
+            tx_channels = []
+            tx_loc_dict = []
+            for bb in range(num_bs):
+                tx_channels.append({'p': []})
+                tx_loc_dict.append([list(bs_pos_xyz[bb]) + [0, 0]])
+            savemat(os.path.join(mat_folder, f'BS{b+1}_BS.mat'), 
+                    {'channels': tx_channels, 
+                     'rx_locs': np.array(tx_loc_dict, dtype=np.single), 
+                     'tx_loc': bs_pos_xyz[b]})
             savemat(os.path.join(mat_folder, f'BS{b+1}_UE_0-{num_ue}.mat'),
-                    {'channels': np.array(ch_dicts[f"BS_{b}"]).T, 'rx_locs': np.array(loc_dicts[f"BS_{b}"], dtype=np.single)})
+                    {'channels': np.array(ch_dicts[f"BS_{b}"]).T, 
+                     'rx_locs': np.array(loc_dicts[f"BS_{b}"], dtype=np.single),
+                     'tx_loc': bs_pos_xyz[b]})
 
         params_file = {
             'carrier_freq': carrier_freq, 
