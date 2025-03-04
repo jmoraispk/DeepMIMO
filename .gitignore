@@ -19,6 +19,7 @@ my_api_key.py
 #   For wireless insite outputs
 P2Ms/*
 *.p2m
+conversion_errors.json
 
 #   For building visualizations
 building_*
