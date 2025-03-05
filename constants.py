@@ -15,5 +15,7 @@ ADDONS = {
 }
 
 # Ray-tracing parameters
+UE_HEIGHT = 1.5  # meters
+BS_HEIGHT = 20  # meters
 BATCH_SIZE = 50
 GRID_SPACING = 1.0  # meters
