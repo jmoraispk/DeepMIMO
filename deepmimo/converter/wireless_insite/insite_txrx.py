@@ -20,7 +20,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List, Tuple
 import numpy as np
-from deepmimo.txrx import TxRxSet
+from ...txrx import TxRxSet
 from .xml_parser import parse_insite_xml
 
 @dataclass
