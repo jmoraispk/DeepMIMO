@@ -574,6 +574,7 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
 
     # Move unzipped folder to scenarios folder
     unzipped_folder_without_suffix = unzipped_folder.replace('_downloaded', '')
+    os.makedirs(scenarios_dir, exist_ok=True)
     os.rename(unzipped_folder, unzipped_folder_without_suffix)
     shutil.move(unzipped_folder_without_suffix, scenario_folder)
     print(f"✓ Unzipped and moved to {scenarios_dir}")
