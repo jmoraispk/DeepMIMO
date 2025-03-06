@@ -4,6 +4,7 @@ Sionna Ray Tracing Paths Module.
 This module handles loading and converting path data from Sionna's format to DeepMIMO's format.
 """
 
+import os
 import numpy as np
 from tqdm import tqdm
 from typing import Dict
@@ -67,7 +68,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         [batch_size, num_rx, num_tx, max_num_paths], float
 
     """
-    path_dict_list = cu.load_pickle(load_folder + 'sionna_paths.pkl')
+    path_dict_list = cu.load_pickle(os.path.join(load_folder, 'sionna_paths.pkl'))
 
     # Collect all unique TX positions from all path dictionaries
     all_tx_pos = np.unique(np.vstack([paths_dict['sources'] for paths_dict in path_dict_list]), axis=0)
@@ -170,14 +171,14 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         
         # Save each data key
         for key in data.keys():
-            cu.save_mat(data[key], key, save_folder, 1, tx_idx, 2) # Static for Sionna
+            cu.save_mat(data[key], key, save_folder, 0, tx_idx, 1) # Static for Sionna
 
     # Update txrx_dict with tx and rx numbers 
-    txrx_dict['txrx_set_1']['num_points'] = n_tx
-    txrx_dict['txrx_set_1']['num_active_points'] = n_tx
+    txrx_dict['txrx_set_0']['num_points'] = n_tx
+    txrx_dict['txrx_set_0']['num_active_points'] = n_tx
     
-    txrx_dict['txrx_set_2']['num_points'] = n_rx
-    txrx_dict['txrx_set_2']['num_active_points'] = n_rx - rx_inactive_idxs_count
+    txrx_dict['txrx_set_1']['num_points'] = n_rx
+    txrx_dict['txrx_set_1']['num_active_points'] = n_rx - rx_inactive_idxs_count
 
 def get_sionna_interaction_types(types: np.ndarray, inter_pos: np.ndarray) -> np.ndarray:
     """

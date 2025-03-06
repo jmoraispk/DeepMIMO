@@ -26,8 +26,8 @@ def read_txrx(rt_params_dict: Dict) -> Dict:
         obj.is_rx = not is_tx
         
         obj.name = 'tx_array' if is_tx else 'rx_array'
-        obj.id_orig = i + 1
-        obj.idx = i + 1  # 1-indexed
+        obj.id_orig = i
+        obj.id = i # 0-indexed
         
         # Set antenna properties        
         obj.num_ant = 1 if rt_params_dict['synthetic_array'] else raw_params[obj.name + '_num_ant']
@@ -37,6 +37,6 @@ def read_txrx(rt_params_dict: Dict) -> Dict:
         # size refers to the number of elements in the array, which can be dual polarized.
         # if dual_pol is True, then num_ant = 2 * size.
 
-        txrx_dict[f'txrx_set_{i+1}'] = obj.to_dict() # 1-indexed
+        txrx_dict[f'txrx_set_{i}'] = obj.to_dict()
 
     return txrx_dict 

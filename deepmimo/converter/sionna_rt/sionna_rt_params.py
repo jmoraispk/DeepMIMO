@@ -13,6 +13,7 @@ The module serves as the interface between Sionna's parameter format
 and DeepMIMO's standardized ray tracing parameters.
 """
 
+import os
 from dataclasses import dataclass
 from typing import Dict
 
@@ -78,7 +79,7 @@ class SionnaRayTracingParameters(RayTracingParameters):
             ValueError: If required parameters are missing or invalid
         """
         # Load original parameters
-        raw_params = cu.load_pickle(load_folder + 'sionna_rt_params.pkl')
+        raw_params = cu.load_pickle(os.path.join(load_folder, 'sionna_rt_params.pkl'))
         
         # Raise error if los is not present
         if 'los' not in raw_params or not raw_params['los']:
