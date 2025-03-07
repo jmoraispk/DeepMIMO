@@ -47,6 +47,7 @@ class Dataset(DotDict):
     - Channel matrices
     - Path information (angles, powers, delays)
     - Position information
+    - TX/RX configuration information
     - Metadata
     
     Attributes can be accessed using both dot notation (dataset.channel) 
@@ -77,6 +78,12 @@ class Dataset(DotDict):
         aod_az_rot_fov/aod_el_rot_fov: Field of view filtered angles of departure
         fov_mask: Field of view mask
         
+    TX/RX Information:
+        - tx_set_id: ID of the transmitter set
+        - rx_set_id: ID of the receiver set
+        - tx_idx: Index of the transmitter within its set
+        - rx_idxs: List of receiver indices used
+        
     Common Aliases:
         ch, pwr, rx_loc, pl, dist, n_paths, etc.
         (See aliases dictionary for complete mapping)
@@ -89,6 +96,7 @@ class Dataset(DotDict):
             data: Initial dataset dictionary. If None, creates empty dataset.
         """
         super().__init__(data or {})
+
 
     def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
         """Compute MIMO channel matrices for all users.
@@ -554,7 +562,15 @@ class Dataset(DotDict):
             idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
         
         return idxs
-
+    
+    def _compute_tx_ori(self) -> np.ndarray:
+        """Compute the orientation of the transmitters.
+        
+        Returns:
+            Array of transmitter orientation
+        """
+        return self.ch_params['bs_antenna']['rotation']*np.pi/180
+    
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
@@ -589,7 +605,11 @@ class Dataset(DotDict):
         
         # Grid information
         'grid_size': '_compute_grid_info',
-        'grid_spacing': '_compute_grid_info'
+        'grid_spacing': '_compute_grid_info',
+
+        # TX/RX information
+        'tx_ori': '_compute_tx_ori',
+        'bs_ori': '_compute_tx_ori',
     }
 
     # Dictionary of common aliases for dataset attributes

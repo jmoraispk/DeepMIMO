@@ -139,6 +139,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
     
     # TX position
     if bs_pos is not None:
+        bs_pos = bs_pos.squeeze()
         ax.scatter(*bs_pos[:n], marker='P', c='r', label='TX')
     
     # TX orientation
