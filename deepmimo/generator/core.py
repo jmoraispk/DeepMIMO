@@ -153,11 +153,10 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
                                                           tx_idx, rx_idxs,
                                                           max_paths, matrices)
 
-                dataset_list[bs_idx]['info'] = {
+                dataset_list[bs_idx]['txrx'] = {
                     'tx_set_id': tx_set_id,
                     'rx_set_id': rx_set_id,
-                    'tx_idx': tx_idx,
-                    'rx_idxs': rx_idxs
+                    'tx_idx': int(tx_idx),
                 }
                 bs_idx += 1
 
