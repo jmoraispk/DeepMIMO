@@ -1,2 +1,4 @@
 .others/
 .osm_exports/
+__pycache__
+.scenarios/

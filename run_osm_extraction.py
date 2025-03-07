@@ -47,9 +47,9 @@ if not os.path.exists(SCRIPT_PATH):
 
 # Define DeepMIMO Root Path
 if OS_TYPE == "Darwin":  # MacOS
-    DEEPMIMO_ROOT = "/Users/sadjadalikhani/Desktop/deepmimo/scenario_generator"
+    DEEPMIMO_ROOT = "/Users/sadjadalikhani/Desktop/deepmimo/osm2dt"
 elif OS_TYPE == "Windows":  # Windows
-    DEEPMIMO_ROOT = "C:\\Users\\salikha4\\Desktop\\scenario_generator"
+    DEEPMIMO_ROOT = "C:\\Users\\salikha4\\Desktop\\osm2dt"
 
 # Argument parser for bounding box or CSV input
 parser = argparse.ArgumentParser(description="Run Blender OSM to PLY converter for multiple scenarios.")

@@ -107,9 +107,9 @@ except (ValueError, IndexError):
 # Output directory setup
 OS_TYPE = platform.system()
 if OS_TYPE == "Darwin":  # MacOS
-    deepmimo_root = "/Users/sadjadalikhani/Desktop/deepmimo/scenario_generator"
+    deepmimo_root = "/Users/sadjadalikhani/Desktop/deepmimo/osm2dt"
 elif OS_TYPE == "Windows":  # Windows
-    deepmimo_root = "C:\\Users\\salikha4\\Desktop\\scenario_generator"
+    deepmimo_root = "C:\\Users\\salikha4\\Desktop\\osm2dt"
 else:
     logger.error("❌ Unsupported operating system. This script only works on MacOS and Windows.")
     sys.exit(1)

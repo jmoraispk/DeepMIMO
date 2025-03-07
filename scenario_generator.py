@@ -110,7 +110,11 @@ def main():
     # Carrier frequency and bandwidth
     parser.add_argument("--carrier_frequency", type=float, default=3.5e9, help="Carrier frequency in Hz")
     parser.add_argument("--bandwidth", type=float, default=10e6, help="Bandwidth in Hz")
-
+    
+    parser.add_argument("--ue_height", type=float, default=2)
+    parser.add_argument("--bs_height", type=float, default=6)
+    parser.add_argument("--grid_spacing", type=float, default=2.5)
+    
     # Ray-tracing parameters
     parser.add_argument("--max_paths", type=int, default=25)
     parser.add_argument("--ray_spacing", type=float, default=0.25)
