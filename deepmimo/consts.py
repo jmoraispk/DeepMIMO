@@ -63,6 +63,7 @@ PARAMS_FILENAME = 'params'
 FP_TYPE = np.float32  # floating point precision for saving values
 
 # Utility/Configuration parameters
+NAME_PARAM_NAME = 'name'
 LOAD_PARAMS_PARAM_NAME = 'load_params'
 
 # Supported ray tracers and their versions

@@ -111,6 +111,7 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
         dataset = load_raytracing_scene(scen_folder, params[c.TXRX_PARAM_NAME], **load_params)
     
     # Set shared parameters
+    dataset[c.NAME_PARAM_NAME] = scen_name
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
     dataset[c.RT_PARAMS_PARAM_NAME] = params[c.RT_PARAMS_PARAM_NAME]
     dataset[c.SCENE_PARAM_NAME] = Scene.from_data(params[c.SCENE_PARAM_NAME], scen_folder)
