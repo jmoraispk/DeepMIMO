@@ -211,10 +211,16 @@ def extract_tx_pos(filename: str) -> np.ndarray:
         new_filename = os.path.join(os.path.dirname(filename), new_basename)
         
         # Step 2 - parse pl file to get tx pos
-        xyz_matrix, _, _ = read_pl_p2m_file(new_filename.replace('.paths', '.pl'))
-        tx_pos = xyz_matrix[0]
-        if tx_pos is None or len(tx_pos) == 0:
-            raise Exception('TX position not found')
+        try:
+            pl_filename = new_filename.replace('.paths', '.pl')
+            xyz_matrix, _, _ = read_pl_p2m_file(pl_filename)
+            tx_pos = xyz_matrix[0]
+            if tx_pos is not None and len(tx_pos) == 0:
+                print(f'TX position not found in pl file {pl_filename}')
+                tx_pos = None
+        except Exception as e:
+            print(f"\nWarning: Could not extract TX position from {new_filename}: {e}")
+            tx_pos = None
     
     return tx_pos
 

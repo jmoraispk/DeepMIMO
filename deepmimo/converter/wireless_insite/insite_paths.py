@@ -84,11 +84,15 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
           f'= {total_pairs} TX-RX set pairs')
     processed_pairs = 0
     
+    # Dictionary to store TX positions as we find them
+    tx_positions = {}  # key: (tx_set_id, tx_idx), value: position
+    
     for tx_set in tx_sets:
         # Discover number of TX points by checking file existence
         for tx_idx in range(tx_set['num_points']):
             # Process this TX point with all RX sets
-            n_rx_files_left = len(rx_sets)
+            tx_key = (tx_set['id'], tx_idx)
+            
             for rx_set in rx_sets:
                 processed_pairs += 1
                 print(f"\rProcessing TX/RX pairs: {processed_pairs}/{total_pairs} "
@@ -98,14 +102,23 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
                 paths_p2m_file = p2m_folder / base_filename
                 
                 if not paths_p2m_file.exists():
-                    print(f"\nWarning: Path file not found: {paths_p2m_file}")
-                    continue
+                    raise FileNotFoundError(f"\n P2M path file not found: {paths_p2m_file}")
                 
                 # Parse path data
                 data = paths_parser(str(paths_p2m_file))
                 
-                # Extract TX positions
-                data[c.TX_POS_PARAM_NAME] = extract_tx_pos(str(paths_p2m_file))
+                # Try to extract TX position if we don't have it yet
+                if tx_key not in tx_positions:
+                    try:
+                        tx_pos = extract_tx_pos(str(paths_p2m_file))
+                        if tx_pos is not None:
+                            tx_positions[tx_key] = tx_pos
+                    except Exception as e:
+                        print(f"\nWarning: Could not extract TX position from {paths_p2m_file}: {e}")
+                        continue
+                
+                # Use stored TX position
+                data[c.TX_POS_PARAM_NAME] = tx_positions[tx_key]
                 
                 # Extract RX positions and path loss from .pl.p2m file
                 pl_p2m_file = str(paths_p2m_file).replace('.paths.', '.pl.')
@@ -117,11 +130,17 @@ def read_paths(rt_folder: str, output_folder: str, txrx_dict: Dict) -> None:
                 # Save each data key using the set's id
                 for key in data.keys():
                     cu.save_mat(data[key], key, output_folder, tx_set['id'], tx_idx, rx_set['id'])
-                n_rx_files_left -= 1
-
-            if n_rx_files_left == len(rx_sets):
-                print(f"\nWarning: No path files found for TX index {tx_idx+1} of TX set {tx_set['id']}")
-                break  # didn't find any files for this TX point -> likely not a point!
+    
+    # Remove TX sets that have no paths with any receivers
+    for tx_set in tx_sets:
+        tx_set_has_paths = False
+        for tx_idx in range(tx_set['num_points']):
+            if (tx_set['id'], tx_idx) in tx_positions:
+                tx_set_has_paths = True
+                break
+        if not tx_set_has_paths:
+            print(f"\nWarning: TX set {tx_set['id']} has no paths with any receivers - removing from txrx_dict")
+            del txrx_dict[f'txrx_set_{tx_set["id"]}']
     
     print("\nPath processing completed!")
 
