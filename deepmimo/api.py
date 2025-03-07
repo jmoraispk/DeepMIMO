@@ -18,6 +18,7 @@ from .general_utilities import (
     get_scenario_folder,
     get_params_path,
     load_dict_from_json,
+    summary,
     zip,
     unzip
 )
@@ -425,7 +426,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     try:
         # Process parameters and generate submission data
         processed_params = _process_params_data(params_dict, extra_metadata)
-        key_components = _generate_key_components(params_dict)
+        key_components = _generate_key_components(summary(scenario_name, print_summary=False))
     except Exception as e:
         print(f"Error: Failed to generate key components - {str(e)}")
         return None
