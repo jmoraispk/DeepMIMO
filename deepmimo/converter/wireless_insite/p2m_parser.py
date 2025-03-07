@@ -192,23 +192,22 @@ def extract_tx_pos(filename: str) -> np.ndarray:
     try:
         a = tx_pos
     except:
-        print('Not found tx_pos. Using hack of finding for tx pos in pl file...')
+        print('Not found tx_pos. This is likely because there are no paths. \n'
+              'Using hack of searching for tx pos in pl file...')
         
         # Step 1 - swapping tx and rx indices in the filename
         basename = os.path.basename(filename)
-        # NOTE: the flipped filename may have the wrong indices (e.g. t001_01.r004.p2m)
-        # print(basename)
         str_list = list(basename)
-        aux = str_list[24]
-        str_list[24] = str_list[19]
-        str_list[19] = aux
-        # (same for tenths)
-        aux = str_list[23]
-        str_list[23] = str_list[18]
-        str_list[18] = aux
-        
-        new_basename = ''.join(str_list)
-        # print(new_basename)
+
+        # Objective: 'O1_28.paths.t001_21.r014.p2m' -> 'O1_28.paths.t001_14.r021.p2m'
+
+        new_str = str_list[:-11]     # copy first part, e.g. 'O1_28.paths.t001_'
+        new_str += str_list[-6:-4]   # put rx number in tx position 
+        new_str += str_list[-9:-6]   # add middle ('.r0')
+        new_str += str_list[-11:-9]  # put tx number in rx position 
+        new_str += str_list[-4:]     # add end ('.p2m')
+
+        new_basename = ''.join(new_str)
         new_filename = os.path.join(os.path.dirname(filename), new_basename)
         
         # Step 2 - parse pl file to get tx pos
