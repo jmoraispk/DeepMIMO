@@ -1,9 +1,0 @@
-# <Transmitter Set: Tx: 1 BS1 - Point 1> 
-# <Receiver Set: Rx: 1 BS1 > 
-# <number of receiver points>
-# <receiver point number> <number of paths for this point>
-# <path number> <phase value(deg)> <mean time of arrival(sec)> <received power(dBm)>
- 1
-1 2
-1 129.198 3.80386e-08 -72.5674
-2 116.958 8.26131e-08 -89.1499
