@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-
 #%%
+import deepmimo as dm
+
+#%% LOAD: Simple
 import os
 import numpy as np
 import deepmimo as dm
@@ -8,9 +10,9 @@ import matplotlib.pyplot as plt
 
 scen_name = 'asu_campus_3p5'
 dm.download(scen_name)
-dataset = dm.load(scen_name)
+dataset = dm.load(scen_name)[0]
 
-#%% LOAD: Detailed example
+#%% LOAD: Detailed 
 
 scen_name = 'city_0_newyork_3p5'
 
@@ -33,9 +35,14 @@ dataset3 = dm.load(scen_name, tx_sets='all', rx_sets='all')
 
 #%% SCENARIO INFORMATION
 
+# Like the information present in the scenario webpage
 dm.summary('asu_campus')
 
 #%% SCENARIO INFORMATION: Transmitters and Receivers
+
+# There are paths between a transmitter and a set of receiver set. 
+# There can also be transmitter sets with multiple transmitters, but we decouple
+# the transmitters from the sets for keeping smaller, consistent matrices.
 
 # Get all available TX-RX pairs
 txrx_sets = dm.get_txrx_sets(scen_name)
@@ -44,7 +51,15 @@ pairs = dm.get_txrx_pairs(txrx_sets)
 print(txrx_sets)
 print(pairs)
 
+dm.print_available_txrx_pair_ids(scen_name)
+
+dataset.txrx
+
+
 #%% SCENARIO INFORMATION: Ray Tracing Parameters
+
+# This information is present in the scenario table and can be used to search and filter.
+# (soon in dm.search())
 
 # Get all available scenarios
 scenarios = dm.get_available_scenarios()
@@ -75,15 +90,17 @@ for scen_name in scenarios:
 #%% VISUALIZATION: Coverage Maps
 
 main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase',
-             'los', 'distances', 'num_paths']
+             'los', 'distance', 'num_paths']
 for key in main_keys:
     plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
-    dm.dm.plot_coverage(dataset.rx_pos, plt_var, bs_pos=dataset.tx_pos.T, title=key)
+    dm.plot_coverage(dataset.rx_pos, plt_var, bs_pos=dataset.tx_pos.T, title=key)
+
+#%%  VISUALIZATION: Coverage Maps (3D)
 
 #3D version
-dm.plot_coverage(dataset.rx_pos, dataset[key], bs_pos=dataset.tx_pos.T,
-              bs_ori=dataset.tx_ori, title=key, cbar_title=key,
-              proj_3D=False, scat_sz=0.1)
+dm.plot_coverage(dataset.rx_pos, dataset['los'], bs_pos=dataset.tx_pos.T,
+                bs_ori=dataset.tx_ori, title='LoS', cbar_title='LoS status',
+                proj_3D=True, scat_sz=0.1)
 
 #%% VISUALIZATION: Rays
 
