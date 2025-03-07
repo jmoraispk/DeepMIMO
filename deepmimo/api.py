@@ -226,7 +226,7 @@ def _process_params_data(params_dict: Dict, extra_metadata: Optional[Dict] = Non
     }
 
 
-def _generate_key_components2(summary_str: str) -> Dict:
+def _generate_key_components(summary_str: str) -> Dict:
     """Generate key components sections from summary string.
 
     Args:
@@ -309,90 +309,6 @@ def _format_section(name: str, lines: list) -> dict:
             </div>
         """
     }
-
-
-def _generate_key_components(params_dict: Dict) -> Dict:
-    """Generate key components sections from params data.
-
-    Args:
-        params_dict: Dictionary containing parsed params.mat data
-
-    Returns:
-        Key components sections for submission
-    """
-    rt_params = params_dict.get(c.RT_PARAMS_PARAM_NAME, {})
-    txrx_sets = params_dict.get(c.TXRX_PARAM_NAME, {})
-    scene_params = params_dict.get(c.SCENE_PARAM_NAME, {})
-
-    frequency = float(rt_params.get("frequency", 3.5e9)) / 1e9
-
-    return {
-        "sections": [
-            {
-                "name": "Ray-Tracing Configuration",
-                "description": f"""
-                    <p><strong>Ray-tracer:</strong> {rt_params.get(c.RT_PARAM_RAYTRACER, 'Unknown')} 
-                    v{rt_params.get(c.RT_PARAM_RAYTRACER_VERSION, 'Unknown')}</p>
-                    <p><strong>Frequency:</strong> {frequency:.1f} GHz</p>
-                """,
-            },
-            {
-                "name": "Ray-tracing parameters",
-                "description": f"""
-                    <h4>Main interaction limits:</h4>
-                    <ul>
-                        <li>Max path depth: {rt_params.get(c.RT_PARAM_PATH_DEPTH, 0)}</li>
-                        <li>Max reflections: {rt_params.get(c.RT_PARAM_MAX_REFLECTIONS, 0)}</li>
-                        <li>Max diffractions: {rt_params.get(c.RT_PARAM_MAX_DIFFRACTIONS, 0)}</li>
-                        <li>Max scatterings: {rt_params.get(c.RT_PARAM_MAX_SCATTERING, 0)}</li>
-                        <li>Max transmissions: {rt_params.get(c.RT_PARAM_MAX_TRANSMISSIONS, 0)}</li>
-                    </ul>
-                    <h4>Ray Casting Settings:</h4>
-                    <ul>
-                        <li>Number of rays: {rt_params.get(c.RT_PARAM_NUM_RAYS, 0):,}</li>
-                        <li>Casting method: {rt_params.get(c.RT_PARAM_RAY_CASTING_METHOD, 'Unknown')}</li>
-                        <li>Casting range (az): {rt_params.get(c.RT_PARAM_RAY_CASTING_RANGE_AZ, 0):.1f}°</li>
-                        <li>Casting range (el): {rt_params.get(c.RT_PARAM_RAY_CASTING_RANGE_EL, 0):.1f}°</li>
-                    </ul>
-                """,
-            },
-            {
-                "name": "Scene",
-                "description": f"""
-                    <ul>
-                        <li>Number of scenes: {scene_params.get(c.SCENE_PARAM_NUMBER_SCENES, 1)}</li>
-                        <li>Total objects: {scene_params.get(c.SCENE_PARAM_N_OBJECTS, 0)}</li>
-                        <li>Vertices: {scene_params.get(c.SCENE_PARAM_N_VERTICES, 0)}</li>
-                        <li>Faces: {scene_params.get(c.SCENE_PARAM_N_TRIANGULAR_FACES, 0)} triangular faces</li>
-                    </ul>
-                """,
-            },
-            {
-                "name": "TX/RX Configuration",
-                "description": f"""
-                    <p><strong>Total number of receivers:</strong> {sum(set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS] 
-                        for set_info in txrx_sets.values() if set_info[c.TXRX_PARAM_IS_RX])}</p>
-                    <p><strong>Total number of transmitters:</strong> {sum(set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS] 
-                        for set_info in txrx_sets.values() if set_info[c.TXRX_PARAM_IS_TX])}</p>
-                    <h4>TX/RX Sets:</h4>
-                    {"".join(f'''
-                        <div class="txrx-set">
-                            <h5>{set_name} ({set_info[c.TXRX_PARAM_NAME_FIELD]})</h5>
-                            <ul>
-                                <li>Role: {' & '.join(filter(None, ['TX' if set_info[c.TXRX_PARAM_IS_TX] else '', 
-                                                                  'RX' if set_info[c.TXRX_PARAM_IS_RX] else '']))}</li>
-                                <li>Total points: {set_info[c.TXRX_PARAM_NUM_POINTS]:,}</li>
-                                <li>Active points: {set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS]:,}</li>
-                                <li>Antennas per point: {set_info[c.TXRX_PARAM_NUM_ANT]}</li>
-                                <li>Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}</li>
-                            </ul>
-                        </div>
-                    ''' for set_name, set_info in txrx_sets.items())}
-                """,
-            },
-        ]
-    }
-
 
 def upload(scenario_name: str, key: str, description: Optional[str] = None,
            details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, skip_zip: bool = False) -> str:
