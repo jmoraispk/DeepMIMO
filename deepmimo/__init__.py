@@ -17,6 +17,7 @@ from .txrx import (
     TxRxPair,
     get_txrx_sets,
     get_txrx_pairs,
+    print_available_txrx_pair_ids,
 )
 
 # Visualization
@@ -80,7 +81,9 @@ __all__ = [
     # TX/RX handling
     'TxRxSet',
     'TxRxPair',
-    'available_txrx_pairs',
+    'get_txrx_sets',
+    'get_txrx_pairs',
+    'print_available_txrx_pair_ids',
     
     # Visualization
     'plot_coverage',

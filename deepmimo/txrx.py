@@ -6,7 +6,7 @@ to represent transmitter and receiver configurations.
 """
 
 from dataclasses import dataclass, asdict, field
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from .general_utilities import get_params_path, load_dict_from_json
 from . import consts as c
@@ -72,6 +72,42 @@ class TxRxPair:
     def __repr__(self) -> str:
         """String representation of TxRxPair."""
         return f"TxRxPair(tx={self.tx.name}[{self.tx_idx}], rx={self.rx.name})"
+    
+    def get_ids(self) -> Tuple[int, int]:
+        """Get the IDs of the transmitter and receiver."""
+        return self.tx.id, self.rx.id
+
+def get_txrx_sets(scenario_name: str) -> List[TxRxSet]:
+    """
+    Get all available transmitter-receiver sets for a given scenario.
+    
+    This function reads the scenario parameters file and creates a list of TxRxSet objects
+    based on the available transmitter and receiver sets.
+
+    Args:
+        scenario_name: Name of the DeepMIMO scenario
+        
+    Returns:
+        List of TxRxSet objects representing all available transmitter-receiver sets
+
+    Example:
+        >>> txrx_sets = dm.get_txrx_sets('O1_60')
+        >>> for txrx_set in txrx_sets:
+        ...     print(txrx_set)
+        TxRxSet(name='tx_array', idx=1, points=2)
+        TxRxSet(name='rx_array', idx=2, points=1)
+    """
+    # Load parameters file
+    params_file = get_params_path(scenario_name)
+    params = load_dict_from_json(params_file)
+    
+    # Extract TxRxSets from parameters
+    txrx_sets = []
+    for key, val in params[c.TXRX_PARAM_NAME].items():
+        if key.startswith('txrx_set_'):
+            txrx_sets.append(TxRxSet(**val))
+    
+    return txrx_sets
 
 def get_txrx_pairs(txrx_sets: List[TxRxSet]) -> List[TxRxPair]:
     """
@@ -112,37 +148,25 @@ def get_txrx_pairs(txrx_sets: List[TxRxSet]) -> List[TxRxPair]:
     
     return pairs
 
-def get_txrx_sets(scenario_name: str) -> List[TxRxSet]:
+def print_available_txrx_pair_ids(scenario_name: str) -> None:
     """
-    Get all available transmitter-receiver sets for a given scenario.
+    Print all available transmitter-receiver pair IDs for a given scenario.
     
-    This function reads the scenario parameters file and creates a list of TxRxSet objects
-    based on the available transmitter and receiver sets.
+    This function reads the scenario parameters file and prints the IDs of all
+    available transmitter-receiver pairs.
 
     Args:
         scenario_name: Name of the DeepMIMO scenario
-        
-    Returns:
-        List of TxRxSet objects representing all available transmitter-receiver sets
-
-    Example:
-        >>> txrx_sets = dm.get_txrx_sets('O1_60')
-        >>> for txrx_set in txrx_sets:
-        ...     print(txrx_set)
-        TxRxSet(name='tx_array', idx=1, points=2)
-        TxRxSet(name='rx_array', idx=2, points=1)
     """
-    # Load parameters file
-    params_file = get_params_path(scenario_name)
-    params = load_dict_from_json(params_file)
-    
-    # Extract TxRxSets from parameters
-    txrx_sets = []
-    for key, val in params[c.TXRX_PARAM_NAME].items():
-        if key.startswith('txrx_set_'):
-            txrx_sets.append(TxRxSet(**val))
-    
-    return txrx_sets
+    txrx_sets = get_txrx_sets(scenario_name)
+    pairs = get_txrx_pairs(txrx_sets)
 
-
+    print("\nTX/RX Pair IDs")
+    print("-" * 25)
+    print(f"{'Pair':^6} | {'TX ID':^6} | {'RX ID':^6}")
+    print("-" * 25)
+    for idx, pair in enumerate(pairs):
+        tx_id, rx_id = pair.get_ids()
+        print(f"{idx:^6} | {tx_id:^6} | {rx_id:^6}")
+    print("-" * 25)
 
