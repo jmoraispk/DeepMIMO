@@ -625,6 +625,8 @@ class Dataset(DotDict):
         # Power aliases
         'pwr': 'power',
         'powers': 'power',
+        'lin_pwr': 'power_linear',
+        'linear_power': 'power_linear',
         'pwr_lin': 'power_linear',
         'pwr_ant_gain': 'power_linear_ant_gain',
         
