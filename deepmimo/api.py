@@ -144,11 +144,12 @@ def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
         return None
 
 
-def _process_params_data(params_dict: Dict) -> Dict:
+def _process_params_data(params_dict: Dict, extra_metadata: Optional[Dict] = None) -> Dict:
     """Process params.mat data into submission format - used in DeepMIMO database.
 
     Args:
         params_dict: Dictionary containing parsed params.mat data
+        extra_metadata: Optional dictionary with additional metadata fields
 
     Returns:
         Processed parameters in submission format
@@ -175,38 +176,52 @@ def _process_params_data(params_dict: Dict) -> Dict:
         c.RAYTRACER_NAME_AODT: "AODT",
     }
 
-    return {
-        "primaryParameters": {
-            "bands": {
-                "sub6": frequency >= 0 and frequency < 6,
-                "mmW": frequency >= 6 and frequency <= 100,
-                "subTHz": frequency > 100,
-            },
-            "numRx": num_rx,
-            "maxReflections": rt_params.get("max_reflections", 1),
-            "raytracerName": raytracer_map.get(rt_params["raytracer_name"], "Insite"),
-            "environment": "outdoor",
+    # Create base parameter dictionaries
+    primary_params = {
+        "bands": {
+            "sub6": frequency >= 0 and frequency < 6,
+            "mmW": frequency >= 6 and frequency <= 100,
+            "subTHz": frequency > 100,
         },
-        "advancedParameters": {
-            "dmVersion": params_dict.get("version", "4.0.0a"),
-            "numTx": num_tx,
-            "multiRxAnt": any(set_info.get("num_ant", 0) > 1 for set_info in txrx_sets.values()
-                              if set_info.get("is_rx")),
-            "multiTxAnt": any(set_info.get("num_ant", 0) > 1 for set_info in txrx_sets.values()
-                              if set_info.get("is_tx")),
-            "dualPolarization": any(set_info.get("dual_pol", False)
-                                    for set_info in txrx_sets.values()),
-            "BS2BS": any(set_info.get("is_tx") and set_info.get("is_rx")
-                         for set_info in txrx_sets.values()) or None,
-            "pathDepth": rt_params.get("max_path_depth", None),
-            "diffraction": bool(rt_params.get("max_diffractions", 0)),
-            "scattering": bool(rt_params.get("max_scattering", 0)),
-            "transmission": bool(rt_params.get("max_transmissions", 0)),
-            "numRays": rt_params.get("num_rays", 1000000),
-            "city": None,
-            "digitalTwin": False,
-            "dynamic": scene_params.get("num_scenes", 1) > 1
-        }
+        "numRx": num_rx,
+        "maxReflections": rt_params.get("max_reflections", 1),
+        "raytracerName": raytracer_map.get(rt_params.get("raytracer_name"), "Insite"),
+        "environment": "outdoor",
+    }
+
+    advanced_params = {
+        "dmVersion": params_dict.get("version", "4.0.0a"),
+        "numTx": num_tx,
+        "multiRxAnt": any(set_info.get("num_ant", 0) > 1 for set_info in txrx_sets.values()
+                           if set_info.get("is_rx")),
+        "multiTxAnt": any(set_info.get("num_ant", 0) > 1 for set_info in txrx_sets.values()
+                           if set_info.get("is_tx")),
+        "dualPolarization": any(set_info.get("dual_pol", False)
+                                for set_info in txrx_sets.values()),
+        "BS2BS": any(set_info.get("is_tx") and set_info.get("is_rx")
+                     for set_info in txrx_sets.values()) or None,
+        "pathDepth": rt_params.get("max_path_depth", None),
+        "diffraction": bool(rt_params.get("max_diffractions", 0)),
+        "scattering": bool(rt_params.get("max_scattering", 0)),
+        "transmission": bool(rt_params.get("max_transmissions", 0)),
+        "numRays": rt_params.get("num_rays", 1000000),
+        "city": None,
+        "digitalTwin": False,
+        "dynamic": scene_params.get("num_scenes", 1) > 1,
+        "bbCoords": None
+    }
+
+    # Override with extra metadata if provided
+    if extra_metadata:
+        for param in extra_metadata:
+            if param in primary_params:
+                primary_params[param] = extra_metadata[param]
+            elif param in advanced_params:
+                advanced_params[param] = extra_metadata[param]
+
+    return {
+        "primaryParameters": primary_params,
+        "advancedParameters": advanced_params
     }
 
 
@@ -379,12 +394,17 @@ def _generate_key_components(params_dict: Dict) -> Dict:
 
 
 def upload(scenario_name: str, key: str, description: Optional[str] = None,
-           details: Optional[list[str]] = None, skip_zip: bool = False) -> str:
+           details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, skip_zip: bool = False) -> str:
     """Upload a DeepMIMO scenario to the server.
 
     Args:
         scenario_name: Path to scenario ZIP file
         key: Upload authorization key
+        description: Optional description of the scenario
+        details: Optional list of details about the scenario
+        extra_metadata: Optional dictionary containing additional metadata fields
+                        (environment, digitalTwin, city, bbCoords, etc.)
+        skip_zip: Skip zipping the scenario folder if True
 
     Returns:
         Download URL if successful, None otherwise
@@ -404,7 +424,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     
     try:
         # Process parameters and generate submission data
-        processed_params = _process_params_data(params_dict)
+        processed_params = _process_params_data(params_dict, extra_metadata)
         key_components = _generate_key_components(params_dict)
     except Exception as e:
         print(f"Error: Failed to generate key components - {str(e)}")
