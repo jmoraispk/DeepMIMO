@@ -29,8 +29,12 @@ from .generator.visualization import (
 # Utilities
 from .generator.utils import (
     uniform_sampling,
+    get_idxs_with_limits,
     LinearPath,
-    get_idxs_with_limits
+)
+
+from .generator.geometry import (
+    steering_vec,
 )
 
 # Channel parameters
