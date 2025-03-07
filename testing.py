@@ -91,7 +91,7 @@ for scenario in scenarios:
         continue
     print(f"\nProcessing: {scenario}")
     # continue
-    dm.upload(scen_path, MY_API_KEY, skip_zip=False)
+    dm.upload(scenario, MY_API_KEY, skip_zip=False)
 
 #%% LOOP all scenarios (summary, load, plot)
 
@@ -108,6 +108,7 @@ for subfolder in subfolders[:-5]:
 
     # dm.load(scen_name, 'matrices': None)
 
+    # TODO: Make this work for loading only the first tx and rx set
     try:
         d = dm.load(scen_name, tx_sets={1: []}, rx_sets={2: []})
     except Exception as e:
@@ -116,6 +117,5 @@ for subfolder in subfolders[:-5]:
     ax.set_title(scen_name + ': ' + ax.get_title())
     plt.show()
 
-# TODO: Make this work for loading only the first tx and rx set
 
 # TODO: Give argument to also not load any matrices (only scene)
