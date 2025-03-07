@@ -1,4 +1,5 @@
 
+#%%
 import time
 import deepmimo as dm
 import os
@@ -18,17 +19,17 @@ if EXECUTION_MODE == 'retry_errors' and os.path.exists(ERROR_LOG_FILE):
         error_scenarios_to_retry = {item[0] for item in json.load(f)}
     subfolders = [f for f in subfolders if os.path.basename(f) in error_scenarios_to_retry]
 
-
+#%%
 # REMAINING TO FIX: i1_2p5
 
 timing_results = {}
-for subfolder in subfolders[30:]:
+for subfolder in subfolders:
     scen_name = os.path.basename(subfolder)
-    print(f"\nProcessing: {scen_name}")
-    if 'boston' in scen_name or 'o1b_28' in scen_name:
-        print('Skipping Boston or o1b_28')
+    if not ('boston' in scen_name):
         continue
+    print(f"\nProcessing: {scen_name}")
     start = time.time()
+    # continue
     try:
         scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, vis_scene=False)
         
