@@ -315,12 +315,24 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     """Upload a DeepMIMO scenario to the server.
 
     Args:
-        scenario_name: Path to scenario ZIP file
+        scenario_name: Scenario name
         key: Upload authorization key
         description: Optional description of the scenario
         details: Optional list of details about the scenario
         extra_metadata: Optional dictionary containing additional metadata fields
                         (environment, digitalTwin, city, bbCoords, etc.)
+            dict contents = {
+                'digitalTwin': <boolean>,
+                'environment': <enum> of 'indoor' or 'outdoor' (all lowercase),
+                'bbCoords': {
+                    "minLat": <float>,
+                    "minLon": <float>,
+                    "maxLat": <float>,
+                    "maxLon": <float>
+                }
+                'city': <string>
+            }
+
         skip_zip: Skip zipping the scenario folder if True
 
     Returns:

@@ -83,6 +83,19 @@ dm.plot_rays(dataset['rx_pos'][10], dataset['tx_pos'][0],
 # Get all available scenarios using function
 scenarios = dm.get_available_scenarios()
 
+metadata_dict = {
+    'bbCoords': {
+        "minLat": 40.68503298,
+        "minLon": -73.84682129, 
+        "maxLat": 40.68597435,
+        "maxLon": -73.84336302
+    },
+    'digitalTwin': True,
+    'environment': 'indoor',
+    "city": "New York"
+}
+metadata_dict = {}
+
 # Zip the filtered scenarios
 for scenario in scenarios:
     scen_path = dm.get_scenario_folder(scenario)
@@ -91,7 +104,7 @@ for scenario in scenarios:
         continue
     print(f"\nProcessing: {scenario}")
     # continue
-    dm.upload(scenario, MY_API_KEY, skip_zip=False)
+    dm.upload(scenario, MY_API_KEY, skip_zip=False, extra_metadata=metadata_dict)
 
 #%% LOOP all scenarios (summary, load, plot)
 
