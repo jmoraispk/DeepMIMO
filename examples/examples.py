@@ -104,22 +104,50 @@ dm.plot_coverage(dataset.rx_pos, dataset['los'], bs_pos=dataset.tx_pos.T,
 
 #%% VISUALIZATION: Rays
 
-
 dm.plot_rays(dataset.rx_pos[10], dataset.tx_pos[0],
              dataset.inter_pos[10], dataset.inter[10],
-             proj_3D=True, color_by_type=True)
+             proj_3D=False, color_by_type=True)
 
 # 2D and 3D
 
-#%% VISUALIZATION: Path Plots
+#%% VISUALIZATION: Path Plots (1) Power in main path
 
 # Percentage of the power in first path
-pwr_in_first_path = [dataset['user']['paths'][u]['power'][0] / np.sum(dataset['user']['paths'][u]['power'])
-                     if dataset['user']['LoS'][u] != -1 else np.nan for u in range(dataset.n_ue)]
+pwr_in_first_path = dataset.lin_pwr[:, 0] / np.nansum(dataset.lin_pwr, axis=-1)
 
 dm.plot_coverage(dataset.rx_pos, pwr_in_first_path, bs_pos=dataset.tx_pos.T,
-              proj_3D=False, title='Percentage of power in 1st path',
-              cbar_title='Percentage of power [%]')
+                title='Percentage of power in 1st path', cbar_title='Percentage of power [%]')
+
+#%% VISUALIZATION: Path Plots (2) Number of interactions in main path
+
+# TODO: change num_paths to nan for inactive users
+
+dm.plot_coverage(dataset.rx_pos, dataset.num_interactions[:,0], bs_pos=dataset.tx_pos.T,
+                title='Number of interactions in 1st path', cbar_title='Number of interactions')
+
+#%% VISUALIZATION: Path Plots (3) Bounce profile in main path
+
+import matplotlib
+
+n_users = dataset.n_ue
+
+bounces_per_user = dataset.inter[:, 0].astype(str) # 'nan', '221', '13', ...
+first_bounce_codes = [code[0] for code in bounces_per_user] # 'n', '2', '1', ...
+
+unique_first_bounces = ['n', '0', '1', '2', '3']
+
+coded_data = np.array([unique_first_bounces.index(code) for code in first_bounce_codes])
+
+# Create custom colormap with white and 4 viridis colors
+viridis = plt.cm.viridis(np.linspace(0, 1, 4))  # Get 4 colors from viridis
+cmap = matplotlib.colors.ListedColormap(['white'] + viridis.tolist()) # white for 'n'
+
+fig, ax, cbar = dm.plot_coverage(dataset.rx_pos, coded_data,
+                                 bs_pos=dataset.tx_pos.T, scat_sz=5.5,
+                                 title='Type of first bounce of first path',
+                                 cmap=cmap, cbar_labels=['None', 'LoS', 'R', 'D', 'DS'])
+
+
 
 #%% CHANNEL GENERATION: Parameters
 print("\nChannel Generation Example")
