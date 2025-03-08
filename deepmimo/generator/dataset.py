@@ -190,9 +190,10 @@ class Dataset(DotDict):
 
     def _compute_num_interactions(self) -> np.ndarray:
         """Compute number of interactions for each path of each user."""
-        result = np.zeros_like(self.inter, dtype=int)
+        result = np.zeros_like(self.inter)
+        result[np.isnan(self.inter)] = np.nan # no interaction
         non_zero = self.inter > 0
-        result[non_zero] = np.floor(np.log10(self.inter[non_zero])).astype(int) + 1
+        result[non_zero] = np.floor(np.log10(self.inter[non_zero])) + 1
         return result
 
     def _compute_distances(self) -> np.ndarray:
