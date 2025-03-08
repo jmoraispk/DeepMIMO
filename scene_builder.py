@@ -45,9 +45,11 @@ def join_and_materialize_objects(name_pattern, target_name, material):
             o.select_set(True)
     selected = bpy.context.selected_objects
     print(f"Number of selected objects ({target_name}): {len(selected)}")
-    if len(selected) >= 1:
+    if len(selected) > 1:
         bpy.context.view_layer.objects.active = selected[-1]
         bpy.ops.object.join()
+    elif len(selected) == 1:
+        bpy.context.view_layer.objects.active = selected[0]
     elif not selected:
         return None
     obj = bpy.context.active_object
@@ -132,7 +134,7 @@ def create_scene(scene_name, positions, osm_folder, time_str):
     origin_lat = bpy.data.scenes["Scene"]["lat"]
     origin_lon = bpy.data.scenes["Scene"]["lon"]
     save_osm_origin(scene_folder, origin_lat, origin_lon)
-
+    
     # Create ground plane
     terrain = create_ground_plane(min_lat, max_lat, min_lon, max_lon)
     terrain_bounds = get_bounding_box(terrain)
@@ -154,6 +156,10 @@ def create_scene(scene_name, positions, osm_folder, time_str):
 
     # Process buildings
     buildings = join_and_materialize_objects('building', 'buildings', building_material)
+    if buildings and buildings.type == 'MESH':
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.separate(type='LOOSE')
+        bpy.ops.object.mode_set(mode='OBJECT')
 
     # Process roads
     bpy.ops.object.select_all(action='DESELECT')
@@ -162,17 +168,15 @@ def create_scene(scene_name, positions, osm_folder, time_str):
             o.select_set(True)
     bpy.ops.object.select_all(action='INVERT')
     road_objs = bpy.context.selected_objects
-    for obj in road_objs:
-        if terrain_bounds:
-            trim_faces_outside_bounds(obj, *terrain_bounds)
     if road_objs:
-        bpy.context.view_layer.objects.active = road_objs[-1]
-        bpy.ops.object.join()
-        roads = bpy.context.active_object
-        roads.name = 'roads'
-        roads.data.materials.clear()
-        roads.data.materials.append(road_material)
-        print(f"Number of selected objects (Roads): {len(road_objs)}")
+        for obj in road_objs:
+            if terrain_bounds:
+                trim_faces_outside_bounds(obj, *terrain_bounds)
+            bpy.context.view_layer.objects.active = obj
+            road = bpy.context.active_object
+            road.data.materials.clear()
+            road.data.materials.append(road_material)
+        print(f"Number of selected objects (Roads): {len(road_objs)}")       
 
     # Render processed scene
     create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_processed.png"))

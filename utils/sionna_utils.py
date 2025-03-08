@@ -26,7 +26,12 @@ def set_materials(scene):
         xpd_coefficient=0.4,
         scattering_pattern=asphalt_pattern)
     scene.add(asphalt_material)
-    scene.objects['roads'].radio_material = "asphalt"
+
+    for obj in scene.objects.keys():
+        if 'road' in obj or 'path' in obj:
+            scene.objects[obj].radio_material = asphalt_material
+            print(f"Set asphalt material for {obj}")
+
     return scene
 
 def create_base_scene(scene_path, center_frequency):

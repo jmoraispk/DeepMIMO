@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # Run Blender and Sionna for each scenario
     n_rows = df.index.stop
     blender_path = '/data/hluo53/blender-3.6.21-linux-x64/blender'
-    for row_idx in range(n_rows):
+    for row_idx in range(0, n_rows):
         row = df.iloc[row_idx]
         scene_name = row['scenario_name']
         min_lat = row['min_lat']
@@ -78,7 +78,7 @@ if __name__ == '__main__':
             print(result.stdout)
         except subprocess.CalledProcessError as e:
             print("Errors:", e.stderr)
-        
+
         # Run Sionna
         with open(os.path.join(osm_folder, scene_name, "osm_gps_origin.txt"), "r") as f:
             origin_lat, origin_lon = map(float, f.read().split())
@@ -97,4 +97,4 @@ if __name__ == '__main__':
         ray_tracer = RayTracer(osm_folder)
         ray_tracer.run(scene_name, bs_pos, user_grid, carrier_freq, n_reflections, diffraction, scattering)
 
-        exit()
+        # exit()

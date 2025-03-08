@@ -60,7 +60,7 @@ class RayTracer:
             print(f"Added BS_{b} at position {bs_pos[b]}")
 
         indices = np.arange(user_grid.shape[0])
-        indices = np.arange(1500)
+        indices = np.arange(100)
 
         data_loader = DataLoader(indices, BATCH_SIZE)
         path_list = []
