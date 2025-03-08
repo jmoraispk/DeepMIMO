@@ -90,7 +90,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
                  proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
-                 cmap: str = 'viridis') -> Tuple[Figure, Axes, Colorbar]:
+                 cmap: str = 'viridis', cbar_labels: Optional[list[str]] = None) -> Tuple[Figure, Axes, Colorbar]:
     """Generate coverage map visualization for user positions.
     
     This function creates a customizable plot showing user positions colored by
@@ -112,7 +112,8 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         equal_aspect (bool): Whether to maintain equal axis scaling. Defaults to False.
         tight (bool): Whether to set tight axis limits around data points. Defaults to True.
         cmap (str): Matplotlib colormap name. Defaults to 'viridis'.
-        
+        cbar_labels (Optional[list[str]]): List of labels for the colorbar. Defaults to None.
+
     Returns:
         Tuple containing:
         - matplotlib Figure object
@@ -130,9 +131,11 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
     fig, ax = plt.subplots(dpi=dpi, figsize=figsize,
                            subplot_kw={'projection': '3d'} if proj_3D else {})
     
+    cov_map = np.array(cov_map) if isinstance(cov_map, list) else cov_map
+
     im = plt.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
     
-    cbar = _create_colorbar(im, cov_map, cmap, cbar_title)
+    cbar = _create_colorbar(im, cov_map, cmap, cbar_title, cbar_labels)
     
     plt.xlabel('x (m)')
     plt.ylabel('y (m)')
