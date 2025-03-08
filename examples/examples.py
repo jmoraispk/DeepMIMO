@@ -175,46 +175,61 @@ dm.plot_coverage(dataset.rx_pos, full_profile_data,
                  cmap=profile_cmap, cbar_labels=profile_labels)
 
 #%% CHANNEL GENERATION: Parameters
-print("\nChannel Generation Example")
-print("-" * 50)
 
 # Create channel parameters with all options
 ch_params = dm.ChannelGenParameters()
 
+# Antenna parameters
+
 # Base station antenna parameters
-ch_params.bs_antenna.rotation = np.array([30, 40, 30])  # [az, el, pol] in degrees
-ch_params.bs_antenna.fov = np.array([360, 180])         # [az, el] in degrees
-ch_params.bs_antenna.shape = np.array([8, 8])           # [horizontal, vertical] elements
-ch_params.bs_antenna.spacing = 0.5                      # Element spacing in wavelengths
+ch_params.bs_antenna.rotation = np.array([0, 0, 0])  # [az, el, pol] in degrees
+ch_params.bs_antenna.fov = np.array([360, 180])      # [az, el] in degrees
+ch_params.bs_antenna.shape = np.array([4, 4])        # [horizontal, vertical] elements
+ch_params.bs_antenna.spacing = 0.5                   # Element spacing in wavelengths
 
 # User equipment antenna parameters
 ch_params.ue_antenna.rotation = np.array([0, 0, 0])  # [az, el, pol] in degrees
-ch_params.ue_antenna.fov = np.array([120, 180])      # [az, el] in degrees
-ch_params.ue_antenna.shape = np.array([4, 4])        # [horizontal, vertical] elements
+ch_params.ue_antenna.fov = np.array([360, 180])      # [az, el] in degrees
+ch_params.ue_antenna.shape = np.array([1, 1])        # [horizontal, vertical] elements
 ch_params.ue_antenna.spacing = 0.5                   # Element spacing in wavelengths
+
+# Channel parameters
+ch_params.freq_domain = True  # Whether to compute frequency domain channels
+ch_params.num_paths = 10      # Number of paths
+
+# OFDM parameters
+ch_params.ofdm.bandwidth = 10e6                         # Bandwidth in Hz
+ch_params.ofdm.num_subcarriers = 512                    # Number of subcarriers
+ch_params.ofdm.selected_subcarriers = np.arange(1)      # Which subcarriers to generate
+ch_params.ofdm.rx_lpf = 0                               # Receive Low Pass / ADC Filter
 
 # Generate channels
 dataset.compute_channels(ch_params)
 dataset.channel.shape
 
+#%% CHANNEL GENERATION: Parameters (2)
 dm.info('ch_params')
 
-#%% CHANNEL GENERATION: Time Domain
+#%% CHANNEL GENERATION: Time Domain (possibly for later?)
 
-# # Channel computation parameters
+# Channel computation parameters
 ch_params.freq_domain = False     # Whether to compute frequency domain channels
 
 dataset.compute_channels(ch_params)
 dataset.channel.shape
 
+# TODO:  PLOT CIRs using the delays of each path
+
 #%% CHANNEL GENERATION: Frequency Domain
-ch_params.freq_domain = True
-ch_params.bandwidth = 1e6        # Bandwidth in Hz
-ch_params.num_subcarriers = 64   # Number of subcarriers
+ch_params = dm.ChannelGenParameters()
 
-channels = dataset.compute_channels()
+ch_params.num_paths = 5
+ch_params.ofdm.bandwidth = 50e6
+ch_params.ofdm.selected_subcarriers = np.arange(64)      # Which subcarriers to generate
 
-# Visualize channel magnitude response (NOTE: requires at >1 subcarriers and antenna)
+channels = dataset.compute_channels(ch_params)
+
+# Visualize channel magnitude response (NOTE: requires at >1 subcarriers and antennas)
 user_idx = np.where(dataset.n_paths > 0)[0][0]
 plt.imshow(np.abs(np.squeeze(channels[user_idx]).T))
 plt.title('Channel Magnitude Response')
@@ -222,18 +237,19 @@ plt.xlabel('TX Antennas')
 plt.ylabel('Subcarriers')
 plt.show()
 
+# NOTE: show the case of when there are too few subcarriers
 
-# Visualize power discarding statistics
-fig, axes = dm.plot_power_discarding(dataset)
+#%% CHANNEL GENERATION: Frequency Domain (2) CIR
+pwrs = dataset.power[user_idx]
+
+plt.figure(dpi=200)
+plt.stem(dataset.delay[user_idx]*10**6, pwrs, basefmt='none')
+plt.xlabel('Time of arrival [us]')
+plt.ylabel('Power per path [dBW]')
+plt.grid()
 plt.show()
 
-scen_name = 'asu_campus'
-
-tx_sets = {1: [0]}
-rx_sets = {2: 'all'}
-
-load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 25}
-dataset = dm.load(scen_name, **load_params)
+#%% CHANNEL GENERATION: Frequency Domain (3) [LATER] Compare with Time Domain
 
 # Create channel generation parameters
 ch_params = dm.ChannelGenParameters()
@@ -281,6 +297,97 @@ print("\nAbsolute differences:")
 print(f"Maximum difference: {max_diff:.2e}")
 print(f"Mean difference: {mean_diff:.2e}")
 
+#%% [LATER] CHANNEL GENERATION:
+
+dm.plot_power_discarding(dataset)
+
+def convert_channel_angle_delay(channel):
+    """
+    Requires a channel where:
+        - The last dimension (-1) is subcarriers (frequency)
+        - The second from last dimension (-2) is antennas (space)
+        - Returns a channel like: ... x angle x delay 
+    """
+    # Inside FFT Conversion to Angle Domain: fft + shift across antennas (axis = 2)
+    # Outside IFFT Conversion from Frequency (subcarriers) to Delay Domain (axis = 3)
+    # Using singles leads to an error of 1e-14. The usual value of one channel entry is 1e-7. csingles are ok.
+    return np.fft.ifft(np.fft.fftshift(np.fft.fft(channel, axis=-2), -2), axis=-1).astype(np.csingle)
+
+
+def compute_DoA(channel, N, norm_ant_spacing=0.5, method_subcarriers='sum'):
+    """
+    expects the channel from one user in the form of "n_rx=1, n_tx, n_subcarriers"
+    N = number of antenna elements
+    norm_ant_spacing = element distance in wavelengths
+    """
+    # Create an array of bin indices
+    n = np.arange(-N/2, N/2, 1)  # Adjusted for zero-centered FFT
+    
+    # Principle of DoA: the signal arriving from angle theta will be captured by each
+    # antenna and have a constant phase difference across the elements. This phase difference
+    # is proportional to the spacing between elements and the sin(angle of arrival). 
+    # This phase shift will manifest itself as a (spatial) frequency when we take an FFT. 
+    # Then we only need to see which bin (or frequency) has the most power and
+    # convert that frequency to the angle of arrival. 
+    
+    # Calculate angles from bin indices
+    theta = np.arcsin(n / (N * norm_ant_spacing))
+    
+    # Convert angles from radians to degrees
+    theta_degrees = np.degrees(theta)
+    
+    # Assuming fft_results is your FFT output array
+    if method_subcarriers == 'sum':
+        f = np.sum
+    elif method_subcarriers == 'mean':
+        f = np.mean
+    ch_ang = f(channel, axis=-1).squeeze()
+    fft_results = np.fft.fftshift(np.fft.fft(ch_ang))
+    
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    plt.plot(theta_degrees, np.abs(fft_results))
+    plt.title('FFT Output vs. Angle')
+    plt.xlabel('Angle (degrees)')
+    plt.ylabel('Magnitude')
+    plt.grid(True)
+    plt.show()
+    
+    print(f'main direction of arrival = {theta_degrees[np.argmax(np.abs(fft_results))]:.2f}')
+
+
+def plot_ang_delay(ch, n_ant=32, NC=32, title='', label_axis=True, bandwidth=50e6, spacing=.5):
+    f, ax = plt.subplots(dpi=300)
+    ax.imshow(np.squeeze(np.abs(ch))[:,:NC])
+    # plt.imshow(np.squeeze(np.abs(ch2))[i][:,:50])
+    #, extent=[0, 50, angles[0], angles[-1]]) # change limits!
+    
+    plt.title(title)
+    plt.ylabel('angle bins')
+    plt.xlabel('delay bins')
+    
+    if label_axis:
+        # X-Axis
+        n_xtickstep = 4
+        plt.xlabel('delays bins [us]')
+        delay_idxs = np.arange(NC)
+        delay_labels = delay_idxs / (bandwidth) * 1e6
+        ax.set_xticks(delay_idxs[::n_xtickstep])
+        ax.set_xticklabels([f'{label:.1f}' for label in delay_labels[::n_xtickstep]])
+        
+        # Y-Axis
+        n_ytickstep = 4
+        plt.ylabel('angle bins [º]')
+        # Create an array of bin indices
+        n = np.arange(-n_ant/2, n_ant/2, 1)  # Adjusted for zero-centered FFT
+        # Calculate angles from bin indices
+        ang_degrees = np.degrees(np.arcsin(n / (n_ant * spacing)))
+        ax.set_yticks(np.arange(n_ant)[::n_ytickstep])
+        ax.set_yticklabels([f'{label:.0f}' for label in ang_degrees[::n_ytickstep]])
+        
+    plt.show()
+
+
 #%% BASIC DATASET OPERATIONS: Line-of-Sight Status
 
 active_mask = dataset.num_paths > 0
@@ -288,15 +395,15 @@ print(f"\nNumber of active positions: {np.sum(active_mask)}")
 print(f"Number of inactive positions: {np.sum(~active_mask)}")
 
 # Create scatter plot showing active vs inactive positions
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(8, 6))
 plt.scatter(dataset.rx_pos[~active_mask, 0], dataset.rx_pos[~active_mask, 1],
-           alpha=0.5, s=3, c='red', label='Inactive')
+           alpha=0.5, s=1, c='red', label='Inactive')
 plt.scatter(dataset.rx_pos[active_mask, 0], dataset.rx_pos[active_mask, 1],
-           alpha=0.5, s=3, c='green', label='Active')
+           alpha=0.5, s=1, c='green', label='Active')
 plt.legend()
 plt.show()
 
-dm.dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
+dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
 
 #%% BASIC DATASET OPERATIONS: Distances
 
@@ -317,20 +424,25 @@ dataset.num_interactions
 #%% BASIC DATASET OPERATIONS: Field-of-View (FoV)
 
 parameters = dm.ChannelGenParameters()
-parameters['ue_antenna']['shape'] = np.array([1, 1])
 parameters['bs_antenna']['shape'] = np.array([8, 1])
 parameters['bs_antenna']['FoV'] = np.array([180, 180])
 parameters['bs_antenna']['rotation'] = np.array([0, 0, 0]) # +x rotation
+
+# TODO: show 3 dataset rotations, but just changing the channel parameters
 dm.plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.tx_pos.T)
 
 parameters['bs_antenna']['rotation'] = np.array([0, 0, 90])
 
 parameters['bs_antenna']['rotation'] = np.array([0, 0, -135])
+
+# TODO: show the los status of 3 FoV fields at a given rotation
 parameters['bs_antenna']['FoV'] = np.array([90, 180])
 
 
 
 #%% SCENE & MATERIALS
+
+# TODO: add __repr__ for scene and materials
 
 print("\nScene and Materials Example")
 print("-" * 50)
@@ -548,7 +660,24 @@ max_bf_pwr = np.max(np.mean(full_dbm,axis=1), axis=0) # assumes grid of beams!
 dm.plot_coverage(dataset.rx_pos, max_bf_pwr, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
               title= 'Best Beamformed Power (assuming GoB) ')
 
+#%% [LATER]
 
+def get_beam_angles(fov, n_beams=None, beam_res=None):
+    """
+    3 ways of computing beam angles:
+        1- given the codebook size (n_beams) and fov --- compute resolution
+        2- given codebook size and resolution        --- computes range (not done)
+        3- given range and resolution                --- computes codebook size
+    """
+    
+    if n_beams:
+        angs = np.linspace(-fov/2, fov/2, n_beams)
+    elif beam_res:
+        angs = np.arange(-fov/2, fov/2+.001, beam_res)
+    else:
+        raise Exception('Not enough information to compute beam angles.')
+    
+    return angs
 
 #%% CONVERTING DATASETS: From Wireless InSite
 
