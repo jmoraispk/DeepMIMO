@@ -32,6 +32,8 @@ def get_bounding_box(obj):
     Returns:
         tuple: (min_x, max_x, min_y, max_y) in world coordinates
     """
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
     if obj.type != 'MESH':
         return None
     bbox = obj.bound_box
