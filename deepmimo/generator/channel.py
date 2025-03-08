@@ -34,20 +34,20 @@ class ChannelGenParameters(DotDict):
         super().__init__({
             # BS Antenna Parameters
             c.PARAMSET_ANT_BS: {
-                c.PARAMSET_ANT_SHAPE: np.array([8, 4]), # Antenna dimensions in X - Y - Z
+                c.PARAMSET_ANT_SHAPE: np.array([8, 1]), # Antenna dimensions in X - Y - Z
                 c.PARAMSET_ANT_SPACING: 0.5,
                 c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
                 c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
-                c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'omni-directional'
+                c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
             },
             
             # UE Antenna Parameters
             c.PARAMSET_ANT_UE: {
-                c.PARAMSET_ANT_SHAPE: np.array([4, 2]), # Antenna dimensions in X - Y - Z
+                c.PARAMSET_ANT_SHAPE: np.array([1, 1]), # Antenna dimensions in X - Y - Z
                 c.PARAMSET_ANT_SPACING: 0.5,
                 c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
                 c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
-                c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'omni-directional'
+                c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
             },
             
             c.PARAMSET_DOPPLER_EN: 0,
@@ -60,7 +60,7 @@ class ChannelGenParameters(DotDict):
             c.PARAMSET_OFDM: {
                 c.PARAMSET_OFDM_SC_NUM: 512, # Number of total subcarriers
                 c.PARAMSET_OFDM_SC_SAMP: np.arange(1), # Select subcarriers to generate
-                c.PARAMSET_OFDM_BANDWIDTH: 50e6, # Hz
+                c.PARAMSET_OFDM_BANDWIDTH: 10e6, # Hz
                 c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
             }
         })

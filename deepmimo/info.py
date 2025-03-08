@@ -131,10 +131,10 @@ CHANNEL_HELP_MESSAGES = {
         '\t Default: None  |  Type: dict',
     c.PARAMSET_OFDM_BANDWIDTH: 
         'System bandwidth\n'
-        '\t Default: 20e6  |  Type: float  |  Units: Hz',
+        '\t Default: 10e6  |  Type: float  |  Units: Hz',
     c.PARAMSET_OFDM_SC_NUM: 
         'Total number of OFDM subcarriers\n'
-        '\t Default: 2048  |  Type: int  |  Units: number of subcarriers',
+        '\t Default: 512  |  Type: int  |  Units: number of subcarriers',
     c.PARAMSET_OFDM_SC_SAMP: 
         'Indices of subcarriers to generate\n'
         '\t Default: None (all subcarriers)  |  Type: list[int]  |  Units: subcarrier indices',
