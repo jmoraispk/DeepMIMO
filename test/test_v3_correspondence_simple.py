@@ -52,7 +52,7 @@ scen_name = convert_scenario(rt_folder, use_v3=False)
 scen_name = 'asu_campus'
 
 tx_sets = {1: [0]}
-rx_sets = {2: [0,1,2,3,4,5,6,7,8,9,10]}
+rx_sets = {0: [0,1,2,3,4,5,6,7,8,9,10]}
 
 load_params = {'tx_sets': tx_sets, 'rx_sets': rx_sets, 'max_paths': 25}
 dataset = dm.load(scen_name, **load_params)
@@ -68,15 +68,14 @@ ch_params = dm.ChannelGenParameters()
 # ch_params.ue_antenna.fov = np.array([120, 180])
 # ch_params.freq_domain = True
 ch_params.num_paths = 5
-ch_params.ofdm.subcarriers = 64
-# ch_params.ofdm.selected_subcarriers = np.arange(11)
-ch_params.ue_antenna.shape = np.array([1,1])
+# ch_params.ofdm.subcarriers = 64
+ch_params.ofdm.bandwidth = 50e6
+ch_params.ofdm.selected_subcarriers = np.arange(11)
 
 # Other computations
 dataset.compute_channels(ch_params)
 
 #%% V3 Generation
-
 
 # Generate dataset using V3
 params = Parameters_old('asu_campus1')
@@ -85,6 +84,8 @@ params = Parameters_old('asu_campus1')
 # params['bs_antenna']['fov'] = np.array([360, 180])
 # params['ue_antenna']['fov'] = np.array([120, 180])
 # params['freq_domain'] = True
+params['bs_antenna']['shape'] = np.array([8,1])
+params['ue_antenna']['shape'] = np.array([1,1])
 params['user_rows'] = np.arange(1)
 params['num_paths'] = 5
 params['ofdm']['selected_subcarriers'] = np.arange(11)
