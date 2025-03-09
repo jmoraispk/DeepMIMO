@@ -41,6 +41,8 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
     
     # Create scene
     scene = Scene()
+
+    terrain_keywords = ['plane', 'floor', 'terrain', 'roads', 'paths']
     
     # Process each object
     for id_counter, (name, vertex_range) in enumerate(objects.items()):
@@ -50,8 +52,12 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
             
             obj_name = name[5:] if name.startswith('mesh-') else name
             
+            # if 'roads' in obj_name or 'paths' in obj_name or 'terrain' in obj_name:
+            #     print(f'Skipping paths/terrain/road {obj_name}')
+            #     continue
+
             # Attribute the correct label to the object
-            is_floor = obj_name.lower() in ['plane', 'floor']
+            is_floor = any(word in obj_name.lower() for word in terrain_keywords)
             obj_label = CAT_TERRAIN if is_floor else CAT_BUILDINGS
             
             # Get material index for this object
