@@ -25,7 +25,8 @@ from matplotlib.colors import ListedColormap
 
 
 def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
-                    cbar_title: str = '', cat_labels: Optional[List[str]] = None) -> Colorbar:
+                     cbar_title: str = '', cat_labels: Optional[List[str]] = None,
+                     ax: Optional[Axes] = None) -> Colorbar:
     """Create a colorbar for the coverage plot, handling both continuous and categorical data.
     
     Args:
@@ -34,10 +35,14 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
         cmap: Matplotlib colormap name
         cbar_title: Title for the colorbar
         cat_labels: Optional labels for categorical values
+        ax: The matplotlib axes object to attach the colorbar to
         
     Returns:
         matplotlib Colorbar object
     """
+    # Get the figure from the axes
+    fig = ax.figure if ax is not None else plt.gcf()
+    
     # Remove NaN values for unique value calculation
     valid_data = cov_map[~np.isnan(cov_map)]
     unique_vals = np.sort(np.unique(valid_data))
@@ -72,14 +77,14 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
         scatter_plot.set_clim(-0.5, n_cats - 0.5)
         
         # Create colorbar with centered ticks
-        cbar = plt.colorbar(scatter_plot, label=cbar_title, ticks=tick_locs,
+        cbar = fig.colorbar(scatter_plot, ax=ax, label=cbar_title, ticks=tick_locs,
                             boundaries=np.arange(-0.5, n_cats + 0.5),
                             values=np.arange(n_cats))
         
         # Set tick labels
         cbar.set_ticklabels(cat_labels if cat_labels else [str(val) for val in unique_vals])
     else:  # Use continuous colorbar for many unique values
-        cbar = plt.colorbar(scatter_plot, label=cbar_title)
+        cbar = fig.colorbar(scatter_plot, ax=ax, label=cbar_title)
     
     return cbar
 
@@ -90,7 +95,8 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
                  proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
-                 cmap: str = 'viridis', cbar_labels: Optional[list[str]] = None) -> Tuple[Figure, Axes, Colorbar]:
+                 cmap: str = 'viridis', cbar_labels: Optional[list[str]] = None,
+                 ax: Optional[Axes] = None) -> Tuple[Figure, Axes, Colorbar]:
     """Generate coverage map visualization for user positions.
     
     This function creates a customizable plot showing user positions colored by
@@ -113,6 +119,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         tight (bool): Whether to set tight axis limits around data points. Defaults to True.
         cmap (str): Matplotlib colormap name. Defaults to 'viridis'.
         cbar_labels (Optional[list[str]]): List of labels for the colorbar. Defaults to None.
+        ax (Optional[Axes]): Matplotlib Axes object. Defaults to None.
 
     Returns:
         Tuple containing:
@@ -126,19 +133,23 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
     
     n = 3 if proj_3D else 2 # n = coordinates to consider
     
-    xyz = {s: rxs[:,i] for s,i in zip(['x', 'y', 'zs'], range(n))}
+    xyz_arg_names = ['x' if n==2 else 'xs', 'y' if n==2 else 'ys', 'zs']
+    xyz = {s: rxs[:,i] for s,i in zip(xyz_arg_names, range(n))}
     
-    fig, ax = plt.subplots(dpi=dpi, figsize=figsize,
-                           subplot_kw={'projection': '3d'} if proj_3D else {})
-    
+    if not ax:
+        fig, ax = plt.subplots(dpi=dpi, figsize=figsize,
+                               subplot_kw={'projection': '3d'} if proj_3D else {})
+    else:
+        fig = ax.figure
+
     cov_map = np.array(cov_map) if isinstance(cov_map, list) else cov_map
 
-    im = plt.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
+    im = ax.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
     
-    cbar = _create_colorbar(im, cov_map, cmap, cbar_title, cbar_labels)
+    cbar = _create_colorbar(im, cov_map, cmap, cbar_title, cbar_labels, ax)
     
-    plt.xlabel('x (m)')
-    plt.ylabel('y (m)')
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
     
     # TX position
     if bs_pos is not None:
@@ -159,21 +170,21 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         ax.set_title(title)
     
     if legend:
-        plt.legend(loc='upper center', ncols=10, framealpha=.5)
+        ax.legend(loc='upper center', ncols=10, framealpha=.5)
     
     if tight:
         s = 1
         mins, maxs = np.min(rxs, axis=0)-s, np.max(rxs, axis=0)+s
         
-        plt.xlim([mins[0], maxs[0]])
-        plt.ylim([mins[1], maxs[1]])
+        ax.set_xlim([mins[0], maxs[0]])
+        ax.set_ylim([mins[1], maxs[1]])
         if proj_3D:
             zlims = [mins[2], maxs[2]] if bs_pos is None else [np.min([mins[2], bs_pos[2]]),
                                                                np.max([mins[2], bs_pos[2]])]
             ax.axes.set_zlim3d(zlims)
     
     if equal_aspect: # often disrups the plot if in 3D.
-        plt.axis('scaled')
+        ax.set_aspect('equal')
     
     return fig, ax, cbar
 
