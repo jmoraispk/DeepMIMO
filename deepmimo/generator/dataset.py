@@ -222,6 +222,20 @@ class Dataset(DotDict):
         # Convert back to dB
         return -10 * np.log10(total_power)
 
+
+    def set_channel_params(self, params: Optional[ChannelGenParameters] = None) -> None:
+        """Set channel generation parameters.
+        
+        Args:
+            params: Channel generation parameters. If None, uses default parameters.
+        """
+        if params is None:
+            params = ChannelGenParameters()
+        else:
+            validate_ch_gen_params(params, self.n_ue)
+        
+        self.ch_params = params
+    
     def _compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
         """Internal method to compute MIMO channel matrices.
         
