@@ -195,7 +195,9 @@ class Dataset(DotDict):
         total_power = np.abs(np.sum(complex_gains, axis=1))**2
         
         # Convert back to dB
-        return -10 * np.log10(total_power)
+        pathloss = -10 * np.log10(total_power)
+        self[c.PATHLOSS_PARAM_NAME] = pathloss  # Cache the result
+        return pathloss
 
 
     def set_channel_params(self, params: Optional[ChannelGenParameters] = None) -> None:
@@ -256,7 +258,7 @@ class Dataset(DotDict):
             freq_domain=params.freq_domain
         )
 
-        self[c.CHANNEL_PARAM_NAME] = channel  # Explicitly cache the result
+        self[c.CHANNEL_PARAM_NAME] = channel  # Cache the result
 
         return channel
 
@@ -273,15 +275,17 @@ class Dataset(DotDict):
         Returns:
             numpy.ndarray: LoS status array, shape (n_users, n_paths) 
         """
-        result = np.full(self.inter.shape[0], -1)
+        los_status = np.full(self.inter.shape[0], -1)
         has_paths = self.num_paths > 0
-        result[has_paths] = 0
+        los_status[has_paths] = 0
         
         first_path = self.inter[:, 0]
         los_mask = first_path == c.INTERACTION_LOS
-        result[los_mask & has_paths] = 1
+        los_status[los_mask & has_paths] = 1
         
-        return result
+        self[c.LOS_PARAM_NAME] = los_status  # Cache the result
+
+        return los_status
 
     def _compute_power_linear_ant_gain(self, tx_ant_params: Optional[Dict[str, Any]] = None,
                                        rx_ant_params: Optional[Dict[str, Any]] = None) -> np.ndarray:
