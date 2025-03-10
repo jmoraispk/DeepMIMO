@@ -194,6 +194,7 @@ NUM_PATHS_FOV_PARAM_NAME = 'num_paths_fov'  # Number of paths within FoV for eac
 PWR_LINEAR_PARAM_NAME = 'power_linear'
 PATHLOSS_PARAM_NAME = 'pathloss'
 DIST_PARAM_NAME = 'distance'
+INTER_STR_PARAM_NAME = 'inter_str'
 
 # Rotated angles (after antenna rotation)
 AOA_AZ_ROT_PARAM_NAME = 'aoa_az_rot'

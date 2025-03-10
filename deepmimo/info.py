@@ -73,6 +73,11 @@ COMPUTED_MATRICES_HELP = {
     c.NUM_PATHS_FOV_PARAM_NAME:
         'Number of paths within FoV for each user\n'
         '\t[num_rx]',
+    c.INTER_STR_PARAM_NAME:
+        'Interaction string for each path.\n'
+        'Interaction codes: 0 -> "", 1 -> "R", 2 -> "D", 3 -> "S", 4 -> "T"\n'
+        'Example interaction integer to string: 121 -> "RDR"\n'
+        '\t[num_rx, num_paths]',
 }
 
 # Dictionary of help messages for configuration/other parameters
