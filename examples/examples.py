@@ -417,9 +417,18 @@ dataset.los
 
 #%% BASIC OPERATIONS: Aliases
 
+
 dataset.pl
 
 # add alias?
+
+#%% BASIC OPERATIONS: Attribute Access
+
+dataset['pl'] == getattr(dataset, 'pl') == dataset.pl == dataset.pathloss
+
+# TODO: make this comparison work?
+# TODO: maybe put this attribute section with the aliases?
+# TODO: define constants for the remaining attributes
 
 
 #%% BASIC OPERATIONS: Antenna Rotations 
@@ -471,51 +480,46 @@ params['bs_antenna']['FoV'] = np.array([90, 180])
 
 #%% SCENE & MATERIALS
 
-# TODO: add __repr__ for scene and materials
-
 print("\nScene and Materials Example")
 print("-" * 50)
 
-# Load a scenario
-dataset = dm.load('simple_street_canyon_test')
 scene = dataset.scene
 
 # 1. Basic scene information
-print("\n1. Scene Overview:")
-print(f"Total objects: {len(scene.objects)}")
+print("\nScene Overview:")
+print(f"- Total objects: {len(scene.objects)}")
 
 # Get objects by category
 buildings = scene.get_objects('buildings')
 terrain = scene.get_objects('terrain')
 vegetation = scene.get_objects('vegetation')
 
-print(f"Buildings: {len(buildings)}")
-print(f"Terrain: {len(terrain)}")
-print(f"Vegetation: {len(vegetation)}")
+print(f"- Buildings: {len(buildings)}")
+print(f"- Terrain: {len(terrain)}")
+print(f"- Vegetation: {len(vegetation)}")
 
 # 2. Materials and Filtering
-print("\n2. Materials and Filtering:")
 materials = dataset.materials
 
 # Get materials used by buildings
 building_materials = buildings.get_materials()
-print(f"Materials used in buildings: {building_materials}")
+print(f"\nMaterials used in buildings: {building_materials}")
 
 # Different ways to filter objects
 print("\nFiltering examples:")
 
 # Filter by label only
 buildings = scene.get_objects(label='buildings')
-print(f"Buildings: {len(buildings)}")
+print(f"- Buildings: {len(buildings)}")
 
 # Filter by material only
 material_idx = building_materials[0]
 objects_with_material = scene.get_objects(material=material_idx)
-print(f"Objects with material {material_idx}: {len(objects_with_material)}")
+print(f"- Objects with material {material_idx}: {len(objects_with_material)}")
 
 # Filter by both label and material
 buildings_with_material = scene.get_objects(label='buildings', material=material_idx)
-print(f"Buildings with material {material_idx}: {len(buildings_with_material)}")
+print(f"- Buildings with material {material_idx}: {len(buildings_with_material)}")
 
 # Print material properties
 material = materials[material_idx]
@@ -525,17 +529,16 @@ print(f"- Permittivity: {material.permittivity}")
 print(f"- Conductivity: {material.conductivity}")
 
 # 3. Object Properties
-print("\n3. Object Properties:")
+print("\nObject Properties:")
 building = buildings[0]
-print(f"Building faces: {len(building.faces)}")
-print(f"Building height: {building.height:.2f}m")
-print(f"Building volume: {building.volume:.2f}m³")
-print(f"Building footprint area: {building.footprint_area:.2f}m²")
+print(f"- Building faces: {len(building.faces)}")
+print(f"- Building height: {building.height:.2f}m")
+print(f"- Building volume: {building.volume:.2f}m³")
+print(f"- Building footprint area: {building.footprint_area:.2f}m²")
 
 # 4. Bounding Boxes
-print("\n4. Bounding Boxes:")
+print("\nBuildings Bounding Box:")
 bb = buildings.bounding_box
-print(f"Buildings bounding box:")
 print(f"- Width (X): {bb.width:.2f}m")
 print(f"- Length (Y): {bb.length:.2f}m")
 print(f"- Height (Z): {bb.height:.2f}m")
@@ -710,11 +713,11 @@ def get_beam_angles(fov, n_beams=None, beam_res=None):
 
 #%% CONVERTING DATASETS: From Wireless InSite
 
-# !wget -O asu_campus_insite_source.zip "https://www.dropbox.com/scl/fi/unldvnar22cuxjh7db2rf/ASU_Campus1.zip?rlkey=rs2ofv3pt4ctafs2zi3vwogrh&dl=0"
-# !unzip asu_campus_insite_source.zip
+# !wget -O asu_campus_p2m.zip "https://www.dropbox.com/s/lgzw8am5v5qz06v/asu_campus_p2m.zip?e=1&st=pcon8w9l&dl=1"
+# !unzip asu_campus_p2m.zip
 
-rt_folder = 'asu_campus_insite_source'
-scen_name = dm.convert(rt_folder, scenario_name='prototype')
+rt_folder = 'asu_campus'
+scen_name = dm.convert(rt_folder, scenario_name='asu_campus_insite')
 dataset_converted = dm.load(scen_name)
 
 
