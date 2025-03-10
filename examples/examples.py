@@ -388,7 +388,7 @@ def plot_ang_delay(ch, n_ant=32, NC=32, title='', label_axis=True, bandwidth=50e
     plt.show()
 
 
-#%% BASIC DATASET OPERATIONS: Line-of-Sight Status
+#%% BASIC OPERATIONS: Line-of-Sight Status
 
 active_mask = dataset.num_paths > 0
 print(f"\nNumber of active positions: {np.sum(active_mask)}")
@@ -405,38 +405,67 @@ plt.show()
 
 dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
 
-#%% BASIC DATASET OPERATIONS: Distances
+#%% BASIC OPERATIONS: Distances
 
 dataset.distance
 
-#%% BASIC DATASET OPERATIONS: Number of Paths
+#%% BASIC OPERATIONS: Number of Paths
 
 dataset.num_paths
 
-#%% BASIC DATASET OPERATIONS: Pathloss
+#%% BASIC OPERATIONS: Pathloss
 
 dataset.pathloss
 
-#%% BASIC DATASET OPERATIONS: Number of Interactions
+#%% BASIC OPERATIONS: Number of Interactions
 
 dataset.num_interactions
 
-#%% BASIC DATASET OPERATIONS: Field-of-View (FoV)
+#%% BASIC OPERATIONS: Antenna Rotations 
 
-parameters = dm.ChannelGenParameters()
-parameters['bs_antenna']['shape'] = np.array([8, 1])
-parameters['bs_antenna']['FoV'] = np.array([180, 180])
-parameters['bs_antenna']['rotation'] = np.array([0, 0, 0]) # +x rotation
+params = dm.ChannelGenParameters()
+params['bs_antenna']['shape'] = np.array([8, 1])
+params['bs_antenna']['FoV'] = np.array([180, 180])
+params['bs_antenna']['rotation'] = np.array([0, 0, 0]) # +x rotation
 
-# TODO: show 3 dataset rotations, but just changing the channel parameters
-dm.plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.tx_pos.T)
+dataset.set_channel_params(params)
 
-parameters['bs_antenna']['rotation'] = np.array([0, 0, 90])
+# Create figure with 3 subplots
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-parameters['bs_antenna']['rotation'] = np.array([0, 0, -135])
+# Define 3 different rotations to show
+rotations = [np.array([0, 0, 0]),     # Facing +x
+             np.array([0, 0, 180]),   # Facing -x
+             np.array([0, 0, -135])]  # Facing 45º between -x and -y
+
+titles = ['Orientation along +x (0°)', 
+          'Orientation along -x (180°)', 
+          'Orientation at 45º between -x and -y (-135°)']
+
+# Plot each rotation
+for i, (rot, title) in enumerate(zip(rotations, titles)):
+    # Update channel parameters with new rotation
+    params['bs_antenna']['rotation'] = rot
+    dataset.set_channel_params(params)
+    
+    # Create coverage plot in current subplot
+    dm.plot_coverage(dataset.rx_pos, dataset.los, 
+                    bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
+                    ax=axes[i], title=title, cbar_title='LoS status')
+
+plt.tight_layout()
+plt.show()
+
+# TODO: add antenna tilt rotations (rotations in elevation, around y-axis)
+
+#%% BASIC OPERATIONS: Antenna Field-of-View (FoV)
+
+params['bs_antenna']['rotation'] = np.array([0, 0, 90])
+
+params['bs_antenna']['rotation'] = np.array([0, 0, -135])
 
 # TODO: show the los status of 3 FoV fields at a given rotation
-parameters['bs_antenna']['FoV'] = np.array([90, 180])
+params['bs_antenna']['FoV'] = np.array([90, 180])
 
 
 
@@ -660,7 +689,7 @@ max_bf_pwr = np.max(np.mean(full_dbm,axis=1), axis=0) # assumes grid of beams!
 dm.plot_coverage(dataset.rx_pos, max_bf_pwr, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
               title= 'Best Beamformed Power (assuming GoB) ')
 
-#%% [LATER]
+#%% BEAMFORMING: [LATER]
 
 def get_beam_angles(fov, n_beams=None, beam_res=None):
     """
@@ -693,19 +722,131 @@ dataset_converted = dm.load(scen_name)
 
 # !pip install sionna
 
-scene = 0
+
+#%% CONVERTING DATASETS: From Sionna RT (2)
+
+import numpy as np
+from tqdm import tqdm
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+import sionna
+from sionna.rt import load_scene, Transmitter, Receiver, PlanarArray, DirectivePattern
+
+def compute_array_combinations(arrays):
+    return np.stack(np.meshgrid(*arrays), -1).reshape(-1, len(arrays))
+
+def gen_user_grid(box_corners, steps, box_offsets=None):
+    """
+    box_corners is = [bbox_min_corner, bbox_max_corner]
+    steps = [x_step, y_step, z_step]
+    """
+
+    # Sample the ranges of coordinates
+    ndim = len(box_corners[0])
+    dim_ranges = []
+    for dim in range(ndim):
+        if steps[dim]:
+            dim_range = np.arange(box_corners[0][dim], box_corners[1][dim], steps[dim])
+        else:
+            dim_range = np.array([box_corners[0][dim]]) # select just the first limit
+        
+        dim_ranges.append(dim_range + box_offsets[dim] if box_offsets else 0)
+    
+    pos = compute_array_combinations(dim_ranges)
+    print(f'Total positions generated: {pos.shape[0]}')
+    return pos
+
+
+def create_base_scene(scene_path, center_frequency):
+    scene = load_scene(scene_path)
+    scene.frequency = center_frequency
+    scene.tx_array = PlanarArray(num_rows=1,
+                                 num_cols=1,
+                                 vertical_spacing=0.5,
+                                 horizontal_spacing=0.5,
+                                 pattern="iso",
+                                 polarization="V")
+    
+    scene.rx_array = scene.tx_array
+    scene.synthetic_array = True
+    
+    return scene
+
+
+
+# Save dict with compute path params to export later
+my_compute_path_params = dict(
+    max_depth=5,
+    num_samples=1e6,
+    scattering=False,
+    diffraction=False
+)
+carrier_freq = 3.5 * 1e9  # Hz
+
+tx_pos = [-33, 11, 32.03]
+
+# 0- Create/Fetch scene and get buldings in the scene
+scene = create_base_scene(sionna.rt.scene.simple_street_canyon,
+                          center_frequency=carrier_freq)
+
+# 1- Compute TX position
+print('Computing BS position')
+scene.add(Transmitter(name="tx", position=tx_pos, orientation=[0,0,0]))
+
+# 2- Compute RXs positions
+print('Computing UEs positions')
+d = 10
+rxs = gen_user_grid(box_corners=[(-d, -d, 0), (d, d, 0)], steps=[2, 2, 0], box_offsets=[0, 0, 2])
+
+# 3- Add the first batch of receivers to the scene
+n_rx = len(rxs)
+n_rx_in_scene = 5  # to compute in parallel
+print(f'Adding users to the scene ({n_rx_in_scene} at a time)')
+for rx_idx in range(n_rx_in_scene):
+    scene.add(Receiver(name=f"rx_{rx_idx}", position=rxs[rx_idx], orientation=[0,0,0]))
+
+# 4- Enable scattering in the radio materials
+if my_compute_path_params['scattering']:
+    for rm in scene.radio_materials.values():
+        rm.scattering_coefficient = 1/np.sqrt(3) # [0,1]
+        rm.scattering_pattern = DirectivePattern(alpha_r=10)
+
+# 5- Compute the paths for each set of receiver positions
 path_list = []
-my_compute_path_params = {}
-save_folder = 'asu_campus_sionna_rt'
+n_rx_remaining = n_rx
+for x in tqdm(range(int(n_rx / n_rx_in_scene)+1), desc='Path computation'):
+    if n_rx_remaining > 0:
+        n_rx_remaining -= n_rx_in_scene
+    else:
+        break
+    if x != 0:
+        # modify current RXs in scene
+        for rx_idx in range(n_rx_in_scene):
+            if rx_idx + n_rx_in_scene*x < n_rx:
+                scene.receivers[f'rx_{rx_idx}'].position = rxs[rx_idx + n_rx_in_scene*x]
+            else:
+                # remove the last receivers in the scene
+                scene.remove(f'rx_{rx_idx}')
+    
+    paths = scene.compute_paths(**my_compute_path_params)
+    
+    paths.normalize_delays = False  # sum min_tau to tau, or tau of 1st path is always = 0
+    
+    path_list.append(paths)
+
+#%%
 
 from deepmimo.converter.sionna_rt import sionna_exporter
 
+save_folder = 'sionna_folder/'
 sionna_exporter.export_to_deepmimo(scene, path_list, my_compute_path_params, save_folder)
 
-dataset_converted = dm.load(scen_name)
+dataset_sionna = dm.load(scen_name)
 
 
+dm.plot_coverage(dataset_sionna.rx_pos, dataset_sionna.los, bs_pos=dataset_sionna.tx_pos.T)
 
-
-
+# TODO: add tx_pos to the range used for plotting
 
