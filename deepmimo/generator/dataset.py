@@ -593,10 +593,16 @@ class Dataset(DotDict):
             Array of interaction string
         """
         
-        inter_raw_str = self.inter[:, 0].astype(str) # 'nan', '221.0', '13.0', ...
+        inter_raw_str = self.inter.astype(str)  # Shape: (n_users, n_paths)
         INTER_MAP = str.maketrans({'0': '', '1': 'R', '2': 'D', '3': 'S', '4': 'T'})
 
-        return np.array([s[:-2].translate(INTER_MAP) if s != 'nan' else 'n' for s in inter_raw_str])
+        # Vectorize the translation across all paths
+        def translate_code(s):
+            # 'nan', '221.0', '134.0', ... -> 'n', 'RRD', 'DST', ...
+            return s[:-2].translate(INTER_MAP) if s != 'nan' else 'n'
+        
+        # Apply translation to each element in the 2D array
+        return np.vectorize(translate_code)(inter_raw_str)
 
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)

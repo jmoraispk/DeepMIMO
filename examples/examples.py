@@ -125,7 +125,7 @@ dm.plot_coverage(dataset.rx_pos, dataset.num_interactions[:,0], bs_pos=dataset.t
 
 #%% VISUALIZATION: Path Plots (3) First interaction in main path
 
-first_bounce_codes = [code[0] if code else '' for code in dataset.inter_str] # 'n', '2', '1', ...
+first_bounce_codes = [code[0] if code else '' for code in dataset.inter_str[:,0]] # 'n', '2', '1', ...
 
 unique_first_bounces = ['n', '', 'R', 'D', 'S']
 
@@ -142,7 +142,7 @@ dm.plot_coverage(dataset.rx_pos, coded_data,
 #%% VISUALIZATION: Path Plots (4) Bounce profile in main path
 
 # Full bounce profile visualization
-unique_profiles = np.unique(dataset.inter_str)
+unique_profiles = np.unique(dataset.inter_str[:,0])
 print(f"\nUnique bounce profiles found: {unique_profiles}")
 
 # Create mapping for full profiles
