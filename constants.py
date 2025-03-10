@@ -1,7 +1,8 @@
 # Constants used throughout the automated scene creation script
 
 # Project root directory (use absolute path)
-PROJ_ROOT = '/data/hluo53/AutoRayTracing'
+PROJ_ROOT = '.'
+BLENDER_PATH = r"/home/joao/blender-3.6.0-linux-x64/blender"
 
 # Material names for scene objects
 BUILDING_MATERIAL = 'itu_concrete'

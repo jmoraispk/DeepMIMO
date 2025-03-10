@@ -3,7 +3,7 @@ import subprocess
 import numpy as np
 import pandas as pd 
 from datetime import datetime as dt 
-from constants import PROJ_ROOT, GRID_SPACING, UE_HEIGHT, BS_HEIGHT
+from constants import PROJ_ROOT, GRID_SPACING, UE_HEIGHT, BS_HEIGHT, BLENDER_PATH
 from utils.geo_utils import convert_GpsBBox2CartesianBBox, convert_Gps2RelativeCartesian
 
 import tensorflow as tf
@@ -42,7 +42,6 @@ if __name__ == '__main__':
 
     # Run Blender and Sionna for each scenario
     n_rows = df.index.stop
-    blender_path = '/data/hluo53/blender-3.6.21-linux-x64/blender'
     for row_idx in range(0, n_rows):
         row = df.iloc[row_idx]
         scene_name = row['scenario_name']
@@ -59,7 +58,7 @@ if __name__ == '__main__':
 
         # Run Blender
         command = [
-            blender_path,
+            BLENDER_PATH,
             '-b',
             '-P',
             os.path.join(PROJ_ROOT, 'scene_builder.py'),
@@ -96,5 +95,5 @@ if __name__ == '__main__':
 
         ray_tracer = RayTracer(osm_folder)
         ray_tracer.run(scene_name, bs_pos, user_grid, carrier_freq, n_reflections, diffraction, scattering)
-
+        break
         # exit()
