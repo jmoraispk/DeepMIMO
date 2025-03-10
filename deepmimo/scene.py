@@ -831,6 +831,25 @@ class Scene:
             label_counts[label] = label_counts.get(label, 0) + 1
         return label_counts
 
+    def __repr__(self) -> str:
+        """Return a concise string representation of the scene.
+        
+        Returns:
+            str: String representation showing key scene information
+        """
+        # Get object counts by label
+        label_counts = self.count_objects_by_label()
+        
+        # Get scene dimensions
+        bb = self.bounding_box
+        dims = f"{bb.width:.1f} x {bb.length:.1f} x {bb.height:.1f} m"
+        
+        # Format object counts
+        counts = [f"{label}: {count}" for label, count in label_counts.items()]
+        counts_str = ", ".join(counts)
+        
+        return f"Scene({len(self.objects)} objects [{counts_str}], dims = {dims})"
+
 #------------------------------------------------------------------------------
 # Utilities
 #------------------------------------------------------------------------------
