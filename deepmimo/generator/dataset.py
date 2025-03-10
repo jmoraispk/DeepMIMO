@@ -98,31 +98,6 @@ class Dataset(DotDict):
         super().__init__(data or {})
 
 
-    def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
-        """Compute MIMO channel matrices for all users.
-        
-        This is the main public method for computing channel matrices. It handles all the
-        necessary preprocessing steps including:
-        - Antenna pattern application
-        - Field of view filtering
-        - Array response computation
-        - OFDM processing (if enabled)
-        
-        The computed channel will be cached and accessible as dataset.channel
-        or dataset['channel'] after this call.
-        
-        Args:
-            params: Channel generation parameters. If None, uses default parameters.
-                   See ChannelGenParameters class for details.
-            
-        Returns:
-            numpy.ndarray: MIMO channel matrix with shape [n_users, n_rx_ant, n_tx_ant, n_subcarriers]
-                          if freq_domain=True, otherwise [n_users, n_rx_ant, n_tx_ant, n_paths]
-        """
-        channel = self._compute_channels(params)
-        self['channel'] = channel  # Explicitly cache the result
-        return channel
-
     def __getattr__(self, key: str) -> Any:
         """Enable dot notation access."""
         try:
@@ -236,16 +211,26 @@ class Dataset(DotDict):
         
         self.ch_params = params
     
-    def _compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
-        """Internal method to compute MIMO channel matrices.
+    def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
+        """Compute MIMO channel matrices for all users.
         
-        This is an internal implementation method. Users should use compute_channel() instead.
+        This is the main public method for computing channel matrices. It handles all the
+        necessary preprocessing steps including:
+        - Antenna pattern application
+        - Field of view filtering
+        - Array response computation
+        - OFDM processing (if enabled)
+        
+        The computed channel will be cached and accessible as dataset.channel
+        or dataset['channel'] after this call.
         
         Args:
-            params: Channel generation parameters
+            params: Channel generation parameters. If None, uses default parameters.
+                   See ChannelGenParameters class for details.
             
         Returns:
-            numpy.ndarray: MIMO channel matrix
+            numpy.ndarray: MIMO channel matrix with shape [n_users, n_rx_ant, n_tx_ant, n_subcarriers]
+                          if freq_domain=True, otherwise [n_users, n_rx_ant, n_tx_ant, n_paths]
         """
         if params is None:
             params = ChannelGenParameters()
@@ -262,7 +247,7 @@ class Dataset(DotDict):
         
         n_paths_to_gen = params.num_paths
         
-        return generate_MIMO_channel(
+        channel = generate_MIMO_channel(
             array_response_product=array_response_product[..., :n_paths_to_gen],
             powers=self._power_linear_ant_gain[..., :n_paths_to_gen],
             delays=self.delay[..., :n_paths_to_gen],
@@ -270,6 +255,10 @@ class Dataset(DotDict):
             ofdm_params=params.ofdm,
             freq_domain=params.freq_domain
         )
+
+        self[c.CHANNEL_PARAM_NAME] = channel  # Explicitly cache the result
+
+        return channel
 
     def compute_los(self) -> np.ndarray:
         """Calculate Line of Sight status (1: LoS, 0: NLoS, -1: No paths) for each receiver.
@@ -609,10 +598,10 @@ class Dataset(DotDict):
     _computed_attributes = {
         c.NUM_PATHS_PARAM_NAME: '_compute_num_paths',
         'n_ue': '_compute_n_ue',
-        'num_interactions': '_compute_num_interactions',
-        c.DIST_PARAM_NAME: '_compute_distances',
+        'num_interactions': 'compute_num_interactions',
+        c.DIST_PARAM_NAME: 'compute_distances',
         c.PATHLOSS_PARAM_NAME: 'compute_pathloss',
-        c.CHANNEL_PARAM_NAME: '_compute_channels',
+        c.CHANNEL_PARAM_NAME: 'compute_channels',
         'los': 'compute_los',
         
         # Power linear
