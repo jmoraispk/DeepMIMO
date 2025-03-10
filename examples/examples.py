@@ -718,12 +718,11 @@ scen_name = dm.convert(rt_folder, scenario_name='prototype')
 dataset_converted = dm.load(scen_name)
 
 
-#%% CONVERTING DATASETS: From Sionna RT
+#%% CONVERTING DATASETS: From Sionna RT (1) Install Sionna
 
 # !pip install sionna
 
-
-#%% CONVERTING DATASETS: From Sionna RT (2)
+#%% CONVERTING DATASETS: From Sionna RT (2) Ray tracing
 
 import numpy as np
 from tqdm import tqdm
@@ -836,7 +835,8 @@ for x in tqdm(range(int(n_rx / n_rx_in_scene)+1), desc='Path computation'):
     
     path_list.append(paths)
 
-#%%
+#%% CONVERTING DATASETS: From Sionna RT (3) Convert to DeepMIMO
+
 
 from deepmimo.converter.sionna_rt import sionna_exporter
 
@@ -844,7 +844,6 @@ save_folder = 'sionna_folder/'
 sionna_exporter.export_to_deepmimo(scene, path_list, my_compute_path_params, save_folder)
 
 dataset_sionna = dm.load(scen_name)
-
 
 dm.plot_coverage(dataset_sionna.rx_pos, dataset_sionna.los, bs_pos=dataset_sionna.tx_pos.T)
 
