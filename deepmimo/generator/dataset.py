@@ -586,6 +586,18 @@ class Dataset(DotDict):
         """
         return self.ch_params['bs_antenna']['rotation']*np.pi/180
     
+    def _compute_inter_str(self) -> np.ndarray:
+        """Compute the interaction string.
+        
+        Returns:
+            Array of interaction string
+        """
+        
+        inter_raw_str = self.inter[:, 0].astype(str) # 'nan', '221.0', '13.0', ...
+        INTER_MAP = str.maketrans({'0': '', '1': 'R', '2': 'D', '3': 'S', '4': 'T'})
+
+        return np.array([s[:-2].translate(INTER_MAP) if s != 'nan' else 'n' for s in inter_raw_str])
+
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
@@ -625,6 +637,9 @@ class Dataset(DotDict):
         # TX/RX information
         'tx_ori': '_compute_tx_ori',
         'bs_ori': '_compute_tx_ori',
+
+        # Interactions
+        'inter_str': '_compute_inter_str',
     }
 
     # Dictionary of common aliases for dataset attributes

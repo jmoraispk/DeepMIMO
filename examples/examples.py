@@ -125,14 +125,9 @@ dm.plot_coverage(dataset.rx_pos, dataset.num_interactions[:,0], bs_pos=dataset.t
 
 #%% VISUALIZATION: Path Plots (3) First interaction in main path
 
-import matplotlib
+first_bounce_codes = [code[0] if code else '' for code in dataset.inter_str] # 'n', '2', '1', ...
 
-n_users = dataset.n_ue
-
-bounces_per_user = dataset.inter[:, 0].astype(str) # 'nan', '221', '13', ...
-first_bounce_codes = [code[0] for code in bounces_per_user] # 'n', '2', '1', ...
-
-unique_first_bounces = ['n', '0', '1', '2', '3']
+unique_first_bounces = ['n', '', 'R', 'D', 'S']
 
 coded_data = np.array([unique_first_bounces.index(code) for code in first_bounce_codes])
 
@@ -147,31 +142,26 @@ dm.plot_coverage(dataset.rx_pos, coded_data,
 #%% VISUALIZATION: Path Plots (4) Bounce profile in main path
 
 # Full bounce profile visualization
-print("\nUnique bounce profiles found:")
-
-#np.nan_to_num(dataset.inter[:, 0], nan=-1).astype(int))
-unique_profiles = [code[:-2] for code in np.unique(bounces_per_user)] # remove '.0' at end
+unique_profiles = np.unique(dataset.inter_str)
+print(f"\nUnique bounce profiles found: {unique_profiles}")
 
 # Create mapping for full profiles
 profile_to_idx = {profile: idx for idx, profile in enumerate(unique_profiles)}
-full_profile_data = np.array([profile_to_idx[profile[:-2]] for profile in bounces_per_user])
+full_profile_data = np.array([profile_to_idx[profile] for profile in dataset.inter_str])
 
 # Create colormap with white for no interaction and viridis colors for the rest
 n_profiles = len(unique_profiles)
 viridis = plt.cm.viridis(np.linspace(0, 1, n_profiles - 1))  # Get colors for the rest
-profile_cmap = matplotlib.colors.ListedColormap(viridis.tolist() + ['white'])
 
 # Create decoded labels for the colorbar
-interaction_map = {'n': 'none', '0': 'LoS', '1': 'R', '2': 'D', '3': 'S'}
-profile_labels = []
-for p in unique_profiles:
-    profile_labels.append('-'.join(interaction_map[c] for c in p))
+profile_labels = ['-'.join(p) if p else 'LoS' for p in unique_profiles]
 
 # Plot the full bounce profiles
 dm.plot_coverage(dataset.rx_pos, full_profile_data,
                  bs_pos=dataset.tx_pos.T, scat_sz=5.5,
                  title='Full bounce profile of first path',
-                 cmap=profile_cmap, cbar_labels=profile_labels)
+                 cmap=viridis.tolist() + ['white'],
+                 cbar_labels=profile_labels)
 
 #%% CHANNEL GENERATION: Parameters
 
