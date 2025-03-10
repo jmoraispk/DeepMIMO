@@ -607,6 +607,7 @@ class Dataset(DotDict):
         c.PATHLOSS_PARAM_NAME: 'compute_pathloss',
         c.CHANNEL_PARAM_NAME: 'compute_channels',
         'los': 'compute_los',
+        'ch_params': 'set_channel_params',
         
         # Power linear
         c.PWR_LINEAR_PARAM_NAME: '_compute_power_linear',
