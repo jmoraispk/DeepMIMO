@@ -598,8 +598,8 @@ class Dataset(DotDict):
     _computed_attributes = {
         c.NUM_PATHS_PARAM_NAME: '_compute_num_paths',
         'n_ue': '_compute_n_ue',
-        'num_interactions': 'compute_num_interactions',
-        c.DIST_PARAM_NAME: 'compute_distances',
+        'num_interactions': '_compute_num_interactions',
+        c.DIST_PARAM_NAME: '_compute_distances',
         c.PATHLOSS_PARAM_NAME: 'compute_pathloss',
         c.CHANNEL_PARAM_NAME: 'compute_channels',
         'los': 'compute_los',
