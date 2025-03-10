@@ -95,7 +95,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
                  proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
-                 cmap: str = 'viridis', cbar_labels: Optional[list[str]] = None,
+                 cmap: str | list = 'viridis', cbar_labels: Optional[list[str]] = None,
                  ax: Optional[Axes] = None) -> Tuple[Figure, Axes, Colorbar]:
     """Generate coverage map visualization for user positions.
     
@@ -117,7 +117,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         proj_3D (bool): Whether to create 3D projection. Defaults to False.
         equal_aspect (bool): Whether to maintain equal axis scaling. Defaults to False.
         tight (bool): Whether to set tight axis limits around data points. Defaults to True.
-        cmap (str): Matplotlib colormap name. Defaults to 'viridis'.
+        cmap (str | list): Matplotlib colormap name or list of colors. Defaults to 'viridis'.
         cbar_labels (Optional[list[str]]): List of labels for the colorbar. Defaults to None.
         ax (Optional[Axes]): Matplotlib Axes object. Defaults to None.
 
@@ -127,6 +127,7 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         - matplotlib Axes object
         - matplotlib Colorbar object
     """
+    cmap = cmap if isinstance(cmap, str) else ListedColormap(cmap)
     plt_params = {'cmap': cmap}
     if lims:
         plt_params['vmin'], plt_params['vmax'] = lims[0], lims[1]

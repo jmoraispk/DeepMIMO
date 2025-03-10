@@ -136,14 +136,13 @@ unique_first_bounces = ['n', '0', '1', '2', '3']
 
 coded_data = np.array([unique_first_bounces.index(code) for code in first_bounce_codes])
 
-# Create custom colormap with white and 4 viridis colors
-viridis = plt.cm.viridis(np.linspace(0, 1, 4))  # Get 4 colors from viridis
-cmap = matplotlib.colors.ListedColormap(['white'] + viridis.tolist()) # white for 'n'
+viridis_colors = plt.cm.viridis(np.linspace(0, 1, 4))  # Get 4 colors from viridis
 
 dm.plot_coverage(dataset.rx_pos, coded_data,
                  bs_pos=dataset.tx_pos.T, scat_sz=5.5,
                  title='Type of first bounce of first path',
-                 cmap=cmap, cbar_labels=['None', 'LoS', 'R', 'D', 'S'])
+                 cmap=['white'] + viridis_colors.tolist(), # white for 'n'
+                 cbar_labels=['None', 'LoS', 'R', 'D', 'S'])
 
 #%% VISUALIZATION: Path Plots (4) Bounce profile in main path
 
