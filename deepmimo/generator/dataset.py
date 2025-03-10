@@ -602,14 +602,14 @@ class Dataset(DotDict):
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
+        c.N_UE_PARAM_NAME: '_compute_n_ue',
         c.NUM_PATHS_PARAM_NAME: '_compute_num_paths',
-        'n_ue': '_compute_n_ue',
-        'num_interactions': '_compute_num_interactions',
+        c.NUM_INTERACTIONS_PARAM_NAME: '_compute_num_interactions',
         c.DIST_PARAM_NAME: '_compute_distances',
         c.PATHLOSS_PARAM_NAME: 'compute_pathloss',
         c.CHANNEL_PARAM_NAME: 'compute_channels',
-        'los': 'compute_los',
-        'ch_params': 'set_channel_params',
+        c.LOS_PARAM_NAME: 'compute_los',
+        c.CH_PARAMS_PARAM_NAME: 'set_channel_params',
         
         # Power linear
         c.PWR_LINEAR_PARAM_NAME: '_compute_power_linear',
@@ -646,58 +646,61 @@ class Dataset(DotDict):
 
     # Dictionary of common aliases for dataset attributes
     _aliases = {
+        # LoS aliases
+        'los_status': c.LOS_PARAM_NAME,
+        
         # Channel aliases
-        'ch': 'channel',
-        'chs': 'channel',
-        'channels': 'channel',
+        'ch': c.CHANNEL_PARAM_NAME,
+        'chs': c.CHANNEL_PARAM_NAME,
+        'channels': c.CHANNEL_PARAM_NAME,
 
         # Channel parameters aliases
-        'channel_params': 'ch_params',
+        'channel_params': c.CH_PARAMS_PARAM_NAME,
         
         # Power aliases
-        'pwr': 'power',
-        'powers': 'power',
-        'lin_pwr': 'power_linear',
-        'linear_power': 'power_linear',
-        'pwr_lin': 'power_linear',
-        'pwr_ant_gain': 'power_linear_ant_gain',
+        'pwr': c.POWER_PARAM_NAME,
+        'powers': c.POWER_PARAM_NAME,
+        'lin_pwr': c.PWR_LINEAR_PARAM_NAME,
+        'linear_power': c.PWR_LINEAR_PARAM_NAME,
+        'pwr_lin': c.PWR_LINEAR_PARAM_NAME,
+        'pwr_ant_gain': c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
         
         # Position aliases
-        'rx_loc': 'rx_pos',
-        'rx_position': 'rx_pos',
-        'rx_locations': 'rx_pos',
-        'tx_loc': 'tx_pos',
-        'tx_position': 'tx_pos',
-        'tx_locations': 'tx_pos',
+        'rx_loc': c.RX_POS_PARAM_NAME,
+        'rx_position': c.RX_POS_PARAM_NAME,
+        'rx_locations': c.RX_POS_PARAM_NAME,
+        'tx_loc': c.TX_POS_PARAM_NAME,
+        'tx_position': c.TX_POS_PARAM_NAME,
+        'tx_locations': c.TX_POS_PARAM_NAME,
         
         # Pathloss aliases
-        'pl': 'pathloss',
-        'path_loss': 'pathloss',
+        'pl': c.PATHLOSS_PARAM_NAME,
+        'path_loss': c.PATHLOSS_PARAM_NAME,
         
         # Distance aliases
-        'dist': 'distances',
-        'distance': 'distances',
-        'dists': 'distances',
+        'dist': c.DIST_PARAM_NAME,
+        'distance': c.DIST_PARAM_NAME,
+        'dists': c.DIST_PARAM_NAME,
         
         # Angle aliases
-        'aoa_phi': 'aoa_az',
-        'aoa_theta': 'aoa_el',
-        'aod_phi': 'aod_az',
-        'aod_theta': 'aod_el',
+        'aoa_phi': c.AOA_AZ_PARAM_NAME,
+        'aoa_theta': c.AOA_EL_PARAM_NAME,
+        'aod_phi': c.AOD_AZ_PARAM_NAME,
+        'aod_theta': c.AOD_EL_PARAM_NAME,
         
         # Path count aliases
-        'n_paths': 'num_paths',
+        'n_paths': c.NUM_PATHS_PARAM_NAME,
         
         # Time of arrival aliases
-        'toa': 'delay',
-        'time_of_arrival': 'delay',
+        'toa': c.DELAY_PARAM_NAME,
+        'time_of_arrival': c.DELAY_PARAM_NAME,
 
         # Interaction aliases
-        'bounce_type': 'inter',
-        'interactions': 'inter',
-        'bounce_pos': 'inter_pos',
-        'interaction_positions': 'inter_pos',
-        'interaction_locations': 'inter_pos'
+        'bounce_type': c.INTERACTIONS_PARAM_NAME,
+        'interactions': c.INTERACTIONS_PARAM_NAME,
+        'bounce_pos': c.INTERACTIONS_POS_PARAM_NAME,
+        'interaction_positions': c.INTERACTIONS_POS_PARAM_NAME,
+        'interaction_locations': c.INTERACTIONS_POS_PARAM_NAME
     }
 
     

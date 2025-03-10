@@ -189,12 +189,16 @@ INTERACTIONS_POS_PARAM_NAME = 'inter_pos'
 
 # Computed Parameters
 CHANNEL_PARAM_NAME = 'channel'
+CH_PARAMS_PARAM_NAME = 'ch_params'  # Channel generation parameters
+LOS_PARAM_NAME = 'los'
 NUM_PATHS_PARAM_NAME = 'num_paths'
-NUM_PATHS_FOV_PARAM_NAME = 'num_paths_fov'  # Number of paths within FoV for each user
 PWR_LINEAR_PARAM_NAME = 'power_linear'
 PATHLOSS_PARAM_NAME = 'pathloss'
 DIST_PARAM_NAME = 'distance'
 INTER_STR_PARAM_NAME = 'inter_str'
+N_UE_PARAM_NAME = 'n_ue'
+NUM_INTERACTIONS_PARAM_NAME = 'num_interactions'
+NUM_PATHS_FOV_PARAM_NAME = '_num_paths_fov'  # Number of paths within FoV for each user
 
 # Rotated angles (after antenna rotation)
 AOA_AZ_ROT_PARAM_NAME = '_aoa_az_rot'
