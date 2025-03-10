@@ -168,22 +168,6 @@ class DotDict(Mapping[K, V]):
         """Return list of valid attributes."""
         return list(set(list(super().__dir__()) + list(self._data.keys())))
 
-    @property
-    def shape(self):
-        """Return shape of the first array-like value in the dictionary."""
-        for val in self._data.values():
-            if hasattr(val, "shape"):
-                return val.shape
-        return None
-
-    @property
-    def size(self):
-        """Return size of the first array-like value in the dictionary."""
-        for val in self._data.values():
-            if hasattr(val, "size"):
-                return val.size
-        return None
-
     def keys(self):
         """Return dictionary keys."""
         return self._data.keys()
