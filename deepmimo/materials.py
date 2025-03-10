@@ -83,6 +83,14 @@ class MaterialList:
         """Iterate over materials."""
         return iter(self._materials)
         
+    def __repr__(self) -> str:
+        """Get string representation of the material list.
+        
+        Returns:
+            String containing list of materials
+        """
+        return str(self._materials)
+        
     def add_materials(self, materials: List[Material]) -> None:
         """Add materials to the collection.
         
