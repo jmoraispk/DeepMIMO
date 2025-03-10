@@ -848,5 +848,3 @@ dataset_sionna = dm.load(scen_name)
 
 dm.plot_coverage(dataset_sionna.rx_pos, dataset_sionna.los, bs_pos=dataset_sionna.tx_pos.T)
 
-# TODO: add tx_pos to the range used for plotting
-

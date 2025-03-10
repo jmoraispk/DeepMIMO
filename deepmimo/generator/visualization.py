@@ -174,14 +174,14 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
     
     if tight:
         s = 1
-        mins, maxs = np.min(rxs, axis=0)-s, np.max(rxs, axis=0)+s
+        # Get plot limits including BS position if available
+        all_points = np.vstack([rxs, bs_pos.reshape(1, -1)]) if bs_pos is not None else rxs
+        mins, maxs = np.min(all_points, axis=0)-s, np.max(all_points, axis=0)+s
         
         ax.set_xlim([mins[0], maxs[0]])
         ax.set_ylim([mins[1], maxs[1]])
         if proj_3D:
-            zlims = [mins[2], maxs[2]] if bs_pos is None else [np.min([mins[2], bs_pos[2]]),
-                                                               np.max([mins[2], bs_pos[2]])]
-            ax.axes.set_zlim3d(zlims)
+            ax.axes.set_zlim3d([mins[2], maxs[2]])
     
     if equal_aspect: # often disrups the plot if in 3D.
         ax.set_aspect('equal')
