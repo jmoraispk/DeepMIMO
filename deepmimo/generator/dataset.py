@@ -264,7 +264,7 @@ class Dataset(DotDict):
         
         return generate_MIMO_channel(
             array_response_product=array_response_product[..., :n_paths_to_gen],
-            powers=self.power_linear_ant_gain[..., :n_paths_to_gen],
+            powers=self._power_linear_ant_gain[..., :n_paths_to_gen],
             delays=self.delay[..., :n_paths_to_gen],
             phases=self.phase[..., :n_paths_to_gen],
             ofdm_params=params.ofdm,
@@ -295,7 +295,7 @@ class Dataset(DotDict):
         return result
 
     def _compute_power_linear_ant_gain(self, tx_ant_params: Optional[Dict[str, Any]] = None,
-                               rx_ant_params: Optional[Dict[str, Any]] = None) -> np.ndarray:
+                                       rx_ant_params: Optional[Dict[str, Any]] = None) -> np.ndarray:
         """Compute received power with antenna patterns applied.
         
         Args:
@@ -607,34 +607,34 @@ class Dataset(DotDict):
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
-        'num_paths': '_compute_num_paths',
+        c.NUM_PATHS_PARAM_NAME: '_compute_num_paths',
         'n_ue': '_compute_n_ue',
         'num_interactions': '_compute_num_interactions',
-        'distances': '_compute_distances',
-        'pathloss': 'compute_pathloss',
-        'channel': '_compute_channels',
+        c.DIST_PARAM_NAME: '_compute_distances',
+        c.PATHLOSS_PARAM_NAME: 'compute_pathloss',
+        c.CHANNEL_PARAM_NAME: '_compute_channels',
         'los': 'compute_los',
         
         # Power linear
-        'power_linear': '_compute_power_linear',
+        c.PWR_LINEAR_PARAM_NAME: '_compute_power_linear',
         
         # Rotated angles
-        'aoa_az_rot': '_compute_rotated_angles',
-        'aoa_el_rot': '_compute_rotated_angles', 
-        'aod_az_rot': '_compute_rotated_angles',
-        'aod_el_rot': '_compute_rotated_angles',
+        c.AOA_AZ_ROT_PARAM_NAME: '_compute_rotated_angles',
+        c.AOA_EL_ROT_PARAM_NAME: '_compute_rotated_angles', 
+        c.AOD_AZ_ROT_PARAM_NAME: '_compute_rotated_angles',
+        c.AOD_EL_ROT_PARAM_NAME: '_compute_rotated_angles',
         'array_response_product': '_compute_array_response_product',
         
         # Field of view
         'fov': '_compute_fov',
-        'fov_mask': '_compute_fov',
-        'aoa_az_rot_fov': '_compute_fov',
-        'aoa_el_rot_fov': '_compute_fov',
-        'aod_az_rot_fov': '_compute_fov',
-        'aod_el_rot_fov': '_compute_fov',
+        c.FOV_MASK_PARAM_NAME: '_compute_fov',
+        c.AOA_AZ_FOV_PARAM_NAME: '_compute_fov',
+        c.AOA_EL_FOV_PARAM_NAME: '_compute_fov',
+        c.AOD_AZ_FOV_PARAM_NAME: '_compute_fov',
+        c.AOD_EL_FOV_PARAM_NAME: '_compute_fov',
         
         # Power with antenna gain
-        'power_linear_ant_gain': '_compute_power_linear_ant_gain',
+        c.PWR_LINEAR_ANT_GAIN_PARAM_NAME: '_compute_power_linear_ant_gain',
         
         # Grid information
         'grid_size': '_compute_grid_info',
@@ -645,7 +645,7 @@ class Dataset(DotDict):
         'bs_ori': '_compute_tx_ori',
 
         # Interactions
-        'inter_str': '_compute_inter_str',
+        c.INTER_STR_PARAM_NAME: '_compute_inter_str',
     }
 
     # Dictionary of common aliases for dataset attributes

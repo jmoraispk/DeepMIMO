@@ -197,20 +197,20 @@ DIST_PARAM_NAME = 'distance'
 INTER_STR_PARAM_NAME = 'inter_str'
 
 # Rotated angles (after antenna rotation)
-AOA_AZ_ROT_PARAM_NAME = 'aoa_az_rot'
-AOA_EL_ROT_PARAM_NAME = 'aoa_el_rot'
-AOD_AZ_ROT_PARAM_NAME = 'aod_az_rot'
-AOD_EL_ROT_PARAM_NAME = 'aod_el_rot'
+AOA_AZ_ROT_PARAM_NAME = '_aoa_az_rot'
+AOA_EL_ROT_PARAM_NAME = '_aoa_el_rot'
+AOD_AZ_ROT_PARAM_NAME = '_aod_az_rot'
+AOD_EL_ROT_PARAM_NAME = '_aod_el_rot'
 
 # Field of view filtered angles
-AOD_EL_FOV_PARAM_NAME = 'aod_el_rot_fov'  # Elevation angles after rotation and FoV filtering
-AOD_AZ_FOV_PARAM_NAME = 'aod_az_rot_fov'  # Azimuth angles after rotation and FoV filtering
-AOA_EL_FOV_PARAM_NAME = 'aoa_el_rot_fov'  # Elevation angles after rotation and FoV filtering
-AOA_AZ_FOV_PARAM_NAME = 'aoa_az_rot_fov'  # Azimuth angles after rotation and FoV filtering
-FOV_MASK_PARAM_NAME = 'fov_mask'      # Boolean mask for FoV filtering
+AOD_EL_FOV_PARAM_NAME = '_aod_el_rot_fov'  # Elevation angles after rotation and FoV filtering
+AOD_AZ_FOV_PARAM_NAME = '_aod_az_rot_fov'  # Azimuth   angles after rotation and FoV filtering
+AOA_EL_FOV_PARAM_NAME = '_aoa_el_rot_fov'  # Elevation angles after rotation and FoV filtering
+AOA_AZ_FOV_PARAM_NAME = '_aoa_az_rot_fov'  # Azimuth   angles after rotation and FoV filtering
+FOV_MASK_PARAM_NAME = '_fov_mask'          # Boolean mask for FoV filtering
 
 # Power with antenna gain
-PWR_LINEAR_ANT_GAIN_PARAM_NAME = 'power_linear_ant_gain'
+PWR_LINEAR_ANT_GAIN_PARAM_NAME = '_power_linear_ant_gain'
 
 #==============================================================================
 # 8. Channel Generation Parameters
