@@ -90,10 +90,10 @@ class RayTracer:
 
         # Save Sionna outputs
         print("Saving Sionna outputs")
-        sionna_rt_folder_FULL = os.path.join(scene_folder, "sionna_export_full")
+        sionna_rt_folder_FULL = os.path.join(scene_folder, "sionna_export_full/")
         sionna_exporter.export_to_deepmimo(scene, path_list, rt_params, sionna_rt_folder_FULL)
 
-        sionna_rt_folder_RX = os.path.join(scene_folder, "sionna_export_RX")
+        sionna_rt_folder_RX = os.path.join(scene_folder, "sionna_export_RX/")
         sionna_exporter.export_to_deepmimo(scene, path_list[1:], rt_params, sionna_rt_folder_RX)
 
         return 
