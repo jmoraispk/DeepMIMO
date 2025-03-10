@@ -212,6 +212,8 @@ class Dataset(DotDict):
             validate_ch_gen_params(params, self.n_ue)
         
         self.ch_params = params
+
+        return params
     
     def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
         """Compute MIMO channel matrices for all users.
