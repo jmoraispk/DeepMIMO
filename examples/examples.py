@@ -394,21 +394,33 @@ plt.show()
 
 dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
 
-#%% BASIC OPERATIONS: Distances
-
-dataset.distance
-
-#%% BASIC OPERATIONS: Number of Paths
-
-dataset.num_paths
-
 #%% BASIC OPERATIONS: Pathloss
+
 
 dataset.pathloss
 
-#%% BASIC OPERATIONS: Number of Interactions
+pathloss = dataset.compute_pathloss()
 
+# coherent vs non-coherent
+
+
+#%% BASIC OPERATIONS: Implicit Computations
+
+dataset.distance
+dataset.num_paths
 dataset.num_interactions
+
+# The same for all other quantities really
+dataset.channels
+dataset.pathloss
+dataset.los
+
+#%% BASIC OPERATIONS: Aliases
+
+dataset.pl
+
+# add alias?
+
 
 #%% BASIC OPERATIONS: Antenna Rotations 
 
@@ -455,7 +467,6 @@ params['bs_antenna']['rotation'] = np.array([0, 0, -135])
 
 # TODO: show the los status of 3 FoV fields at a given rotation
 params['bs_antenna']['FoV'] = np.array([90, 180])
-
 
 
 #%% SCENE & MATERIALS
