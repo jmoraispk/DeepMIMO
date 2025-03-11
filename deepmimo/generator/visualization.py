@@ -151,7 +151,9 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
     
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
-    
+    if proj_3D:
+        ax.set_zlabel('z (m)')
+        
     # TX position
     if bs_pos is not None:
         bs_pos = bs_pos.squeeze()
