@@ -422,6 +422,8 @@ dataset.pl
 
 # add alias?
 
+# dataset.tx_ori == dataset.bs_ori
+
 #%% BASIC OPERATIONS: Attribute Access
 
 dataset['pl'] == getattr(dataset, 'pl') == dataset.pl == dataset.pathloss
@@ -431,13 +433,9 @@ dataset['pl'] == getattr(dataset, 'pl') == dataset.pl == dataset.pathloss
 # TODO: define constants for the remaining attributes
 
 
-#%% BASIC OPERATIONS: Antenna Rotations 
+#%% BASIC OPERATIONS: Antenna Rotations (1) Azimuth
 
 params = dm.ChannelGenParameters()
-params['bs_antenna']['shape'] = np.array([8, 1])
-params['bs_antenna']['FoV'] = np.array([180, 180])
-params['bs_antenna']['rotation'] = np.array([0, 0, 0]) # +x rotation
-
 dataset.set_channel_params(params)
 
 # Create figure with 3 subplots
@@ -452,21 +450,51 @@ titles = ['Orientation along +x (0°)',
           'Orientation along -x (180°)', 
           'Orientation at 45º between -x and -y (-135°)']
 
-# Plot each rotation
+# Plot each azimuth rotation
 for i, (rot, title) in enumerate(zip(rotations, titles)):
     # Update channel parameters with new rotation
-    params['bs_antenna']['rotation'] = rot
-    dataset.set_channel_params(params)
+    dataset.ch_params.bs_antenna.rotation = rot
     
     # Create coverage plot in current subplot
     dm.plot_coverage(dataset.rx_pos, dataset.los, 
-                    bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
-                    ax=axes[i], title=title, cbar_title='LoS status')
+                     bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
+                     ax=axes[i], title=title, cbar_title='LoS status')
 
 plt.tight_layout()
 plt.show()
 
-# TODO: add antenna tilt rotations (rotations in elevation, around y-axis)
+#%% BASIC OPERATIONS: Antenna Rotations (2) Elevation
+
+params = dm.ChannelGenParameters()
+dataset.set_channel_params(params)
+
+# Create figure with 3 subplots
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), subplot_kw={'projection': '3d'})
+
+# Define 3 different rotations to show
+rotations = [np.array([0,  0, -180]),   # Facing -x
+             np.array([0, 30, -180]),   # Facing 30º below -x in XZ plane
+             np.array([0, 60, -180])]   # Facing 60º below -x in XZ plane
+
+titles = ['Orientation along -x (180°)', 
+          'Orientation at 30º between -x and -z', 
+          'Orientation at 60º between -x and -z']
+
+# Plot each azimuth rotation
+for i, (rot, title) in enumerate(zip(rotations, titles)):
+    # Update channel parameters with new rotation
+    dataset.ch_params.bs_antenna.rotation = rot
+    
+    # Create coverage plot in current subplot
+    dm.plot_coverage(dataset.rx_pos, dataset.los, proj_3D=True,
+                     bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
+                     ax=axes[i], title=title, cbar_title='LoS status')
+    axes[i].view_init(elev=5, azim=-90)  # Set view to xz plane to see tilt
+    axes[i].set_yticks([])  # Remove y-axis ticks to unclutter the plot
+
+plt.tight_layout()
+plt.show()
+
 
 #%% BASIC OPERATIONS: Antenna Field-of-View (FoV)
 
@@ -643,52 +671,46 @@ plot_feat_dist(dataset.los[idxs_A], dataset.los[idxs_B], 'LoS Status')
 
 
 #%% BEAMFORMING: Received Power with TX Beamforming
+ch_params = dm.ChannelGenParameters()
+ch_params.bs_antenna.rotation = np.array([0, 0, -135])
+dataset.set_channel_params(ch_params)
+dataset.compute_channels()
 
-from tqdm import tqdm
-# Compute Received power in different Beams and Bands
 n_beams = 25
 
-# Setup Beamformers
 beam_angles = np.around(np.linspace(-60, 60, n_beams), 2)
 
-# n_beams x n_ant = 25 x 64
-F1 = np.array([dm.steering_vec(parameters['bs_antenna']['shape'], phi=azi,
-                            spacing=parameters['bs_antenna']['spacing']).squeeze()
+# F1 is [n_beams, n_ant]
+F1 = np.array([dm.steering_vec(dataset.ch_params.bs_antenna.shape, phi=azi,
+                               spacing=dataset.ch_params.bs_antenna.spacing).squeeze()
                for azi in beam_angles])
 
-# Assuming 0 dBW transmit power
-full_dbm = np.zeros((n_beams, dataset.n_ue), dtype=float)
-for ue_idx in tqdm(range(dataset.n_ue), desc='Computing the beamformed received power per user'):
-    if dataset.los[ue_idx] == -1:
-        full_dbm[:,ue_idx] = np.nan
-    else:
-        chs = F1 @ dataset.channel[ue_idx]
-        full_linear = np.abs(np.mean(chs.squeeze().reshape((n_beams, -1)), axis=-1))
-        full_dbm[:,ue_idx] = np.around(20*np.log10(full_linear) + 30, 1)
+recv_bf_pwr_dbm = np.zeros((dataset.n_ue, n_beams)) * np.nan
+mean_amplitude = np.abs(F1 @ dataset.channel[dataset.los != -1]).mean(axis=1).mean(axis=-1)
+# Avg over rx antennas and subcarriers, respectively
+recv_bf_pwr_dbm[dataset.los != -1] = np.around(20*np.log10(mean_amplitude) + 30, 1)
 
 #%% BEAMFORMING: Received Power with TX Beamforming (2) Plotting
 
-# TODO: make 3 images in a single plot
-for beam_idx in [12]:#range(n_beams):
-    rcv_pwr = full_dbm[beam_idx]
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), dpi=300, tight_layout=True)
 
-    title = f'Beam = {beam_idx} ({beam_angles[beam_idx]:.1f}º)'
-
-    dm.plot_coverage(dataset.rx_pos, rcv_pwr, bs_pos=dataset.tx_pos.T,
-                  bs_ori=dataset.tx_ori, title=title, lims=[-180, -60])
-    break
+for plt_idx, beam_idx in enumerate([8, 12, 16]):
+    dm.plot_coverage(dataset.rx_pos, recv_bf_pwr_dbm[:, beam_idx], ax=axes[plt_idx], 
+                     bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori, lims=[-180, -60],
+                     title=f'Beam = {beam_idx} ({beam_angles[beam_idx]:.1f}º)')
 
 #%% BEAMFORMING: Received Power with TX Beamforming (3) Plotting Best Beam
 
 # Average the power on each subband and get the index of the beam that delivers max pwr
-best_beams = np.argmax(np.mean(full_dbm,axis=1), axis=0)
-best_beams = best_beams.astype(float)
-best_beams[np.isnan(full_dbm[0,0,:])] = np.nan
+best_beams = np.argmax(recv_bf_pwr_dbm, axis=1).astype(float)
+best_beams[np.isnan(recv_bf_pwr_dbm[:, 0])] = np.nan
 
 dm.plot_coverage(dataset.rx_pos, best_beams, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
-              title= 'Best Beams', cbar_title='Best beam index')
+                 title= 'Best Beams', cbar_title='Best beam index')
 
-max_bf_pwr = np.max(np.mean(full_dbm,axis=1), axis=0) # assumes grid of beams!
+#%% BEAMFORMING: Received Power with TX Beamforming (4) Plotting Max Beamformed Receive Power
+
+max_bf_pwr = np.max(recv_bf_pwr_dbm, axis=1) # assumes grid of beams!
 dm.plot_coverage(dataset.rx_pos, max_bf_pwr, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
               title= 'Best Beamformed Power (assuming GoB) ')
 
