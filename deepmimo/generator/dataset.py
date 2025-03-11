@@ -573,14 +573,42 @@ class Dataset(DotDict):
         
         return idxs
     
-    def _compute_tx_ori(self) -> np.ndarray:
-        """Compute the orientation of the transmitters.
+    @property
+    def tx_ori(self) -> np.ndarray:
+        """Compute the orientation of the transmitter.
         
         Returns:
             Array of transmitter orientation
         """
         return self.ch_params['bs_antenna']['rotation']*np.pi/180
     
+    @property
+    def bs_ori(self) -> np.ndarray:
+        """Alias for tx_ori - computes the orientation of the transmitter/basestation.
+        
+        Returns:
+            Array of transmitter orientation
+        """
+        return self.tx_ori
+    
+    @property
+    def rx_ori(self) -> np.ndarray:
+        """Compute the orientation of the receivers.
+        
+        Returns:
+            Array of receiver orientation
+        """
+        return self.ch_params['ue_antenna']['rotation']*np.pi/180
+
+    @property
+    def ue_ori(self) -> np.ndarray:
+        """Alias for rx_ori - computes the orientation of the receivers/users.
+        
+        Returns:
+            Array of receiver orientation
+        """
+        return self.rx_ori
+
     def _compute_inter_str(self) -> np.ndarray:
         """Compute the interaction string.
         
@@ -636,10 +664,6 @@ class Dataset(DotDict):
         'grid_size': '_compute_grid_info',
         'grid_spacing': '_compute_grid_info',
 
-        # TX/RX information
-        'tx_ori': '_compute_tx_ori',
-        'bs_ori': '_compute_tx_ori',
-
         # Interactions
         c.INTER_STR_PARAM_NAME: '_compute_inter_str',
     }
@@ -666,9 +690,11 @@ class Dataset(DotDict):
         'pwr_ant_gain': c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
         
         # Position aliases
+        'ue_pos': c.RX_POS_PARAM_NAME,
         'rx_loc': c.RX_POS_PARAM_NAME,
         'rx_position': c.RX_POS_PARAM_NAME,
         'rx_locations': c.RX_POS_PARAM_NAME,
+        'bs_pos': c.TX_POS_PARAM_NAME,
         'tx_loc': c.TX_POS_PARAM_NAME,
         'tx_position': c.TX_POS_PARAM_NAME,
         'tx_locations': c.TX_POS_PARAM_NAME,
