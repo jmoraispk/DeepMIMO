@@ -211,7 +211,7 @@ class Dataset(DotDict):
         else:
             validate_ch_gen_params(params, self.n_ue)
         
-        self.ch_params = params
+        self._ch_params = params  # Cache the params, internal use only
 
         return params
     
@@ -237,7 +237,7 @@ class Dataset(DotDict):
                           if freq_domain=True, otherwise [n_users, n_rx_ant, n_tx_ant, n_paths]
         """
         if params is None:
-            params = ChannelGenParameters()
+            params = ChannelGenParameters() if self._ch_params is None else self._ch_params
         else:
             validate_ch_gen_params(params, self.n_ue)
         
