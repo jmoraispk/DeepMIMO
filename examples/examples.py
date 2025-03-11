@@ -486,9 +486,8 @@ for i, (rot, title) in enumerate(zip(rotations, titles)):
     dataset.ch_params.bs_antenna.rotation = rot
     
     # Create coverage plot in current subplot
-    dm.plot_coverage(dataset.rx_pos, dataset.los, proj_3D=True,
-                     bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
-                     ax=axes[i], title=title, cbar_title='LoS status')
+    dataset.plot_coverage(dataset.los, proj_3D=True, ax=axes[i],
+                          title=title, cbar_title='LoS status')
     axes[i].view_init(elev=5, azim=-90)  # Set view to xz plane to see tilt
     axes[i].set_yticks([])  # Remove y-axis ticks to unclutter the plot
 
@@ -673,8 +672,7 @@ plot_feat_dist(dataset.los[idxs_A], dataset.los[idxs_B], 'LoS Status')
 #%% BEAMFORMING: Received Power with TX Beamforming
 ch_params = dm.ChannelGenParameters()
 ch_params.bs_antenna.rotation = np.array([0, 0, -135])
-dataset.set_channel_params(ch_params)
-dataset.compute_channels()
+dataset.compute_channels(ch_params)
 
 n_beams = 25
 
@@ -695,9 +693,8 @@ recv_bf_pwr_dbm[dataset.los != -1] = np.around(20*np.log10(mean_amplitude) + 30,
 fig, axes = plt.subplots(1, 3, figsize=(18, 5), dpi=300, tight_layout=True)
 
 for plt_idx, beam_idx in enumerate([8, 12, 16]):
-    dm.plot_coverage(dataset.rx_pos, recv_bf_pwr_dbm[:, beam_idx], ax=axes[plt_idx], 
-                     bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori, lims=[-180, -60],
-                     title=f'Beam = {beam_idx} ({beam_angles[beam_idx]:.1f}º)')
+    dataset.plot_coverage(recv_bf_pwr_dbm[:, beam_idx], ax=axes[plt_idx], lims=[-180, -60],
+                          title=f'Beam # {beam_idx} ({beam_angles[beam_idx]:.1f}º)')
 
 #%% BEAMFORMING: Received Power with TX Beamforming (3) Plotting Best Beam
 

@@ -16,6 +16,7 @@ import numpy as np
 from ..general_utilities import DotDict
 from .. import consts as c
 from ..info import info
+from .visualization import plot_coverage
 
 # Channel generation
 from .channel import generate_MIMO_channel, ChannelGenParameters, validate_ch_gen_params
@@ -627,6 +628,15 @@ class Dataset(DotDict):
         # Apply translation to each element in the 2D array
         return np.vectorize(translate_code)(inter_raw_str)
 
+    def plot_coverage(self, cov_map, **kwargs):
+        """Plot the coverage of the dataset.
+        
+        Args:
+            cov_map: The coverage map to plot.
+            **kwargs: Additional keyword arguments to pass to the plot_coverage function.
+        """
+        return plot_coverage(self.rx_pos, cov_map, bs_pos=self.tx_pos.T, bs_ori=self.tx_ori, **kwargs)
+    
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
