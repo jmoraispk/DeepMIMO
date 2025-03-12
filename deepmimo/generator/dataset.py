@@ -229,7 +229,6 @@ class Dataset(DotDict):
         
         # Clear dependent cache if FoV changed
         if fov_changed:
-            print(f"Clearing dependent cache for FoV change: {c.FOV_MASK_PARAM_NAME}, {c.NUM_PATHS_PARAM_NAME}, {c.LOS_PARAM_NAME}")
             for key in [c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME]:
                 self._data.pop(key, None)
         
@@ -298,7 +297,6 @@ class Dataset(DotDict):
         Returns:
             numpy.ndarray: LoS status array, shape (n_users,)
         """
-        print('computing los...')
         los_status = np.full(self.inter.shape[0], -1)
         
         # First ensure we have rotated angles by accessing them

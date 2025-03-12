@@ -494,9 +494,7 @@ plt.show()
 
 
 #%% [LATER] BASIC OPERATIONS: Antenna Field-of-View (FoV)
-import deepmimo as dm; dataset = dm.load('asu_campus_3p5')[0]; print(dataset.tx_ori)
 
-#%%
 params = dm.ChannelGenParameters()
 params['bs_antenna']['rotation'] = np.array([0, 0, -135])
 
@@ -506,11 +504,11 @@ fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 # Define 3 FoV
 fovs = [np.array([360, 180]),   # Facing -x
         np.array([90, 180]),   # Facing 30º below -x in XZ plane
-        np.array([ 40, 180])]   # Facing 60º below -x in XZ plane
+        np.array([ 60, 180])]   # Facing 60º below -x in XZ plane
 
 titles = ['FoV = 180°', 
-          'FoV = 180°', 
-          'FoV = 90°']
+          'FoV = 90°', 
+          'FoV = 60°']
 
 cmap = ['tab:red', 'tab:blue', 'tab:green']
 
@@ -526,11 +524,6 @@ for i, (fov, title) in enumerate(zip(fovs, titles)):
 
 plt.tight_layout()
 plt.show()
-
-# TODO: the LoS needs to be computed from the rotated / FoV filtered information
-
-# params['bs_antenna']['FoV'] = np.array([90, 180])
-
 
 #%% SCENE & MATERIALS
 
