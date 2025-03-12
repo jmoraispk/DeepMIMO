@@ -430,8 +430,6 @@ dataset['pl'] == getattr(dataset, 'pl') == dataset.pl == dataset.pathloss
 
 # TODO: make this comparison work?
 # TODO: maybe put this attribute section with the aliases?
-# TODO: define constants for the remaining attributes
-
 
 #%% BASIC OPERATIONS: Antenna Rotations (1) Azimuth
 
@@ -495,14 +493,43 @@ plt.tight_layout()
 plt.show()
 
 
-#%% BASIC OPERATIONS: Antenna Field-of-View (FoV)
+#%% [LATER] BASIC OPERATIONS: Antenna Field-of-View (FoV)
+import deepmimo as dm; dataset = dm.load('asu_campus_3p5')[0]; print(dataset.tx_ori)
 
-params['bs_antenna']['rotation'] = np.array([0, 0, 90])
-
+#%%
+params = dm.ChannelGenParameters()
 params['bs_antenna']['rotation'] = np.array([0, 0, -135])
 
-# TODO: show the los status of 3 FoV fields at a given rotation
-params['bs_antenna']['FoV'] = np.array([90, 180])
+# Create figure with 3 subplots
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+# Define 3 FoV
+fovs = [np.array([360, 180]),   # Facing -x
+        np.array([90, 180]),   # Facing 30º below -x in XZ plane
+        np.array([ 40, 180])]   # Facing 60º below -x in XZ plane
+
+titles = ['FoV = 180°', 
+          'FoV = 180°', 
+          'FoV = 90°']
+
+cmap = ['tab:red', 'tab:blue', 'tab:green']
+
+# Plot each azimuth rotation
+for i, (fov, title) in enumerate(zip(fovs, titles)):
+    # Update channel parameters with new rotation
+    print(f"Iteration {i}: Setting FoV to {fov}")
+    params['bs_antenna']['fov'] = fov
+    dataset.set_channel_params(params)
+    
+    dataset.plot_coverage(dataset.los, ax=axes[i],# cmap=cmap,
+                          title=title, cbar_title='LoS status')
+
+plt.tight_layout()
+plt.show()
+
+# TODO: the LoS needs to be computed from the rotated / FoV filtered information
+
+# params['bs_antenna']['FoV'] = np.array([90, 180])
 
 
 #%% SCENE & MATERIALS
@@ -711,7 +738,7 @@ max_bf_pwr = np.max(recv_bf_pwr_dbm, axis=1) # assumes grid of beams!
 dm.plot_coverage(dataset.rx_pos, max_bf_pwr, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
               title= 'Best Beamformed Power (assuming GoB) ')
 
-#%% BEAMFORMING: [LATER]
+#%% [LATER] BEAMFORMING: (integrating beam angles and beamforming in dataset?)
 
 def get_beam_angles(fov, n_beams=None, beam_res=None):
     """

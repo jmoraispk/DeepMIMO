@@ -155,10 +155,12 @@ class Dataset(DotDict):
         raise KeyError(key)
 
     def _compute_num_paths(self) -> np.ndarray:
-        """Compute number of valid paths for each user."""
-        max_paths = self.aoa_az.shape[-1]
-        nan_count_matrix = np.isnan(self.aoa_az).sum(axis=1)
-        return max_paths - nan_count_matrix
+        """Compute number of valid paths for each user after FoV filtering."""
+        # Get FoV-filtered angles (this will trigger FoV computation if needed)
+        aoa_az_fov = self[c.AOA_AZ_FOV_PARAM_NAME]
+        
+        # Count non-NaN values (NaN indicates filtered out by FoV)
+        return (~np.isnan(aoa_az_fov)).sum(axis=1)
 
     def _compute_n_ue(self) -> int:
         """Return the number of UEs/receivers in the dataset."""
@@ -212,8 +214,25 @@ class Dataset(DotDict):
         else:
             validate_ch_gen_params(params, self.n_ue)
         
-        self._ch_params = params  # Cache the params, internal use only
+        # Check if FoV parameters have changed
+        fov_changed = False
+        if 'ch_params' in self._data:
+            old_bs_fov = self.ch_params.bs_antenna.fov
+            old_ue_fov = self.ch_params.ue_antenna.fov
+            new_bs_fov = params.bs_antenna.fov
+            new_ue_fov = params.ue_antenna.fov
+            fov_changed = not (np.array_equal(old_bs_fov, new_bs_fov) and 
+                              np.array_equal(old_ue_fov, new_ue_fov))
 
+        # Create a deep copy of the parameters to ensure isolation
+        self.ch_params = params.deepcopy()
+        
+        # Clear dependent cache if FoV changed
+        if fov_changed:
+            print(f"Clearing dependent cache for FoV change: {c.FOV_MASK_PARAM_NAME}, {c.NUM_PATHS_PARAM_NAME}, {c.LOS_PARAM_NAME}")
+            for key in [c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME]:
+                self._data.pop(key, None)
+        
         return params
     
     def compute_channels(self, params: Optional[ChannelGenParameters] = None) -> np.ndarray:
@@ -238,13 +257,14 @@ class Dataset(DotDict):
                           if freq_domain=True, otherwise [n_users, n_rx_ant, n_tx_ant, n_paths]
         """
         if params is None:
-            params = ChannelGenParameters() if self._ch_params is None else self._ch_params
+            params = ChannelGenParameters() if self.ch_params is None else self.ch_params
         else:
             validate_ch_gen_params(params, self.n_ue)
         
         # Store params directly in dictionary
-        self.ch_params = params
+        self.set_channel_params(params)
         
+
         np.random.seed(1001)
         
         # Compute array response product
@@ -265,7 +285,7 @@ class Dataset(DotDict):
 
         return channel
 
-    def compute_los(self) -> np.ndarray:
+    def _compute_los(self) -> np.ndarray:
         """Calculate Line of Sight status (1: LoS, 0: NLoS, -1: No paths) for each receiver.
 
         Uses the interaction codes defined in consts.py:
@@ -276,18 +296,39 @@ class Dataset(DotDict):
             INTERACTION_TRANSMISSION = 4: Transmission
 
         Returns:
-            numpy.ndarray: LoS status array, shape (n_users, n_paths) 
+            numpy.ndarray: LoS status array, shape (n_users,)
         """
+        print('computing los...')
         los_status = np.full(self.inter.shape[0], -1)
-        has_paths = self.num_paths > 0
+        
+        # First ensure we have rotated angles by accessing them
+        # This will trigger computation if needed
+        _ = self[c.AOD_AZ_ROT_PARAM_NAME]
+        
+        # Now get FoV mask which will use the rotated angles
+        fov_mask = self[c.FOV_MASK_PARAM_NAME]
+        if fov_mask is not None:
+            # If we have FoV filtering, only consider paths within FoV
+            has_paths = np.any(fov_mask, axis=1)
+            # For each user, find the first valid path within FoV
+            first_valid_path = np.full(self.inter.shape[0], -1)
+            for i in range(self.inter.shape[0]):
+                valid_paths = np.where(fov_mask[i])[0]
+                if len(valid_paths) > 0:
+                    first_valid_path[i] = self.inter[i, valid_paths[0]]
+        else:
+            # No FoV filtering, use all paths
+            has_paths = self.num_paths > 0
+            first_valid_path = self.inter[:, 0]
+        
+        # Set NLoS status for users with paths
         los_status[has_paths] = 0
         
-        first_path = self.inter[:, 0]
-        los_mask = first_path == c.INTERACTION_LOS
+        # Set LoS status for users with direct path as first valid path
+        los_mask = first_valid_path == c.INTERACTION_LOS
         los_status[los_mask & has_paths] = 1
         
-        self[c.LOS_PARAM_NAME] = los_status  # Cache the result
-
+        self[c.LOS_PARAM_NAME] = los_status
         return los_status
 
     def _compute_power_linear_ant_gain(self, tx_ant_params: Optional[Dict[str, Any]] = None,
@@ -319,7 +360,7 @@ class Dataset(DotDict):
                                         aod_phi=self[c.AOD_AZ_FOV_PARAM_NAME])
 
     def _compute_rotated_angles(self, tx_ant_params: Optional[Dict[str, Any]] = None, 
-                              rx_ant_params: Optional[Dict[str, Any]] = None) -> Dict[str, np.ndarray]:
+                                rx_ant_params: Optional[Dict[str, Any]] = None) -> Dict[str, np.ndarray]:
         """Compute rotated angles for all users in batch.
         
         Args:
@@ -360,6 +401,8 @@ class Dataset(DotDict):
         This function applies field of view constraints to the rotated angles
         and stores both the filtered angles and the mask in the dataset.
         Optimizes computation by skipping mask generation when FoV is full.
+        If no channel parameters are set, assumes full FoV and returns unfiltered angles.
+
         
         Args:
             bs_params: Base station antenna parameters including FoV. If None, uses stored params.
@@ -368,6 +411,17 @@ class Dataset(DotDict):
         Returns:
             Dict: Dictionary containing FoV filtered angles and mask
         """
+        # Check if channel parameters exist
+        if not hasattr(self, 'ch_params'):
+            # Return unfiltered & unrotated angles and no mask (indicating full FoV)
+            return {
+                c.FOV_MASK_PARAM_NAME: None,
+                c.AOD_EL_FOV_PARAM_NAME: self[c.AOD_EL_PARAM_NAME],
+                c.AOD_AZ_FOV_PARAM_NAME: self[c.AOD_AZ_PARAM_NAME],
+                c.AOA_EL_FOV_PARAM_NAME: self[c.AOA_EL_PARAM_NAME],
+                c.AOA_AZ_FOV_PARAM_NAME: self[c.AOA_AZ_PARAM_NAME]
+            }
+        
         # Use stored channel parameters if none provided
         if bs_params is None:
             bs_params = self.ch_params.bs_antenna
@@ -389,6 +443,7 @@ class Dataset(DotDict):
         ue_full_fov = (rx_fov[0] >= 360 and rx_fov[1] >= 180)
         
         if bs_full_fov and ue_full_fov:
+            # Return unfiltered angles and no mask (indicating full FoV)
             return {
                 c.FOV_MASK_PARAM_NAME: None,
                 c.AOD_EL_FOV_PARAM_NAME: aod_theta,
@@ -442,7 +497,7 @@ class Dataset(DotDict):
         Returns:
             Array response product matrix
         """
-        # Get antenna parameters from ch_params
+        # Get antenna parameters from channel parameters
         tx_ant_params = self.ch_params.bs_antenna
         rx_ant_params = self.ch_params.ue_antenna
         
@@ -646,7 +701,7 @@ class Dataset(DotDict):
         c.DIST_PARAM_NAME: '_compute_distances',
         c.PATHLOSS_PARAM_NAME: 'compute_pathloss',
         c.CHANNEL_PARAM_NAME: 'compute_channels',
-        c.LOS_PARAM_NAME: 'compute_los',
+        c.LOS_PARAM_NAME: '_compute_los',
         c.CH_PARAMS_PARAM_NAME: 'set_channel_params',
         
         # Power linear
@@ -725,7 +780,7 @@ class Dataset(DotDict):
         'aod_theta': c.AOD_EL_PARAM_NAME,
         
         # Path count aliases
-        'n_paths': c.NUM_PATHS_PARAM_NAME,
+        'n_paths': c.NUM_PATHS_PARAM_NAME,  # Add alias for new attribute
         
         # Time of arrival aliases
         'toa': c.DELAY_PARAM_NAME,
