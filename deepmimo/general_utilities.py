@@ -198,6 +198,28 @@ class DotDict(Mapping[K, V]):
                 result[key] = value
         return result
 
+    def deepcopy(self) -> 'DotDict':
+        """Create a deep copy of the DotDict instance.
+        
+        This method creates a completely independent copy of the DotDict,
+        including nested dictionaries and numpy arrays. This ensures that
+        modifications to the copy won't affect the original.
+        
+        Returns:
+            DotDict: A deep copy of this instance
+        """
+        result = {}
+        for key, value in self._data.items():
+            if isinstance(value, DotDict):
+                result[key] = value.deepcopy()
+            elif isinstance(value, dict):
+                result[key] = DotDict(value).deepcopy()
+            elif isinstance(value, np.ndarray):
+                result[key] = value.copy()
+            else:
+                result[key] = value
+        return DotDict(result)
+
     def __repr__(self) -> str:
         """Return string representation of dictionary."""
         return pformat(self._data)
