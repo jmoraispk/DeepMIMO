@@ -12,10 +12,9 @@ based on path information from ray-tracing and antenna configurations.
 
 import numpy as np
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, Optional
 from .. import consts as c
 from ..general_utilities import DotDict, compare_two_dicts
-from pprint import pformat
 
 class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.
@@ -29,42 +28,54 @@ class ChannelGenParameters(DotDict):
     The parameters can be accessed directly using dot notation (e.g. params.bs_antenna.shape)
     or using dictionary notation (e.g. params['bs_antenna']['shape']).
     """
-    def __init__(self):
-        """Initialize channel generation parameters with default values."""
-        super().__init__({
-            # BS Antenna Parameters
-            c.PARAMSET_ANT_BS: {
-                c.PARAMSET_ANT_SHAPE: np.array([8, 1]), # Antenna dimensions in X - Y - Z
-                c.PARAMSET_ANT_SPACING: 0.5,
-                c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
-                c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
-                c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
-            },
-            
-            # UE Antenna Parameters
-            c.PARAMSET_ANT_UE: {
-                c.PARAMSET_ANT_SHAPE: np.array([1, 1]), # Antenna dimensions in X - Y - Z
-                c.PARAMSET_ANT_SPACING: 0.5,
-                c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
-                c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
-                c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
-            },
-            
-            c.PARAMSET_DOPPLER_EN: 0,
-            c.PARAMSET_POLAR_EN: 0,
-            c.PARAMSET_NUM_PATHS: c.MAX_PATHS, 
-            
-            c.PARAMSET_FD_CH: 1, # OFDM channel if 1, Time domain if 0
-            
-            # OFDM Parameters
-            c.PARAMSET_OFDM: {
-                c.PARAMSET_OFDM_SC_NUM: 512, # Number of total subcarriers
-                c.PARAMSET_OFDM_SC_SAMP: np.arange(1), # Select subcarriers to generate
-                c.PARAMSET_OFDM_BANDWIDTH: 10e6, # Hz
-                c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
-            }
-        })
-    
+    # Default channel generation parameters
+    DEFAULT_PARAMS = {
+        # BS Antenna Parameters
+        c.PARAMSET_ANT_BS: {
+            c.PARAMSET_ANT_SHAPE: np.array([8, 1]), # Antenna dimensions in X - Y - Z
+            c.PARAMSET_ANT_SPACING: 0.5,
+            c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
+            c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
+            c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
+        },
+        
+        # UE Antenna Parameters
+        c.PARAMSET_ANT_UE: {
+            c.PARAMSET_ANT_SHAPE: np.array([1, 1]), # Antenna dimensions in X - Y - Z
+            c.PARAMSET_ANT_SPACING: 0.5,
+            c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
+            c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
+            c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
+        },
+        
+        c.PARAMSET_DOPPLER_EN: 0,
+        c.PARAMSET_POLAR_EN: 0,
+        c.PARAMSET_NUM_PATHS: c.MAX_PATHS, 
+        
+        c.PARAMSET_FD_CH: 1, # OFDM channel if 1, Time domain if 0
+        
+        # OFDM Parameters
+        c.PARAMSET_OFDM: {
+            c.PARAMSET_OFDM_SC_NUM: 512, # Number of total subcarriers
+            c.PARAMSET_OFDM_SC_SAMP: np.arange(1), # Select subcarriers to generate
+            c.PARAMSET_OFDM_BANDWIDTH: 10e6, # Hz
+            c.PARAMSET_OFDM_LPF: 0 # Receive Low Pass / ADC Filter
+        }
+    }
+
+    def __init__(self, data: Optional[Dict] = None):
+        """Initialize channel generation parameters.
+        
+        Args:
+            data: Optional dictionary containing channel parameters to override defaults
+        """
+        # Initialize with defaults
+        super().__init__(self.DEFAULT_PARAMS)
+        
+        # Update with provided data if any
+        if data is not None:
+            self.update(data)
+
 def validate_ch_gen_params(params: ChannelGenParameters, n_ues: int) -> ChannelGenParameters:
     """Validate channel generation parameters.
         
