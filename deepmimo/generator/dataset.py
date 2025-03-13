@@ -388,7 +388,7 @@ class Dataset(DotDict):
             Dict: Dictionary containing FoV filtered angles and mask
         """
         # Check if FoV parameters exist
-        if not hasattr(self, 'bs_fov') or not hasattr(self, 'ue_fov'):
+        if not hasattr(self._data, 'bs_fov') or not hasattr(self._data, 'ue_fov'):
             # Return unfiltered & unrotated angles and no mask (indicating full FoV)
             return {
                 c.FOV_MASK_PARAM_NAME: None,
