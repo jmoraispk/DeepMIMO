@@ -586,7 +586,10 @@ print(f"- Width (X): {bb.width:.2f}m")
 print(f"- Length (Y): {bb.length:.2f}m")
 print(f"- Height (Z): {bb.height:.2f}m")
 
-#%% USER SAMPLING
+#%% USER SAMPLING: Dataset Trimming
+
+# For sampling users, we always have to find first the indices of the users we want to keep
+# Then, we can use them to index particular matrix, or the entire dataset -> subset() method
 
 print("\nActive Users and Dataset Subsetting (Trimming) Example")
 print("-" * 50)
@@ -597,45 +600,39 @@ print(f"Original dataset has {dataset.n_ue} UEs")
 print(f"Found {len(active_idxs)} active UEs")
 
 # Create new dataset with only active users
-active_dataset = dataset.subset(active_idxs)
-print(f"New dataset has {active_dataset.n_ue} UEs")
+dataset_t = dataset.subset(active_idxs)
+print(f"New dataset has {dataset_t.n_ue} UEs")
 
-dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0],
-                 bs_pos=active_dataset.tx_pos.T)
+dataset_t.plot_coverage(dataset_t.aoa_az[:,0])
 
 #%% USER SAMPLING: Uniform
 
 idxs = dataset.get_uniform_idxs([4,4])
-dm.dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
+dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
 
-#%% USER SAMPLING: Linear (1)
-
-# LINEAR PATHS: 2D plots across positions (with Class)
+#%% USER SAMPLING: Linear (1) 2D plots across positions (with Class)
 
 # Get the closest dataset positions for a given path
-linpath1 = dm.LinearPath(dataset, [100, 90], [-50, 90], n_steps=75)
-linpath2 = dm.LinearPath(dataset, [100, 80], [-50, 80], n_steps=75)
-linpath3 = dm.LinearPath(dataset, [ 30,  0], [ 30, 150], n_steps=75)
+idxs1 = dm.LinearPath(dataset.rx_pos, [100, 90], [-50,  90], n_steps=75).idxs
+idxs2 = dm.LinearPath(dataset.rx_pos, [100, 80], [-50,  80], n_steps=75).idxs
+idxs3 = dm.LinearPath(dataset.rx_pos, [ 30,  0], [ 30, 150], n_steps=75).idxs
 
-dm.plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
-              # title='Pathloss with positions', cbar_title='pathloss [dB]')
-              title='LoS with positions', cbar_title='LoS status')
+dataset.plot_coverage(dataset.los,title='LoS with positions', cbar_title='LoS status')
 
-plt.scatter(linpath1.pos[:,0], linpath1.pos[:,1], c='blue', label='path1', s=4, lw=.1)
-plt.scatter(linpath2.pos[:,0], linpath2.pos[:,1], c='cyan', label='path2', s=4, lw=.1)
-plt.scatter(linpath3.pos[:,0], linpath3.pos[:,1], c='red',  label='path3', s=4, lw=.1)
+plt.scatter(dataset.rx_pos[idxs1,0], dataset.rx_pos[idxs1,1], c='blue', label='path1', s=6, lw=.1)
+plt.scatter(dataset.rx_pos[idxs2,0], dataset.rx_pos[idxs2,1], c='cyan', label='path2', s=6, lw=.1)
+plt.scatter(dataset.rx_pos[idxs3,0], dataset.rx_pos[idxs3,1], c='red',  label='path3', s=6, lw=.1)
 plt.legend()
-
-# TODO: change make this general (able to plot linear paths on top of coverage map)
 
 #%% USER SAMPLING: Linear (2) feature variation across linear path
 
-for var_name in linpath1.get_feature_names():
+for var_name in ['los', 'pathloss', 'delay']:
     plt.figure(dpi=200)
-    plt.plot(getattr(linpath1, var_name), ls='-',  c='blue', label='path1',marker='*', markersize=7)
-    plt.plot(getattr(linpath2, var_name), ls='-.', c='cyan', label='path2',marker='s', markerfacecolor='none')
-    plt.plot(getattr(linpath3, var_name), ls='--', c='red',  label='path3',marker='o', markerfacecolor='w')
-    plt.xlabel('position index')
+    data = dataset[var_name] if var_name != 'delay' else dataset[var_name][:,0]
+    plt.plot(data[idxs1], ls='-',  c='blue', label='path1',marker='*', markersize=7)
+    plt.plot(data[idxs2], ls='-.', c='cyan', label='path2',marker='s', markerfacecolor='none')
+    plt.plot(data[idxs3], ls='--', c='red',  label='path3',marker='o', markerfacecolor='w')
+    plt.xlabel('Position index')
     plt.ylabel(f'{var_name}')
     plt.grid()
     plt.legend()
@@ -643,21 +640,18 @@ for var_name in linpath1.get_feature_names():
 
 #%% USER SAMPLING: In rectangular zones
 
-idxs_A = dm.get_idxs_in_xy_box(dataset.rx_pos,
-                            x_min=-100, x_max=-60, y_min=0, y_max=40)
+idxs_A = dm.get_idxs_with_limits(dataset.rx_pos, x_min=-100, x_max=-60, y_min=0, y_max=40)
 
-idxs_B = dm.get_idxs_in_xy_box(dataset.rx_pos,
-                            x_min= 125, x_max=165, y_min=0, y_max=40)
+idxs_B = dm.get_idxs_with_limits(dataset.rx_pos, x_min= 125, x_max=165, y_min=0, y_max=40)
 
 # Plot boxes 
-dm.plot_coverage(dataset.rx_pos, dataset.aoa_az, 
-                 bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
-                 title='Dataset zones on Optimum Beams', cbar_title='Optimum Beam Index')
+dataset.plot_coverage(dataset.aoa_az[:,0])
 
 plt.scatter(dataset.rx_pos[idxs_A,0], dataset.rx_pos[idxs_A,1],
-            label='box A', s=2, lw=.1, alpha=.1)
+            label='box A', s=2, lw=.1, alpha=.3)
 plt.scatter(dataset.rx_pos[idxs_B,0], dataset.rx_pos[idxs_B,1],
-            label='box B', s=2, lw=.1, alpha=.1)
+            label='box B', s=2, lw=.1, alpha=.3)
+plt.title('Dataset zones on AoA Azimuth [º]')
 
 #%% USER SAMPLING: In rectangular zones (2) Feature distributions
 def plot_feat_dist(data_A, data_B, feat_name):
@@ -680,8 +674,7 @@ def plot_feat_dist(data_A, data_B, feat_name):
 
 plot_feat_dist(dataset.rx_pos[idxs_A, 0], dataset.rx_pos[idxs_B, 0], 'x (m)')
 plot_feat_dist(dataset.rx_pos[idxs_A, 1], dataset.rx_pos[idxs_B, 1], 'y (m)')
-plot_feat_dist(dataset.los[idxs_A], dataset.los[idxs_B], 'LoS Status')
-
+plot_feat_dist(dataset.aoa_az[idxs_A, 0], dataset.aoa_az[idxs_B, 0], 'AoA Azimuth [º]')
 
 #%% BEAMFORMING: Received Power with TX Beamforming
 ch_params = dm.ChannelGenParameters()
