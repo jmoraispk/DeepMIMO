@@ -311,14 +311,15 @@ def _format_section(name: str, lines: list) -> dict:
     }
 
 def upload(scenario_name: str, key: str, description: Optional[str] = None,
-           details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, skip_zip: bool = False) -> str:
+           details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, 
+           skip_zip: bool = False) -> str:
     """Upload a DeepMIMO scenario to the server.
 
     Args:
         scenario_name: Scenario name
         key: Upload authorization key
-        description: Optional description of the scenario
-        details: Optional list of details about the scenario
+        description: Optional description of the scenario. This is the subtitle.
+        details: Optional list of details about the scenario. This is the detail boxes.
         extra_metadata: Optional dictionary containing additional metadata fields
                         (environment, digitalTwin, city, bbCoords, etc.)
             dict contents = {
@@ -332,6 +333,8 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
                 }
                 'city': <string>
             }
+            This variable can be used to assign manual metadata to the scenario.
+            Through this, submissions can be 100% automated (via code).
 
         skip_zip: Skip zipping the scenario folder if True
 
@@ -406,16 +409,17 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         response.raise_for_status()
         print("✓ Submission created successfully")
 
-        result = submission_data["download"][0]["zip"]
+        submission_result = submission_data["download"][0]["zip"]
+        
+        print('Thank you for your submission!')
+        print('Head over to deepmimo.net/dashboard?tab=submissions to monitor it.')
+        print('The admins have been notified and will get to it ASAP.')
+    
     except Exception as e:
         print(f"Error: Upload failed - {str(e)}")
-        result = None
+        submission_result = None
 
-    print('Thank you for your submission!')
-    print('Head over to deepmimo.net/dashboard?tab=submissions to add any additional details. ')
-    print('The admins have been notified and will get to it ASAP.')
-    
-    return result
+    return submission_result
 
 
 def _download_url(scenario_name: str) -> str:
