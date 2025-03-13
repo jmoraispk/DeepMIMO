@@ -147,6 +147,10 @@ class DotDict(Mapping[K, V]):
             value = DotDict(value)
         self._data[key] = value
 
+    def __delitem__(self, key: str) -> None:
+        """Enable dictionary-style deletion."""
+        del self._data[key]
+
     def update(self, other: Dict[str, Any]) -> None:
         """Update the dictionary with elements from another dictionary."""
         # Convert any nested dicts to DotDicts first

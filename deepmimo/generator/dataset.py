@@ -135,10 +135,9 @@ class Dataset(DotDict):
         if resolved_key != key:
             key = resolved_key
             try:
-                # Try direct access with resolved key
-                return self._data[key]  # Access underlying dictionary directly
+                return super().__getitem__(key)
             except KeyError:
-                pass  # Continue to computation check
+                pass
             
         if key in self._computed_attributes:
             compute_method_name = self._computed_attributes[key]
@@ -146,10 +145,10 @@ class Dataset(DotDict):
             value = compute_method()
             # Cache the result
             if isinstance(value, dict):
-                self.update(value)  # Uses DotDict's update which stores in _data
-                return self._data[key]  # Return the specific key requested
+                self.update(value)
+                return super().__getitem__(key)
             else:
-                self[key] = value  # Only store in _data
+                self[key] = value
                 return value
         
         raise KeyError(key)
@@ -388,7 +387,8 @@ class Dataset(DotDict):
             Dict: Dictionary containing FoV filtered angles and mask
         """
         # Check if FoV parameters exist
-        if not hasattr(self._data, 'bs_fov') or not hasattr(self._data, 'ue_fov'):
+        if not hasattr(self, 'bs_fov') or not hasattr(self, 'ue_fov'):
+
             # Return unfiltered & unrotated angles and no mask (indicating full FoV)
             return {
                 c.FOV_MASK_PARAM_NAME: None,
@@ -660,11 +660,16 @@ class Dataset(DotDict):
         - Channel matrices
         - Powers with antenna gain
         """
-        for key in [c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME,
-                    c.CHANNEL_PARAM_NAME,  c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
-                    c.AOD_EL_FOV_PARAM_NAME, c.AOD_AZ_FOV_PARAM_NAME,
-                    c.AOA_EL_FOV_PARAM_NAME, c.AOA_AZ_FOV_PARAM_NAME]:
-            self._data.pop(key, None)
+        # Define FOV-dependent keys
+        fov_dependent_keys = {
+            c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME,
+            c.CHANNEL_PARAM_NAME,  c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
+            c.AOD_EL_FOV_PARAM_NAME, c.AOD_AZ_FOV_PARAM_NAME,
+            c.AOA_EL_FOV_PARAM_NAME, c.AOA_AZ_FOV_PARAM_NAME
+        }
+        # Remove all FOV-dependent keys at once
+        for k in fov_dependent_keys & self.keys():
+            super().__delitem__(k)
 
     def apply_fov(self, bs_fov: np.ndarray = np.array([360, 180]), 
                   ue_fov: np.ndarray = np.array([360, 180])) -> None:
