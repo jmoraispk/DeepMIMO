@@ -195,7 +195,7 @@ class Dataset(DotDict):
         complex_gains = np.sqrt(powers_linear).astype(np.complex64)
         if coherent:
             complex_gains *= np.exp(1j * phases_rad)
-        total_power = np.abs(np.sum(complex_gains, axis=1))**2
+        total_power = np.abs(np.nansum(complex_gains, axis=1))**2
         
         # Convert back to dB
         pathloss = -10 * np.log10(total_power)
