@@ -241,4 +241,3 @@ PARAMSET_ANT_SPACING = 'spacing'
 PARAMSET_ANT_ROTATION = 'rotation'
 PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
-PARAMSET_ANT_FOV = 'fov'

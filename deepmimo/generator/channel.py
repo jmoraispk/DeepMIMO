@@ -35,7 +35,6 @@ class ChannelGenParameters(DotDict):
             c.PARAMSET_ANT_SHAPE: np.array([8, 1]), # Antenna dimensions in X - Y - Z
             c.PARAMSET_ANT_SPACING: 0.5,
             c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
-            c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
             c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
         },
         
@@ -44,7 +43,6 @@ class ChannelGenParameters(DotDict):
             c.PARAMSET_ANT_SHAPE: np.array([1, 1]), # Antenna dimensions in X - Y - Z
             c.PARAMSET_ANT_SPACING: 0.5,
             c.PARAMSET_ANT_ROTATION: np.array([0, 0, 0]), # Rotation around X - Y - Z axes
-            c.PARAMSET_ANT_FOV: np.array([360, 180]), # Horizontal-Vertical FoV
             c.PARAMSET_ANT_RAD_PAT: c.PARAMSET_ANT_RAD_PAT_VALS[0] # 'isotropic'
         },
         

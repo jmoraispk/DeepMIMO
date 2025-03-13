@@ -493,37 +493,33 @@ plt.tight_layout()
 plt.show()
 
 
-#%% [LATER] BASIC OPERATIONS: Antenna Field-of-View (FoV)
+#%% BASIC OPERATIONS: Antenna Field-of-View (FoV)
 
 params = dm.ChannelGenParameters()
 params['bs_antenna']['rotation'] = np.array([0, 0, -135])
+dataset.set_channel_params(params)
 
 # Create figure with 3 subplots
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), tight_layout=True)
 
 # Define 3 FoV
-fovs = [np.array([360, 180]),   # Facing -x
-        np.array([90, 180]),   # Facing 30º below -x in XZ plane
+fovs = [np.array([180, 180]),   # Facing -x
+        np.array([ 90, 180]),   # Facing 30º below -x in XZ plane
         np.array([ 60, 180])]   # Facing 60º below -x in XZ plane
 
 titles = ['FoV = 180°', 
           'FoV = 90°', 
           'FoV = 60°']
 
-cmap = ['tab:red', 'tab:blue', 'tab:green']
-
 # Plot each azimuth rotation
 for i, (fov, title) in enumerate(zip(fovs, titles)):
     # Update channel parameters with new rotation
     print(f"Iteration {i}: Setting FoV to {fov}")
-    params['bs_antenna']['fov'] = fov
-    dataset.set_channel_params(params)
-    
-    dataset.plot_coverage(dataset.los, ax=axes[i],# cmap=cmap,
-                          title=title, cbar_title='LoS status')
+    dataset.apply_fov(bs_fov=fov)
 
-plt.tight_layout()
-plt.show()
+    dataset.plot_coverage(dataset.los, ax=axes[i], title=title, cbar_title='LoS status')
+
+# Note, when applying fov, several cached values will be invalidated, like the los and channels
 
 #%% SCENE & MATERIALS
 

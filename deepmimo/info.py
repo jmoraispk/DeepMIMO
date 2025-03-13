@@ -109,9 +109,6 @@ CHANNEL_HELP_MESSAGES = {
     c.PARAMSET_ANT_ROTATION: 
         'Rotation angles [azimuth, elevation, polarization]\n'
         '\t Default: [0, 0, 0]  |  Type: list[float]  |  Units: degrees',
-    c.PARAMSET_ANT_FOV: 
-        'Field of view [horizontal, vertical]\n'
-        '\t Default: [360, 180]  |  Type: list[float]  |  Units: degrees',
     c.PARAMSET_ANT_RAD_PAT: 
         'Antenna element radiation pattern\n'
         '\t Default: "isotropic"  |  Type: str  |  Options: "isotropic", "halfwave-dipole"',
