@@ -430,11 +430,10 @@ dataset.pl
 # dataset.tx_ori == dataset.bs_ori
 
 #%% BASIC OPERATIONS: Attribute Access
-
-dataset['pl'] == getattr(dataset, 'pl') == dataset.pl == dataset.pathloss
-
-# TODO: make this comparison work?
-# TODO: maybe put this attribute section with the aliases?
+for var_name in ['pl', 'rx_pos', 'aoa_az', 'channel', ]:
+    a = dataset[var_name]
+    b = getattr(dataset, var_name)
+    print(f"dataset['{var_name}'] == dataset.{var_name}: {a is b}")
 
 #%% BASIC OPERATIONS: Antenna Rotations (1) Azimuth
 
