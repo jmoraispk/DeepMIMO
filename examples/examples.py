@@ -493,7 +493,7 @@ plt.tight_layout()
 plt.show()
 
 
-#%% BASIC OPERATIONS: Antenna Field-of-View (FoV)
+#%% [LATER] ADVANCED OPERATIONS: Antenna Field-of-View (FoV)
 
 params = dm.ChannelGenParameters()
 params['bs_antenna']['rotation'] = np.array([0, 0, -135])
@@ -600,9 +600,7 @@ print(f"Found {len(active_idxs)} active UEs")
 active_dataset = dataset.subset(active_idxs)
 print(f"New dataset has {active_dataset.n_ue} UEs")
 
-active_dataset.scene.plot()
-
-dm.dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0],
+dm.plot_coverage(active_dataset.rx_pos, active_dataset.aoa_az[:,0],
                  bs_pos=active_dataset.tx_pos.T)
 
 #%% USER SAMPLING: Uniform
