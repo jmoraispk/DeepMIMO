@@ -422,8 +422,19 @@ dataset.grid_spacing       # calls dataset._compute_grid_info()
 
 #%% BASIC OPERATIONS: Aliases
 
+checks = [
+    dataset.pwr is dataset.power,
+    dataset.pl is dataset.pathloss,
+    dataset.ch is dataset.channels,
+    dataset.ch_params is dataset.channel_params,
+    dataset.n_paths is dataset.num_paths,
+    dataset.n_ue is dataset.n_ue,
+    dataset.grid_size is dataset.grid_size,
+    dataset.grid_spacing is dataset.grid_spacing,
+]
 
-dataset.pl
+for check in checks:
+    print(check)
 
 # add alias?
 
@@ -747,8 +758,8 @@ def get_beam_angles(fov, n_beams=None, beam_res=None):
 # !unzip asu_campus_p2m.zip
 
 rt_folder = 'asu_campus'
-scen_name = dm.convert(rt_folder, scenario_name='asu_campus_insite')
-dataset_converted = dm.load(scen_name)
+scen_name_insite = dm.convert(rt_folder, scenario_name='asu_campus_insite')
+dataset_converted = dm.load(scen_name_insite)
 
 
 #%% CONVERTING DATASETS: From Sionna RT (1) Install Sionna
@@ -870,13 +881,18 @@ for x in tqdm(range(int(n_rx / n_rx_in_scene)+1), desc='Path computation'):
 
 #%% CONVERTING DATASETS: From Sionna RT (3) Convert to DeepMIMO
 
-
 from deepmimo.converter.sionna_rt import sionna_exporter
 
 save_folder = 'sionna_folder/'
 sionna_exporter.export_to_deepmimo(scene, path_list, my_compute_path_params, save_folder)
 
-dataset_sionna = dm.load(scen_name)
+scen_name_sionna = dm.convert(save_folder)
+
+dataset_sionna = dm.load(scen_name_sionna)
 
 dm.plot_coverage(dataset_sionna.rx_pos, dataset_sionna.los, bs_pos=dataset_sionna.tx_pos.T)
 
+#%% UPLOADING DATASETS
+
+dm.upload(scen_name_insite, key='')
+dm.upload(scen_name_sionna, key='')
