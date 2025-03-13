@@ -396,24 +396,29 @@ dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
 
 #%% BASIC OPERATIONS: Pathloss
 
+non_coherent_pathloss = dataset.compute_pathloss(coherent=False)
+coherent_pathloss = dataset.compute_pathloss(coherent=True) # default
 
-dataset.pathloss
-
-pathloss = dataset.compute_pathloss()
-
-# coherent vs non-coherent
-
+dataset.plot_coverage(non_coherent_pathloss, title='Non-Coherent pathloss')
+dataset.plot_coverage(coherent_pathloss, title='Coherent pathloss')
 
 #%% BASIC OPERATIONS: Implicit Computations
 
-dataset.distance
-dataset.num_paths
-dataset.num_interactions
+# Implicit and lazy computations
+# Functions are public when arguments are needed
 
-# The same for all other quantities really
-dataset.channels
-dataset.pathloss
-dataset.los
+# Public compute functions
+dataset.channels          # calls dataset.compute_channels()
+dataset.pathloss          # calls dataset.compute_pathloss()
+
+# Hidden compute functions
+dataset.distance           # calls dataset._compute_distances()
+dataset.num_paths          # calls dataset._compute_num_paths()
+dataset.num_interactions   # calls dataset._compute_num_interactions()
+dataset.los                # calls dataset._compute_los()
+dataset.n_ue               # calls dataset._compute_n_ue()
+dataset.grid_size          # calls dataset._compute_grid_info()
+dataset.grid_spacing       # calls dataset._compute_grid_info()
 
 #%% BASIC OPERATIONS: Aliases
 
