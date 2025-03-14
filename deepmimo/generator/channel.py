@@ -13,6 +13,7 @@ based on path information from ray-tracing and antenna configurations.
 import numpy as np
 from tqdm import tqdm
 from typing import Dict, Optional
+from copy import deepcopy
 from .. import consts as c
 from ..general_utilities import DotDict, compare_two_dicts
 
@@ -67,8 +68,8 @@ class ChannelGenParameters(DotDict):
         Args:
             data: Optional dictionary containing channel parameters to override defaults
         """
-        # Initialize with defaults
-        super().__init__(self.DEFAULT_PARAMS)
+        # Initialize with deep copy of defaults
+        super().__init__(deepcopy(self.DEFAULT_PARAMS))
         
         # Update with provided data if any
         if data is not None:
