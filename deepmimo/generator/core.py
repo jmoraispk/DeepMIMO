@@ -221,7 +221,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: i
         mat_path = os.path.join(rayfolder, mat_filename)
     
         if os.path.exists(mat_path):
-            print(f'Loading {mat_filename}..')
+            print(f'Loading {mat_filename}...', end='')
             tx_dict[key] = scipy.io.loadmat(mat_path)[key]
         else:
             print(f'File {mat_path} could not be found')
@@ -237,7 +237,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: i
         if key not in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
             tx_dict[key] = tx_dict[key][:, :max_paths, ...]
         
-        print(f'shape = {tx_dict[key].shape}')
+        print(f'Done. Shape: {tx_dict[key].shape}')
     return tx_dict 
 
 # Helper functions

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 scen_name = 'asu_campus_3p5'
 dm.download(scen_name)
-dataset = dm.load(scen_name)[0]
+dataset = dm.load(scen_name)[1]
 
 #%% LOAD: Detailed 
 
@@ -66,25 +66,25 @@ scenarios = dm.get_available_scenarios()
 print(f"Found {len(scenarios)} scenarios\n")
 
 for scen_name in scenarios:
-      params_json_path = dm.get_params_path(scen_name)
+    params_json_path = dm.get_params_path(scen_name)
 
-      # Skip if params file doesn't exist
-      if not os.path.exists(params_json_path):
-          print(f"Skipping {scen_name} - no params file found")
-          continue
+    # Skip if params file doesn't exist
+    if not os.path.exists(params_json_path):
+        print(f"Skipping {scen_name} - no params file found")
+        continue
 
-      params_dict = dm.load_dict_from_json(params_json_path)
-      rt_params = params_dict[dm.consts.RT_PARAMS_PARAM_NAME]
+    params_dict = dm.load_dict_from_json(params_json_path)
+    rt_params = params_dict[dm.consts.RT_PARAMS_PARAM_NAME]
 
-      # Calculate sums
-      max_reflections = rt_params[dm.consts.RT_PARAM_MAX_REFLECTIONS]
-      max_diffractions = rt_params[dm.consts.RT_PARAM_MAX_DIFFRACTIONS]
-      total_interactions = max_reflections + max_diffractions
+    # Calculate sums
+    max_reflections = rt_params[dm.consts.RT_PARAM_MAX_REFLECTIONS]
+    max_diffractions = rt_params[dm.consts.RT_PARAM_MAX_DIFFRACTIONS]
+    total_interactions = max_reflections + max_diffractions
 
-      print(f"\nScenario: {scen_name}")
-      print(f"Max Reflections: {max_reflections}")
-      print(f"Max Diffractions: {max_diffractions}")
-      print(f"Total Interactions: {total_interactions}")
+    print(f"\nScenario: {scen_name}")
+    print(f"Max Reflections: {max_reflections}")
+    print(f"Max Diffractions: {max_diffractions}")
+    print(f"Total Interactions: {total_interactions}")
 
 
 #%% VISUALIZATION: Coverage Maps
@@ -94,8 +94,9 @@ main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase',
 for key in main_keys:
     plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
     dm.plot_coverage(dataset.rx_pos, plt_var, bs_pos=dataset.tx_pos.T, title=key)
+    # break
 
-#%%  VISUALIZATION: Coverage Maps (3D)
+#%% VISUALIZATION: Coverage Maps (3D)
 
 #3D version
 dm.plot_coverage(dataset.rx_pos, dataset['los'], bs_pos=dataset.tx_pos.T,
@@ -106,7 +107,7 @@ dm.plot_coverage(dataset.rx_pos, dataset['los'], bs_pos=dataset.tx_pos.T,
 
 dm.plot_rays(dataset.rx_pos[10], dataset.tx_pos[0],
              dataset.inter_pos[10], dataset.inter[10],
-             proj_3D=False, color_by_type=True)
+             proj_3D=True, color_by_type=True)
 
 # 2D and 3D
 
@@ -147,7 +148,7 @@ print(f"\nUnique bounce profiles found: {unique_profiles}")
 
 # Create mapping for full profiles
 profile_to_idx = {profile: idx for idx, profile in enumerate(unique_profiles)}
-full_profile_data = np.array([profile_to_idx[profile] for profile in dataset.inter_str])
+full_profile_data = np.array([profile_to_idx[profile] for profile in dataset.inter_str[:, 0]])
 
 # Create colormap with white for no interaction and viridis colors for the rest
 n_profiles = len(unique_profiles)
@@ -392,15 +393,16 @@ plt.scatter(dataset.rx_pos[active_mask, 0], dataset.rx_pos[active_mask, 1],
 plt.legend()
 plt.show()
 
-dm.plot_coverage(dataset['rx_pos'], dataset.los != -1)
+dm.plot_coverage(dataset['rx_pos'], dataset.los != -1, cmap=['red', 'green'])
 
 #%% BASIC OPERATIONS: Pathloss
 
 non_coherent_pathloss = dataset.compute_pathloss(coherent=False)
 coherent_pathloss = dataset.compute_pathloss(coherent=True) # default
 
-dataset.plot_coverage(non_coherent_pathloss, title='Non-Coherent pathloss')
-dataset.plot_coverage(coherent_pathloss, title='Coherent pathloss')
+_, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=200)
+dataset.plot_coverage(non_coherent_pathloss, title='Non-Coherent pathloss', ax=axes[0])
+dataset.plot_coverage(coherent_pathloss, title='Coherent pathloss', ax=axes[1])
 
 #%% BASIC OPERATIONS: Implicit Computations
 
@@ -508,7 +510,7 @@ plt.tight_layout()
 plt.show()
 
 
-#%% [LATER] ADVANCED OPERATIONS: Antenna Field-of-View (FoV)
+#%% ADVANCED OPERATIONS: Antenna Field-of-View (FoV) (1) Azimuth FoV
 
 params = dm.ChannelGenParameters()
 params['bs_antenna']['rotation'] = np.array([0, 0, -135])
@@ -522,19 +524,39 @@ fovs = [np.array([180, 180]),   # Facing -x
         np.array([ 90, 180]),   # Facing 30º below -x in XZ plane
         np.array([ 60, 180])]   # Facing 60º below -x in XZ plane
 
-titles = ['FoV = 180°', 
-          'FoV = 90°', 
-          'FoV = 60°']
+titles = [f'FoV = {fov[0]} x {fov[1]}°' for fov in fovs]
 
 # Plot each azimuth rotation
 for i, (fov, title) in enumerate(zip(fovs, titles)):
     # Update channel parameters with new rotation
     print(f"Iteration {i}: Setting FoV to {fov}")
-    dataset.apply_fov(bs_fov=fov)
+    dataset.apply_fov(bs_fov=fov)  # dataset.apply_fov() to reset fov
 
     dataset.plot_coverage(dataset.los, ax=axes[i], title=title, cbar_title='LoS status')
 
 # Note, when applying fov, several cached values will be invalidated, like the los and channels
+
+#%% ADVANCED OPERATIONS: Antenna Field-of-View (FoV) (2) Elevation FoV
+
+params = dm.ChannelGenParameters()
+params['bs_antenna']['rotation'] = np.array([0, 30, -135])
+dataset.set_channel_params(params)
+
+# Create figure with 3 subplots
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), tight_layout=True)
+
+# Define 3 FoV
+fovs = [np.array([360, 90]),   # Facing -x
+        np.array([360, 45]),   # Facing 30º below -x in XZ plane
+        np.array([360, 30])]   # Facing 60º below -x in XZ plane
+
+titles = [f'FoV = {fov[0]} x {fov[1]}°' for fov in fovs]
+
+# Plot each azimuth rotation
+for i, (fov, title) in enumerate(zip(fovs, titles)):
+    print(f"Iteration {i}: Setting FoV to {fov}")
+    dataset.apply_fov(bs_fov=fov)  # dataset.apply_fov() to reset fov
+    dataset.plot_coverage(dataset.los, ax=axes[i], title=title, cbar_title='LoS status')
 
 #%% SCENE & MATERIALS
 
