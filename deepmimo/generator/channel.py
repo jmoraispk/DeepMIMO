@@ -75,79 +75,79 @@ class ChannelGenParameters(DotDict):
         if data is not None:
             self.update(data)
 
-def validate_ch_gen_params(params: ChannelGenParameters, n_ues: int) -> ChannelGenParameters:
-    """Validate channel generation parameters.
+    def validate(self, n_ues: int) -> 'ChannelGenParameters':
+        """Validate channel generation parameters.
         
-    This function checks that channel generation parameters are valid and
-    consistent with the dataset configuration.
-    
-    Args:
-        params (ChannelGenParameters): Channel generation parameters to validate
+        This method checks that channel generation parameters are valid and
+        consistent with the dataset configuration.
         
-    Returns:
-        ChannelGenParameters: Validated parameters
+        Args:
+            n_ues (int): Number of UEs to validate against
+            
+        Returns:
+            ChannelGenParameters: Self for method chaining
 
-    Raises:
-        ValueError: If parameters are invalid or inconsistent
-    """
-    # Notify the user if some keyword is not used (likely set incorrectly)
-    additional_keys = compare_two_dicts(params, ChannelGenParameters())
-    if len(additional_keys):
-        print('The following parameters seem unnecessary:')
-        print(additional_keys)
-    
-    # BS Antenna Rotation
-    if c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_BS].keys():
-        rotation_shape = params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION].shape
-        assert (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
-                'The BS antenna rotation must be a 3D vector'
-    else:
-        params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None                                            
-
-    # UE Antenna Rotation
-    if (c.PARAMSET_ANT_ROTATION in params[c.PARAMSET_ANT_UE].keys() and \
-        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None):
-        rotation_shape = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION].shape
-        cond_1 = len(rotation_shape) == 1 and rotation_shape[0] == 3
-        cond_2 = len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2
-        cond_3 = (rotation_shape[0] == n_ues)
-    
-        assert_str = ('The UE antenna rotation must either be a 3D vector for ' +
-                     'constant values or 3 x 2 matrix for random values')
-        assert cond_1 or cond_2 or cond_3, assert_str
-    
-        if len(rotation_shape) == 1 and rotation_shape[0] == 3:
-            rotation = np.zeros((n_ues, 3))
-            rotation[:] = params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
-            params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = rotation
-        elif (len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2):
-            params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = np.random.uniform(
-                              params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 0], 
-                              params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 1], 
-                              (n_ues, 3))
-    else:
-        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
-            np.array([None] * n_ues) # List of None
-    
-    # BS Antenna Radiation Pattern
-    if (c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_BS].keys() and \
-        params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] is not None):
-        assert_str = ("The BS antenna radiation pattern must have " + 
-                     f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
-        assert params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
-    else:
-        params[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
+        Raises:
+            ValueError: If parameters are invalid or inconsistent
+        """
+        # Notify the user if some keyword is not used (likely set incorrectly)
+        additional_keys = compare_two_dicts(self, ChannelGenParameters())
+        if len(additional_keys):
+            print('The following parameters seem unnecessary:')
+            print(additional_keys)
         
-    # UE Antenna Radiation Pattern
-    if c.PARAMSET_ANT_RAD_PAT in params[c.PARAMSET_ANT_UE].keys() and \
-        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None:
-        assert_str = ("The UE antenna radiation pattern must have one of the " + 
-                     f"following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
-        assert params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
-    else:
-        params[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
+        # BS Antenna Rotation
+        if c.PARAMSET_ANT_ROTATION in self[c.PARAMSET_ANT_BS].keys():
+            rotation_shape = self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION].shape
+            assert (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
+                    'The BS antenna rotation must be a 3D vector'
+        else:
+            self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None                                            
+
+        # UE Antenna Rotation
+        if (c.PARAMSET_ANT_ROTATION in self[c.PARAMSET_ANT_UE].keys() and \
+            self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None):
+            rotation_shape = self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION].shape
+            cond_1 = len(rotation_shape) == 1 and rotation_shape[0] == 3
+            cond_2 = len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2
+            cond_3 = (rotation_shape[0] == n_ues)
+        
+            assert_str = ('The UE antenna rotation must either be a 3D vector for ' +
+                         'constant values or 3 x 2 matrix for random values')
+            assert cond_1 or cond_2 or cond_3, assert_str
+        
+            if len(rotation_shape) == 1 and rotation_shape[0] == 3:
+                rotation = np.zeros((n_ues, 3))
+                rotation[:] = self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
+                self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = rotation
+            elif (len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2):
+                self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = np.random.uniform(
+                                  self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 0], 
+                                  self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 1], 
+                                  (n_ues, 3))
+        else:
+            self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
+                np.array([None] * n_ues) # List of None
+        
+        # BS Antenna Radiation Pattern
+        if (c.PARAMSET_ANT_RAD_PAT in self[c.PARAMSET_ANT_BS].keys() and \
+            self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] is not None):
+            assert_str = ("The BS antenna radiation pattern must have " + 
+                         f"one of the following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
+            assert self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
+        else:
+            self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
+            
+        # UE Antenna Radiation Pattern
+        if c.PARAMSET_ANT_RAD_PAT in self[c.PARAMSET_ANT_UE].keys() and \
+            self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] is not None:
+            assert_str = ("The UE antenna radiation pattern must have one of the " + 
+                         f"following values: {str(c.PARAMSET_ANT_RAD_PAT_VALS)}")
+            assert self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] in c.PARAMSET_ANT_RAD_PAT_VALS, assert_str
+        else:
+            self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_RAD_PAT] = c.PARAMSET_ANT_RAD_PAT_VALS[0]
                                              
-    return params
+        return self
 
 class OFDM_PathGenerator:
     """Class for generating OFDM paths with specified parameters.

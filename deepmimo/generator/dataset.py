@@ -41,7 +41,7 @@ from ..info import info
 from .visualization import plot_coverage
 
 # Channel generation
-from .channel import generate_MIMO_channel, ChannelGenParameters, validate_ch_gen_params
+from .channel import generate_MIMO_channel, ChannelGenParameters
 
 # Antenna patterns and geometry
 from .ant_patterns import AntennaPattern
@@ -200,8 +200,9 @@ class Dataset(DotDict):
         """
         if params is None:
             params = ChannelGenParameters()
-        else:
-            validate_ch_gen_params(params, self.n_ue)
+        
+        # Validate and update parameters
+        params.validate(self.n_ue)
         
         # Create a deep copy of the parameters to ensure isolation
         old_params = (super().__getitem__(c.CH_PARAMS_PARAM_NAME) 
@@ -242,12 +243,10 @@ class Dataset(DotDict):
         """
         if params is None:
             params = ChannelGenParameters() if self.ch_params is None else self.ch_params
-        else:
-            validate_ch_gen_params(params, self.n_ue)
         
-        # Store params directly in dictionary
+        # Validate and store params
+        params.validate(self.n_ue)
         self.set_channel_params(params)
-        
 
         np.random.seed(1001)
         
@@ -907,7 +906,6 @@ class Dataset(DotDict):
         'interaction_locations': c.INTERACTIONS_POS_PARAM_NAME
     }
 
-    
     def info(self, param_name: str | None = None) -> None:
         """Display help information about DeepMIMO dataset parameters.
         
