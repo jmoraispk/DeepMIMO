@@ -560,6 +560,8 @@ for i, (fov, title) in enumerate(zip(fovs, titles)):
 
 dataset.apply_fov() # to reset fov
 
+# Note, to see path information affected by fov, index arrays with: dataset.los != -1
+
 #%% SCENE & MATERIALS
 
 print("\nScene and Materials Example")
