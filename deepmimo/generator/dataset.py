@@ -202,6 +202,50 @@ class Dataset(DotDict):
         return pathloss
 
 
+    def _clear_cache_fov(self) -> None:
+        """Clear all cached attributes that depend on field of view (FoV) filtering.
+        
+        This includes:
+        - FoV filtered angles
+        - FoV mask
+        - Number of valid paths
+        - Line of sight status
+        - Channel matrices
+        - Powers with antenna gain
+        """
+        # Define FOV-dependent keys
+        fov_dependent_keys = {
+            c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME,
+            c.CHANNEL_PARAM_NAME,  c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
+            c.AOD_EL_FOV_PARAM_NAME, c.AOD_AZ_FOV_PARAM_NAME,
+            c.AOA_EL_FOV_PARAM_NAME, c.AOA_AZ_FOV_PARAM_NAME
+        }
+        # Remove all FOV-dependent keys at once
+        for k in fov_dependent_keys & self.keys():
+            super().__delitem__(k)
+
+    def _clear_cache_rotated_angles(self) -> None:
+        """Clear all cached attributes that depend on rotated angles.
+        
+        This includes:
+        - Rotated angles
+        - Field of view filtered angles (since they depend on rotated angles)
+        - Line of sight status
+        - Channel matrices
+        - Powers with antenna gain
+        """
+        # Define rotated angles dependent keys
+        rotated_angles_keys = {
+            c.AOD_EL_ROT_PARAM_NAME, c.AOD_AZ_ROT_PARAM_NAME,
+            c.AOA_EL_ROT_PARAM_NAME, c.AOA_AZ_ROT_PARAM_NAME
+        }
+        # Remove all rotated angles dependent keys at once
+        for k in rotated_angles_keys & self.keys():
+            super().__delitem__(k)
+        
+        # Also clear FOV cache since it depends on rotated angles
+        self._clear_cache_fov()
+
     def set_channel_params(self, params: Optional[ChannelGenParameters] = None) -> None:
         """Set channel generation parameters.
         
@@ -214,7 +258,18 @@ class Dataset(DotDict):
             validate_ch_gen_params(params, self.n_ue)
         
         # Create a deep copy of the parameters to ensure isolation
+        old_params = (super().__getitem__(c.CH_PARAMS_PARAM_NAME) 
+                      if c.CH_PARAMS_PARAM_NAME in super().keys() else None)
         self.ch_params = params.deepcopy()
+        
+        # If rotation has changed, clear rotated angles cache
+        if old_params is not None:
+            old_bs_rot = old_params.bs_antenna[c.PARAMSET_ANT_ROTATION]
+            old_ue_rot = old_params.ue_antenna[c.PARAMSET_ANT_ROTATION]
+            new_bs_rot = params.bs_antenna[c.PARAMSET_ANT_ROTATION]
+            new_ue_rot = params.ue_antenna[c.PARAMSET_ANT_ROTATION]
+            if not np.array_equal(old_bs_rot, new_bs_rot) or not np.array_equal(old_ue_rot, new_ue_rot):
+                self._clear_cache_rotated_angles()
         
         return params
     
@@ -648,28 +703,6 @@ class Dataset(DotDict):
         # Apply translation to each element in the 2D array
         return np.vectorize(translate_code)(inter_raw_str)
 
-    def clear_cache_fov(self) -> None:
-        """Clear all cached attributes that depend on field of view (FoV) filtering.
-        
-        This includes:
-        - FoV filtered angles
-        - FoV mask
-        - Number of valid paths
-        - Line of sight status
-        - Channel matrices
-        - Powers with antenna gain
-        """
-        # Define FOV-dependent keys
-        fov_dependent_keys = {
-            c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME,
-            c.CHANNEL_PARAM_NAME,  c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
-            c.AOD_EL_FOV_PARAM_NAME, c.AOD_AZ_FOV_PARAM_NAME,
-            c.AOA_EL_FOV_PARAM_NAME, c.AOA_AZ_FOV_PARAM_NAME
-        }
-        # Remove all FOV-dependent keys at once
-        for k in fov_dependent_keys & self.keys():
-            super().__delitem__(k)
-
     def apply_fov(self, bs_fov: np.ndarray = np.array([360, 180]), 
                   ue_fov: np.ndarray = np.array([360, 180])) -> None:
         """Apply field of view (FoV) filtering to the dataset.
@@ -691,7 +724,7 @@ class Dataset(DotDict):
             - Powers with antenna gain
         """
         # Clear cached FoV-dependent attributes
-        self.clear_cache_fov()
+        self._clear_cache_fov()
             
         # Store FoV parameters
         self.bs_fov = bs_fov

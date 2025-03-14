@@ -206,7 +206,7 @@ dm.info('ch_params')
 ch_params.freq_domain = False     # Whether to compute frequency domain channels
 
 dataset.compute_channels(ch_params)
-dataset.channel.shape
+dataset.channel.shape  # as many taps as paths
 
 # TODO:  PLOT CIRs using the delays of each path
 
@@ -239,7 +239,7 @@ plt.ylabel('Power per path [dBW]')
 plt.grid()
 plt.show()
 
-#%% CHANNEL GENERATION: Frequency Domain (3) [LATER] Compare with Time Domain
+#%% [LATER] CHANNEL GENERATION: Frequency Domain (3) Compare with Time Domain
 
 # Create channel generation parameters
 ch_params = dm.ChannelGenParameters()
@@ -451,7 +451,6 @@ for var_name in ['pl', 'rx_pos', 'aoa_az', 'channel', ]:
 #%% BASIC OPERATIONS: Antenna Rotations (1) Azimuth
 
 params = dm.ChannelGenParameters()
-dataset.set_channel_params(params)
 
 # Create figure with 3 subplots
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
@@ -468,7 +467,8 @@ titles = ['Orientation along +x (0°)',
 # Plot each azimuth rotation
 for i, (rot, title) in enumerate(zip(rotations, titles)):
     # Update channel parameters with new rotation
-    dataset.ch_params.bs_antenna.rotation = rot
+    params.bs_antenna.rotation = rot
+    dataset.set_channel_params(params)  # safest way to set params
     
     # Create coverage plot in current subplot
     dm.plot_coverage(dataset.rx_pos, dataset.los, 
@@ -481,7 +481,6 @@ plt.show()
 #%% BASIC OPERATIONS: Antenna Rotations (2) Elevation
 
 params = dm.ChannelGenParameters()
-dataset.set_channel_params(params)
 
 # Create figure with 3 subplots
 fig, axes = plt.subplots(1, 3, figsize=(18, 5), subplot_kw={'projection': '3d'})
@@ -498,7 +497,8 @@ titles = ['Orientation along -x (180°)',
 # Plot each azimuth rotation
 for i, (rot, title) in enumerate(zip(rotations, titles)):
     # Update channel parameters with new rotation
-    dataset.ch_params.bs_antenna.rotation = rot
+    params.bs_antenna.rotation = rot
+    dataset.set_channel_params(params)
     
     # Create coverage plot in current subplot
     dataset.plot_coverage(dataset.los, proj_3D=True, ax=axes[i],
@@ -555,8 +555,10 @@ titles = [f'FoV = {fov[0]} x {fov[1]}°' for fov in fovs]
 # Plot each azimuth rotation
 for i, (fov, title) in enumerate(zip(fovs, titles)):
     print(f"Iteration {i}: Setting FoV to {fov}")
-    dataset.apply_fov(bs_fov=fov)  # dataset.apply_fov() to reset fov
+    dataset.apply_fov(bs_fov=fov)
     dataset.plot_coverage(dataset.los, ax=axes[i], title=title, cbar_title='LoS status')
+
+dataset.apply_fov() # to reset fov
 
 #%% SCENE & MATERIALS
 
