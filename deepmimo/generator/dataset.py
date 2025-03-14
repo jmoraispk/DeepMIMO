@@ -53,7 +53,7 @@ from .geometry import (
 )
 
 # Utilities
-from .utils import dbw2watt
+from .utils import dbw2watt, get_uniform_idxs
 
 # Parameters that should remain consistent across datasets in a MacroDataset
 SHARED_PARAMS = [
@@ -768,23 +768,7 @@ class Dataset(DotDict):
         Raises:
             ValueError: If dataset does not have a valid grid structure
         """
-        
-        grid_size = self.grid_size  # [x_size, y_size] = [n_cols, n_rows]
-        
-        # Check if dataset has valid grid structure
-        if not self._is_valid_grid():
-            print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {self.n_ue} users in rx_pos")
-            if steps == [1, 1]:
-                idxs = np.arange(self.n_ue)
-            else:
-                raise ValueError("Dataset does not have a valid grid structure. Cannot perform uniform sampling.")
-        else:
-            # Get indices of users at uniform intervals
-            cols = np.arange(grid_size[0], step=steps[0])
-            rows = np.arange(grid_size[1], step=steps[1])
-            idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
-        
-        return idxs
+        return get_uniform_idxs(self.n_ue, self.grid_size, steps)
     
 
     ###########################################

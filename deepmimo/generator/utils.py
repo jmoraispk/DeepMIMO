@@ -34,6 +34,46 @@ def dbw2watt(val: float | np.ndarray) -> float | np.ndarray:
     """
     return 10**(val/10)
 
+def get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.ndarray:
+    """Return indices of users at uniform intervals in a grid.
+    
+    This function generates indices for uniform sampling of users in a grid,
+    allowing for different sampling rates in each dimension. It validates the
+    grid structure and handles edge cases appropriately.
+
+    Args:
+        n_ue: Number of users in the dataset
+        grid_size: Array with [x_size, y_size] - number of points in each dimension
+        steps: List of sampling steps for each dimension [x_step, y_step]
+        
+    Returns:
+        Array of indices for uniformly sampled users
+        
+    Raises:
+        ValueError: If dataset does not have a valid grid structure and steps != [1,1]
+        
+    Example:
+        >>> rx_pos = np.array([[0,0], [0,1], [1,0], [1,1]])  # 2x2 grid
+        >>> grid_size = np.array([2, 2])
+        >>> steps = [2, 2]  # Sample every other point
+        >>> get_uniform_idxs(rx_pos, grid_size, steps)
+        array([0])  # Returns index of first point
+    """    
+    # Check if dataset has valid grid structure
+    if np.prod(grid_size) != n_ue:
+        print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {n_ue} users in rx_pos")
+        if steps == [1, 1]:
+            idxs = np.arange(n_ue)
+        else:
+            raise ValueError("Dataset does not have a valid grid structure. Cannot perform uniform sampling.")
+    else:
+        # Get indices of users at uniform intervals
+        cols = np.arange(grid_size[0], step=steps[0])
+        rows = np.arange(grid_size[1], step=steps[1])
+        idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
+    
+    return idxs
+
 def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.ndarray:
     """Return indices of users at uniform intervals.
     
