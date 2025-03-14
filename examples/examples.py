@@ -94,7 +94,6 @@ main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase',
 for key in main_keys:
     plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
     dm.plot_coverage(dataset.rx_pos, plt_var, bs_pos=dataset.tx_pos.T, title=key)
-    # break
 
 #%% VISUALIZATION: Coverage Maps (3D)
 
@@ -208,7 +207,14 @@ ch_params.freq_domain = False     # Whether to compute frequency domain channels
 dataset.compute_channels(ch_params)
 dataset.channel.shape  # as many taps as paths
 
-# TODO:  PLOT CIRs using the delays of each path
+# Plot CIRs using the delays of each path
+user_idx = np.where(dataset.n_paths > 0)[0][0]
+plt.figure(dpi=200)
+plt.stem(dataset.delay[user_idx]*10**6, dataset.power[user_idx], basefmt='none')
+plt.xlabel('Time of arrival [us]')
+plt.ylabel('Power per path [dBW]')
+plt.grid()
+plt.show()
 
 #%% CHANNEL GENERATION: Frequency Domain
 ch_params = dm.ChannelGenParameters()
@@ -229,15 +235,6 @@ plt.show()
 
 # NOTE: show the case of when there are too few subcarriers
 
-#%% CHANNEL GENERATION: Frequency Domain (2) CIR
-pwrs = dataset.power[user_idx]
-
-plt.figure(dpi=200)
-plt.stem(dataset.delay[user_idx]*10**6, pwrs, basefmt='none')
-plt.xlabel('Time of arrival [us]')
-plt.ylabel('Power per path [dBW]')
-plt.grid()
-plt.show()
 
 #%% [LATER] CHANNEL GENERATION: Frequency Domain (3) Compare with Time Domain
 
@@ -438,10 +435,6 @@ checks = [
 for check in checks:
     print(check)
 
-# add alias?
-
-# dataset.tx_ori == dataset.bs_ori
-
 #%% BASIC OPERATIONS: Attribute Access
 for var_name in ['pl', 'rx_pos', 'aoa_az', 'channel', ]:
     a = dataset[var_name]
@@ -453,7 +446,7 @@ for var_name in ['pl', 'rx_pos', 'aoa_az', 'channel', ]:
 params = dm.ChannelGenParameters()
 
 # Create figure with 3 subplots
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), tight_layout=True)
 
 # Define 3 different rotations to show
 rotations = [np.array([0, 0, 0]),     # Facing +x
@@ -475,15 +468,13 @@ for i, (rot, title) in enumerate(zip(rotations, titles)):
                      bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
                      ax=axes[i], title=title, cbar_title='LoS status')
 
-plt.tight_layout()
-plt.show()
 
 #%% BASIC OPERATIONS: Antenna Rotations (2) Elevation
 
 params = dm.ChannelGenParameters()
 
 # Create figure with 3 subplots
-fig, axes = plt.subplots(1, 3, figsize=(18, 5), subplot_kw={'projection': '3d'})
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), subplot_kw={'projection': '3d'}, tight_layout=True)
 
 # Define 3 different rotations to show
 rotations = [np.array([0,  0, -180]),   # Facing -x
@@ -505,9 +496,6 @@ for i, (rot, title) in enumerate(zip(rotations, titles)):
                           title=title, cbar_title='LoS status')
     axes[i].view_init(elev=5, azim=-90)  # Set view to xz plane to see tilt
     axes[i].set_yticks([])  # Remove y-axis ticks to unclutter the plot
-
-plt.tight_layout()
-plt.show()
 
 
 #%% ADVANCED OPERATIONS: Antenna Field-of-View (FoV) (1) Azimuth FoV
@@ -562,8 +550,15 @@ dataset.apply_fov() # to reset fov
 
 # Note, to see path information affected by fov, index arrays with: dataset.los != -1
 
-#%% SCENE & MATERIALS
+#%% SCENE & MATERIALS: Visualization
 
+# Plot the full scene
+dataset.scene.plot()
+
+# Plot the scene with triangular faces
+dataset.scene.plot(mode='tri_faces')
+
+#%% SCENE & MATERIALS: Operations
 print("\nScene and Materials Example")
 print("-" * 50)
 
@@ -718,7 +713,7 @@ plot_feat_dist(dataset.rx_pos[idxs_A, 1], dataset.rx_pos[idxs_B, 1], 'y (m)')
 plot_feat_dist(dataset.aoa_az[idxs_A, 0], dataset.aoa_az[idxs_B, 0], 'AoA Azimuth [º]')
 
 #%% BEAMFORMING: Received Power with TX Beamforming
-ch_params = dm.ChannelGenParameters()
+ch_params = dm.ChannelGenParameters()  # default array has 8 elements
 ch_params.bs_antenna.rotation = np.array([0, 0, -135])
 dataset.compute_channels(ch_params)
 
@@ -726,11 +721,11 @@ n_beams = 25
 
 beam_angles = np.around(np.linspace(-60, 60, n_beams), 2)
 
-# F1 is [n_beams, n_ant]
-F1 = np.array([dm.steering_vec(dataset.ch_params.bs_antenna.shape, phi=azi,
-                               spacing=dataset.ch_params.bs_antenna.spacing).squeeze()
+# Compute Beamformers: F1 is [n_beams, n_ant]
+F1 = np.array([dm.steering_vec(dataset.ch_params.bs_antenna.shape, phi=azi).squeeze()
                for azi in beam_angles])
 
+# Apply beamformers
 recv_bf_pwr_dbm = np.zeros((dataset.n_ue, n_beams)) * np.nan
 mean_amplitude = np.abs(F1 @ dataset.channel[dataset.los != -1]).mean(axis=1).mean(axis=-1)
 # Avg over rx antennas and subcarriers, respectively
@@ -757,7 +752,7 @@ dm.plot_coverage(dataset.rx_pos, best_beams, bs_pos=dataset.tx_pos.T, bs_ori=dat
 
 max_bf_pwr = np.max(recv_bf_pwr_dbm, axis=1) # assumes grid of beams!
 dm.plot_coverage(dataset.rx_pos, max_bf_pwr, bs_pos=dataset.tx_pos.T, bs_ori=dataset.tx_ori,
-              title= 'Best Beamformed Power (assuming GoB) ')
+              title= 'Best Beamformed Power (with grid of beams) ')
 
 #%% [LATER] BEAMFORMING: (integrating beam angles and beamforming in dataset?)
 
@@ -783,7 +778,7 @@ def get_beam_angles(fov, n_beams=None, beam_res=None):
 # !wget -O asu_campus_p2m.zip "https://www.dropbox.com/s/lgzw8am5v5qz06v/asu_campus_p2m.zip?e=1&st=pcon8w9l&dl=1"
 # !unzip asu_campus_p2m.zip
 
-rt_folder = 'asu_campus'
+rt_folder = r'C:\Users\jmora\Documents\GitHub\DeepMIMO\P2Ms\asu_campus_lite'
 scen_name_insite = dm.convert(rt_folder, scenario_name='asu_campus_insite')
 dataset_converted = dm.load(scen_name_insite)
 
