@@ -1,8 +1,30 @@
 """
 Dataset module for DeepMIMO.
 
-This module provides the Dataset class for managing DeepMIMO datasets,
-including channel matrices, path information, and metadata.
+This module provides two main classes:
+
+Dataset: For managing individual DeepMIMO datasets, including:
+- Channel matrices 
+- Path information (angles, powers, delays)
+- Position information
+- TX/RX configuration information
+- Metadata
+
+MacroDataset: For managing collections of related DeepMIMO datasets that *may* share:
+- Scene configuration
+- Material properties
+- Loading parameters 
+- Ray-tracing parameters
+
+The Dataset class is organized into several logical sections:
+1. Core Dictionary Interface - Basic dictionary-like operations and key resolution
+2. Channel Computations - Channel matrices and array responses
+3. Geometric Computations - Angles, rotations, and positions
+4. Field of View Operations - FoV filtering and caching
+5. Path and Power Computations - Path characteristics and power calculations
+6. Grid and Sampling Operations - Grid info and dataset subsetting
+7. Visualization - Plotting and display methods
+8. Utilities and Configuration - Helper methods and class configuration
 """
 
 # Standard library imports
@@ -90,6 +112,10 @@ class Dataset(DotDict):
         (See aliases dictionary for complete mapping)
     """
     
+    ###########################################
+    # 1. Core Interface
+    ###########################################
+    
     def __init__(self, data: Optional[Dict[str, Any]] = None):
         """Initialize dataset with optional data.
         
@@ -97,7 +123,6 @@ class Dataset(DotDict):
             data: Initial dataset dictionary. If None, creates empty dataset.
         """
         super().__init__(data or {})
-
 
     def __getattr__(self, key: str) -> Any:
         """Enable dot notation access."""
@@ -152,99 +177,20 @@ class Dataset(DotDict):
                 return value
         
         raise KeyError(key)
+    
+    
+    def __dir__(self):
+        """Return list of valid attributes including computed ones."""
+        # Include standard attributes, computed attributes, and aliases
+        return list(set(
+            list(super().__dir__()) + 
+            list(self._computed_attributes.keys()) + 
+            list(self._aliases.keys())
+        ))
 
-    def _compute_num_paths(self) -> np.ndarray:
-        """Compute number of valid paths for each user after FoV filtering."""
-        # Get FoV-filtered angles (this will trigger FoV computation if needed)
-        aoa_az_fov = self[c.AOA_AZ_FOV_PARAM_NAME]
-        
-        # Count non-NaN values (NaN indicates filtered out by FoV)
-        return (~np.isnan(aoa_az_fov)).sum(axis=1)
-
-    def _compute_n_ue(self) -> int:
-        """Return the number of UEs/receivers in the dataset."""
-        return self.rx_pos.shape[0]
-
-    def _compute_num_interactions(self) -> np.ndarray:
-        """Compute number of interactions for each path of each user."""
-        result = np.zeros_like(self.inter)
-        result[np.isnan(self.inter)] = np.nan # no interaction
-        non_zero = self.inter > 0
-        result[non_zero] = np.floor(np.log10(self.inter[non_zero])) + 1
-        return result
-
-    def _compute_distances(self) -> np.ndarray:
-        """Compute Euclidean distances between receivers and transmitter."""
-        return np.linalg.norm(self.rx_pos - self.tx_pos, axis=1)
-
-    def compute_pathloss(self, coherent: bool = True) -> np.ndarray:
-        """Compute path loss in dB, assuming 0 dBm transmitted power.
-        
-        Args:
-            coherent (bool): Whether to use coherent sum. Defaults to True
-        
-        Returns:
-            numpy.ndarray: Path loss in dB
-        """
-        # Convert powers to linear scale
-        powers_linear = 10 ** (self.power / 10)  # mW
-        phases_rad = np.deg2rad(self.phase)
-        
-        # Sum complex path gains
-        complex_gains = np.sqrt(powers_linear).astype(np.complex64)
-        if coherent:
-            complex_gains *= np.exp(1j * phases_rad)
-        total_power = np.abs(np.nansum(complex_gains, axis=1))**2
-        
-        # Convert back to dB
-        pathloss = -10 * np.log10(total_power)
-        self[c.PATHLOSS_PARAM_NAME] = pathloss  # Cache the result
-        return pathloss
-
-
-    def _clear_cache_fov(self) -> None:
-        """Clear all cached attributes that depend on field of view (FoV) filtering.
-        
-        This includes:
-        - FoV filtered angles
-        - FoV mask
-        - Number of valid paths
-        - Line of sight status
-        - Channel matrices
-        - Powers with antenna gain
-        """
-        # Define FOV-dependent keys
-        fov_dependent_keys = {
-            c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME,
-            c.CHANNEL_PARAM_NAME,  c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
-            c.AOD_EL_FOV_PARAM_NAME, c.AOD_AZ_FOV_PARAM_NAME,
-            c.AOA_EL_FOV_PARAM_NAME, c.AOA_AZ_FOV_PARAM_NAME
-        }
-        # Remove all FOV-dependent keys at once
-        for k in fov_dependent_keys & self.keys():
-            super().__delitem__(k)
-
-    def _clear_cache_rotated_angles(self) -> None:
-        """Clear all cached attributes that depend on rotated angles.
-        
-        This includes:
-        - Rotated angles
-        - Field of view filtered angles (since they depend on rotated angles)
-        - Line of sight status
-        - Channel matrices
-        - Powers with antenna gain
-        """
-        # Define rotated angles dependent keys
-        rotated_angles_keys = {
-            c.AOD_EL_ROT_PARAM_NAME, c.AOD_AZ_ROT_PARAM_NAME,
-            c.AOA_EL_ROT_PARAM_NAME, c.AOA_AZ_ROT_PARAM_NAME
-        }
-        # Remove all rotated angles dependent keys at once
-        for k in rotated_angles_keys & self.keys():
-            super().__delitem__(k)
-        
-        # Also clear FOV cache since it depends on rotated angles
-        self._clear_cache_fov()
+    ###########################################
+    # 2. Channel Computations
+    ###########################################
 
     def set_channel_params(self, params: Optional[ChannelGenParameters] = None) -> None:
         """Set channel generation parameters.
@@ -322,79 +268,46 @@ class Dataset(DotDict):
         self[c.CHANNEL_PARAM_NAME] = channel  # Cache the result
 
         return channel
+    
+    ###########################################
+    # 3. Geometric Computations
+    ###########################################
 
-    def _compute_los(self) -> np.ndarray:
-        """Calculate Line of Sight status (1: LoS, 0: NLoS, -1: No paths) for each receiver.
-
-        Uses the interaction codes defined in consts.py:
-            INTERACTION_LOS = 0: Line-of-sight (direct path)
-            INTERACTION_REFLECTION = 1: Reflection
-            INTERACTION_DIFFRACTION = 2: Diffraction
-            INTERACTION_SCATTERING = 3: Scattering
-            INTERACTION_TRANSMISSION = 4: Transmission
-
+    @property
+    def tx_ori(self) -> np.ndarray:
+        """Compute the orientation of the transmitter.
+        
         Returns:
-            numpy.ndarray: LoS status array, shape (n_users,)
+            Array of transmitter orientation
         """
-        los_status = np.full(self.inter.shape[0], -1)
+        return self.ch_params['bs_antenna']['rotation']*np.pi/180
+    
+    @property
+    def bs_ori(self) -> np.ndarray:
+        """Alias for tx_ori - computes the orientation of the transmitter/basestation.
         
-        # First ensure we have rotated angles by accessing them
-        # This will trigger computation if needed
-        _ = self[c.AOD_AZ_ROT_PARAM_NAME]
-        
-        # Now get FoV mask which will use the rotated angles
-        fov_mask = self[c.FOV_MASK_PARAM_NAME]
-        if fov_mask is not None:
-            # If we have FoV filtering, only consider paths within FoV
-            has_paths = np.any(fov_mask, axis=1)
-            # For each user, find the first valid path within FoV
-            first_valid_path = np.full(self.inter.shape[0], -1)
-            for i in range(self.inter.shape[0]):
-                valid_paths = np.where(fov_mask[i])[0]
-                if len(valid_paths) > 0:
-                    first_valid_path[i] = self.inter[i, valid_paths[0]]
-        else:
-            # No FoV filtering, use all paths
-            has_paths = self.num_paths > 0
-            first_valid_path = self.inter[:, 0]
-        
-        # Set NLoS status for users with paths
-        los_status[has_paths] = 0
-        
-        # Set LoS status for users with direct path as first valid path
-        los_mask = first_valid_path == c.INTERACTION_LOS
-        los_status[los_mask & has_paths] = 1
-        
-        self[c.LOS_PARAM_NAME] = los_status
-        return los_status
-
-    def _compute_power_linear_ant_gain(self, tx_ant_params: Optional[Dict[str, Any]] = None,
-                                       rx_ant_params: Optional[Dict[str, Any]] = None) -> np.ndarray:
-        """Compute received power with antenna patterns applied.
-        
-        Args:
-            tx_ant_params (Optional[Dict[str, Any]]): Transmitter antenna parameters. If None, uses stored params.
-            rx_ant_params (Optional[Dict[str, Any]]): Receiver antenna parameters. If None, uses stored params.
-            
         Returns:
-            np.ndarray: Powers with antenna pattern applied, shape [n_users, n_paths]
+            Array of transmitter orientation
         """
-        # Use stored channel parameters if none provided
-        if tx_ant_params is None:
-            tx_ant_params = self.ch_params[c.PARAMSET_ANT_BS]
-        if rx_ant_params is None:
-            rx_ant_params = self.ch_params[c.PARAMSET_ANT_UE]
-            
-        # Create antenna pattern object
-        antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
-                                        rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
+        return self.tx_ori
+    
+    @property
+    def rx_ori(self) -> np.ndarray:
+        """Compute the orientation of the receivers.
         
-        # Get FoV filtered angles and apply antenna patterns in batch
-        return antennapattern.apply_batch(power=self[c.PWR_LINEAR_PARAM_NAME],
-                                        aoa_theta=self[c.AOA_EL_FOV_PARAM_NAME],
-                                        aoa_phi=self[c.AOA_AZ_FOV_PARAM_NAME], 
-                                        aod_theta=self[c.AOD_EL_FOV_PARAM_NAME],
-                                        aod_phi=self[c.AOD_AZ_FOV_PARAM_NAME])
+        Returns:
+            Array of receiver orientation
+        """
+        return self.ch_params['ue_antenna']['rotation']*np.pi/180
+
+    @property
+    def ue_ori(self) -> np.ndarray:
+        """Alias for rx_ori - computes the orientation of the receivers/users.
+        
+        Returns:
+            Array of receiver orientation
+        """
+        return self.rx_ori
 
     def _compute_rotated_angles(self, tx_ant_params: Optional[Dict[str, Any]] = None, 
                                 rx_ant_params: Optional[Dict[str, Any]] = None) -> Dict[str, np.ndarray]:
@@ -431,6 +344,98 @@ class Dataset(DotDict):
             c.AOA_AZ_ROT_PARAM_NAME: aoa_phi_rot
         }
 
+    def _clear_cache_rotated_angles(self) -> None:
+        """Clear all cached attributes that depend on rotated angles.
+        
+        This includes:
+        - Rotated angles
+        - Field of view filtered angles (since they depend on rotated angles)
+        - Line of sight status
+        - Channel matrices
+        - Powers with antenna gain
+        """
+        # Define rotated angles dependent keys
+        rotated_angles_keys = {
+            c.AOD_EL_ROT_PARAM_NAME, c.AOD_AZ_ROT_PARAM_NAME,
+            c.AOA_EL_ROT_PARAM_NAME, c.AOA_AZ_ROT_PARAM_NAME
+        }
+        # Remove all rotated angles dependent keys at once
+        for k in rotated_angles_keys & self.keys():
+            super().__delitem__(k)
+        
+        # Also clear FOV cache since it depends on rotated angles
+        self._clear_cache_fov()
+
+    def _compute_single_array_response(self, ant_params: Dict, theta: np.ndarray, 
+                                       phi: np.ndarray) -> np.ndarray:
+        """Internal method to compute array response for a single antenna array.
+        
+        Args:
+            ant_params: Antenna parameters dictionary
+            theta: Elevation angles array
+            phi: Azimuth angles array
+            
+        Returns:
+            Array response matrix
+        """
+        # Use attribute access for antenna parameters
+        kd = 2 * np.pi * ant_params.spacing
+        ant_ind = ant_indices(ant_params[c.PARAMSET_ANT_SHAPE])  # tuple complications..
+        
+        return array_response_batch(ant_ind=ant_ind, theta=theta, phi=phi, kd=kd)
+
+    def _compute_array_response_product(self) -> np.ndarray:
+        """Internal method to compute product of TX and RX array responses.
+        
+        Returns:
+            Array response product matrix
+        """
+        # Get antenna parameters from channel parameters
+        tx_ant_params = self.ch_params.bs_antenna
+        rx_ant_params = self.ch_params.ue_antenna
+        
+        # Compute individual responses
+        array_response_TX = self._compute_single_array_response(
+            tx_ant_params, self[c.AOD_EL_FOV_PARAM_NAME], self[c.AOD_AZ_FOV_PARAM_NAME])
+            
+        array_response_RX = self._compute_single_array_response(
+            rx_ant_params, self[c.AOA_EL_FOV_PARAM_NAME], self[c.AOA_AZ_FOV_PARAM_NAME])
+        
+        # Compute product with proper broadcasting
+        # [n_users, M_rx, M_tx, n_paths]
+        return array_response_RX[:, :, None, :] * array_response_TX[:, None, :, :]
+
+    ###########################################
+    # 4. Field of View Operations
+    ###########################################
+
+    def apply_fov(self, bs_fov: np.ndarray = np.array([360, 180]), 
+                  ue_fov: np.ndarray = np.array([360, 180])) -> None:
+        """Apply field of view (FoV) filtering to the dataset.
+        
+        This method sets the FoV parameters and invalidates any cached FoV-dependent attributes.
+        The actual filtering will be performed lazily when FoV-dependent attributes are accessed.
+        
+        Args:
+            bs_fov: Base station FoV as [horizontal, vertical] in degrees. Defaults to [360, 180] (full sphere).
+            ue_fov: User equipment FoV as [horizontal, vertical] in degrees. Defaults to [360, 180] (full sphere).
+            
+        Note:
+            This operation affects all path-related attributes and cached computations.
+            The following will be recomputed as needed when accessed:
+            - FoV filtered angles
+            - Number of valid paths
+            - Line of sight status
+            - Channel matrices
+            - Powers with antenna gain
+        """
+        # Clear cached FoV-dependent attributes
+        self._clear_cache_fov()
+            
+        # Store FoV parameters
+        self.bs_fov = bs_fov
+        self.ue_fov = ue_fov
+    
     def _compute_fov(self) -> Dict[str, np.ndarray]:
         """Compute field of view filtered angles for all users.
         
@@ -493,48 +498,181 @@ class Dataset(DotDict):
             c.AOA_AZ_FOV_PARAM_NAME: np.where(fov_mask, aoa_phi, np.nan)
         }
 
-    def _compute_single_array_response(self, ant_params: Dict, theta: np.ndarray, 
-                                       phi: np.ndarray) -> np.ndarray:
-        """Internal method to compute array response for a single antenna array.
+
+    def _clear_cache_fov(self) -> None:
+        """Clear all cached attributes that depend on field of view (FoV) filtering.
+        
+        This includes:
+        - FoV filtered angles
+        - FoV mask
+        - Number of valid paths
+        - Line of sight status
+        - Channel matrices
+        - Powers with antenna gain
+        """
+        # Define FOV-dependent keys
+        fov_dependent_keys = {
+            c.FOV_MASK_PARAM_NAME, c.NUM_PATHS_PARAM_NAME, c.LOS_PARAM_NAME,
+            c.CHANNEL_PARAM_NAME,  c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
+            c.AOD_EL_FOV_PARAM_NAME, c.AOD_AZ_FOV_PARAM_NAME,
+            c.AOA_EL_FOV_PARAM_NAME, c.AOA_AZ_FOV_PARAM_NAME
+        }
+        # Remove all FOV-dependent keys at once
+        for k in fov_dependent_keys & self.keys():
+            super().__delitem__(k)
+
+    ###########################################
+    # 5. Path and Power Computations
+    ###########################################
+
+    def compute_pathloss(self, coherent: bool = True) -> np.ndarray:
+        """Compute path loss in dB, assuming 0 dBm transmitted power.
         
         Args:
-            ant_params: Antenna parameters dictionary
-            theta: Elevation angles array
-            phi: Azimuth angles array
-            
-        Returns:
-            Array response matrix
-        """
-        # Use attribute access for antenna parameters
-        kd = 2 * np.pi * ant_params.spacing
-        ant_ind = ant_indices(ant_params[c.PARAMSET_ANT_SHAPE])  # tuple complications..
+            coherent (bool): Whether to use coherent sum. Defaults to True
         
-        return array_response_batch(ant_ind=ant_ind, theta=theta, phi=phi, kd=kd)
+        Returns:
+            numpy.ndarray: Path loss in dB
+        """
+        # Convert powers to linear scale
+        powers_linear = 10 ** (self.power / 10)  # mW
+        phases_rad = np.deg2rad(self.phase)
+        
+        # Sum complex path gains
+        complex_gains = np.sqrt(powers_linear).astype(np.complex64)
+        if coherent:
+            complex_gains *= np.exp(1j * phases_rad)
+        total_power = np.abs(np.nansum(complex_gains, axis=1))**2
+        
+        # Convert back to dB
+        pathloss = -10 * np.log10(total_power)
+        self[c.PATHLOSS_PARAM_NAME] = pathloss  # Cache the result
+        return pathloss
 
-    def _compute_array_response_product(self) -> np.ndarray:
-        """Internal method to compute product of TX and RX array responses.
+
+    def _compute_los(self) -> np.ndarray:
+        """Calculate Line of Sight status (1: LoS, 0: NLoS, -1: No paths) for each receiver.
+
+        Uses the interaction codes defined in consts.py:
+            INTERACTION_LOS = 0: Line-of-sight (direct path)
+            INTERACTION_REFLECTION = 1: Reflection
+            INTERACTION_DIFFRACTION = 2: Diffraction
+            INTERACTION_SCATTERING = 3: Scattering
+            INTERACTION_TRANSMISSION = 4: Transmission
+
+        Returns:
+            numpy.ndarray: LoS status array, shape (n_users,)
+        """
+        los_status = np.full(self.inter.shape[0], -1)
+        
+        # First ensure we have rotated angles by accessing them
+        # This will trigger computation if needed
+        _ = self[c.AOD_AZ_ROT_PARAM_NAME]
+        
+        # Now get FoV mask which will use the rotated angles
+        fov_mask = self[c.FOV_MASK_PARAM_NAME]
+        if fov_mask is not None:
+            # If we have FoV filtering, only consider paths within FoV
+            has_paths = np.any(fov_mask, axis=1)
+            # For each user, find the first valid path within FoV
+            first_valid_path = np.full(self.inter.shape[0], -1)
+            for i in range(self.inter.shape[0]):
+                valid_paths = np.where(fov_mask[i])[0]
+                if len(valid_paths) > 0:
+                    first_valid_path[i] = self.inter[i, valid_paths[0]]
+        else:
+            # No FoV filtering, use all paths
+            has_paths = self.num_paths > 0
+            first_valid_path = self.inter[:, 0]
+        
+        # Set NLoS status for users with paths
+        los_status[has_paths] = 0
+        
+        # Set LoS status for users with direct path as first valid path
+        los_mask = first_valid_path == c.INTERACTION_LOS
+        los_status[los_mask & has_paths] = 1
+        
+        self[c.LOS_PARAM_NAME] = los_status
+        return los_status
+
+    def _compute_num_paths(self) -> np.ndarray:
+        """Compute number of valid paths for each user after FoV filtering."""
+        # Get FoV-filtered angles (this will trigger FoV computation if needed)
+        aoa_az_fov = self[c.AOA_AZ_FOV_PARAM_NAME]
+        
+        # Count non-NaN values (NaN indicates filtered out by FoV)
+        return (~np.isnan(aoa_az_fov)).sum(axis=1)
+
+    def _compute_num_interactions(self) -> np.ndarray:
+        """Compute number of interactions for each path of each user."""
+        result = np.zeros_like(self.inter)
+        result[np.isnan(self.inter)] = np.nan # no interaction
+        non_zero = self.inter > 0
+        result[non_zero] = np.floor(np.log10(self.inter[non_zero])) + 1
+        return result
+
+    def _compute_inter_str(self) -> np.ndarray:
+        """Compute the interaction string.
         
         Returns:
-            Array response product matrix
+            Array of interaction string
         """
-        # Get antenna parameters from channel parameters
-        tx_ant_params = self.ch_params.bs_antenna
-        rx_ant_params = self.ch_params.ue_antenna
         
-        # Compute individual responses
-        array_response_TX = self._compute_single_array_response(
-            tx_ant_params, self[c.AOD_EL_FOV_PARAM_NAME], self[c.AOD_AZ_FOV_PARAM_NAME])
+        inter_raw_str = self.inter.astype(str)  # Shape: (n_users, n_paths)
+        INTER_MAP = str.maketrans({'0': '', '1': 'R', '2': 'D', '3': 'S', '4': 'T'})
+
+        # Vectorize the translation across all paths
+        def translate_code(s):
+            # 'nan', '221.0', '134.0', ... -> 'n', 'RRD', 'DST', ...
+            return s[:-2].translate(INTER_MAP) if s != 'nan' else 'n'
+        
+        # Apply translation to each element in the 2D array
+        return np.vectorize(translate_code)(inter_raw_str)
+
+    def _compute_n_ue(self) -> int:
+        """Return the number of UEs/receivers in the dataset."""
+        return self.rx_pos.shape[0]
+
+    def _compute_distances(self) -> np.ndarray:
+        """Compute Euclidean distances between receivers and transmitter."""
+        return np.linalg.norm(self.rx_pos - self.tx_pos, axis=1)
+
+    def _compute_power_linear_ant_gain(self, tx_ant_params: Optional[Dict[str, Any]] = None,
+                                       rx_ant_params: Optional[Dict[str, Any]] = None) -> np.ndarray:
+        """Compute received power with antenna patterns applied.
+        
+        Args:
+            tx_ant_params (Optional[Dict[str, Any]]): Transmitter antenna parameters. If None, uses stored params.
+            rx_ant_params (Optional[Dict[str, Any]]): Receiver antenna parameters. If None, uses stored params.
             
-        array_response_RX = self._compute_single_array_response(
-            rx_ant_params, self[c.AOA_EL_FOV_PARAM_NAME], self[c.AOA_AZ_FOV_PARAM_NAME])
+        Returns:
+            np.ndarray: Powers with antenna pattern applied, shape [n_users, n_paths]
+        """
+        # Use stored channel parameters if none provided
+        if tx_ant_params is None:
+            tx_ant_params = self.ch_params[c.PARAMSET_ANT_BS]
+        if rx_ant_params is None:
+            rx_ant_params = self.ch_params[c.PARAMSET_ANT_UE]
+            
+        # Create antenna pattern object
+        antennapattern = AntennaPattern(tx_pattern=tx_ant_params[c.PARAMSET_ANT_RAD_PAT],
+                                        rx_pattern=rx_ant_params[c.PARAMSET_ANT_RAD_PAT])
         
-        # Compute product with proper broadcasting
-        # [n_users, M_rx, M_tx, n_paths]
-        return array_response_RX[:, :, None, :] * array_response_TX[:, None, :, :]
+        # Get FoV filtered angles and apply antenna patterns in batch
+        return antennapattern.apply_batch(power=self[c.PWR_LINEAR_PARAM_NAME],
+                                        aoa_theta=self[c.AOA_EL_FOV_PARAM_NAME],
+                                        aoa_phi=self[c.AOA_AZ_FOV_PARAM_NAME], 
+                                        aod_theta=self[c.AOD_EL_FOV_PARAM_NAME],
+                                        aod_phi=self[c.AOD_AZ_FOV_PARAM_NAME])
+
 
     def _compute_power_linear(self) -> np.ndarray:
         """Internal method to compute linear power from power in dBm"""
         return dbw2watt(self.power) 
+
+    ###########################################
+    # 6. Grid and Sampling Operations
+    ###########################################
 
     def _compute_grid_info(self) -> Dict[str, np.ndarray]:
         """Internal method to compute grid size and spacing information from receiver positions.
@@ -649,86 +787,10 @@ class Dataset(DotDict):
         
         return idxs
     
-    @property
-    def tx_ori(self) -> np.ndarray:
-        """Compute the orientation of the transmitter.
-        
-        Returns:
-            Array of transmitter orientation
-        """
-        return self.ch_params['bs_antenna']['rotation']*np.pi/180
-    
-    @property
-    def bs_ori(self) -> np.ndarray:
-        """Alias for tx_ori - computes the orientation of the transmitter/basestation.
-        
-        Returns:
-            Array of transmitter orientation
-        """
-        return self.tx_ori
-    
-    @property
-    def rx_ori(self) -> np.ndarray:
-        """Compute the orientation of the receivers.
-        
-        Returns:
-            Array of receiver orientation
-        """
-        return self.ch_params['ue_antenna']['rotation']*np.pi/180
 
-    @property
-    def ue_ori(self) -> np.ndarray:
-        """Alias for rx_ori - computes the orientation of the receivers/users.
-        
-        Returns:
-            Array of receiver orientation
-        """
-        return self.rx_ori
-
-    def _compute_inter_str(self) -> np.ndarray:
-        """Compute the interaction string.
-        
-        Returns:
-            Array of interaction string
-        """
-        
-        inter_raw_str = self.inter.astype(str)  # Shape: (n_users, n_paths)
-        INTER_MAP = str.maketrans({'0': '', '1': 'R', '2': 'D', '3': 'S', '4': 'T'})
-
-        # Vectorize the translation across all paths
-        def translate_code(s):
-            # 'nan', '221.0', '134.0', ... -> 'n', 'RRD', 'DST', ...
-            return s[:-2].translate(INTER_MAP) if s != 'nan' else 'n'
-        
-        # Apply translation to each element in the 2D array
-        return np.vectorize(translate_code)(inter_raw_str)
-
-    def apply_fov(self, bs_fov: np.ndarray = np.array([360, 180]), 
-                  ue_fov: np.ndarray = np.array([360, 180])) -> None:
-        """Apply field of view (FoV) filtering to the dataset.
-        
-        This method sets the FoV parameters and invalidates any cached FoV-dependent attributes.
-        The actual filtering will be performed lazily when FoV-dependent attributes are accessed.
-        
-        Args:
-            bs_fov: Base station FoV as [horizontal, vertical] in degrees. Defaults to [360, 180] (full sphere).
-            ue_fov: User equipment FoV as [horizontal, vertical] in degrees. Defaults to [360, 180] (full sphere).
-            
-        Note:
-            This operation affects all path-related attributes and cached computations.
-            The following will be recomputed as needed when accessed:
-            - FoV filtered angles
-            - Number of valid paths
-            - Line of sight status
-            - Channel matrices
-            - Powers with antenna gain
-        """
-        # Clear cached FoV-dependent attributes
-        self._clear_cache_fov()
-            
-        # Store FoV parameters
-        self.bs_fov = bs_fov
-        self.ue_fov = ue_fov
+    ###########################################
+    # 7. Visualization
+    ###########################################
 
     def plot_coverage(self, cov_map, **kwargs):
         """Plot the coverage of the dataset.
@@ -739,6 +801,10 @@ class Dataset(DotDict):
         """
         return plot_coverage(self.rx_pos, cov_map, bs_pos=self.tx_pos.T, bs_ori=self.tx_ori, **kwargs)
     
+    ###########################################
+    # 8. Utilities and Computation Methods
+    ###########################################
+
     # Dictionary mapping attribute names to their computation methods
     # (in order of computation)
     _computed_attributes = {
@@ -842,15 +908,6 @@ class Dataset(DotDict):
     }
 
     
-    def __dir__(self):
-        """Return list of valid attributes including computed ones."""
-        # Include standard attributes, computed attributes, and aliases
-        return list(set(
-            list(super().__dir__()) + 
-            list(self._computed_attributes.keys()) + 
-            list(self._aliases.keys())
-        ))
-
     def info(self, param_name: str | None = None) -> None:
         """Display help information about DeepMIMO dataset parameters.
         
