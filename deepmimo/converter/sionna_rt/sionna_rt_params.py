@@ -94,6 +94,11 @@ class SionnaRayTracingParameters(RayTracingParameters):
         n_tx, n_tx_ant = raw_params['tx_array_size'], raw_params['tx_array_num_ant']
         n_emmitters = n_tx * n_tx_ant
         n_rays = raw_params['num_samples'] // n_emmitters
+        print(f"n_rays: {n_rays}")
+        print(f"n_emmitters: {n_emmitters}")
+        print(f"n_tx: {n_tx}")
+        print(f"n_tx_ant: {n_tx_ant}")
+        print(f"raw_params['num_samples']: {raw_params['num_samples']}")
     
         # Create standardized parameters
         params_dict = {
@@ -102,7 +107,7 @@ class SionnaRayTracingParameters(RayTracingParameters):
             'raytracer_version': raw_params.get('raytracer_version', RAYTRACER_VERSION_SIONNA),
 
             # Base required parameters
-            'frequency': raw_params['frequency'],
+            'frequency': int(raw_params['frequency']),
             
             # Ray tracing interaction settings
             'max_path_depth': int(raw_params['max_depth']),
@@ -117,14 +122,14 @@ class SionnaRayTracingParameters(RayTracingParameters):
             'terrain_scattering': raw_params['scattering'],
 
             # Details on diffraction, scattering, and transmission
-            'diffuse_reflections': raw_params['max_depth'] - 1, # Sionna only supports diffuse reflections
+            'diffuse_reflections': int(raw_params['max_depth']) - 1, # Sionna only supports diffuse reflections
             'diffuse_diffractions': 0, # Sionna only supports 1 diffraction event, with no diffuse scattering
             'diffuse_transmissions': 0, # Sionna does not support transmissions
             'diffuse_final_interaction_only': True, # Sionna only supports diffuse scattering at final interaction
             'diffuse_random_phases': raw_params.get('scat_random_phases', True),
 
             'synthetic_array': raw_params.get('synthetic_array', True),
-            'num_rays': -1 if raw_params['method'] == 'fibonacci' else n_rays, 
+            'num_rays': -1 if raw_params['method'] != 'fibonacci' else n_rays, 
             'ray_casting_method': raw_params['method'].replace('fibonacci', 'uniform'),
             # The alternative to fibonacci is exhaustive, for which the number of rays is not predictable
 
