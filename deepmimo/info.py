@@ -57,7 +57,8 @@ FUNDAMENTAL_MATRICES_HELP = {
 COMPUTED_MATRICES_HELP = {
     c.CHANNEL_PARAM_NAME:
         'Channel matrix between TX and RX antennas\n'
-        '\t[num_rx, num_rx_ant, num_tx_ant]',
+        '\t[num_rx, num_rx_ant, num_tx_ant, X], with X = number of paths in time domain \n'
+        '\t or X = number of subcarriers in frequency domain',
     c.PWR_LINEAR_PARAM_NAME:
         'Linear power for each path (W)\n'
         '\t[num_rx, num_paths]',
@@ -100,16 +101,16 @@ CHANNEL_HELP_MESSAGES = {
         'User equipment antenna array configuration parameters. \n',
     
     # Antenna Parameters
-    c.PARAMSET_ANT_SHAPE: 
+    c.PARAMSET_ANT_BS + '.' + c.PARAMSET_ANT_SHAPE: 
         'Antenna array dimensions [X, Y] or [X, Y, Z] elements\n'
         '\t Default: [1, 1]  |  Type: list[int]  |  Units: number of elements',
-    c.PARAMSET_ANT_SPACING: 
+    c.PARAMSET_ANT_BS + '.' + c.PARAMSET_ANT_SPACING: 
         'Spacing between antenna elements\n'
         '\t Default: 0.5  |  Type: float  |  Units: wavelengths',
-    c.PARAMSET_ANT_ROTATION: 
+    c.PARAMSET_ANT_BS + '.' + c.PARAMSET_ANT_ROTATION: 
         'Rotation angles [azimuth, elevation, polarization]\n'
         '\t Default: [0, 0, 0]  |  Type: list[float]  |  Units: degrees',
-    c.PARAMSET_ANT_RAD_PAT: 
+    c.PARAMSET_ANT_BS + '.' + c.PARAMSET_ANT_RAD_PAT: 
         'Antenna element radiation pattern\n'
         '\t Default: "isotropic"  |  Type: str  |  Options: "isotropic", "halfwave-dipole"',
     
@@ -131,22 +132,18 @@ CHANNEL_HELP_MESSAGES = {
     c.PARAMSET_OFDM: 
         f'OFDM channel configuration parameters. Used (and needed!) only if {c.PARAMSET_FD_CH}=1. \n'
         '\t Default: None  |  Type: dict',
-    c.PARAMSET_OFDM_BANDWIDTH: 
+    c.PARAMSET_OFDM + '.' + c.PARAMSET_OFDM_BANDWIDTH: 
         'System bandwidth\n'
         '\t Default: 10e6  |  Type: float  |  Units: Hz',
-    c.PARAMSET_OFDM_SC_NUM: 
+    c.PARAMSET_OFDM + '.' + c.PARAMSET_OFDM_SC_NUM: 
         'Total number of OFDM subcarriers\n'
         '\t Default: 512  |  Type: int  |  Units: number of subcarriers',
-    c.PARAMSET_OFDM_SC_SAMP: 
+    c.PARAMSET_OFDM + '.' + c.PARAMSET_OFDM_SC_SAMP: 
         'Indices of subcarriers to generate\n'
         '\t Default: None (all subcarriers)  |  Type: list[int]  |  Units: subcarrier indices',
-    c.PARAMSET_OFDM_LPF: 
+    c.PARAMSET_OFDM + '.' + c.PARAMSET_OFDM_LPF: 
         'Enable/disable receive low-pass filter / ADC filter\n'
         '\t Default: False  |  Type: bool',
-    'Notes': 
-        'OFDM parameters can be accessed using dot notation (e.g. params.ofdm.subcarriers). \n'
-        'OR using dictionary notation (e.g. params["ofdm"]["subcarriers"]). \n'
-        'Likewise for antenna parameters (e.g. params.bs_antenna.shape). \n'
 }
 
 # Combined dictionary for parameter lookups
