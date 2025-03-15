@@ -53,6 +53,7 @@ def read_scene(folder_path: str | Path) -> Scene:
         raise ValueError(f"Folder does not exist: {folder}")
     
     scene = Scene()
+    next_object_id = 0  # Track the next available object ID
     
     # Find all files with matching extensions
     found_files = {ext: [] for ext in OBJECT_LABELS}
@@ -72,8 +73,9 @@ def read_scene(folder_path: str | Path) -> Scene:
             
         # Parse all files of this type
         for file in type_files:
-            parser = PhysicalObjectParser(file)
+            parser = PhysicalObjectParser(file, starting_id=next_object_id)
             objects = parser.parse()
+            next_object_id += len(objects)  # Update next available ID
             scene.add_objects(objects)
     
     return scene
@@ -82,11 +84,12 @@ def read_scene(folder_path: str | Path) -> Scene:
 class PhysicalObjectParser:
     """Parser for Wireless InSite physical object files (.city, .ter, .veg)."""
     
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, starting_id: int = 0):
         """Initialize parser with file path.
         
         Args:
             file_path: Path to the physical object file (.city, .ter, .veg)
+            starting_id: Starting ID for objects in this file (default: 0)
         """
         self.file_path = Path(file_path)
         if self.file_path.suffix not in OBJECT_LABELS:
@@ -94,6 +97,7 @@ class PhysicalObjectParser:
         
         self.label = OBJECT_LABELS[self.file_path.suffix]
         self.name = self.file_path.stem  # Get filename without extension
+        self.starting_id = starting_id
     
     def parse(self) -> List[PhysicalElement]:
         """Parse the file and return a list of physical objects.
@@ -120,8 +124,9 @@ class PhysicalObjectParser:
             # Convert faces to Face objects
             faces = [Face(vertices=face) for face in object_faces]
             
-            # Create PhysicalElement object with appropriate label
-            obj = PhysicalElement(faces=faces, name=self.name, object_id=i, label=self.label)
+            # Create PhysicalElement object with appropriate label and global ID
+            obj = PhysicalElement(faces=faces, name=self.name, 
+                                  object_id=self.starting_id + i, label=self.label)
             objects.append(obj)
             
         return objects
