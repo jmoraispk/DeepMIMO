@@ -371,7 +371,7 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
                     point_color = 'blue'
                     point_label = None
                 
-                plot_point(pos, c=point_color, marker='o', s=50, label=point_label, zorder=2)
+                plot_point(pos, c=point_color, marker='o', s=20, label=point_label, zorder=2)
     
     # Plot TX and RX points
     plot_point(tx_loc, c='black', marker='^', s=100, label='TX', zorder=3)

@@ -38,7 +38,7 @@ import numpy as np
 from ..general_utilities import DotDict
 from .. import consts as c
 from ..info import info
-from .visualization import plot_coverage
+from .visualization import plot_coverage, plot_rays
 
 # Channel generation
 from .channel import generate_MIMO_channel, ChannelGenParameters
@@ -783,6 +783,20 @@ class Dataset(DotDict):
             **kwargs: Additional keyword arguments to pass to the plot_coverage function.
         """
         return plot_coverage(self.rx_pos, cov_map, bs_pos=self.tx_pos.T, bs_ori=self.tx_ori, **kwargs)
+    
+    def plot_rays(self, idx: int, **kwargs):
+        """Plot the rays of the dataset.
+        
+        Args:
+            **kwargs: Additional keyword arguments to pass to the plot_rays function.
+        """
+        default_kwargs = {
+            'proj_3D': True,
+            'color_by_type': True,
+        }
+        default_kwargs.update(kwargs)
+        return plot_rays(self.rx_pos[idx], self.tx_pos[0], self.inter_pos[idx],
+                         self.inter[idx], **default_kwargs)
     
     ###########################################
     # 8. Utilities and Computation Methods
