@@ -298,13 +298,22 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
         - matplotlib Axes object
     """
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi,
-                          subplot_kw={'projection': '3d'} if proj_3D else {})
+                           subplot_kw={'projection': '3d'} if proj_3D else {})
     
     # Ensure inputs are numpy arrays and have correct shape
     rx_loc = np.asarray(rx_loc)  # Shape: (3,)
     tx_loc = np.asarray(tx_loc)  # Shape: (3,)
     inter_pos = np.asarray(inter_pos)  # Shape: (n_paths, max_interactions, 3)
     inter = np.asarray(inter)  # Shape: (n_paths,)
+    
+    # Define dimension-specific plotting functions
+    def plot_line(start_point, end_point, **kwargs):
+        coords = [(start_point[i], end_point[i]) for i in range(3 if proj_3D else 2)]
+        ax.plot(*coords, **kwargs)
+        
+    def plot_point(point, **kwargs):
+        coords = point[:3] if proj_3D else point[:2]
+        ax.scatter(*coords, **kwargs)
     
     # Define colors and names for different interaction types
     interaction_colors = {
@@ -327,9 +336,9 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
     
     # For each ray path
     for path_idx in range(len(inter_pos)):
-        # Get valid interaction points for this path (excluding zero padding)
-        # Check if any coordinate (x,y,z) is non-zero
-        valid_inters = np.any(inter_pos[path_idx] != 0, axis=1)
+        # Get valid interaction points for this path (excluding NaN values)
+        # Check if any coordinate (x,y,z) is not NaN
+        valid_inters = ~np.any(np.isnan(inter_pos[path_idx]), axis=1)
         path_interactions = inter_pos[path_idx][valid_inters]
         
         # Create complete path: TX -> interactions -> RX
@@ -346,18 +355,10 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
         
         # Check if this is a LoS path
         is_los = len(path_interactions) == 0
-        
+        plt_color = 'g' if is_los else 'r'
         # Plot the ray path segments
         for i in range(len(path_points)-1):
-            if proj_3D:
-                ax.plot([path_points[i,0], path_points[i+1,0]], 
-                       [path_points[i,1], path_points[i+1,1]],
-                       [path_points[i,2], path_points[i+1,2]],
-                       'g-' if is_los else 'r-', alpha=0.5)
-            else:
-                ax.plot([path_points[i,0], path_points[i+1,0]],
-                       [path_points[i,1], path_points[i+1,1]],
-                       'g-' if is_los else 'r-', alpha=0.5)
+            plot_line(path_points[i], path_points[i+1], color=plt_color, alpha=0.5, zorder=1)
         
         # Plot interaction points
         if len(path_interactions) > 0:  # If there are interaction points
@@ -370,30 +371,17 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
                     point_color = 'blue'
                     point_label = None
                 
-                if proj_3D:
-                    ax.scatter(pos[0], pos[1], pos[2],
-                             c=point_color, marker='o', s=50,
-                             label=point_label)
-                else:
-                    ax.scatter(pos[0], pos[1],
-                             c=point_color, marker='o', s=50,
-                             label=point_label)
+                plot_point(pos, c=point_color, marker='o', s=50, label=point_label, zorder=2)
     
     # Plot TX and RX points
-    if proj_3D:
-        ax.scatter(tx_loc[0], tx_loc[1], tx_loc[2], 
-                  c='black', marker='^', s=100, label='TX')
-        ax.scatter(rx_loc[0], rx_loc[1], rx_loc[2],
-                  c='black', marker='v', s=100, label='RX')
-        ax.set_zlabel('z (m)')
-    else:
-        ax.scatter(tx_loc[0], tx_loc[1],
-                  c='black', marker='^', s=100, label='TX')
-        ax.scatter(rx_loc[0], rx_loc[1],
-                  c='black', marker='v', s=100, label='RX')
+    plot_point(tx_loc, c='black', marker='^', s=100, label='TX', zorder=3)
+    plot_point(rx_loc, c='black', marker='v', s=100, label='RX', zorder=3)
     
+    # Set axis labels
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
+    if proj_3D:
+        ax.set_zlabel('z (m)')
     
     # Only show legend if color_by_type is True or if there are TX/RX points
     if color_by_type:
@@ -408,6 +396,7 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
     if not proj_3D:
         ax.set_aspect('equal')
     
+    ax.grid()
     return fig, ax
 
 def plot_power_discarding(dataset, trim_delay: Optional[float] = None) -> Tuple[Figure, Axes]:
@@ -432,7 +421,8 @@ def plot_power_discarding(dataset, trim_delay: Optional[float] = None) -> Tuple[
     # Get the trim delay - either provided or from OFDM parameters
     if trim_delay is None:
         if not hasattr(dataset, 'channel_params'):
-            raise ValueError("Dataset has no channel parameters. Please provide trim_delay explicitly.")
+            raise ValueError("Dataset has no channel parameters. "
+                             "Please provide trim_delay explicitly.")
         trim_delay = (dataset.channel_params.ofdm.subcarriers / 
                      dataset.channel_params.ofdm.bandwidth)
     
