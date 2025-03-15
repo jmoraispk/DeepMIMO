@@ -312,7 +312,7 @@ def plot_txrx_sets(txrx_sets: List[TxRxSet], point_locations: Dict[int, np.ndarr
     plt.ylabel("Y (m)")
     plt.show()
 
-def read_txrx(folder: str) -> Dict[str, Any]:
+def read_txrx(folder: str, plot: bool = False) -> Dict[str, Any]:
     """Create TX/RX information from a folder containing Wireless Insite files.
     
     This function:
@@ -321,7 +321,8 @@ def read_txrx(folder: str) -> Dict[str, Any]:
     
     Args:
         folder (str): Path to simulation folder containing XML file
-
+        plot (bool, optional): Whether to plot the TX/RX sets. Defaults to False.
+        
     Returns:
         Dict[str, Any]: Dictionary containing TX/RX set information and indices
     """
@@ -348,7 +349,8 @@ def read_txrx(folder: str) -> Dict[str, Any]:
         txrx_dict[f'txrx_set_{obj.id}'] = obj.to_dict()
     
     # Optional visualization
-    plot_txrx_sets(txrx_sets, point_locations)
+    if plot:
+        plot_txrx_sets(txrx_sets, point_locations)
     
     return txrx_dict
 
