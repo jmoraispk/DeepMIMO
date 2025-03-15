@@ -824,32 +824,22 @@ class Scene:
 # Utilities
 #------------------------------------------------------------------------------
 
-def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tuple[float, float, float]]]:
-    """Generate faces for a physical object from its vertices.
+def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces using convex hull approach (fast but simplified).
     
-    This function takes a list of vertices and generates faces to form a complete 
-    3D object. It creates a convex hull from the base points and generates top, 
-    bottom and side faces. This is a utility function used by various converters
-    to generate efficient convex hull representations of objects.
-    
-    Note that while this generates convex hull faces, the Face class maintains
-    the ability to generate triangular faces when needed through its
-    triangular_faces property.
-
     Args:
-        vertices (list of tuple): List of (x,y,z) vertex coordinates for the object
-
+        vertices: Array of vertex coordinates (shape: N x 3)
+        
     Returns:
-        list of list of tuple: List of faces, where each face is a list of (x,y,z) 
-            vertex coordinates defining the face polygon
+        List of faces, where each face is a list of (x,y,z) vertex coordinates
     """
     # Extract base points (x,y coordinates)
-    points_2d = np.array([(x, y) for x, y, z in vertices])
+    points_2d = vertices[:, :2]
     
-    # Get object height (assuming constant height)
-    heights = [z for _, _, z in vertices]
-    object_height = max(heights) - min(heights)
-    base_height = min(heights)
+    # Get object height
+    heights = vertices[:, 2]
+    object_height = np.max(heights) - np.min(heights)
+    base_height = np.min(heights)
     
     # Create convex hull for base shape
     try:
@@ -878,8 +868,125 @@ def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tu
         ]
         side_faces.append(side)
     
-    # Combine all faces
-    faces = [bottom_face, top_face] + side_faces
+    return [bottom_face, top_face] + side_faces
+
+def _get_faces_coplanar(vertices: np.ndarray) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces by detecting coplanar sets (detailed but slower).
+    
+    Args:
+        vertices: Array of vertex coordinates (shape: N x 3)
+        
+    Returns:
+        List of faces, where each face is a list of (x,y,z) vertex coordinates
+    """
+    def are_coplanar(points, tolerance=1e-10):
+        """Check if points are coplanar by checking rank of centered points."""
+        if len(points) < 3:
+            return True
+        centered = points - points.mean(axis=0)
+        _, s, _ = np.linalg.svd(centered)
+        return s[2] < tolerance
+    
+    def get_face_normal(points):
+        """Get normal vector of a face using first three points."""
+        v1 = points[1] - points[0]
+        v2 = points[2] - points[0]
+        normal = np.cross(v1, v2)
+        return normal / np.linalg.norm(normal)
+    
+    def points_to_2d(points, normal):
+        """Project 3D points onto their best-fit plane."""
+        # Find rotation matrix to rotate normal to z-axis
+        z_axis = np.array([0, 0, 1])
+        if np.allclose(normal, z_axis) or np.allclose(normal, -z_axis):
+            rotation = np.eye(3)
+        else:
+            rotation_axis = np.cross(normal, z_axis)
+            rotation_axis /= np.linalg.norm(rotation_axis)
+            cos_theta = np.dot(normal, z_axis)
+            theta = np.arccos(cos_theta)
+            
+            # Rodrigues rotation formula
+            K = np.array([[0, -rotation_axis[2], rotation_axis[1]],
+                         [rotation_axis[2], 0, -rotation_axis[0]],
+                         [-rotation_axis[1], rotation_axis[0], 0]])
+            rotation = np.eye(3) + np.sin(theta) * K + (1 - cos_theta) * K @ K
+        
+        # Project points to 2D
+        rotated = points @ rotation.T
+        return rotated[:, :2]
+    
+    def order_vertices_2d(points_2d):
+        """Order vertices counter-clockwise around their centroid."""
+        center = points_2d.mean(axis=0)
+        angles = np.arctan2(points_2d[:, 1] - center[1],
+                           points_2d[:, 0] - center[0])
+        return np.argsort(angles)
+    
+    # Initialize faces list
+    faces = []
+    unprocessed = set(range(len(vertices)))
+    
+    # Process vertices until all are assigned to faces
+    while unprocessed:
+        # Start new face with first unprocessed vertex
+        current = list(unprocessed)[0]
+        face_vertices = [current]
+        coplanar_points = [vertices[current]]
+        
+        # Find all coplanar vertices
+        for idx in list(unprocessed - {current}):
+            test_points = np.array(coplanar_points + [vertices[idx]])
+            if are_coplanar(test_points):
+                face_vertices.append(idx)
+                coplanar_points.append(vertices[idx])
+        
+        # Convert to numpy array for easier manipulation
+        coplanar_points = np.array(coplanar_points)
+        
+        # Get face normal and project to 2D
+        normal = get_face_normal(coplanar_points)
+        points_2d = points_to_2d(coplanar_points, normal)
+        
+        # Order vertices counter-clockwise
+        order = order_vertices_2d(points_2d)
+        ordered_vertices = [tuple(vertices[face_vertices[i]]) for i in order]
+        
+        # Add face and update unprocessed set
+        faces.append(ordered_vertices)
+        unprocessed -= set(face_vertices)
+    
+    return faces
+
+def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = True) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces for a physical object from its vertices.
+    
+    This function supports two modes:
+    1. Fast mode (default):
+       - Uses convex hull to create a simplified geometric shape
+       - Creates top, bottom and side faces
+       - More efficient but loses geometric detail
+       
+    2. Detailed mode:
+       - Detects coplanar sets of vertices to form faces
+       - Preserves original geometry
+       - Slower but more accurate
+    
+    Args:
+        vertices: List of (x,y,z) vertex coordinates for the object
+        fast: Whether to use fast mode (default: True)
+        
+    Returns:
+        List of faces, where each face is a list of (x,y,z) vertex coordinates
+    """
+    vertices = np.array(vertices)
+    if len(vertices) < 3:
+        return None
+    
+    if fast:
+        faces = _get_faces_convex_hull(vertices)
+    else:
+        faces = _get_faces_coplanar(vertices)
     
     return faces
 
