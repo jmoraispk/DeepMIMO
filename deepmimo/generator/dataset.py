@@ -200,8 +200,10 @@ class Dataset(DotDict):
         """
         if params is None:
             params = ChannelGenParameters()
+        else:
+            print('here!')
         
-        # Validate and update parameters
+        print(type(params))
         params.validate(self.n_ue)
         
         # Create a deep copy of the parameters to ensure isolation
@@ -243,9 +245,7 @@ class Dataset(DotDict):
         """
         if params is None:
             params = ChannelGenParameters() if self.ch_params is None else self.ch_params
-        
-        # Validate and store params
-        params.validate(self.n_ue)
+
         self.set_channel_params(params)
 
         np.random.seed(1001)

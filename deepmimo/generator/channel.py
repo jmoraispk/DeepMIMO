@@ -102,7 +102,7 @@ class ChannelGenParameters(DotDict):
             assert (len(rotation_shape) == 1 and rotation_shape[0] == 3), \
                     'The BS antenna rotation must be a 3D vector'
         else:
-            self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None                                            
+            self[c.PARAMSET_ANT_BS][c.PARAMSET_ANT_ROTATION] = None
 
         # UE Antenna Rotation
         if (c.PARAMSET_ANT_ROTATION in self[c.PARAMSET_ANT_UE].keys() and \
