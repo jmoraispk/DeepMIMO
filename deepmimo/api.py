@@ -38,12 +38,12 @@ def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
         key (str): API authentication key
         
     Returns:
-        Optional[Dict]: Response data containing downloadUrl and fileId if successful,
+        Optional[Dict]: Response data containing filename and fileId if successful,
                        None if upload fails
         
     Notes:
         Uses chunked upload with progress bar for large files.
-        Handles both file upload and download URL generation.
+        Handles file upload only, no longer returns direct download URLs.
     """
     try:
         # Get file info first
@@ -122,16 +122,8 @@ def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
             progress_reader.close()
             pbar.close()
 
-        # Get the proper download URL from the server
-        download_response = requests.get(
-            "https://dev.deepmimo.net/api/b2/download-url",
-            params={"filename": filename},
-            headers={"Authorization": f"Bearer {key}"},
-        )
-        download_response.raise_for_status()
-
         return {
-            "downloadUrl": download_response.json()["downloadUrl"],
+            "filename": filename,
             "fileId": upload_response.json().get("fileId"),
         }
 
@@ -336,7 +328,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         skip_zip: Skip zipping the scenario folder if True
 
     Returns:
-        Download URL if successful, None otherwise
+        Scenario name if successful, None otherwise
     """
     scen_folder = get_scenario_folder(scenario_name)
     params_path = get_params_path(scenario_name)
@@ -382,7 +374,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     except Exception as e:
         print(f"Error: Failed to upload to storage - {str(e)}")
 
-    if not upload_result or "downloadUrl" not in upload_result:
+    if not upload_result or "filename" not in upload_result:
         raise RuntimeError("Failed to upload to B2")
     print("✓ Upload successful")
     
@@ -390,7 +382,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         {
             "version": f"v{processed_params['advancedParameters']['dmVersion']}",
             "description": "Initial version",
-            "zip": f"{upload_result['downloadUrl']}",
+            "zip": upload_result["filename"],  # Store only the filename, not the URL
             "folder": "",
             "fileId": upload_result.get("fileId"),
         }
@@ -406,7 +398,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         response.raise_for_status()
         print("✓ Submission created successfully")
 
-        result = submission_data["download"][0]["zip"]
+        result = scenario_name  # Return scenario name instead of direct URL
     except Exception as e:
         print(f"Error: Upload failed - {str(e)}")
         result = None
@@ -419,13 +411,13 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
 
 
 def _download_url(scenario_name: str) -> str:
-    """Get the download URL for a DeepMIMO scenario.
+    """Get the secure download endpoint URL for a DeepMIMO scenario.
 
     Args:
         scenario_name: Name of the scenario ZIP file
 
     Returns:
-        Public URL for downloading the scenario
+        Secure URL for downloading the scenario through the API endpoint
 
     Raises:
         ValueError: If scenario name is invalid
@@ -434,24 +426,8 @@ def _download_url(scenario_name: str) -> str:
     if not scenario_name.endswith(".zip"):
         scenario_name += ".zip"
 
-    try:
-        # Get download URL from server
-        response = requests.get(
-            "https://dev.deepmimo.net/api/b2/download-url",
-            params={"filename": scenario_name},
-        )
-
-        if response.status_code != 200:
-            raise ValueError(f"Scenario '{scenario_name}' not found")
-
-        download_url = response.json().get("downloadUrl")
-        if not download_url:
-            raise RuntimeError("Invalid response from server")
-
-        return download_url
-
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Failed to get scenario URL: {str(e)}")
+    # Return the secure download endpoint URL with the filename as a parameter
+    return f"https://dev.deepmimo.net/api/download/secure?filename={scenario_name}"
 
 
 def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[str]:
@@ -478,13 +454,12 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
         return None
 
     try:
-        # Get download URL using existing helper
+        # Get secure download URL using existing helper
         url = _download_url(scenario_name)
     except Exception as e:
         print(f"Error: Failed to get download URL - {str(e)}")
-        print(f"Attempting to backup link to B2 storage...")
-        url =  f"http://f005.backblazeb2.com/file/deepmimo-scenarios/{scenario_name}.zip"
-        
+        # Use the secure download endpoint as fallback
+        url = f"https://dev.deepmimo.net/api/download/secure?filename={scenario_name}.zip"
     
     output_path = os.path.join(download_dir, f"{scenario_name}_downloaded.zip")
 
