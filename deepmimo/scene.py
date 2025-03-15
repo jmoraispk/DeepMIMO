@@ -588,7 +588,6 @@ class Scene:
         all_vertices = []
         vertex_map = {}  # Maps (x,y,z) tuple to vertex index
         tri_faces = []  # List of triangular face vertex indices (3 vertices each)
-        materials = []  # Material index for each triangular face
         
         # Track object metadata
         objects_metadata = []
@@ -613,7 +612,6 @@ class Scene:
                     
                     # Add triangular face and its material
                     tri_faces.append(tri_indices)
-                    materials.append(face.material_idx)
                     face_tri_indices.append(current_tri_idx)
                     current_tri_idx += 1
                 
@@ -633,7 +631,6 @@ class Scene:
         # Save matrices
         savemat(f"{base_folder}/vertices.mat", {'vertices': vertices})
         savemat(f"{base_folder}/faces.mat", {'faces': tri_faces})
-        savemat(f"{base_folder}/materials.mat", {'materials': materials})
         save_dict_as_json(f"{base_folder}/objects.json", objects_metadata)
         
         return {
