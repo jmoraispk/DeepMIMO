@@ -219,7 +219,8 @@ class PhysicalElement:
     DEFAULT_LABELS = {CAT_BUILDINGS, CAT_TERRAIN, CAT_VEGETATION, CAT_FLOORPLANS, CAT_OBJECTS}
     
     def __init__(self, faces: List[Face], object_id: int = -1, 
-                 label: str = CAT_OBJECTS, color: str = '', speed: float = 0.0):
+                 label: str = CAT_OBJECTS, color: str = '', speed: float = 0.0,
+                 name: str = ''):
         """Initialize a physical object from its faces.
         
         Args:
@@ -228,12 +229,14 @@ class PhysicalElement:
             label: Label identifying the type of object (default: 'objects')
             color: Color for visualization (default: '', which means use default color)
             speed: Speed of the object (default: 0.0)
+            name: Optional name for the object (default: '')
         """
         self._faces = faces
         self.object_id = object_id
         self.label = label if label in self.DEFAULT_LABELS else CAT_OBJECTS
         self.color = color
         self.speed = speed
+        self.name = name
         
         # Extract all vertices from faces for bounding box computation
         all_vertices = np.vstack([face.vertices for face in faces])
@@ -309,15 +312,10 @@ class PhysicalElement:
     def to_dict(self) -> Dict:
         """Convert physical object to dictionary format."""
         return {
+            'name': self.name,
             'label': self.label,
             'id': self.object_id,
-            'faces': [
-                {
-                    'vertices': face.vertices.tolist(),
-                    'material_idx': face.material_idx
-                }
-                for face in self.faces
-            ]
+            'faces': []  # Will be populated with tri_indices during scene export
         }
     
     @classmethod
@@ -325,12 +323,12 @@ class PhysicalElement:
         """Create physical object from dictionary format."""
         faces = [
             Face(
-                vertices=np.array(face['vertices']),
+                vertices=face['vertices'],
                 material_idx=face['material_idx']
             )
             for face in data['faces']
         ]
-        return cls(faces=faces, object_id=data['id'], label=data['label'])
+        return cls(faces=faces, name=data['name'], object_id=data['id'], label=data['label'])
 
     @property
     def position(self) -> np.ndarray:
@@ -379,6 +377,17 @@ class PhysicalElement:
         if self._material_indices is None:
             self._material_indices = {face.material_idx for face in self._faces}
         return self._material_indices
+
+    def __repr__(self) -> str:
+        """Return a concise string representation of the physical element.
+        
+        Returns:
+            str: String representation showing key element information
+        """
+        bb = self.bounding_box
+        dims = f"{bb.width:.0f} x {bb.length:.0f} x {bb.height:.0f} m"
+        return (f"PhysicalElement(name='{self.name}', id={self.object_id}, "
+                f"label='{self.label}', faces={len(self._faces)}, dims={dims})")
 
 class PhysicalElementGroup:
     """Represents a group of physical objects that can be queried and manipulated together."""
@@ -586,7 +595,7 @@ class Scene:
         current_tri_idx = 0
         
         for obj in self.objects:
-            object_faces_metadata = []  # List of triangular face indices for each face
+            obj_metadata = obj.to_dict()
             
             for face in obj.faces:
                 face_tri_indices = []  # Indices of triangular faces for this face
@@ -608,16 +617,13 @@ class Scene:
                     face_tri_indices.append(current_tri_idx)
                     current_tri_idx += 1
                 
-                # Store triangular face indices for this face
-                # Ensure face_tri_indices is stored as a list, even if it's a single index
-                object_faces_metadata.append(face_tri_indices if len(face_tri_indices) > 1 else [face_tri_indices[0]])
+                # Store triangular face indices and material index
+                obj_metadata['faces'].append({
+                    'tri_indices': face_tri_indices,
+                    'material_idx': face.material_idx
+                })
             
-            # Store object metadata
-            objects_metadata.append({
-                'id': obj.object_id,
-                'label': obj.label,
-                'faces': object_faces_metadata  # List of lists of triangular face indices
-            })
+            objects_metadata.append(obj_metadata)
         
         # Convert to numpy arrays
         vertices = np.array(all_vertices)  # Shape: (N_vertices, 3)
@@ -639,17 +645,15 @@ class Scene:
         }
     
     @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str) -> 'Scene':
+    def from_data(cls, base_folder: str) -> 'Scene':
         """Create scene from metadata dictionary and data files.
         
         Args:
-            metadata: Dictionary containing metadata about the scene
             base_folder: Base folder containing matrix files
         """
         # Load matrices
         vertices = loadmat(f"{base_folder}/vertices.mat")['vertices']
         tri_faces = loadmat(f"{base_folder}/faces.mat")['faces']
-        materials = loadmat(f"{base_folder}/materials.mat")['materials'].flatten()
         objects_metadata = load_dict_from_json(f"{base_folder}/objects.json")
         
         scene = cls()
@@ -659,8 +663,9 @@ class Scene:
             object_faces = []
             
             # Process each face in the object
-            for face_tri_indices in object_data['faces']:
-                # Handle both list and integer cases
+            for face_data in object_data['faces']:
+                # Get triangulation indices
+                face_tri_indices = face_data['tri_indices']
                 if isinstance(face_tri_indices, (int, np.integer)):
                     face_tri_indices = [face_tri_indices]
                 
@@ -675,19 +680,17 @@ class Scene:
                 # Get vertices in the order they were added
                 face_vertices = vertices[face_vertex_indices]
                 
-                # Get material index (same for all triangular faces in this face)
-                material_idx = materials[face_tri_indices[0]]
+                # Get material index from face data
+                material_idx = face_data['material_idx']
                 
                 # Create face with all vertices in order
-                face = Face(
-                    vertices=face_vertices,
-                    material_idx=material_idx
-                )
+                face = Face(vertices=face_vertices, material_idx=material_idx)
                 object_faces.append(face)
             
             # Create object with appropriate label
             obj = PhysicalElement(
                 faces=object_faces,
+                name=object_data['name'],
                 object_id=object_data['id'],
                 label=object_data['label']
             )

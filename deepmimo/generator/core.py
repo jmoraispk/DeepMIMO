@@ -114,7 +114,7 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     dataset[c.NAME_PARAM_NAME] = scen_name
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
     dataset[c.RT_PARAMS_PARAM_NAME] = params[c.RT_PARAMS_PARAM_NAME]
-    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(params[c.SCENE_PARAM_NAME], scen_folder)
+    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(scen_folder)
     dataset[c.MATERIALS_PARAM_NAME] = MaterialList.from_dict(params[c.MATERIALS_PARAM_NAME])
 
     return dataset
