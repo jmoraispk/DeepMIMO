@@ -94,12 +94,7 @@ class SionnaRayTracingParameters(RayTracingParameters):
         n_tx, n_tx_ant = raw_params['tx_array_size'], raw_params['tx_array_num_ant']
         n_emmitters = n_tx * n_tx_ant
         n_rays = raw_params['num_samples'] // n_emmitters
-        print(f"n_rays: {n_rays}")
-        print(f"n_emmitters: {n_emmitters}")
-        print(f"n_tx: {n_tx}")
-        print(f"n_tx_ant: {n_tx_ant}")
-        print(f"raw_params['num_samples']: {raw_params['num_samples']}")
-    
+        
         # Create standardized parameters
         params_dict = {
             # Ray Tracing Engine info

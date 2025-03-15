@@ -120,9 +120,9 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     return dataset
 
 def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c.MAX_PATHS,
-                         tx_sets: Dict[int, list | str] | list | str = 'all',
-                         rx_sets: Dict[int, list | str] | list | str = 'all',
-                         matrices: List[str] | str = 'all') -> Dataset:
+                          tx_sets: Dict[int, list | str] | list | str = 'all',
+                          rx_sets: Dict[int, list | str] | list | str = 'all',
+                          matrices: List[str] | str = 'all') -> Dataset:
     """Load raytracing data for a scene.
 
     Args:
@@ -143,8 +143,8 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
     
     for tx_set_id, tx_idxs in tx_sets.items():
         for rx_set_id, rx_idxs in rx_sets.items():
-            dataset_list.append({})
             for tx_idx in tx_idxs:
+                dataset_list.append({})
                 print(f'\nTX set: {tx_set_id} (basestation)')
                 rx_id_str = 'basestation' if rx_set_id == tx_set_id else 'users'
                 print(f'RX set: {rx_set_id} ({rx_id_str})')
