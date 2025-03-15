@@ -409,6 +409,12 @@ class PhysicalElementGroup:
         """Get object by index."""
         return self._objects[idx]
     
+    def __repr__(self) -> str:
+        """Return a concise string representation of the physical element group."""
+        obj_list = "\n".join(f"  {obj}" for obj in self._objects)
+        return (f"PhysicalElementGroup(objects={len(self._objects)})\n"
+                f"Objects:\n{obj_list}")
+
     def get_materials(self) -> List[int]:
         """Get list of material indices used by objects in this group."""
         return list(set().union(*(obj.material_indices for obj in self._objects)))
