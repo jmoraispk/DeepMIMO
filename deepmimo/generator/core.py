@@ -161,7 +161,7 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
                 bs_idx += 1
 
     # Convert dictionary to Dataset at the end
-    if len(dataset_list):
+    if len(dataset_list) > 1:
         final_dataset = MacroDataset([Dataset(d_dict) for d_dict in dataset_list])
     else:
         final_dataset = Dataset(dataset_list[0])
