@@ -309,25 +309,54 @@ class PhysicalElement:
         """Get the volume of the object using its convex hull."""
         return self.hull_volume
     
-    def to_dict(self) -> Dict:
-        """Convert physical object to dictionary format."""
-        return {
+    def to_dict(self, vertex_map: Dict[Tuple[float, ...], int]) -> Dict:
+        """Convert physical object to dictionary format.
+        
+        Args:
+            vertex_map: Dictionary mapping vertex tuples to their global indices
+            
+        Returns:
+            Dict containing object metadata with face vertex and material indices
+        """
+        obj_metadata = {
             'name': self.name,
             'label': self.label,
             'id': self.object_id,
-            'faces': []  # Will be populated with tri_indices during scene export
+            'face_vertex_idxs': [],
+            'face_material_idxs': []
         }
+        
+        # Process each face
+        for face in self.faces:
+            # Get vertex indices for this face
+            face_vertex_indices = []
+            for tri_vertices in face.triangular_faces:
+                for vertex in tri_vertices:
+                    vertex_tuple = tuple(vertex)
+                    if vertex_tuple not in vertex_map:
+                        vertex_map[vertex_tuple] = len(vertex_map)
+                    if vertex_map[vertex_tuple] not in face_vertex_indices:
+                        face_vertex_indices.append(vertex_map[vertex_tuple])
+            
+            # Store vertex indices and material index
+            obj_metadata['face_vertex_idxs'].append(face_vertex_indices)
+            obj_metadata['face_material_idxs'].append(face.material_idx)
+        
+        return obj_metadata
     
     @classmethod
-    def from_dict(cls, data: Dict) -> 'PhysicalElement':
-        """Create physical object from dictionary format."""
-        faces = [
-            Face(
-                vertices=face['vertices'],
-                material_idx=face['material_idx']
-            )
-            for face in data['faces']
-        ]
+    def from_dict(cls, data: Dict, vertices: np.ndarray) -> 'PhysicalElement':
+        """Create physical object from dictionary format.
+        
+        Args:
+            data: Dictionary containing object data
+            vertices: Array of vertex coordinates (shape: N_vertices x 3)
+            
+        Returns:
+            PhysicalElement: Created object
+        """
+        faces = [Face(vertices=vertices[vertex_idxs], material_idx=material_idx)
+                 for vertex_idxs, material_idx in zip(data['face_vertex_idxs'], data['face_material_idxs'])]
         return cls(faces=faces, name=data['name'], object_id=data['id'], label=data['label'])
 
     @property
@@ -590,53 +619,24 @@ class Scene:
         # Create base folder if it doesn't exist
         Path(base_folder).mkdir(parents=True, exist_ok=True)
         
-        # First collect all vertices and build index mapping
-        all_vertices = []
+        # Initialize vertex mapping
         vertex_map = {}  # Maps (x,y,z) tuple to vertex index
-        tri_faces = []  # List of triangular face vertex indices (3 vertices each)
         
-        # Track object metadata
+        # Convert objects to metadata format
         objects_metadata = []
-        current_tri_idx = 0
-        
         for obj in self.objects:
-            obj_metadata = obj.to_dict()
-            
-            for face in obj.faces:
-                face_tri_indices = []  # Indices of triangular faces for this face
-                
-                # Process each triangular face
-                for tri_vertices in face.triangular_faces:
-                    # Get or create indices for each vertex in the triangle
-                    tri_indices = []
-                    for vertex in tri_vertices:
-                        vertex_tuple = tuple(vertex)
-                        if vertex_tuple not in vertex_map:
-                            vertex_map[vertex_tuple] = len(all_vertices)
-                            all_vertices.append(vertex)
-                        tri_indices.append(vertex_map[vertex_tuple])
-                    
-                    # Add triangular face and its material
-                    tri_faces.append(tri_indices)
-                    face_tri_indices.append(current_tri_idx)
-                    current_tri_idx += 1
-                
-                # Store triangular face indices and material index
-                obj_metadata['faces'].append({
-                    'tri_indices': face_tri_indices,
-                    'material_idx': face.material_idx
-                })
-            
+            # to_dict will update vertex_map as needed
+            obj_metadata = obj.to_dict(vertex_map)
             objects_metadata.append(obj_metadata)
         
-        # Convert to numpy arrays
+        # Convert vertices to array
+        all_vertices = [None] * len(vertex_map)
+        for vertex, idx in vertex_map.items():
+            all_vertices[idx] = vertex
         vertices = np.array(all_vertices)  # Shape: (N_vertices, 3)
-        tri_faces = np.array(tri_faces)  # Shape: (N_triangular_faces, 3)
-        materials = np.array(materials)  # Shape: (N_triangular_faces,)
         
         # Save matrices
         savemat(f"{base_folder}/vertices.mat", {'vertices': vertices})
-        savemat(f"{base_folder}/faces.mat", {'faces': tri_faces})
         save_dict_as_json(f"{base_folder}/objects.json", objects_metadata)
         
         return {
@@ -644,7 +644,7 @@ class Scene:
             'n_objects': len(self.objects),
             'n_vertices': len(vertices),
             'n_faces': sum(len(obj.faces) for obj in self.objects),
-            'n_triangular_faces': len(tri_faces)
+            'n_triangular_faces': len(self.face_indices)
         }
     
     @classmethod
@@ -656,47 +656,13 @@ class Scene:
         """
         # Load matrices
         vertices = loadmat(f"{base_folder}/vertices.mat")['vertices']
-        tri_faces = loadmat(f"{base_folder}/faces.mat")['faces']
         objects_metadata = load_dict_from_json(f"{base_folder}/objects.json")
         
         scene = cls()
         
-        # Create objects using face metadata
+        # Create objects using metadata
         for object_data in objects_metadata:
-            object_faces = []
-            
-            # Process each face in the object
-            for face_data in object_data['faces']:
-                # Get triangulation indices
-                face_tri_indices = face_data['tri_indices']
-                if isinstance(face_tri_indices, (int, np.integer)):
-                    face_tri_indices = [face_tri_indices]
-                
-                # Collect all vertices from all triangles in order
-                face_vertex_indices = []
-                for tri_idx in face_tri_indices:
-                    # Add each vertex index if not already present
-                    for vertex_idx in tri_faces[tri_idx]:
-                        if vertex_idx not in face_vertex_indices:
-                            face_vertex_indices.append(vertex_idx)
-                
-                # Get vertices in the order they were added
-                face_vertices = vertices[face_vertex_indices]
-                
-                # Get material index from face data
-                material_idx = face_data['material_idx']
-                
-                # Create face with all vertices in order
-                face = Face(vertices=face_vertices, material_idx=material_idx)
-                object_faces.append(face)
-            
-            # Create object with appropriate label
-            obj = PhysicalElement(
-                faces=object_faces,
-                name=object_data['name'],
-                object_id=object_data['id'],
-                label=object_data['label']
-            )
+            obj = PhysicalElement.from_dict(object_data, vertices)
             scene.add_object(obj)
         
         return scene
@@ -739,9 +705,7 @@ class Scene:
         for label, objects in label_groups.items():
             # Get visualization settings for this label
             vis_settings = self.visualization_settings.get(
-                label,
-                {'z_order': 3, 'alpha': 0.8, 'color': None}  # Default settings
-            )
+                label, {'z_order': 3, 'alpha': 0.8, 'color': None})  # Default settings
             
             # Use rainbow colormap for objects without fixed color
             n_objects = len(objects)
@@ -918,3 +882,4 @@ def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tu
     faces = [bottom_face, top_face] + side_faces
     
     return faces
+
