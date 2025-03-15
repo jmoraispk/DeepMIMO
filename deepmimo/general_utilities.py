@@ -222,7 +222,7 @@ class DotDict(Mapping[K, V]):
                 result[key] = value.copy()
             else:
                 result[key] = value
-        return DotDict(result)
+        return type(self)(result)  # Use the same class type as self
 
     def __repr__(self) -> str:
         """Return string representation of dictionary."""
