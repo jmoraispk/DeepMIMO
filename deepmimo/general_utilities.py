@@ -343,10 +343,10 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
 
     summary_str += "\n[Scene]\n"
     summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
-    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}\n"
-    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}\n"
-    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,} "
-    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} "
+    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]:,}\n"
+    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]:,}\n"
+    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,}\n"
+    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,}\n"
 
     summary_str += "\n[Materials]\n"
     summary_str += f"Total materials: {len(material_params)}\n"
