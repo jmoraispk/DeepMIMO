@@ -93,6 +93,7 @@ class PhysicalObjectParser:
             raise ValueError(f"Unsupported file type: {self.file_path.suffix}")
         
         self.label = OBJECT_LABELS[self.file_path.suffix]
+        self.name = self.file_path.stem  # Get filename without extension
     
     def parse(self) -> List[PhysicalElement]:
         """Parse the file and return a list of physical objects.
@@ -120,7 +121,7 @@ class PhysicalObjectParser:
             faces = [Face(vertices=face) for face in object_faces]
             
             # Create PhysicalElement object with appropriate label
-            obj = PhysicalElement(faces=faces, object_id=i, label=self.label)
+            obj = PhysicalElement(faces=faces, name=self.name, object_id=i, label=self.label)
             objects.append(obj)
             
         return objects
