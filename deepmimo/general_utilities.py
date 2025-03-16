@@ -147,6 +147,10 @@ class DotDict(Mapping[K, V]):
             value = DotDict(value)
         self._data[key] = value
 
+    def __delitem__(self, key: str) -> None:
+        """Enable dictionary-style deletion."""
+        del self._data[key]
+
     def update(self, other: Dict[str, Any]) -> None:
         """Update the dictionary with elements from another dictionary."""
         # Convert any nested dicts to DotDicts first
@@ -167,22 +171,6 @@ class DotDict(Mapping[K, V]):
     def __dir__(self):
         """Return list of valid attributes."""
         return list(set(list(super().__dir__()) + list(self._data.keys())))
-
-    @property
-    def shape(self):
-        """Return shape of the first array-like value in the dictionary."""
-        for val in self._data.values():
-            if hasattr(val, "shape"):
-                return val.shape
-        return None
-
-    @property
-    def size(self):
-        """Return size of the first array-like value in the dictionary."""
-        for val in self._data.values():
-            if hasattr(val, "size"):
-                return val.size
-        return None
 
     def keys(self):
         """Return dictionary keys."""
@@ -213,6 +201,28 @@ class DotDict(Mapping[K, V]):
             else:
                 result[key] = value
         return result
+
+    def deepcopy(self) -> 'DotDict':
+        """Create a deep copy of the DotDict instance.
+        
+        This method creates a completely independent copy of the DotDict,
+        including nested dictionaries and numpy arrays. This ensures that
+        modifications to the copy won't affect the original.
+        
+        Returns:
+            DotDict: A deep copy of this instance
+        """
+        result = {}
+        for key, value in self._data.items():
+            if isinstance(value, DotDict):
+                result[key] = value.deepcopy()
+            elif isinstance(value, dict):
+                result[key] = DotDict(value).deepcopy()
+            elif isinstance(value, np.ndarray):
+                result[key] = value.copy()
+            else:
+                result[key] = value
+        return DotDict(result)
 
     def __repr__(self) -> str:
         """Return string representation of dictionary."""
@@ -333,10 +343,10 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
 
     summary_str += "\n[Scene]\n"
     summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
-    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}\n"
-    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}\n"
-    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,} "
-    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} "
+    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]:,}\n"
+    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]:,}\n"
+    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,}\n"
+    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,}\n"
 
     summary_str += "\n[Materials]\n"
     summary_str += f"Total materials: {len(material_params)}\n"

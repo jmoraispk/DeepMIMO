@@ -25,7 +25,8 @@ from matplotlib.colors import ListedColormap
 
 
 def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
-                    cbar_title: str = '', cat_labels: Optional[List[str]] = None) -> Colorbar:
+                     cbar_title: str = '', cat_labels: Optional[List[str]] = None,
+                     ax: Optional[Axes] = None) -> Colorbar:
     """Create a colorbar for the coverage plot, handling both continuous and categorical data.
     
     Args:
@@ -34,20 +35,24 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
         cmap: Matplotlib colormap name
         cbar_title: Title for the colorbar
         cat_labels: Optional labels for categorical values
+        ax: The matplotlib axes object to attach the colorbar to
         
     Returns:
         matplotlib Colorbar object
     """
+    # Get the figure from the axes
+    fig = ax.figure if ax is not None else plt.gcf()
+    
     # Remove NaN values for unique value calculation
     valid_data = cov_map[~np.isnan(cov_map)]
     unique_vals = np.sort(np.unique(valid_data))
     n_cats = len(unique_vals)
     
     if cat_labels is not None and len(cat_labels) != n_cats:
-                raise ValueError(f"Number of category labels ({len(cat_labels)}) "
-                               f"must match number of unique values ({n_cats})")
+        raise ValueError(f"Number of category labels ({len(cat_labels)}) "
+                         f"must match number of unique values ({n_cats})")
     
-    if n_cats < 10:  # Use discrete colorbar for small number of unique values
+    if n_cats < 10 or cat_labels:  # Use discrete colorbar for small number of unique values
         # Create discrete colormap
         if isinstance(cmap, str):
             # Get base colors from the colormap
@@ -72,14 +77,14 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
         scatter_plot.set_clim(-0.5, n_cats - 0.5)
         
         # Create colorbar with centered ticks
-        cbar = plt.colorbar(scatter_plot, label=cbar_title, ticks=tick_locs,
+        cbar = fig.colorbar(scatter_plot, ax=ax, label=cbar_title, ticks=tick_locs,
                             boundaries=np.arange(-0.5, n_cats + 0.5),
                             values=np.arange(n_cats))
         
         # Set tick labels
         cbar.set_ticklabels(cat_labels if cat_labels else [str(val) for val in unique_vals])
     else:  # Use continuous colorbar for many unique values
-        cbar = plt.colorbar(scatter_plot, label=cbar_title)
+        cbar = fig.colorbar(scatter_plot, ax=ax, label=cbar_title)
     
     return cbar
 
@@ -90,7 +95,8 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
                  proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
-                 cmap: str = 'viridis') -> Tuple[Figure, Axes, Colorbar]:
+                 cmap: str | list = 'viridis', cbar_labels: Optional[list[str]] = None,
+                 ax: Optional[Axes] = None) -> Tuple[Figure, Axes, Colorbar]:
     """Generate coverage map visualization for user positions.
     
     This function creates a customizable plot showing user positions colored by
@@ -111,32 +117,43 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         proj_3D (bool): Whether to create 3D projection. Defaults to False.
         equal_aspect (bool): Whether to maintain equal axis scaling. Defaults to False.
         tight (bool): Whether to set tight axis limits around data points. Defaults to True.
-        cmap (str): Matplotlib colormap name. Defaults to 'viridis'.
-        
+        cmap (str | list): Matplotlib colormap name or list of colors. Defaults to 'viridis'.
+        cbar_labels (Optional[list[str]]): List of labels for the colorbar. Defaults to None.
+        ax (Optional[Axes]): Matplotlib Axes object. Defaults to None.
+
     Returns:
         Tuple containing:
         - matplotlib Figure object
         - matplotlib Axes object
         - matplotlib Colorbar object
     """
+    cmap = cmap if isinstance(cmap, str) else ListedColormap(cmap)
     plt_params = {'cmap': cmap}
     if lims:
         plt_params['vmin'], plt_params['vmax'] = lims[0], lims[1]
     
     n = 3 if proj_3D else 2 # n = coordinates to consider
     
-    xyz = {s: rxs[:,i] for s,i in zip(['x', 'y', 'zs'], range(n))}
+    xyz_arg_names = ['x' if n==2 else 'xs', 'y' if n==2 else 'ys', 'zs']
+    xyz = {s: rxs[:,i] for s,i in zip(xyz_arg_names, range(n))}
     
-    fig, ax = plt.subplots(dpi=dpi, figsize=figsize,
-                           subplot_kw={'projection': '3d'} if proj_3D else {})
+    if not ax:
+        fig, ax = plt.subplots(dpi=dpi, figsize=figsize,
+                               subplot_kw={'projection': '3d'} if proj_3D else {})
+    else:
+        fig = ax.figure
+
+    cov_map = np.array(cov_map) if isinstance(cov_map, list) else cov_map
+
+    im = ax.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
     
-    im = plt.scatter(**xyz, c=cov_map, s=scat_sz, marker='s', **plt_params)
+    cbar = _create_colorbar(im, cov_map, cmap, cbar_title, cbar_labels, ax)
     
-    cbar = _create_colorbar(im, cov_map, cmap, cbar_title)
-    
-    plt.xlabel('x (m)')
-    plt.ylabel('y (m)')
-    
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    if proj_3D:
+        ax.set_zlabel('z (m)')
+        
     # TX position
     if bs_pos is not None:
         bs_pos = bs_pos.squeeze()
@@ -156,21 +173,21 @@ def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np
         ax.set_title(title)
     
     if legend:
-        plt.legend(loc='upper center', ncols=10, framealpha=.5)
+        ax.legend(loc='upper center', ncols=10, framealpha=.5)
     
     if tight:
         s = 1
-        mins, maxs = np.min(rxs, axis=0)-s, np.max(rxs, axis=0)+s
+        # Get plot limits including BS position if available
+        all_points = np.vstack([rxs, bs_pos.reshape(1, -1)]) if bs_pos is not None else rxs
+        mins, maxs = np.min(all_points, axis=0)-s, np.max(all_points, axis=0)+s
         
-        plt.xlim([mins[0], maxs[0]])
-        plt.ylim([mins[1], maxs[1]])
+        ax.set_xlim([mins[0], maxs[0]])
+        ax.set_ylim([mins[1], maxs[1]])
         if proj_3D:
-            zlims = [mins[2], maxs[2]] if bs_pos is None else [np.min([mins[2], bs_pos[2]]),
-                                                               np.max([mins[2], bs_pos[2]])]
-            ax.axes.set_zlim3d(zlims)
+            ax.axes.set_zlim3d([mins[2], maxs[2]])
     
     if equal_aspect: # often disrups the plot if in 3D.
-        plt.axis('scaled')
+        ax.set_aspect('equal')
     
     return fig, ax, cbar
 
@@ -281,13 +298,22 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
         - matplotlib Axes object
     """
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi,
-                          subplot_kw={'projection': '3d'} if proj_3D else {})
+                           subplot_kw={'projection': '3d'} if proj_3D else {})
     
     # Ensure inputs are numpy arrays and have correct shape
     rx_loc = np.asarray(rx_loc)  # Shape: (3,)
     tx_loc = np.asarray(tx_loc)  # Shape: (3,)
     inter_pos = np.asarray(inter_pos)  # Shape: (n_paths, max_interactions, 3)
     inter = np.asarray(inter)  # Shape: (n_paths,)
+    
+    # Define dimension-specific plotting functions
+    def plot_line(start_point, end_point, **kwargs):
+        coords = [(start_point[i], end_point[i]) for i in range(3 if proj_3D else 2)]
+        ax.plot(*coords, **kwargs)
+        
+    def plot_point(point, **kwargs):
+        coords = point[:3] if proj_3D else point[:2]
+        ax.scatter(*coords, **kwargs)
     
     # Define colors and names for different interaction types
     interaction_colors = {
@@ -310,9 +336,9 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
     
     # For each ray path
     for path_idx in range(len(inter_pos)):
-        # Get valid interaction points for this path (excluding zero padding)
-        # Check if any coordinate (x,y,z) is non-zero
-        valid_inters = np.any(inter_pos[path_idx] != 0, axis=1)
+        # Get valid interaction points for this path (excluding NaN values)
+        # Check if any coordinate (x,y,z) is not NaN
+        valid_inters = ~np.any(np.isnan(inter_pos[path_idx]), axis=1)
         path_interactions = inter_pos[path_idx][valid_inters]
         
         # Create complete path: TX -> interactions -> RX
@@ -329,18 +355,10 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
         
         # Check if this is a LoS path
         is_los = len(path_interactions) == 0
-        
+        plt_color = 'g' if is_los else 'r'
         # Plot the ray path segments
         for i in range(len(path_points)-1):
-            if proj_3D:
-                ax.plot([path_points[i,0], path_points[i+1,0]], 
-                       [path_points[i,1], path_points[i+1,1]],
-                       [path_points[i,2], path_points[i+1,2]],
-                       'g-' if is_los else 'r-', alpha=0.5)
-            else:
-                ax.plot([path_points[i,0], path_points[i+1,0]],
-                       [path_points[i,1], path_points[i+1,1]],
-                       'g-' if is_los else 'r-', alpha=0.5)
+            plot_line(path_points[i], path_points[i+1], color=plt_color, alpha=0.5, zorder=1)
         
         # Plot interaction points
         if len(path_interactions) > 0:  # If there are interaction points
@@ -353,30 +371,17 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
                     point_color = 'blue'
                     point_label = None
                 
-                if proj_3D:
-                    ax.scatter(pos[0], pos[1], pos[2],
-                             c=point_color, marker='o', s=50,
-                             label=point_label)
-                else:
-                    ax.scatter(pos[0], pos[1],
-                             c=point_color, marker='o', s=50,
-                             label=point_label)
+                plot_point(pos, c=point_color, marker='o', s=20, label=point_label, zorder=2)
     
     # Plot TX and RX points
-    if proj_3D:
-        ax.scatter(tx_loc[0], tx_loc[1], tx_loc[2], 
-                  c='black', marker='^', s=100, label='TX')
-        ax.scatter(rx_loc[0], rx_loc[1], rx_loc[2],
-                  c='black', marker='v', s=100, label='RX')
-        ax.set_zlabel('z (m)')
-    else:
-        ax.scatter(tx_loc[0], tx_loc[1],
-                  c='black', marker='^', s=100, label='TX')
-        ax.scatter(rx_loc[0], rx_loc[1],
-                  c='black', marker='v', s=100, label='RX')
+    plot_point(tx_loc, c='black', marker='^', s=100, label='TX', zorder=3)
+    plot_point(rx_loc, c='black', marker='v', s=100, label='RX', zorder=3)
     
+    # Set axis labels
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
+    if proj_3D:
+        ax.set_zlabel('z (m)')
     
     # Only show legend if color_by_type is True or if there are TX/RX points
     if color_by_type:
@@ -391,6 +396,7 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
     if not proj_3D:
         ax.set_aspect('equal')
     
+    ax.grid()
     return fig, ax
 
 def plot_power_discarding(dataset, trim_delay: Optional[float] = None) -> Tuple[Figure, Axes]:
@@ -415,7 +421,8 @@ def plot_power_discarding(dataset, trim_delay: Optional[float] = None) -> Tuple[
     # Get the trim delay - either provided or from OFDM parameters
     if trim_delay is None:
         if not hasattr(dataset, 'channel_params'):
-            raise ValueError("Dataset has no channel parameters. Please provide trim_delay explicitly.")
+            raise ValueError("Dataset has no channel parameters. "
+                             "Please provide trim_delay explicitly.")
         trim_delay = (dataset.channel_params.ofdm.subcarriers / 
                      dataset.channel_params.ofdm.bandwidth)
     

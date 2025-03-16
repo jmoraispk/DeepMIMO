@@ -204,6 +204,6 @@ def export_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths,
     }
     
     for filename, variable in save_vars_dict.items():
-        cu.save_pickle(variable, save_folder + filename)
+        cu.save_pickle(variable, os.path.join(save_folder, filename))
 
     return

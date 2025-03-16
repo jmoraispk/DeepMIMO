@@ -219,7 +219,8 @@ class PhysicalElement:
     DEFAULT_LABELS = {CAT_BUILDINGS, CAT_TERRAIN, CAT_VEGETATION, CAT_FLOORPLANS, CAT_OBJECTS}
     
     def __init__(self, faces: List[Face], object_id: int = -1, 
-                 label: str = CAT_OBJECTS, color: str = '', speed: float = 0.0):
+                 label: str = CAT_OBJECTS, color: str = '', speed: float = 0.0,
+                 name: str = ''):
         """Initialize a physical object from its faces.
         
         Args:
@@ -228,12 +229,14 @@ class PhysicalElement:
             label: Label identifying the type of object (default: 'objects')
             color: Color for visualization (default: '', which means use default color)
             speed: Speed of the object (default: 0.0)
+            name: Optional name for the object (default: '')
         """
         self._faces = faces
         self.object_id = object_id
         self.label = label if label in self.DEFAULT_LABELS else CAT_OBJECTS
         self.color = color
         self.speed = speed
+        self.name = name
         
         # Extract all vertices from faces for bounding box computation
         all_vertices = np.vstack([face.vertices for face in faces])
@@ -306,31 +309,55 @@ class PhysicalElement:
         """Get the volume of the object using its convex hull."""
         return self.hull_volume
     
-    def to_dict(self) -> Dict:
-        """Convert physical object to dictionary format."""
-        return {
+    def to_dict(self, vertex_map: Dict[Tuple[float, ...], int]) -> Dict:
+        """Convert physical object to dictionary format.
+        
+        Args:
+            vertex_map: Dictionary mapping vertex tuples to their global indices
+            
+        Returns:
+            Dict containing object metadata with face vertex and material indices
+        """
+        obj_metadata = {
+            'name': self.name,
             'label': self.label,
             'id': self.object_id,
-            'faces': [
-                {
-                    'vertices': face.vertices.tolist(),
-                    'material_idx': face.material_idx
-                }
-                for face in self.faces
-            ]
+            'face_vertex_idxs': [],
+            'face_material_idxs': []
         }
+        
+        # Process each face
+        for face in self.faces:
+            # Get vertex indices for this face
+            face_vertex_indices = []
+            for tri_vertices in face.triangular_faces:
+                for vertex in tri_vertices:
+                    vertex_tuple = tuple(vertex)
+                    if vertex_tuple not in vertex_map:
+                        vertex_map[vertex_tuple] = len(vertex_map)
+                    if vertex_map[vertex_tuple] not in face_vertex_indices:
+                        face_vertex_indices.append(vertex_map[vertex_tuple])
+            
+            # Store vertex indices and material index
+            obj_metadata['face_vertex_idxs'].append(face_vertex_indices)
+            obj_metadata['face_material_idxs'].append(face.material_idx)
+        
+        return obj_metadata
     
     @classmethod
-    def from_dict(cls, data: Dict) -> 'PhysicalElement':
-        """Create physical object from dictionary format."""
-        faces = [
-            Face(
-                vertices=np.array(face['vertices']),
-                material_idx=face['material_idx']
-            )
-            for face in data['faces']
-        ]
-        return cls(faces=faces, object_id=data['id'], label=data['label'])
+    def from_dict(cls, data: Dict, vertices: np.ndarray) -> 'PhysicalElement':
+        """Create physical object from dictionary format.
+        
+        Args:
+            data: Dictionary containing object data
+            vertices: Array of vertex coordinates (shape: N_vertices x 3)
+            
+        Returns:
+            PhysicalElement: Created object
+        """
+        faces = [Face(vertices=vertices[vertex_idxs], material_idx=material_idx)
+                 for vertex_idxs, material_idx in zip(data['face_vertex_idxs'], data['face_material_idxs'])]
+        return cls(faces=faces, name=data['name'], object_id=data['id'], label=data['label'])
 
     @property
     def position(self) -> np.ndarray:
@@ -380,6 +407,17 @@ class PhysicalElement:
             self._material_indices = {face.material_idx for face in self._faces}
         return self._material_indices
 
+    def __repr__(self) -> str:
+        """Return a concise string representation of the physical element.
+        
+        Returns:
+            str: String representation showing key element information
+        """
+        bb = self.bounding_box
+        dims = f"{bb.width:.0f} x {bb.length:.0f} x {bb.height:.0f} m"
+        return (f"PhysicalElement(name='{self.name}', id={self.object_id}, "
+                f"label='{self.label}', faces={len(self._faces)}, dims={dims})")
+
 class PhysicalElementGroup:
     """Represents a group of physical objects that can be queried and manipulated together."""
     
@@ -400,6 +438,12 @@ class PhysicalElementGroup:
         """Get object by index."""
         return self._objects[idx]
     
+    def __repr__(self) -> str:
+        """Return a concise string representation of the physical element group."""
+        obj_list = "\n".join(f"  {obj}" for obj in self._objects)
+        return (f"PhysicalElementGroup(objects={len(self._objects)})\n"
+                f"Objects:\n{obj_list}")
+
     def get_materials(self) -> List[int]:
         """Get list of material indices used by objects in this group."""
         return list(set().union(*(obj.material_indices for obj in self._objects)))
@@ -575,59 +619,24 @@ class Scene:
         # Create base folder if it doesn't exist
         Path(base_folder).mkdir(parents=True, exist_ok=True)
         
-        # First collect all vertices and build index mapping
-        all_vertices = []
+        # Initialize vertex mapping
         vertex_map = {}  # Maps (x,y,z) tuple to vertex index
-        tri_faces = []  # List of triangular face vertex indices (3 vertices each)
-        materials = []  # Material index for each triangular face
         
-        # Track object metadata
+        # Convert objects to metadata format
         objects_metadata = []
-        current_tri_idx = 0
-        
         for obj in self.objects:
-            object_faces_metadata = []  # List of triangular face indices for each face
-            
-            for face in obj.faces:
-                face_tri_indices = []  # Indices of triangular faces for this face
-                
-                # Process each triangular face
-                for tri_vertices in face.triangular_faces:
-                    # Get or create indices for each vertex in the triangle
-                    tri_indices = []
-                    for vertex in tri_vertices:
-                        vertex_tuple = tuple(vertex)
-                        if vertex_tuple not in vertex_map:
-                            vertex_map[vertex_tuple] = len(all_vertices)
-                            all_vertices.append(vertex)
-                        tri_indices.append(vertex_map[vertex_tuple])
-                    
-                    # Add triangular face and its material
-                    tri_faces.append(tri_indices)
-                    materials.append(face.material_idx)
-                    face_tri_indices.append(current_tri_idx)
-                    current_tri_idx += 1
-                
-                # Store triangular face indices for this face
-                # Ensure face_tri_indices is stored as a list, even if it's a single index
-                object_faces_metadata.append(face_tri_indices if len(face_tri_indices) > 1 else [face_tri_indices[0]])
-            
-            # Store object metadata
-            objects_metadata.append({
-                'id': obj.object_id,
-                'label': obj.label,
-                'faces': object_faces_metadata  # List of lists of triangular face indices
-            })
+            # to_dict will update vertex_map as needed
+            obj_metadata = obj.to_dict(vertex_map)
+            objects_metadata.append(obj_metadata)
         
-        # Convert to numpy arrays
+        # Convert vertices to array
+        all_vertices = [None] * len(vertex_map)
+        for vertex, idx in vertex_map.items():
+            all_vertices[idx] = vertex
         vertices = np.array(all_vertices)  # Shape: (N_vertices, 3)
-        tri_faces = np.array(tri_faces)  # Shape: (N_triangular_faces, 3)
-        materials = np.array(materials)  # Shape: (N_triangular_faces,)
         
         # Save matrices
         savemat(f"{base_folder}/vertices.mat", {'vertices': vertices})
-        savemat(f"{base_folder}/faces.mat", {'faces': tri_faces})
-        savemat(f"{base_folder}/materials.mat", {'materials': materials})
         save_dict_as_json(f"{base_folder}/objects.json", objects_metadata)
         
         return {
@@ -635,62 +644,25 @@ class Scene:
             'n_objects': len(self.objects),
             'n_vertices': len(vertices),
             'n_faces': sum(len(obj.faces) for obj in self.objects),
-            'n_triangular_faces': len(tri_faces)
+            'n_triangular_faces': len(self.face_indices)
         }
     
     @classmethod
-    def from_data(cls, metadata: Dict, base_folder: str) -> 'Scene':
+    def from_data(cls, base_folder: str) -> 'Scene':
         """Create scene from metadata dictionary and data files.
         
         Args:
-            metadata: Dictionary containing metadata about the scene
             base_folder: Base folder containing matrix files
         """
         # Load matrices
         vertices = loadmat(f"{base_folder}/vertices.mat")['vertices']
-        tri_faces = loadmat(f"{base_folder}/faces.mat")['faces']
-        materials = loadmat(f"{base_folder}/materials.mat")['materials'].flatten()
         objects_metadata = load_dict_from_json(f"{base_folder}/objects.json")
         
         scene = cls()
         
-        # Create objects using face metadata
+        # Create objects using metadata
         for object_data in objects_metadata:
-            object_faces = []
-            
-            # Process each face in the object
-            for face_tri_indices in object_data['faces']:
-                # Handle both list and integer cases
-                if isinstance(face_tri_indices, (int, np.integer)):
-                    face_tri_indices = [face_tri_indices]
-                
-                # Collect all vertices from all triangles in order
-                face_vertex_indices = []
-                for tri_idx in face_tri_indices:
-                    # Add each vertex index if not already present
-                    for vertex_idx in tri_faces[tri_idx]:
-                        if vertex_idx not in face_vertex_indices:
-                            face_vertex_indices.append(vertex_idx)
-                
-                # Get vertices in the order they were added
-                face_vertices = vertices[face_vertex_indices]
-                
-                # Get material index (same for all triangular faces in this face)
-                material_idx = materials[face_tri_indices[0]]
-                
-                # Create face with all vertices in order
-                face = Face(
-                    vertices=face_vertices,
-                    material_idx=material_idx
-                )
-                object_faces.append(face)
-            
-            # Create object with appropriate label
-            obj = PhysicalElement(
-                faces=object_faces,
-                object_id=object_data['id'],
-                label=object_data['label']
-            )
+            obj = PhysicalElement.from_dict(object_data, vertices)
             scene.add_object(obj)
         
         return scene
@@ -733,9 +705,7 @@ class Scene:
         for label, objects in label_groups.items():
             # Get visualization settings for this label
             vis_settings = self.visualization_settings.get(
-                label,
-                {'z_order': 3, 'alpha': 0.8, 'color': None}  # Default settings
-            )
+                label, {'z_order': 3, 'alpha': 0.8, 'color': None})  # Default settings
             
             # Use rainbow colormap for objects without fixed color
             n_objects = len(objects)
@@ -831,36 +801,45 @@ class Scene:
             label_counts[label] = label_counts.get(label, 0) + 1
         return label_counts
 
+    def __repr__(self) -> str:
+        """Return a concise string representation of the scene.
+        
+        Returns:
+            str: String representation showing key scene information
+        """
+        # Get object counts by label
+        label_counts = self.count_objects_by_label()
+        
+        # Get scene dimensions
+        bb = self.bounding_box
+        dims = f"{bb.width:.1f} x {bb.length:.1f} x {bb.height:.1f} m"
+        
+        # Format object counts
+        counts = [f"{label}: {count}" for label, count in label_counts.items()]
+        counts_str = ", ".join(counts)
+        
+        return f"Scene({len(self.objects)} objects [{counts_str}], dims = {dims})"
+
 #------------------------------------------------------------------------------
 # Utilities
 #------------------------------------------------------------------------------
 
-def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tuple[float, float, float]]]:
-    """Generate faces for a physical object from its vertices.
+def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces using convex hull approach (fast but simplified).
     
-    This function takes a list of vertices and generates faces to form a complete 
-    3D object. It creates a convex hull from the base points and generates top, 
-    bottom and side faces. This is a utility function used by various converters
-    to generate efficient convex hull representations of objects.
-    
-    Note that while this generates convex hull faces, the Face class maintains
-    the ability to generate triangular faces when needed through its
-    triangular_faces property.
-
     Args:
-        vertices (list of tuple): List of (x,y,z) vertex coordinates for the object
-
+        vertices: Array of vertex coordinates (shape: N x 3)
+        
     Returns:
-        list of list of tuple: List of faces, where each face is a list of (x,y,z) 
-            vertex coordinates defining the face polygon
+        List of faces, where each face is a list of (x,y,z) vertex coordinates
     """
     # Extract base points (x,y coordinates)
-    points_2d = np.array([(x, y) for x, y, z in vertices])
+    points_2d = vertices[:, :2]
     
-    # Get object height (assuming constant height)
-    heights = [z for _, _, z in vertices]
-    object_height = max(heights) - min(heights)
-    base_height = min(heights)
+    # Get object height
+    heights = vertices[:, 2]
+    object_height = np.max(heights) - np.min(heights)
+    base_height = np.min(heights)
     
     # Create convex hull for base shape
     try:
@@ -889,7 +868,125 @@ def get_object_faces(vertices: List[Tuple[float, float, float]]) -> List[List[Tu
         ]
         side_faces.append(side)
     
-    # Combine all faces
-    faces = [bottom_face, top_face] + side_faces
+    return [bottom_face, top_face] + side_faces
+
+def _get_faces_coplanar(vertices: np.ndarray) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces by detecting coplanar sets (detailed but slower).
+    
+    Args:
+        vertices: Array of vertex coordinates (shape: N x 3)
+        
+    Returns:
+        List of faces, where each face is a list of (x,y,z) vertex coordinates
+    """
+    def are_coplanar(points, tolerance=1e-10):
+        """Check if points are coplanar by checking rank of centered points."""
+        if len(points) < 3:
+            return True
+        centered = points - points.mean(axis=0)
+        _, s, _ = np.linalg.svd(centered)
+        return s[2] < tolerance
+    
+    def get_face_normal(points):
+        """Get normal vector of a face using first three points."""
+        v1 = points[1] - points[0]
+        v2 = points[2] - points[0]
+        normal = np.cross(v1, v2)
+        return normal / np.linalg.norm(normal)
+    
+    def points_to_2d(points, normal):
+        """Project 3D points onto their best-fit plane."""
+        # Find rotation matrix to rotate normal to z-axis
+        z_axis = np.array([0, 0, 1])
+        if np.allclose(normal, z_axis) or np.allclose(normal, -z_axis):
+            rotation = np.eye(3)
+        else:
+            rotation_axis = np.cross(normal, z_axis)
+            rotation_axis /= np.linalg.norm(rotation_axis)
+            cos_theta = np.dot(normal, z_axis)
+            theta = np.arccos(cos_theta)
+            
+            # Rodrigues rotation formula
+            K = np.array([[0, -rotation_axis[2], rotation_axis[1]],
+                         [rotation_axis[2], 0, -rotation_axis[0]],
+                         [-rotation_axis[1], rotation_axis[0], 0]])
+            rotation = np.eye(3) + np.sin(theta) * K + (1 - cos_theta) * K @ K
+        
+        # Project points to 2D
+        rotated = points @ rotation.T
+        return rotated[:, :2]
+    
+    def order_vertices_2d(points_2d):
+        """Order vertices counter-clockwise around their centroid."""
+        center = points_2d.mean(axis=0)
+        angles = np.arctan2(points_2d[:, 1] - center[1],
+                           points_2d[:, 0] - center[0])
+        return np.argsort(angles)
+    
+    # Initialize faces list
+    faces = []
+    unprocessed = set(range(len(vertices)))
+    
+    # Process vertices until all are assigned to faces
+    while unprocessed:
+        # Start new face with first unprocessed vertex
+        current = list(unprocessed)[0]
+        face_vertices = [current]
+        coplanar_points = [vertices[current]]
+        
+        # Find all coplanar vertices
+        for idx in list(unprocessed - {current}):
+            test_points = np.array(coplanar_points + [vertices[idx]])
+            if are_coplanar(test_points):
+                face_vertices.append(idx)
+                coplanar_points.append(vertices[idx])
+        
+        # Convert to numpy array for easier manipulation
+        coplanar_points = np.array(coplanar_points)
+        
+        # Get face normal and project to 2D
+        normal = get_face_normal(coplanar_points)
+        points_2d = points_to_2d(coplanar_points, normal)
+        
+        # Order vertices counter-clockwise
+        order = order_vertices_2d(points_2d)
+        ordered_vertices = [tuple(vertices[face_vertices[i]]) for i in order]
+        
+        # Add face and update unprocessed set
+        faces.append(ordered_vertices)
+        unprocessed -= set(face_vertices)
     
     return faces
+
+def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = True) -> List[List[Tuple[float, float, float]]]:
+    """Generate faces for a physical object from its vertices.
+    
+    This function supports two modes:
+    1. Fast mode (default):
+       - Uses convex hull to create a simplified geometric shape
+       - Creates top, bottom and side faces
+       - More efficient but loses geometric detail
+       
+    2. Detailed mode:
+       - Detects coplanar sets of vertices to form faces
+       - Preserves original geometry
+       - Slower but more accurate
+    
+    Args:
+        vertices: List of (x,y,z) vertex coordinates for the object
+        fast: Whether to use fast mode (default: True)
+        
+    Returns:
+        List of faces, where each face is a list of (x,y,z) vertex coordinates
+    """
+    vertices = np.array(vertices)
+    if len(vertices) < 3:
+        return None
+    
+    if fast:
+        faces = _get_faces_convex_hull(vertices)
+    else:
+        faces = _get_faces_coplanar(vertices)
+    
+    return faces
+

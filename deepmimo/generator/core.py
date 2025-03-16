@@ -114,15 +114,15 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     dataset[c.NAME_PARAM_NAME] = scen_name
     dataset[c.LOAD_PARAMS_PARAM_NAME] = load_params
     dataset[c.RT_PARAMS_PARAM_NAME] = params[c.RT_PARAMS_PARAM_NAME]
-    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(params[c.SCENE_PARAM_NAME], scen_folder)
+    dataset[c.SCENE_PARAM_NAME] = Scene.from_data(scen_folder)
     dataset[c.MATERIALS_PARAM_NAME] = MaterialList.from_dict(params[c.MATERIALS_PARAM_NAME])
 
     return dataset
 
 def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c.MAX_PATHS,
-                         tx_sets: Dict[int, list | str] | list | str = 'all',
-                         rx_sets: Dict[int, list | str] | list | str = 'all',
-                         matrices: List[str] | str = 'all') -> Dataset:
+                          tx_sets: Dict[int, list | str] | list | str = 'all',
+                          rx_sets: Dict[int, list | str] | list | str = 'all',
+                          matrices: List[str] | str = 'all') -> Dataset:
     """Load raytracing data for a scene.
 
     Args:
@@ -143,8 +143,8 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
     
     for tx_set_id, tx_idxs in tx_sets.items():
         for rx_set_id, rx_idxs in rx_sets.items():
-            dataset_list.append({})
             for tx_idx in tx_idxs:
+                dataset_list.append({})
                 print(f'\nTX set: {tx_set_id} (basestation)')
                 rx_id_str = 'basestation' if rx_set_id == tx_set_id else 'users'
                 print(f'RX set: {rx_set_id} ({rx_id_str})')
@@ -161,7 +161,7 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
                 bs_idx += 1
 
     # Convert dictionary to Dataset at the end
-    if len(dataset_list):
+    if len(dataset_list) > 1:
         final_dataset = MacroDataset([Dataset(d_dict) for d_dict in dataset_list])
     else:
         final_dataset = Dataset(dataset_list[0])
@@ -221,7 +221,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: i
         mat_path = os.path.join(rayfolder, mat_filename)
     
         if os.path.exists(mat_path):
-            print(f'Loading {mat_filename}..')
+            print(f'Loading {mat_filename}...', end='')
             tx_dict[key] = scipy.io.loadmat(mat_path)[key]
         else:
             print(f'File {mat_path} could not be found')
@@ -237,7 +237,7 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: i
         if key not in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
             tx_dict[key] = tx_dict[key][:, :max_paths, ...]
         
-        print(f'shape = {tx_dict[key].shape}')
+        print(f'Done. Shape: {tx_dict[key].shape}')
     return tx_dict 
 
 # Helper functions

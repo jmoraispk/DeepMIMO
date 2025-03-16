@@ -11,14 +11,36 @@ from my_api_key import API_KEY as MY_API_KEY
 #%% V4 Conversion
 
 # Example usage
-rt_folder = './P2Ms/asu_campus'
+# rt_folder = './P2Ms/asu_campus'
 # rt_folder = './P2Ms/simple_street_canyon_test'
 # rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/DeepMIMO_folder'
 # rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_test'
-rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_export_test2'
+# rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_export_test2'
+# rt_folder = r'C:\Users\jmora\Downloads\DeepMIMOv4-hao-test\all_runs\run_03-08-2025_15H38M57S\NewYork\sionna_export_full'
+rt_folder = r'C:\Users\jmora\Documents\GitHub\AutoRayTracing\all_runs\run_03-09-2025_18H18M51S\NewYork\sionna_export_RX'
 
 scen_name = os.path.basename(rt_folder)
 dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=True)
+
+#%%
+
+import pickle
+def load_pickle(filename: str):
+    with open(filename, 'rb') as file:
+        return pickle.load(file)
+    
+from pprint import pprint
+
+p  = load_pickle(os.path.join(rt_folder, 'sionna_paths.pkl'))
+m  = load_pickle(os.path.join(rt_folder, 'sionna_materials.pkl'))
+mi = load_pickle(os.path.join(rt_folder, 'sionna_material_indices.pkl'))
+rt = load_pickle(os.path.join(rt_folder, 'sionna_rt_params.pkl'))
+v  = load_pickle(os.path.join(rt_folder, 'sionna_vertices.pkl'))
+o  = load_pickle(os.path.join(rt_folder, 'sionna_objects.pkl'))
+
+#%%
+
+
 
 #%%
 

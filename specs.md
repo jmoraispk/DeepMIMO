@@ -11,8 +11,12 @@ This folder contains the files that specify how each DeepMIMO version organizes 
         1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
     5. ['inter_loc'] is N x MAX_PATHS x MAX_INTERACTIONS x 3
     6. ['vertices'] is N_vertices x 3. XYZ coordinates of each vertex.
-    7. ['faces'] is N_faces x 3. Indices of the vertices of each face counter-clockwise, with surface normal pointing outward (follows right-hand rule). Each face is triangular.
-    8. ['materials'] is N_faces x 1
+    7. ['objects'] Data of objects:
+        - Name
+        - ID (unique)
+        - Label
+        - Indices of the vertices of each face counter-clockwise, with surface normal pointing outward (follows right-hand rule). 
+        - Indices of the materials of each face
 
 Summary of the dataset by matrix size (all real numbers):
   1. 8 matrices of N x MAX_PATHS

@@ -13,7 +13,7 @@ dataset generation process.
 """
 
 # Standard library imports
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 # Third-party imports
 import numpy as np
@@ -33,6 +33,46 @@ def dbw2watt(val: float | np.ndarray) -> float | np.ndarray:
         Power value(s) in Watts
     """
     return 10**(val/10)
+
+def get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.ndarray:
+    """Return indices of users at uniform intervals in a grid.
+    
+    This function generates indices for uniform sampling of users in a grid,
+    allowing for different sampling rates in each dimension. It validates the
+    grid structure and handles edge cases appropriately.
+
+    Args:
+        n_ue: Number of users in the dataset
+        grid_size: Array with [x_size, y_size] - number of points in each dimension
+        steps: List of sampling steps for each dimension [x_step, y_step]
+        
+    Returns:
+        Array of indices for uniformly sampled users
+        
+    Raises:
+        ValueError: If dataset does not have a valid grid structure and steps != [1,1]
+        
+    Example:
+        >>> rx_pos = np.array([[0,0], [0,1], [1,0], [1,1]])  # 2x2 grid
+        >>> grid_size = np.array([2, 2])
+        >>> steps = [2, 2]  # Sample every other point
+        >>> get_uniform_idxs(rx_pos, grid_size, steps)
+        array([0])  # Returns index of first point
+    """    
+    # Check if dataset has valid grid structure
+    if np.prod(grid_size) != n_ue:
+        print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {n_ue} users in rx_pos")
+        if steps == [1, 1]:
+            idxs = np.arange(n_ue)
+        else:
+            raise ValueError("Dataset does not have a valid grid structure. Cannot perform uniform sampling.")
+    else:
+        # Get indices of users at uniform intervals
+        cols = np.arange(grid_size[0], step=steps[0])
+        rows = np.arange(grid_size[1], step=steps[1])
+        idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
+    
+    return idxs
 
 def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.ndarray:
     """Return indices of users at uniform intervals.
@@ -62,7 +102,7 @@ class LinearPath:
     loss, delays, and angles.
     
     Attributes:
-        dataset (Dict): DeepMIMO dataset containing path information
+        rx_pos (np.ndarray): Positions of dataset points
         first_pos (np.ndarray): Starting position of the linear path
         last_pos (np.ndarray): Ending position of the linear path
         n (int): Number of points along the path
@@ -70,7 +110,7 @@ class LinearPath:
         pos (np.ndarray): Positions of points along the path
         feature_names (List[str]): Names of extracted features
     """
-    def __init__(self, deepmimo_dataset: Dict[str, Any] | List[Dict[str, Any]], first_pos: np.ndarray,
+    def __init__(self, rx_pos: np.ndarray, first_pos: np.ndarray,
                  last_pos: np.ndarray, res: float = 1, n_steps: Optional[int] = None, 
                  filter_repeated: bool = True) -> None:
         """Initialize a linear path through the dataset.
@@ -90,13 +130,10 @@ class LinearPath:
         self.first_pos = first_pos
         self.last_pos = last_pos
         
-        self.dataset = deepmimo_dataset if type(deepmimo_dataset) != list else deepmimo_dataset[0]
-        self._set_idxs_pos_res_steps(res, n_steps, filter_repeated)
-        self._copy_data_from_dataset()
-        self._extract_features()
+        self._set_idxs_pos_res_steps(rx_pos, res, n_steps, filter_repeated)
 
-    def _set_idxs_pos_res_steps(self, res: float, n_steps: Optional[int], 
-                                filter_repeated: bool) -> None:
+    def _set_idxs_pos_res_steps(self, rx_pos: np.ndarray, res: float,
+                                n_steps: Optional[int], filter_repeated: bool) -> None:
         """Set path indices, positions, resolution and steps.
         
         Args:
@@ -104,9 +141,8 @@ class LinearPath:
             n_steps: Number of steps along path
             filter_repeated: Whether to filter repeated positions
         """
-        dataset_pos = self.dataset['user']['location']
         if not n_steps:
-            data_res = np.linalg.norm(dataset_pos[0] - dataset_pos[1])
+            data_res = np.linalg.norm(rx_pos[0] - rx_pos[1])
             if res < data_res and filter_repeated:
                 print(f'Changing resolution to {data_res} to eliminate repeated positions')
                 res = data_res
@@ -120,7 +156,7 @@ class LinearPath:
         zs = np.linspace(self.first_pos[2], self.last_pos[2], self.n).reshape((-1,1))
         
         interpolated_pos = np.hstack((xs,ys,zs))
-        idxs = np.array([np.argmin(np.linalg.norm(dataset_pos - pos, axis=1)) 
+        idxs = np.array([np.argmin(np.linalg.norm(rx_pos - pos, axis=1)) 
                          for pos in interpolated_pos])
         
         if filter_repeated:
@@ -134,42 +170,6 @@ class LinearPath:
             self.n = len(idxs)
     
         self.idxs = idxs
-        self.pos = dataset_pos[idxs]
-
-    def _copy_data_from_dataset(self) -> None:
-        """Copy relevant data from dataset to class attributes."""
-        self.feature_names = ['LoS', 'pathloss', 'distance']
-        
-        self.LoS = self.dataset['user']['LoS'][self.idxs]
-        self.pathloss = self.dataset['user']['pathloss'][self.idxs]
-        self.distance = self.dataset['user']['distance'][self.idxs]
-        self.paths = self.dataset['user']['paths'][self.idxs]
-        self.channel = self.dataset['user']['channel'][self.idxs]
-
-    def _extract_features(self) -> None:
-        """Extract path features and compute derived quantities."""
-        # Main path features
-        self.path_features = ['DoD_phi', 'DoD_theta', 'DoA_phi', 'DoA_theta',
-                            'ToA', 'phase', 'power']
-        self.feature_names += ['main_path_' + var for var in self.path_features]
-        for feat in self.path_features:
-            setattr(self, f'main_path_{feat}',
-                    np.array([self.paths[i][feat][0] for i in range(self.n)]))
-        
-        # Other features
-        self.feature_names += ['pwr_ratio_main_path', 'total_power']
-        self.total_power = np.array([np.sum(self.paths[i]['power']) for i in range(self.n)])
-        self.pwr_ratio_main_path = np.array([self.main_path_power[i] / np.sum(self.paths[i]['power'])
-                                           if self.LoS[i] != -1 else np.nan for i in range(self.n)])
-
-    def get_feature_names(self) -> List[str]:
-        """Get list of available feature names.
-        
-        Returns:
-            List of feature names extracted from the path
-        """
-        return self.feature_names
-
 
 def get_idxs_with_limits(data_pos: np.ndarray, **limits) -> np.ndarray:
     """Get indices of positions within specified coordinate limits.
