@@ -1,9 +1,11 @@
+#%% Imports
 
-#%%
 import time
 import deepmimo as dm
 import os
 import json
+
+# from my_api_key import API_KEY as MY_API_KEY
 
 # Main execution
 EXECUTION_MODE = 'collect_errors' # 'collect_errors' | 'retry_errors'
@@ -20,19 +22,28 @@ if EXECUTION_MODE == 'retry_errors' and os.path.exists(ERROR_LOG_FILE):
     subfolders = [f for f in subfolders if os.path.basename(f) in error_scenarios_to_retry]
 
 #%%
-# REMAINING TO FIX: i1_2p5
 
 timing_results = {}
-for subfolder in subfolders:
-    scen_name = os.path.basename(subfolder)
-    if not ('boston' in scen_name):
-        continue
+
+# For conversion
+# for subfolder in subfolders:
+#     scen_name = os.path.basename(subfolder)
+
+# For zipping
+for scen_name in dm.get_available_scenarios():
+
+    # if 'asu' in scen_name:
+    #     continue
     print(f"\nProcessing: {scen_name}")
-    start = time.time()
+    # break
     # continue
+    start = time.time()
     try:
-        scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, vis_scene=False)
+        # scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, vis_scene=False)
+        # print(f"Conversion successful: {scen_name}")
         
+        dm.upload(scen_name, key='')
+        print(f"Zip successful: {scen_name}")
     except Exception as e:
         if EXECUTION_MODE == 'retry_errors':
             raise  # Re-raise the exception in retry mode
@@ -40,7 +51,9 @@ for subfolder in subfolders:
         if EXECUTION_MODE == 'collect_errors' and error_scenarios:
             with open(ERROR_LOG_FILE, 'w') as f:
                 json.dump(error_scenarios, f, indent=2)
-    timing_results[scen_name] = time.time() - start
+    
+    timing_results[scen_name + '+' + 'upload'] = time.time() - start
+
 
 if timing_results:
     print("\nPer-scenario timing:")
