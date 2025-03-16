@@ -402,7 +402,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         print("✓ Submission created successfully")
 
 
-        result = scenario_name  # Return scenario name instead of direct URL
+        submission_result = scenario_name
   
         print('Thank you for your submission!')
         print('Head over to deepmimo.net/dashboard?tab=submissions to monitor it.')
