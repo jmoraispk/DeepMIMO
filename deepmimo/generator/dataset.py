@@ -737,10 +737,8 @@ class Dataset(DotDict):
         for attr, value in self.to_dict().items():
             # skip private and already handled attributes
             if not attr.startswith('_') and attr not in SHARED_PARAMS + ['n_ue']:
-                print(f"attr: {attr}")
                 if isinstance(value, np.ndarray) and value.shape[0] == self.n_ue:
                     # Copy and index arrays with UE dimension
-                    print(f"value.shape: {value.shape}")
                     setattr(new_dataset, attr, value[idxs])
                 else:
                     # Copy other attributes as is
