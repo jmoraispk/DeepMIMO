@@ -24,6 +24,18 @@ HEADERS = {
     'Accept': '*/*'
 }
 
+def check_scen_name(scen_name: str) -> None:
+    """Check if a scenario name is valid.
+    
+    Args:
+        scen_name (str): The scenario name to check
+    
+    """
+    if np.any([char in scen_name for char in c.SCENARIO_NAME_INVALID_CHARS]):
+        raise ValueError(f"Invalid scenario name: {scen_name}.\n"
+                         f"Contains one of the following invalid characters: {c.SCENARIO_NAME_INVALID_CHARS}")
+    return 
+
 def get_scenarios_dir() -> str:
     """Get the absolute path to the scenarios directory.
     
@@ -53,6 +65,7 @@ def get_scenario_folder(scenario_name: str) -> str:
     Returns:
         str: Absolute path to the scenario folder
     """
+    check_scen_name(scenario_name)
     return os.path.join(get_scenarios_dir(), scenario_name)
 
 def get_params_path(scenario_name: str) -> str:
@@ -64,6 +77,7 @@ def get_params_path(scenario_name: str) -> str:
     Returns:
         str: Absolute path to the scenario's params file
     """
+    check_scen_name(scenario_name)
     return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}.json')
 
 def save_dict_as_json(output_path: str, data_dict: Dict[str, Any]) -> None:
@@ -73,9 +87,9 @@ def save_dict_as_json(output_path: str, data_dict: Dict[str, Any]) -> None:
         output_path: Path to save JSON file
         data_dict: Dictionary to save
     """
+    numpy_handler = lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x)
     with open(output_path, 'w') as f:
-        json.dump(data_dict, f, indent=2, 
-                 default=lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x))
+        json.dump(data_dict, f, indent=2, default=numpy_handler)
 
 def load_dict_from_json(file_path: str) -> Dict[str, Any]:
     """Load dictionary from JSON file.
@@ -147,6 +161,10 @@ class DotDict(Mapping[K, V]):
             value = DotDict(value)
         self._data[key] = value
 
+    def __delitem__(self, key: str) -> None:
+        """Enable dictionary-style deletion."""
+        del self._data[key]
+
     def update(self, other: Dict[str, Any]) -> None:
         """Update the dictionary with elements from another dictionary."""
         # Convert any nested dicts to DotDicts first
@@ -167,22 +185,6 @@ class DotDict(Mapping[K, V]):
     def __dir__(self):
         """Return list of valid attributes."""
         return list(set(list(super().__dir__()) + list(self._data.keys())))
-
-    @property
-    def shape(self):
-        """Return shape of the first array-like value in the dictionary."""
-        for val in self._data.values():
-            if hasattr(val, "shape"):
-                return val.shape
-        return None
-
-    @property
-    def size(self):
-        """Return size of the first array-like value in the dictionary."""
-        for val in self._data.values():
-            if hasattr(val, "size"):
-                return val.size
-        return None
 
     def keys(self):
         """Return dictionary keys."""
@@ -213,6 +215,28 @@ class DotDict(Mapping[K, V]):
             else:
                 result[key] = value
         return result
+
+    def deepcopy(self) -> 'DotDict':
+        """Create a deep copy of the DotDict instance.
+        
+        This method creates a completely independent copy of the DotDict,
+        including nested dictionaries and numpy arrays. This ensures that
+        modifications to the copy won't affect the original.
+        
+        Returns:
+            DotDict: A deep copy of this instance
+        """
+        result = {}
+        for key, value in self._data.items():
+            if isinstance(value, DotDict):
+                result[key] = value.deepcopy()
+            elif isinstance(value, dict):
+                result[key] = DotDict(value).deepcopy()
+            elif isinstance(value, np.ndarray):
+                result[key] = value.copy()
+            else:
+                result[key] = value
+        return type(self)(result)  # Use the same class type as self
 
     def __repr__(self) -> str:
         """Return string representation of dictionary."""
@@ -333,10 +357,10 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
 
     summary_str += "\n[Scene]\n"
     summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
-    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]}\n"
-    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]}\n"
-    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,} "
-    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,} "
+    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]:,}\n"
+    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]:,}\n"
+    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,}\n"
+    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,}\n"
 
     summary_str += "\n[Materials]\n"
     summary_str += f"Total materials: {len(material_params)}\n"
@@ -438,8 +462,8 @@ def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
     """Compare two dictionaries for equality.
             
     This function performs a deep comparison of two dictionaries, handling
-    nested dictionaries and numpy arrays.
-        
+    nested dictionaries.
+    
     Args:
         dict1 (dict): First dictionary to compare
         dict2 (dict): Second dictionary to compare

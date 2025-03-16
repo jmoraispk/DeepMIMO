@@ -47,14 +47,14 @@ def read_materials(load_folder: str, save_folder: str) -> Tuple[Dict, Dict[str, 
         material = Material(
             id=i,
             name=f'material_{i}',  # Default name if not provided
-            permittivity=mat_property['relative_permittivity'],
-            conductivity=mat_property['conductivity'],
+            permittivity=float(mat_property['relative_permittivity']),
+            conductivity=float(mat_property['conductivity']),
             scattering_model=scattering_model,
-            scattering_coefficient=scat_coeff,
-            cross_polarization_coefficient=mat_property['xpd_coefficient'],
-            alpha_r=mat_property['alpha_r'],
-            alpha_i=mat_property['alpha_i'],
-            lambda_param=mat_property['lambda_']
+            scattering_coefficient=float(scat_coeff),
+            cross_polarization_coefficient=float(mat_property['xpd_coefficient']),
+            alpha_r=float(mat_property['alpha_r']),
+            alpha_i=float(mat_property['alpha_i']),
+            lambda_param=float(mat_property['lambda_'])
         )
         materials.append(material)
     

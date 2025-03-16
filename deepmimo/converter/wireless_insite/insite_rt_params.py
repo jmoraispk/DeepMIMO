@@ -131,7 +131,7 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'diffuse_scattering': diffuse_scat_vals
         }
 
-        num_rays = 360 // model_vals['ray_spacing'] * 180  
+        num_rays = int(360 // model_vals['ray_spacing'] * 180)
 
         # Compute the path depth from the number of interactions
         computed_path_depth_no_scattering = sum([

@@ -41,6 +41,8 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
     
     # Create scene
     scene = Scene()
+
+    terrain_keywords = ['plane', 'floor', 'terrain', 'roads', 'paths']
     
     # Process each object
     for id_counter, (name, vertex_range) in enumerate(objects.items()):
@@ -48,10 +50,12 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
             # Get vertex range for this object
             start_idx, end_idx = vertex_range
             
-            obj_name = name[5:] if name.startswith('mesh-') else name
-            
+            # if 'roads' in name or 'paths' in name or 'terrain' in name:
+            #     print(f'Skipping paths/terrain/road {name}')
+            #     continue
+
             # Attribute the correct label to the object
-            is_floor = obj_name.lower() in ['plane', 'floor']
+            is_floor = any(word in name.lower() for word in terrain_keywords)
             obj_label = CAT_TERRAIN if is_floor else CAT_BUILDINGS
             
             # Get material index for this object
@@ -80,7 +84,8 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
             obj = PhysicalElement(
                 faces=object_faces,
                 object_id=id_counter,
-                label=obj_label
+                label=obj_label,
+                name=name
             )
             scene.add_object(obj)
             
