@@ -24,6 +24,18 @@ HEADERS = {
     'Accept': '*/*'
 }
 
+def check_scen_name(scen_name: str) -> None:
+    """Check if a scenario name is valid.
+    
+    Args:
+        scen_name (str): The scenario name to check
+    
+    """
+    if np.any([char in scen_name for char in c.SCENARIO_NAME_INVALID_CHARS]):
+        raise ValueError(f"Invalid scenario name: {scen_name}.\n"
+                         f"Contains one of the following invalid characters: {c.SCENARIO_NAME_INVALID_CHARS}")
+    return 
+
 def get_scenarios_dir() -> str:
     """Get the absolute path to the scenarios directory.
     
@@ -53,6 +65,7 @@ def get_scenario_folder(scenario_name: str) -> str:
     Returns:
         str: Absolute path to the scenario folder
     """
+    check_scen_name(scenario_name)
     return os.path.join(get_scenarios_dir(), scenario_name)
 
 def get_params_path(scenario_name: str) -> str:
@@ -64,6 +77,7 @@ def get_params_path(scenario_name: str) -> str:
     Returns:
         str: Absolute path to the scenario's params file
     """
+    check_scen_name(scenario_name)
     return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}.json')
 
 def save_dict_as_json(output_path: str, data_dict: Dict[str, Any]) -> None:

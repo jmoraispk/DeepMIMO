@@ -241,3 +241,11 @@ PARAMSET_ANT_SPACING = 'spacing'
 PARAMSET_ANT_ROTATION = 'rotation'
 PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
+
+#==============================================================================
+# 9. Other Constants
+#==============================================================================
+
+# Invalid characters in scenario names
+SCENARIO_NAME_INVALID_CHARS = ['/', '\\', ':', '*', '?', '"', "'", '<', '>', '|', 
+                               '\n']
