@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-#%%
-import deepmimo as dm
-
-#%% LOAD: Simple
+#%% ALWAYS RUN THIS FIRST
 import os
 import numpy as np
 import deepmimo as dm
@@ -10,17 +7,24 @@ import matplotlib.pyplot as plt
 
 scen_name = 'asu_campus_3p5'
 dm.download(scen_name)
-dataset = dm.load(scen_name)[1]
+dataset = dm.load(scen_name)[0]
+
+#%% LOAD: Simple
+
+scen_name = 'asu_campus_3p5'
+dm.download(scen_name)
+macro_dataset = dm.load(scen_name)
 
 #%% LOAD: Detailed 
 
-scen_name = 'city_0_newyork_3p5'
+city_scen_name = 'city_0_newyork_3p5'
+dm.download(city_scen_name)  # just to avoid prompting the user during load
 
 tx_sets_dict = {1: [0]}  # Load first points from set 1
 rx_sets_dict = {4: np.arange(10)}  # Load first 10 points from set 4
 
 dataset1 = dm.load(
-    scen_name,
+    city_scen_name,
     tx_sets=tx_sets_dict,
     rx_sets=rx_sets_dict,
     matrices=['aoa_az', 'aoa_el', 'inter_pos', 'inter'],
@@ -28,15 +32,17 @@ dataset1 = dm.load(
 )
 
 # Example 2: Load all points of specific TX/RX sets using lists
-dataset2 = dm.load(scen_name, tx_sets=[1], rx_sets=[2])
+dataset2 = dm.load(city_scen_name, tx_sets=[1], rx_sets=[2])
 
 # Example 3: Load all TX/RX sets (default)
-dataset3 = dm.load(scen_name, tx_sets='all', rx_sets='all')
+dataset3 = dm.load(city_scen_name, tx_sets='all', rx_sets='all')
 
 #%% SCENARIO INFORMATION
 
 # Like the information present in the scenario webpage
-dm.summary('asu_campus')
+dm.summary('asu_campus_3p5')
+
+dm.info()
 
 #%% SCENARIO INFORMATION: Transmitters and Receivers
 
@@ -103,17 +109,14 @@ dm.plot_coverage(dataset.rx_pos, dataset['los'], bs_pos=dataset.tx_pos.T,
                 proj_3D=True, scat_sz=0.1)
 
 #%% VISUALIZATION: Rays
+u_i = np.where(dataset.los == 1)[0][100]
 
-dm.plot_rays(dataset.rx_pos[10], dataset.tx_pos[0],
-             dataset.inter_pos[10], dataset.inter[10],
-             proj_3D=True, color_by_type=True)
-
-# 2D and 3D
+dataset.plot_rays(u_i, proj_3D=True)
 
 #%% VISUALIZATION: Path Plots (1) Power in main path
 
 # Percentage of the power in first path
-pwr_in_first_path = dataset.lin_pwr[:, 0] / np.nansum(dataset.lin_pwr, axis=-1)
+pwr_in_first_path = dataset.lin_pwr[:, 0] / np.nansum(dataset.lin_pwr, axis=-1) * 100
 
 dm.plot_coverage(dataset.rx_pos, pwr_in_first_path, bs_pos=dataset.tx_pos.T,
                 title='Percentage of power in 1st path', cbar_title='Percentage of power [%]')
@@ -124,6 +127,8 @@ dm.plot_coverage(dataset.rx_pos, dataset.num_interactions[:,0], bs_pos=dataset.t
                 title='Number of interactions in 1st path', cbar_title='Number of interactions')
 
 #%% VISUALIZATION: Path Plots (3) First interaction in main path
+dm.info('dataset.inter')
+dm.info('dataset.inter_str')
 
 first_bounce_codes = [code[0] if code else '' for code in dataset.inter_str[:,0]] # 'n', '2', '1', ...
 
@@ -172,13 +177,11 @@ ch_params = dm.ChannelGenParameters()
 
 # Base station antenna parameters
 ch_params.bs_antenna.rotation = np.array([0, 0, 0])  # [az, el, pol] in degrees
-ch_params.bs_antenna.fov = np.array([360, 180])      # [az, el] in degrees
-ch_params.bs_antenna.shape = np.array([4, 4])        # [horizontal, vertical] elements
+ch_params.bs_antenna.shape = np.array([8, 1])        # [horizontal, vertical] elements
 ch_params.bs_antenna.spacing = 0.5                   # Element spacing in wavelengths
 
 # User equipment antenna parameters
 ch_params.ue_antenna.rotation = np.array([0, 0, 0])  # [az, el, pol] in degrees
-ch_params.ue_antenna.fov = np.array([360, 180])      # [az, el] in degrees
 ch_params.ue_antenna.shape = np.array([1, 1])        # [horizontal, vertical] elements
 ch_params.ue_antenna.spacing = 0.5                   # Element spacing in wavelengths
 
@@ -188,9 +191,9 @@ ch_params.num_paths = 10      # Number of paths
 
 # OFDM parameters
 ch_params.ofdm.bandwidth = 10e6                         # Bandwidth in Hz
-ch_params.ofdm.num_subcarriers = 512                    # Number of subcarriers
+ch_params.ofdm.subcarriers = 512                        # Number of subcarriers
 ch_params.ofdm.selected_subcarriers = np.arange(1)      # Which subcarriers to generate
-ch_params.ofdm.rx_lpf = 0                               # Receive Low Pass / ADC Filter
+ch_params.ofdm.rx_filter = 0                            # Receive Low Pass / ADC Filter
 
 # Generate channels
 dataset.compute_channels(ch_params)
@@ -378,15 +381,15 @@ def plot_ang_delay(ch, n_ant=32, NC=32, title='', label_axis=True, bandwidth=50e
 #%% BASIC OPERATIONS: Line-of-Sight Status
 
 active_mask = dataset.num_paths > 0
-print(f"\nNumber of active positions: {np.sum(active_mask)}")
-print(f"Number of inactive positions: {np.sum(~active_mask)}")
+print(f"\nNumber of active positions: {np.nansum(active_mask)}")
+print(f"Number of inactive positions: {np.nansum(~active_mask)}")
 
 # Create scatter plot showing active vs inactive positions
 plt.figure(figsize=(8, 6))
 plt.scatter(dataset.rx_pos[~active_mask, 0], dataset.rx_pos[~active_mask, 1],
-           alpha=0.5, s=1, c='red', label='Inactive')
+            alpha=0.5, s=1, c='red', label='Inactive')
 plt.scatter(dataset.rx_pos[active_mask, 0], dataset.rx_pos[active_mask, 1],
-           alpha=0.5, s=1, c='green', label='Active')
+            alpha=0.5, s=1, c='green', label='Active')
 plt.legend()
 plt.show()
 
@@ -427,9 +430,9 @@ checks = [
     dataset.ch is dataset.channels,
     dataset.ch_params is dataset.channel_params,
     dataset.n_paths is dataset.num_paths,
-    dataset.n_ue is dataset.n_ue,
-    dataset.grid_size is dataset.grid_size,
-    dataset.grid_spacing is dataset.grid_spacing,
+    dataset.aoa_phi is dataset.aoa_az,
+    dataset.bs_pos is dataset.tx_pos,
+    dataset.toa is dataset.delay,
 ]
 
 for check in checks:
@@ -452,6 +455,7 @@ fig, axes = plt.subplots(1, 3, figsize=(18, 5), tight_layout=True)
 rotations = [np.array([0, 0, 0]),     # Facing +x
              np.array([0, 0, 180]),   # Facing -x
              np.array([0, 0, -135])]  # Facing 45º between -x and -y
+# Rotation follow the right hand rule around each positive semiaxis
 
 titles = ['Orientation along +x (0°)', 
           'Orientation along -x (180°)', 
@@ -481,9 +485,9 @@ rotations = [np.array([0,  0, -180]),   # Facing -x
              np.array([0, 30, -180]),   # Facing 30º below -x in XZ plane
              np.array([0, 60, -180])]   # Facing 60º below -x in XZ plane
 
-titles = ['Orientation along -x (180°)', 
-          'Orientation at 30º between -x and -z', 
-          'Orientation at 60º between -x and -z']
+titles = ['Orientation along -x (tilt = 0º)',
+          'Orientation at 30º between -x and -z (tilt = 30º)', 
+          'Orientation at 60º between -x and -z (tilt = 60º)']
 
 # Plot each azimuth rotation
 for i, (rot, title) in enumerate(zip(rotations, titles)):
@@ -643,7 +647,7 @@ dataset_t.plot_coverage(dataset_t.aoa_az[:,0])
 
 #%% USER SAMPLING: Uniform
 
-idxs = dataset.get_uniform_idxs([4,4])
+idxs = dataset.get_uniform_idxs([4,2])
 dm.plot_coverage(dataset.rx_pos[idxs], dataset.aoa_az[idxs, 0], bs_pos=dataset.tx_pos.T)
 
 #%% USER SAMPLING: Linear (1) 2D plots across positions (with Class)
@@ -705,16 +709,19 @@ def plot_feat_dist(data_A, data_B, feat_name):
     plt.hist(data_B, **hist_params, label='B')
     plt.title(f'{feat_name} distribution')
     plt.xlabel(f'{feat_name}')
+    plt.legend()
     plt.grid()
     plt.show()
 
 plot_feat_dist(dataset.rx_pos[idxs_A, 0], dataset.rx_pos[idxs_B, 0], 'x (m)')
 plot_feat_dist(dataset.rx_pos[idxs_A, 1], dataset.rx_pos[idxs_B, 1], 'y (m)')
 plot_feat_dist(dataset.aoa_az[idxs_A, 0], dataset.aoa_az[idxs_B, 0], 'AoA Azimuth [º]')
+plot_feat_dist(dataset.los[idxs_A], dataset.los[idxs_B], 'LoS status')
 
 #%% BEAMFORMING: Received Power with TX Beamforming
 ch_params = dm.ChannelGenParameters()  # default array has 8 elements
 ch_params.bs_antenna.rotation = np.array([0, 0, -135])
+ch_params.bs_antenna.shape = np.array([32, 1])
 dataset.compute_channels(ch_params)
 
 n_beams = 25
