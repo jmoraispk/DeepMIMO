@@ -73,9 +73,9 @@ def save_dict_as_json(output_path: str, data_dict: Dict[str, Any]) -> None:
         output_path: Path to save JSON file
         data_dict: Dictionary to save
     """
+    numpy_handler = lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x)
     with open(output_path, 'w') as f:
-        json.dump(data_dict, f, indent=2, 
-                 default=lambda x: x.tolist() if isinstance(x, np.ndarray) else str(x))
+        json.dump(data_dict, f, indent=2, default=numpy_handler)
 
 def load_dict_from_json(file_path: str) -> Dict[str, Any]:
     """Load dictionary from JSON file.
@@ -448,8 +448,8 @@ def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
     """Compare two dictionaries for equality.
             
     This function performs a deep comparison of two dictionaries, handling
-    nested dictionaries and numpy arrays.
-        
+    nested dictionaries.
+    
     Args:
         dict1 (dict): First dictionary to compare
         dict2 (dict): Second dictionary to compare
