@@ -24,7 +24,7 @@ OS_TYPE = platform.system()
 if OS_TYPE == "Darwin":  # MacOS
     DEFAULT_BLENDER_PATH = "/Applications/Blender.app/Contents/MacOS/Blender"
 elif OS_TYPE == "Windows":  # Windows
-    DEFAULT_BLENDER_PATH = "C:\\Users\\salikha4\\Desktop\\blender-4.3.2-windows-x64\\blender.exe" 
+    DEFAULT_BLENDER_PATH = "C:\\Users\\namhyunk\\Desktop\\blender-4.3.2-windows-x64\\blender.exe" 
 else:
     logger.error("❌ Unsupported operating system. This script only works on MacOS and Windows.")
     sys.exit(1)
@@ -49,7 +49,7 @@ if not os.path.exists(SCRIPT_PATH):
 if OS_TYPE == "Darwin":  # MacOS
     DEEPMIMO_ROOT = "/Users/sadjadalikhani/Desktop/deepmimo/osm2dt"
 elif OS_TYPE == "Windows":  # Windows
-    DEEPMIMO_ROOT = "C:\\Users\\salikha4\\Desktop\\osm2dt"
+    DEEPMIMO_ROOT = "C:\\Users\\namhyunk\\Desktop\\osm2dt"
 
 # Argument parser for bounding box or CSV input
 parser = argparse.ArgumentParser(description="Run Blender OSM to PLY converter for multiple scenarios.")
