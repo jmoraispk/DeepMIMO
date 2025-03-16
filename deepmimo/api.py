@@ -402,7 +402,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         print("✓ Submission created successfully")
 
 
-        result = scenario_name  # Return scenario name instead of direct URL
+        submission_result = scenario_name
   
         print('Thank you for your submission!')
         print('Head over to deepmimo.net/dashboard?tab=submissions to monitor it.')
@@ -458,13 +458,8 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
         print(f'Scenario "{scenario_name}" already exists in {scenarios_dir}')
         return None
 
-    try:
-        # Get secure download URL using existing helper
-        url = _download_url(scenario_name)
-    except Exception as e:
-        print(f"Error: Failed to get download URL - {str(e)}")
-        # Use the secure download endpoint as fallback
-        url = f"https://dev.deepmimo.net/api/download/secure?filename={scenario_name}.zip"
+    # Get secure download URL using existing helper
+    url = _download_url(scenario_name)
     
     output_path = os.path.join(download_dir, f"{scenario_name}_downloaded.zip")
 
@@ -475,25 +470,43 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
 
         print(f"Downloading scenario '{scenario_name}'")
         try:
-            response = requests.get(url, stream=True, headers=HEADERS)
-            response.raise_for_status()
+            # Get download token and redirect URL
+            resp = requests.get(url, headers=HEADERS)
+            resp.raise_for_status()
+            token_data = resp.json()
+            
+            if "error" in token_data:
+                print(f"Server error: {token_data.get('error')}")
+                return None
+            
+            # Get and format redirect URL
+            redirect_url = token_data.get('redirectUrl')
+            if not redirect_url:
+                print("Error: Missing redirect URL")
+                return None
+                
+            if not redirect_url.startswith('http'):
+                redirect_url = f"{url.split('/api/')[0]}{redirect_url}"
+            
+            # Download the file
+            download_resp = requests.get(redirect_url, stream=True, headers=HEADERS)
+            download_resp.raise_for_status()
+            total_size = int(download_resp.headers.get("content-length", 0))
 
-            # Get total file size for progress bar
-            total_size = int(response.headers.get("content-length", 0))
-
-            # Download with progress bar
-            with open(output_path, "wb") as file:
-                with tqdm(total=total_size, unit="B", unit_scale=True, 
-                        unit_divisor=1024, dynamic_ncols=True) as progress_bar:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            file.write(chunk)
-                            progress_bar.update(len(chunk))
-
+            with open(output_path, "wb") as file, \
+                 tqdm(total=total_size, unit='B', unit_scale=True, 
+                      unit_divisor=1024, desc="Downloading") as pbar:
+                for chunk in download_resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        file.write(chunk)
+                        pbar.update(len(chunk))
+            
             print(f"✓ Downloaded to {output_path}")
 
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             print(f"Download failed: {str(e)}")
+            if os.path.exists(output_path):
+                os.remove(output_path)  # Clean up partial download
             return None
     else: # Extract the zip if it exists, don't download again
         print(f'Scenario zip file "{output_path}" already exists.')
