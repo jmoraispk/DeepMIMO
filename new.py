@@ -1,6 +1,5 @@
 import sys
 import utm
-# Import existing modules
 from pathlib import Path
 from generate_city.generate_city import generate_city
 from WI_interface.XmlGenerator import XmlGenerator
@@ -13,8 +12,30 @@ import subprocess
 import os
 from utils.geo_utils import convert_GpsBBox2CartesianBBox, convert_Gps2RelativeCartesian
 from constants import PROJ_ROOT, GRID_SPACING, UE_HEIGHT, BS_HEIGHT, BLENDER_PATH
+from DeepMIMO_p2m_converter.ChannelDataLoader import WIChannelConverter
+from DeepMIMO_p2m_converter.ChannelDataFormatter import DeepMIMODataFormatter
+# from wireless_insite.insite_converter import insite_rt_converter
+import converter_utils as cu
 import numpy as np
 from datetime import datetime as dt 
+# from aodt.aodt_converter import aodt_rt_converter
+# from sionna_rt.sionna_converter import sionna_rt_converter
+from typing import Dict, Any, Optional
+import scipy
+
+import os
+import shutil
+from typing import Optional
+from pprint import pprint
+
+# Local imports
+import consts as c
+
+from wireless_insite.insite_rt_params import read_rt_params
+from wireless_insite.insite_txrx import read_txrx
+from wireless_insite.insite_paths import read_paths
+from wireless_insite.insite_materials import read_materials
+from wireless_insite.insite_scene import read_scene
 
 df = pd.read_csv('params.csv')
 
@@ -63,7 +84,7 @@ def run_command(command, description):
     print(f"\n✅ {description} completed!\n")
 
 def read_rt_configs(row):
-    scene_name = row['scenario_name']
+    scenario_name = row['scenario_name']
     min_lat = row['min_lat']
     min_lon = row['min_lon']
     max_lat = row['max_lat']
@@ -88,7 +109,7 @@ def read_rt_configs(row):
     
 
     rt_params = {
-        'scene_name': scene_name,
+        'scenario_name': scenario_name,
         'min_lat': min_lat,
         'min_lon': min_lon,
         'max_lat': max_lat,
@@ -164,6 +185,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
 
     insite_path, intermediate_path, mat_path, study_area_path = create_directory_structure(osm_folder, rt_params)
     root_dir = Path("C:/Users/namhyunk/Desktop/osm2dt")
+
     # Generate city features
     city_feature_list = generate_city(
         str(osm_folder) + os.sep,  # Add trailing separator explicitly
@@ -258,6 +280,166 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     xml_path = insite_path / "insite.study_area.xml"
     xml_generator.save(str(xml_path))
 
+    # Run Wireless InSite
+    wi_path = "C:\\Program Files\\Remcom\\Wireless InSite 3.3.0.4\\bin\\calc\\wibatch.exe"
+    subprocess.run([
+        wi_path,
+        "-f", str(xml_path),
+        "-out", str(study_area_path),
+        "-p", "insite"
+    ], check=True)
+
+    # Convert P2M to MAT format
+    WIChannelConverter(str(study_area_path), str(intermediate_path))
+
+    DeepMIMODataFormatter(
+        str(intermediate_path),
+        str(mat_path),
+        max_channels=30000,
+        TX_order=range(1, len(tx_pos) + 1),
+        RX_order=[len(tx_pos) + 1],
+    )
+
+    # Save parameters
+    scipy.io.savemat(
+        str(mat_path / "params.mat"),
+        {
+            "version": 2,
+            "carrier_freq": rt_params['carrier_freq'],
+            "transmit_power": 0.0,
+            "user_grids": np.array([[1, int(grid_side[1] // grid_spacing + 1), int(grid_side[0] // grid_spacing + 1)]], dtype=float),
+            "num_BS": len(tx_pos),
+            "dual_polar_available": 0,
+            "doppler_available": 0
+        }
+    )
+    
+    # Save arguments and grid details to a text file
+    param_file = insite_path / "parameters.txt"
+    with open(param_file, "w") as f:
+        # Save all input arguments
+        for arg, value in rt_params.items():
+            f.write(f"{arg}: {value}\n")
+        f.write(f"n_rows: {len(row_indices)}\n")
+        f.write(f"user_per_row: {users_per_row}\n")
+        f.write(f"n_users: {len(row_indices) * users_per_row}\n")
+    
+    return insite_path
+
+def convert(path_to_rt_folder: str, **conversion_params: Dict[str, Any]) -> Optional[Any]:
+    """Create a standardized scenario from raytracing data.
+    
+    This function automatically detects the raytracing data format based on file 
+    extensions and uses the appropriate converter to generate a standardized scenario.
+    It supports AODT, Sionna RT, and Wireless Insite formats.
+
+    Args:
+        path_to_rt_folder (str): Path to the folder containing raytracing data
+        **conversion_params (Dict[str, Any]): Additional parameters for the conversion process
+
+    Returns:
+        Optional[Any]: Scenario object if conversion is successful, None otherwise
+    """
+    print('Determining converter...')
+    
+    # files_in_dir = os.listdir(path_to_rt_folder)
+    # if cu.ext_in_list('.aodt', files_in_dir):
+    #    print("Using AODT converter")
+    #    rt_converter = aodt_rt_converter
+    #elif cu.ext_in_list('.pkl', files_in_dir):
+    #    print("Using Sionna RT converter")
+    #    rt_converter = sionna_rt_converter
+    #elif cu.ext_in_list('.setup', files_in_dir):
+    #    print("Using Wireless Insite converter")
+    #    rt_converter = insite_rt_converter
+    #else:
+    #    print("Unknown ray tracer type")
+    #    return None
+    
+    scenario = insite_rt_converter(path_to_rt_folder, **conversion_params)
+    return scenario
+
+# Constants
+MATERIAL_FILES = ['.city', '.ter', '.veg']
+SETUP_FILES = ['.setup', '.txrx'] + MATERIAL_FILES
+SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
+
+def insite_rt_converter(rt_folder: str, copy_source: bool = False,
+                        overwrite: Optional[bool] = None, vis_scene: bool = True, 
+                        scenario_name: str = '') -> str:
+    """Convert Wireless InSite ray-tracing data to DeepMIMO format.
+
+    This function handles the conversion of Wireless InSite ray-tracing simulation 
+    data into the DeepMIMO dataset format. It processes path files (.p2m), setup files,
+    and transmitter/receiver configurations to generate channel matrices and metadata.
+
+    Args:
+        rt_folder (str): Path to folder containing .setup, .txrx, and material files.
+        copy_source (bool): Whether to copy ray-tracing source files to output.
+        overwrite (Optional[bool]): Whether to overwrite existing files. Prompts if None. Defaults to None.
+        vis_scene (bool): Whether to visualize the scene layout. Defaults to False.
+        scenario_name (str): Custom name for output folder. Uses p2m folder name if empty.
+
+    Returns:
+        str: Path to output folder containing converted DeepMIMO dataset.
+        
+    Raises:
+        FileNotFoundError: If required input files are missing.
+        ValueError: If transmitter or receiver IDs are invalid.
+    """
+
+    # Get scenario name from folder if not provided
+    scen_name = scenario_name if scenario_name else os.path.basename(rt_folder)
+    
+    # Get paths for input and output folders
+    output_folder = os.path.join(os.path.dirname(rt_folder), scen_name + '_deepmimo')
+    
+    # Create output folder
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+    os.makedirs(output_folder)
+    
+    # Read ray tracing parameters
+    rt_params = read_rt_params(rt_folder)
+
+    # Read TXRX (.txrx)
+    txrx_dict = read_txrx(rt_folder)
+    
+    # Read Paths (.p2m)
+    read_paths(rt_folder, output_folder, txrx_dict)
+    
+    # Read Materials of all objects (.city, .ter, .veg)
+    materials_dict = read_materials(rt_folder)
+    
+    # Read scene objects
+    scene = read_scene(rt_folder)
+    scene_dict = scene.export_data(output_folder)
+    
+    # Visualize if requested
+    if vis_scene: scene.plot()
+    
+    # Save parameters to params.json
+    params = {
+        c.VERSION_PARAM_NAME: c.VERSION,
+        c.RT_PARAMS_PARAM_NAME: rt_params,
+        c.TXRX_PARAM_NAME: txrx_dict,
+        c.MATERIALS_PARAM_NAME: materials_dict,
+        c.SCENE_PARAM_NAME: scene_dict
+    }
+    cu.save_params(params, output_folder)
+    
+    if True:
+        pprint(params)
+
+    # Save scenario to deepmimo scenarios folder
+    scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
+    
+    # Copy and zip ray tracing source files as well
+    if copy_source:
+        cu.save_rt_source_files(rt_folder, SOURCE_EXTS)
+    
+    return scen_name
+
 
 ## main
 for index, row in df.iterrows():
@@ -294,19 +476,19 @@ for index, row in df.iterrows():
     # TODO4: insite_raytrace()
 	# Ray Tracing
     insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
-    
-    print('end of a scenario!!')
-    print('--------------------')
 
 	# Convert to DeepMIMO
     scen_insite = dm.convert(insite_rt_path) #-- supposed to be deepmimo
 
 	# Test Conversion
     dataset_insite = dm.load(scen_insite)
+
+    print('end of a scenario!!')
+    print('--------------------')
     
 
 
-
+'''
 for index, row in df.iterrows():
 
     # STEP 1: replace the CSV logic
@@ -333,4 +515,5 @@ for index, row in df.iterrows():
 
     # STEP 3: replace the CSV logic
     blender_path = call_blender1()
-    run_insite(blender_path, **rt_params)
+    run_insite(blender_path, **rt_params)'
+'''
