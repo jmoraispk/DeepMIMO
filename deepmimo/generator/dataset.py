@@ -200,10 +200,7 @@ class Dataset(DotDict):
         """
         if params is None:
             params = ChannelGenParameters()
-        else:
-            print('here!')
-        
-        print(type(params))
+            
         params.validate(self.n_ue)
         
         # Create a deep copy of the parameters to ensure isolation
@@ -325,6 +322,19 @@ class Dataset(DotDict):
         if rx_ant_params is None:
             rx_ant_params = self.ch_params.ue_antenna
             
+        # Transform UE antenna rotation if needed
+        ue_rotation = rx_ant_params[c.PARAMSET_ANT_ROTATION]
+        if len(ue_rotation.shape) == 1 and ue_rotation.shape[0] == 3:
+            # Convert single 3D vector to array for all users
+            ue_rotation = np.tile(ue_rotation, (self.n_ue, 1))
+        elif len(ue_rotation.shape) == 2 and ue_rotation.shape[0] == 3 and ue_rotation.shape[1] == 2:
+            # Generate random rotations for each user
+            ue_rotation = np.random.uniform(
+                ue_rotation[:, 0],
+                ue_rotation[:, 1],
+                (self.n_ue, 3)
+            )
+            
         # Rotate angles for all users at once
         aod_theta_rot, aod_phi_rot = rotate_angles_batch(
             rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
@@ -332,7 +342,7 @@ class Dataset(DotDict):
             phi=self[c.AOD_AZ_PARAM_NAME])
         
         aoa_theta_rot, aoa_phi_rot = rotate_angles_batch(
-            rotation=rx_ant_params[c.PARAMSET_ANT_ROTATION],
+            rotation=ue_rotation,
             theta=self[c.AOA_EL_PARAM_NAME],
             phi=self[c.AOA_AZ_PARAM_NAME])
         

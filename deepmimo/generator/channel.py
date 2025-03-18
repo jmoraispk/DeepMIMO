@@ -115,19 +115,8 @@ class ChannelGenParameters(DotDict):
             assert_str = ('The UE antenna rotation must either be a 3D vector for ' +
                          'constant values or 3 x 2 matrix for random values')
             assert cond_1 or cond_2 or cond_3, assert_str
-        
-            if len(rotation_shape) == 1 and rotation_shape[0] == 3:
-                rotation = np.zeros((n_ues, 3))
-                rotation[:] = self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION]
-                self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = rotation
-            elif (len(rotation_shape) == 2 and rotation_shape[0] == 3 and rotation_shape[1] == 2):
-                self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = np.random.uniform(
-                                  self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 0], 
-                                  self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION][:, 1], 
-                                  (n_ues, 3))
         else:
-            self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = \
-                np.array([None] * n_ues) # List of None
+            self[c.PARAMSET_ANT_UE][c.PARAMSET_ANT_ROTATION] = np.array([0, 0, 0])
         
         # BS Antenna Radiation Pattern
         if (c.PARAMSET_ANT_RAD_PAT in self[c.PARAMSET_ANT_BS].keys() and \
