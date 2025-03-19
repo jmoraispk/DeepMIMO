@@ -190,13 +190,15 @@ ch_params.freq_domain = True  # Whether to compute frequency domain channels
 ch_params.num_paths = 10      # Number of paths
 
 # OFDM parameters
-ch_params.ofdm.bandwidth = 10e6                         # Bandwidth in Hz
-ch_params.ofdm.subcarriers = 512                        # Number of subcarriers
-ch_params.ofdm.selected_subcarriers = np.arange(1)      # Which subcarriers to generate
-ch_params.ofdm.rx_filter = 0                            # Receive Low Pass / ADC Filter
+ch_params.ofdm.bandwidth = 10e6                      # Bandwidth in Hz
+ch_params.ofdm.subcarriers = 512                     # Number of subcarriers
+ch_params.ofdm.selected_subcarriers = np.arange(1)   # Which subcarriers to generate
+ch_params.ofdm.rx_filter = 0                         # Receive Low Pass / ADC Filter
+
+dataset.set_channel_params(ch_params)
 
 # Generate channels
-dataset.compute_channels(ch_params)
+# dataset.compute_channels(ch_params)
 dataset.channel.shape
 
 #%% CHANNEL GENERATION: Parameters (2)
@@ -717,6 +719,77 @@ plot_feat_dist(dataset.rx_pos[idxs_A, 0], dataset.rx_pos[idxs_B, 0], 'x (m)')
 plot_feat_dist(dataset.rx_pos[idxs_A, 1], dataset.rx_pos[idxs_B, 1], 'y (m)')
 plot_feat_dist(dataset.aoa_az[idxs_A, 0], dataset.aoa_az[idxs_B, 0], 'AoA Azimuth [º]')
 plot_feat_dist(dataset.los[idxs_A], dataset.los[idxs_B], 'LoS status')
+
+#%% (LATER) USER SAMPLING: Partitioning dataset 
+
+class Area():
+    def __init__(self, idxs=None, name='', center=''):
+        # idxs inside the area
+        self.idxs = idxs
+        self.name = name
+        self.center = center
+    
+    def __repr__(self):
+        s =  f'name = {self.name}\n'
+        s += f'center = {self.center}\n'
+        s += f'Number of idxs = {len(self.idxs)}\n'
+        s += f'idxs = {self.idxs}'
+        return s
+
+def plot_areas(areas, all_pos, s=50, show=True):
+    n_areas = len(areas)
+    colors = plt.get_cmap('tab20', n_areas)  # Get 'tab20' colormap for n_areas distinct colors
+
+    f = plt.figure(dpi=300, figsize=(10, 10))
+    ax = f.add_subplot(111)
+    for k in range(n_areas):
+        cluster_center = areas[k].center
+        idxs = areas[k].idxs
+        # Use the colormap to get a unique color for each area
+        area_color = colors(k / n_areas)
+        plt.scatter(all_pos[idxs, 0], all_pos[idxs, 1], color=area_color, s=s)
+
+        # Optional: Uncomment to display cluster centers and labels
+        plt.plot(cluster_center[0], cluster_center[1], "o", 
+                  markerfacecolor=area_color, markeredgecolor="k", markersize=6)
+        plt.text(cluster_center[0]+5, cluster_center[1], f'{k}', fontdict={'fontsize':25},
+                  bbox=dict(facecolor='white', alpha=0.3))
+
+    # Set plot limits based on your data
+    plt.ylim([np.min(all_pos[:, 1]), np.max(all_pos[:, 1])])
+    plt.xlim([np.min(all_pos[:, 0]), np.max(all_pos[:, 0])])
+    ax.set_xticklabels([])  # Hide x-axis tick labels
+    ax.set_yticklabels([])  # Hide y-axis tick labels
+
+    # Show plot if required
+    if show:
+        plt.show()
+
+    return f, ax
+
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import pairwise_distances_argmin
+n_areas = 3 # areas
+enabled_idxs = np.where(dataset.los != -1)[0]
+pos = dataset.rx_pos[enabled_idxs]
+# no_pos = data['user']['location'][data['user']['LoS'] == -1]
+
+k_means = KMeans(init="k-means++", n_clusters=n_areas, n_init=10)
+
+k_means.fit(pos)
+k_means_cluster_centers = k_means.cluster_centers_
+k_means_labels = pairwise_distances_argmin(pos, k_means_cluster_centers)
+
+areas = [Area(enabled_idxs[np.where(k_means_labels == i)[0]], 
+                 name=i, center=k_means_cluster_centers[i]) for i in range(n_areas)]
+
+plot_areas(areas, dataset.rx_pos)
+
+# Stats about the areas
+area_lens = [len(a.idxs) for a in areas]
+min_idxs, max_idxs, mean_idxs = np.min(area_lens), np.max(area_lens), np.mean(area_lens)
+print(f'Areas have min {min_idxs} idxs, max {max_idxs} idxs, and an avg of {mean_idxs} idxs.')
+
 
 #%% BEAMFORMING: Received Power with TX Beamforming
 ch_params = dm.ChannelGenParameters()  # default array has 8 elements
