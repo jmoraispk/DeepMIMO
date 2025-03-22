@@ -1,7 +1,7 @@
 #%% Imports
 
 import time
-import deepmimo as dm
+from .. import deepmimo as dm
 import os
 import json
 
