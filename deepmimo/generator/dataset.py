@@ -554,7 +554,10 @@ class Dataset(DotDict):
         total_power = np.abs(np.nansum(complex_gains, axis=1))**2
         
         # Convert back to dB
-        pathloss = -10 * np.log10(total_power)
+        mask = total_power > 0
+        pathloss = np.full_like(total_power, np.nan)
+        pathloss[mask] = -10 * np.log10(total_power[mask])
+        
         self[c.PATHLOSS_PARAM_NAME] = pathloss  # Cache the result
         return pathloss
 
