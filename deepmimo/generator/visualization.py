@@ -90,13 +90,13 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
 
 
 def plot_coverage(rxs: np.ndarray, cov_map: tuple[float, ...] | list[float] | np.ndarray,
-                 dpi: int = 300, figsize: tuple = (6,4), cbar_title: str = '',
-                 title: bool | str = False, scat_sz: float = 0.5,
-                 bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
-                 legend: bool = False, lims: Optional[Tuple[float, float]] = None,
-                 proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
-                 cmap: str | list = 'viridis', cbar_labels: Optional[list[str]] = None,
-                 ax: Optional[Axes] = None) -> Tuple[Figure, Axes, Colorbar]:
+                  dpi: int = 100, figsize: tuple = (6,4), cbar_title: str = '',
+                  title: bool | str = False, scat_sz: float = 0.5,
+                  bs_pos: Optional[np.ndarray] = None, bs_ori: Optional[np.ndarray] = None,
+                  legend: bool = False, lims: Optional[Tuple[float, float]] = None,
+                  proj_3D: bool = False, equal_aspect: bool = False, tight: bool = True,
+                  cmap: str | list = 'viridis', cbar_labels: Optional[list[str]] = None,
+                  ax: Optional[Axes] = None) -> Tuple[Figure, Axes, Colorbar]:
     """Generate coverage map visualization for user positions.
     
     This function creates a customizable plot showing user positions colored by
