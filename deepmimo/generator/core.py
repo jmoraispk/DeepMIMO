@@ -68,7 +68,11 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     Args:
         scen_name (str): Name of the scenario to load
         **load_params: Additional parameters for loading the scenario
-        
+            max_paths (int): Maximum number of paths to load. Defaults to 5.
+            tx_sets (dict or list or str): Transmitter sets to load. Defaults to 'all'.
+            rx_sets (dict or list or str): Receiver sets to load. Defaults to 'all'.
+            matrices (list of str or str): List of matrix names to load. Defaults to 'all'.
+
     Returns:
         Dataset or MacroDataset: Loaded dataset(s)
         
@@ -106,9 +110,9 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
             snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
                                            f'scene_{snapshot_i}')
             print(f'Scene {snapshot_i + 1}/{n_snapshots}')
-            dataset[snapshot_i] = load_raytracing_scene(snapshot_folder, rt_params, **load_params)
+            dataset[snapshot_i] = _load_raytracing_scene(snapshot_folder, rt_params, **load_params)
     else: # static
-        dataset = load_raytracing_scene(scen_folder, params[c.TXRX_PARAM_NAME], **load_params)
+        dataset = _load_raytracing_scene(scen_folder, params[c.TXRX_PARAM_NAME], **load_params)
     
     # Set shared parameters
     dataset[c.NAME_PARAM_NAME] = scen_name
@@ -119,25 +123,25 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
 
     return dataset
 
-def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c.MAX_PATHS,
+def _load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c.MAX_PATHS,
                           tx_sets: Dict[int, list | str] | list | str = 'all',
                           rx_sets: Dict[int, list | str] | list | str = 'all',
                           matrices: List[str] | str = 'all') -> Dataset:
     """Load raytracing data for a scene.
 
     Args:
-        scene_folder (str): Path to scene folder containing raytracing data files
-        rt_params (dict): Dictionary containing raytracing parameters 
-        max_paths (int): Maximum number of paths to load. Defaults to 5
-        tx_sets (dict or list or str): Transmitter sets to load. Defaults to 'all'
-        rx_sets (dict or list or str): Receiver sets to load. Defaults to 'all'
-        matrices (list of str): List of matrix names to load. Defaults to 'all'
+        scene_folder (str): Path to the folder containing raytracing data files.
+        txrx_dict (dict): Dictionary containing transmitter and receiver sets.
+        max_paths (int): Maximum number of paths to load. Defaults to 5.
+        tx_sets (dict or list or str): Transmitter sets to load. Defaults to 'all'.
+        rx_sets (dict or list or str): Receiver sets to load. Defaults to 'all'.
+        matrices (list of str or str): List of matrix names to load. Defaults to 'all'.
 
     Returns:
         Dataset: Dataset containing the requested matrices for each tx-rx pair
     """
-    tx_sets = validate_txrx_sets(tx_sets, txrx_dict, 'tx')
-    rx_sets = validate_txrx_sets(rx_sets, txrx_dict, 'rx')
+    tx_sets = _validate_txrx_sets(tx_sets, txrx_dict, 'tx')
+    rx_sets = _validate_txrx_sets(rx_sets, txrx_dict, 'rx')
     dataset_list = []
     bs_idx = 0
     
@@ -148,7 +152,7 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
                 print(f'\nTX set: {tx_set_id} (basestation)')
                 rx_id_str = 'basestation' if rx_set_id == tx_set_id else 'users'
                 print(f'RX set: {rx_set_id} ({rx_id_str})')
-                dataset_list[bs_idx] = load_tx_rx_raydata(scene_folder,
+                dataset_list[bs_idx] = _load_tx_rx_raydata(scene_folder,
                                                           tx_set_id, rx_set_id,
                                                           tx_idx, rx_idxs,
                                                           max_paths, matrices)
@@ -168,7 +172,7 @@ def load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = c
     return final_dataset
 
 
-def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: int, 
+def _load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: int, 
                         rx_idxs: np.ndarray | List, max_paths: int, 
                         matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
     """Load raytracing data for a transmitter-receiver pair.
@@ -241,8 +245,8 @@ def load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: i
     return tx_dict 
 
 # Helper functions
-def validate_txrx_sets(sets: Dict[int, list | str] | list | str,
-                       txrx_dict: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
+def _validate_txrx_sets(sets: Dict[int, list | str] | list | str,
+                        txrx_dict: Dict[str, Any], tx_or_rx: str = 'tx') -> Dict[int, list]:
     """Validate and process TX/RX set specifications.
 
     This function validates and processes transmitter/receiver set specifications,
