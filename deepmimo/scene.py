@@ -644,7 +644,7 @@ class Scene:
             'n_objects': len(self.objects),
             'n_vertices': len(vertices),
             'n_faces': sum(len(obj.faces) for obj in self.objects),
-            'n_triangular_faces': len(self.face_indices)
+            'n_triangular_faces': sum(len(obj_face_idxs) for obj_face_idxs in self.face_indices)
         }
     
     @classmethod
