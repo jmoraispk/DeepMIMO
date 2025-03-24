@@ -55,6 +55,12 @@ FUNDAMENTAL_MATRICES_HELP = {
 
 # Dictionary of help messages for computed/derived matrices
 COMPUTED_MATRICES_HELP = {
+    c.LOS_PARAM_NAME:
+        'Line of sight status for each path. \n'
+        '\t1: Direct path between TX and RX. \n'
+        '\t0: Indirect path (reflection, diffraction, scattering, or transmission). \n'
+        '\t-1: No paths between TX and RX. \n'
+        '\t[num_rx, num_paths]',
     c.CHANNEL_PARAM_NAME:
         'Channel matrix between TX and RX antennas\n'
         '\t[num_rx, num_rx_ant, num_tx_ant, X], with X = number of paths in time domain \n'
@@ -70,9 +76,6 @@ COMPUTED_MATRICES_HELP = {
         '\t[num_rx, num_paths]',
     c.NUM_PATHS_PARAM_NAME:
         'Number of paths for each user\n'
-        '\t[num_rx]',
-    c.NUM_PATHS_FOV_PARAM_NAME:
-        'Number of paths within FoV for each user\n'
         '\t[num_rx]',
     c.INTER_STR_PARAM_NAME:
         'Interaction string for each path.\n'
