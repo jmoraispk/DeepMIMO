@@ -59,7 +59,7 @@ print(pairs)
 
 dm.print_available_txrx_pair_ids(scen_name)
 
-dataset.txrx
+print(dataset.txrx)
 
 
 #%% SCENARIO INFORMATION: Ray Tracing Parameters
