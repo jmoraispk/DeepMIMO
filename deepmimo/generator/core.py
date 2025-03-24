@@ -67,11 +67,21 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     
     Args:
         scen_name (str): Name of the scenario to load
-        **load_params: Additional parameters for loading the scenario
-            max_paths (int): Maximum number of paths to load. Defaults to 5.
-            tx_sets (dict or list or str): Transmitter sets to load. Defaults to 'all'.
-            rx_sets (dict or list or str): Receiver sets to load. Defaults to 'all'.
-            matrices (list of str or str): List of matrix names to load. Defaults to 'all'.
+        **load_params: Additional parameters for loading the scenario. Can be passed as a dictionary
+            or as keyword arguments. Available parameters are:
+            
+            max_paths (int, optional): Maximum number of paths to load. Defaults to 5.
+            tx_sets (dict or list or str, optional): Transmitter sets to load. Can be:
+                - dict: Mapping of set IDs to lists of indices or 'all'
+                - list: List of set IDs to load all indices from
+                - str: 'all' to load all sets and indices
+                Defaults to 'all'.
+            rx_sets (dict or list or str, optional): Receiver sets to load. Same format as tx_sets.
+                Defaults to 'all'.
+            matrices (list of str or str, optional): List of matrix names to load. Can be:
+                - list: List of matrix names to load
+                - str: 'all' to load all available matrices
+                Defaults to 'all'.
 
     Returns:
         Dataset or MacroDataset: Loaded dataset(s)
