@@ -60,7 +60,7 @@ COMPUTED_MATRICES_HELP = {
         '\t1: Direct path between TX and RX. \n'
         '\t0: Indirect path (reflection, diffraction, scattering, or transmission). \n'
         '\t-1: No paths between TX and RX. \n'
-        '\t[num_rx, num_paths]',
+        '\t[num_rx, ]',
     c.CHANNEL_PARAM_NAME:
         'Channel matrix between TX and RX antennas\n'
         '\t[num_rx, num_rx_ant, num_tx_ant, X], with X = number of paths in time domain \n'
