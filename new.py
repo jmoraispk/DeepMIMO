@@ -11,7 +11,7 @@ from ray_tracer import RayTracer
 import pandas as pd
 import numpy as np
 import subprocess
-import os
+import os, glob
 import deepmimo as dm
 
 
@@ -175,26 +175,38 @@ def call_blender2(rt_params):
         print("Errors:", e.stderr)
 
 
-def insite_raytrace(rt_params):
-    # Run Sionna
-    time_str = dt.now().strftime("%m-%d-%Y_%HH%MM%SS")
-    osm_folder = os.path.join(PROJ_ROOT, 'all_runs', f'run_{time_str}')
-    with open(os.path.join(osm_folder, rt_params['scenario_name'], "osm_gps_origin.txt"), "r") as f:
-        origin_lat, origin_lon = map(float, f.read().split())
-    print(f"origin_lat: {origin_lat}, origin_lon: {origin_lon}")
+# def sionna_raytrace(rt_params):
+#     # Run Sionna
+#     #time_str = dt.now().strftime("%m-%d-%Y_%HH%MM%SS")
+#     #osm_folder = os.path.join(PROJ_ROOT, 'all_runs', f'run_{time_str}')
+#     #with open(os.path.join(osm_folder, rt_params['scenario_name'], "osm_gps_origin.txt"), "r") as f:
+#     #    origin_lat, origin_lon = map(float, f.read().split())
+#     #print(f"origin_lat: {origin_lat}, origin_lon: {origin_lon}")
+#     # run_* 폴더 중 가장 최근 생성된 폴더 찾기
+#     runs_path = os.path.join(PROJ_ROOT, 'all_runs')
+#     run_folders = glob.glob(os.path.join(runs_path, 'run_*'))
+#     latest_run = max(run_folders, key=os.path.getmtime)  # 가장 최근에 수정된 run_* 폴더
 
-    user_grid = generate_user_grid(row, origin_lat, origin_lon)
-    print(f"User grid shape: {user_grid.shape}")
+#     # 시나리오 경로 및 파일 열기
+#     scenario_folder = os.path.join(latest_run, rt_params['scenario_name'])
+#     origin_file = os.path.join(scenario_folder, "osm_gps_origin.txt")
 
-    num_bs = len(rt_params['bs_lats'])
-    print(f"Number of BSs: {num_bs}")
-    bs_pos = [[convert_Gps2RelativeCartesian(rt_params['bs_lats'][i], rt_params['bs_lons'][i], origin_lat, origin_lon)[0],
-                convert_Gps2RelativeCartesian(rt_params['bs_lats'][i], rt_params['bs_lons'][i], origin_lat, origin_lon)[1], 
-                BS_HEIGHT]
-                for i in range(num_bs)]
+#     with open(origin_file, "r") as f:
+#         origin_lat, origin_lon = map(float, f.read().split())
+#     print(f"origin_lat: {origin_lat}, origin_lon: {origin_lon}")
 
-    ray_tracer = RayTracer(osm_folder)
-    ray_tracer.run(rt_params['scenario_name'], bs_pos, user_grid, rt_params['carrier_freq'], rt_params['n_reflections'], rt_params['diffraction'], rt_params['scattering'])
+#     user_grid = generate_user_grid(row, origin_lat, origin_lon)
+#     print(f"User grid shape: {user_grid.shape}")
+
+#     num_bs = len(rt_params['bs_lats'])
+#     print(f"Number of BSs: {num_bs}")
+#     bs_pos = [[convert_Gps2RelativeCartesian(rt_params['bs_lats'][i], rt_params['bs_lons'][i], origin_lat, origin_lon)[0],
+#                 convert_Gps2RelativeCartesian(rt_params['bs_lats'][i], rt_params['bs_lons'][i], origin_lat, origin_lon)[1], 
+#                 BS_HEIGHT]
+#                 for i in range(num_bs)]
+
+#     ray_tracer = RayTracer(osm_folder)
+#     ray_tracer.run(rt_params['scenario_name'], bs_pos, user_grid, rt_params['carrier_freq'], rt_params['max_reflections'], rt_params['diffraction'], rt_params['scattering'])
 
 def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     
@@ -321,7 +333,7 @@ for index, row in df.iterrows():
     call_blender1(rt_params)
 
     # TODO5: call_blender2()
-    # call_blender2(rt_params)
+    call_blender2(rt_params)
     
     # Identify the paths --
     root_dir = Path("C:/Users/namhyunk/Desktop/osm2dt")
@@ -336,14 +348,16 @@ for index, row in df.iterrows():
     user_grid = generate_user_grid(row, rt_params['origin_lat'], rt_params['origin_lon'])
     print(f"User grid shape: {user_grid.shape}")
 
-	# TODO3: gen_positins()
+	# TODO3: gen_positions()
 	# Generate XY user grid and BS positions
     rx_pos = gen_rx_pos(row, osm_folder)  # N x 3 (N ~ 20k)
     tx_pos = gen_tx_pos(rt_params)  # M x 3 (M ~ 3)
 
     # TODO4: insite_raytrace()
 	# Ray Tracing
+
     insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
+    # sionna_raytrace(rt_params)
 
 	# Convert to DeepMIMO
     scen_insite = dm.convert(insite_rt_path) #-- supposed to be deepmimo
