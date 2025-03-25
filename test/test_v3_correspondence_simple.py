@@ -1,4 +1,3 @@
-
 #%%
 import numpy as np
 import deepmimo as dm
@@ -71,6 +70,10 @@ ch_params.num_paths = 5
 # ch_params.ofdm.subcarriers = 64
 ch_params.ofdm.bandwidth = 50e6
 ch_params.ofdm.selected_subcarriers = np.arange(11)
+ch_params['bs_antenna']['shape'] = np.array([8,1]) # default is [8,1]
+
+# Set FoV parameters using the new API
+# dataset.apply_fov(bs_fov=np.array([360, 180]), ue_fov=np.array([360, 180]))  # Full FoV
 
 # Other computations
 dataset.compute_channels(ch_params)
@@ -78,7 +81,7 @@ dataset.compute_channels(ch_params)
 #%% V3 Generation
 
 # Generate dataset using V3
-params = Parameters_old('asu_campus1')
+params = Parameters_old('asu_campus')
 # params = Parameters_old('O1_3p5')
 # params['bs_antenna']['rotation'] = np.array([30,40,30])
 # params['bs_antenna']['fov'] = np.array([360, 180])
@@ -101,3 +104,5 @@ b = dataset2[0]['user']['channel'][i]
 pprint(a.flatten()[-10:])
 pprint(b.flatten()[-10:])
 pprint(np.max(np.abs(a-b)))
+
+# %%

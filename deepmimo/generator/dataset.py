@@ -456,14 +456,14 @@ class Dataset(DotDict):
             Dict: Dictionary containing FoV filtered angles and mask
         """
         # Check if FoV parameters exist
-        if self.get('bs_fov') is None or self.get('ue_fov') is None:
+        if self.get('bs_fov') is None and self.get('ue_fov') is None:
             # Return unfiltered & unrotated angles and no mask (indicating full FoV)
             return {
                 c.FOV_MASK_PARAM_NAME: None,
-                c.AOD_EL_FOV_PARAM_NAME: self[c.AOD_EL_PARAM_NAME],
-                c.AOD_AZ_FOV_PARAM_NAME: self[c.AOD_AZ_PARAM_NAME],
-                c.AOA_EL_FOV_PARAM_NAME: self[c.AOA_EL_PARAM_NAME],
-                c.AOA_AZ_FOV_PARAM_NAME: self[c.AOA_AZ_PARAM_NAME]
+                c.AOD_EL_FOV_PARAM_NAME: self[c.AOD_EL_PARAM_NAME] * np.pi / 180,
+                c.AOD_AZ_FOV_PARAM_NAME: self[c.AOD_AZ_PARAM_NAME] * np.pi / 180,
+                c.AOA_EL_FOV_PARAM_NAME: self[c.AOA_EL_PARAM_NAME] * np.pi / 180,
+                c.AOA_AZ_FOV_PARAM_NAME: self[c.AOA_AZ_PARAM_NAME] * np.pi / 180
             }
             
         # Get rotated angles from dataset
