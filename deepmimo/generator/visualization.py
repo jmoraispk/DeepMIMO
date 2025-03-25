@@ -381,15 +381,18 @@ def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
     ax.set_ylabel('y (m)')
     if proj_3D:
         ax.set_zlabel('z (m)')
-    
     # Only show legend if color_by_type is True or if there are TX/RX points
     if color_by_type:
         # Remove duplicate labels
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
-        ax.legend(by_label.values(), by_label.keys())
+        legend = ax.legend(by_label.values(), by_label.keys())
     else:
-        ax.legend()
+        legend = ax.legend()
+    
+    # Put legend outside the plot
+    legend.set_bbox_to_anchor((1, 0.9))
+    # legend.set_loc('center left')
     
     # Set equal aspect ratio for better visualization
     if not proj_3D:
