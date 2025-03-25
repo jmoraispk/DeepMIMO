@@ -156,7 +156,7 @@ class Dataset(DotDict):
             KeyError if key cannot be resolved
         """
         # First check if it's an alias and resolve it
-        resolved_key = self._aliases.get(key, key)
+        resolved_key = c.DATASET_ALIASES.get(key, key)
         if resolved_key != key:
             key = resolved_key
             try:
@@ -178,14 +178,13 @@ class Dataset(DotDict):
         
         raise KeyError(key)
     
-    
     def __dir__(self):
         """Return list of valid attributes including computed ones."""
         # Include standard attributes, computed attributes, and aliases
         return list(set(
             list(super().__dir__()) + 
             list(self._computed_attributes.keys()) + 
-            list(self._aliases.keys())
+            list(c.DATASET_ALIASES.keys())
         ))
 
     ###########################################
@@ -625,6 +624,15 @@ class Dataset(DotDict):
         result[non_zero] = np.floor(np.log10(self.inter[non_zero])) + 1
         return result
 
+    def _compute_inter_int(self) -> np.ndarray:
+        """Compute the interaction integer.
+        
+        Returns:
+            Array of interaction integer
+        """
+        
+        return self.inter
+
     def _compute_inter_str(self) -> np.ndarray:
         """Compute the interaction string.
         
@@ -856,67 +864,6 @@ class Dataset(DotDict):
         c.INTER_STR_PARAM_NAME: '_compute_inter_str',
     }
 
-    # Dictionary of common aliases for dataset attributes
-    _aliases = {
-        # LoS aliases
-        'los_status': c.LOS_PARAM_NAME,
-        
-        # Channel aliases
-        'ch': c.CHANNEL_PARAM_NAME,
-        'chs': c.CHANNEL_PARAM_NAME,
-        'channels': c.CHANNEL_PARAM_NAME,
-
-        # Channel parameters aliases
-        'channel_params': c.CH_PARAMS_PARAM_NAME,
-        
-        # Power aliases
-        'pwr': c.POWER_PARAM_NAME,
-        'powers': c.POWER_PARAM_NAME,
-        'lin_pwr': c.PWR_LINEAR_PARAM_NAME,
-        'linear_power': c.PWR_LINEAR_PARAM_NAME,
-        'pwr_lin': c.PWR_LINEAR_PARAM_NAME,
-        'pwr_ant_gain': c.PWR_LINEAR_ANT_GAIN_PARAM_NAME,
-        
-        # Position aliases
-        'ue_pos': c.RX_POS_PARAM_NAME,
-        'rx_loc': c.RX_POS_PARAM_NAME,
-        'rx_position': c.RX_POS_PARAM_NAME,
-        'rx_locations': c.RX_POS_PARAM_NAME,
-        'bs_pos': c.TX_POS_PARAM_NAME,
-        'tx_loc': c.TX_POS_PARAM_NAME,
-        'tx_position': c.TX_POS_PARAM_NAME,
-        'tx_locations': c.TX_POS_PARAM_NAME,
-        
-        # Pathloss aliases
-        'pl': c.PATHLOSS_PARAM_NAME,
-        'path_loss': c.PATHLOSS_PARAM_NAME,
-        
-        # Distance aliases
-        'dist': c.DIST_PARAM_NAME,
-        'distance': c.DIST_PARAM_NAME,
-        'dists': c.DIST_PARAM_NAME,
-        
-        # Angle aliases
-        'aoa_phi': c.AOA_AZ_PARAM_NAME,
-        'aoa_theta': c.AOA_EL_PARAM_NAME,
-        'aod_phi': c.AOD_AZ_PARAM_NAME,
-        'aod_theta': c.AOD_EL_PARAM_NAME,
-        
-        # Path count aliases
-        'n_paths': c.NUM_PATHS_PARAM_NAME,  # Add alias for new attribute
-        
-        # Time of arrival aliases
-        'toa': c.DELAY_PARAM_NAME,
-        'time_of_arrival': c.DELAY_PARAM_NAME,
-
-        # Interaction aliases
-        'bounce_type': c.INTERACTIONS_PARAM_NAME,
-        'interactions': c.INTERACTIONS_PARAM_NAME,
-        'bounce_pos': c.INTERACTIONS_POS_PARAM_NAME,
-        'interaction_positions': c.INTERACTIONS_POS_PARAM_NAME,
-        'interaction_locations': c.INTERACTIONS_POS_PARAM_NAME
-    }
-
     def info(self, param_name: str | None = None) -> None:
         """Display help information about DeepMIMO dataset parameters.
         
@@ -926,8 +873,8 @@ class Dataset(DotDict):
                        If the parameter name is an alias, shows info for the resolved parameter.
         """
         # If it's an alias, resolve it first
-        if param_name in self._aliases:
-            resolved_name = self._aliases[param_name]
+        if param_name in c.DATASET_ALIASES:
+            resolved_name = c.DATASET_ALIASES[param_name]
             print(f"'{param_name}' is an alias for '{resolved_name}'")
             param_name = resolved_name
             

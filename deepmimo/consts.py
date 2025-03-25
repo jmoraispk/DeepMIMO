@@ -39,6 +39,9 @@ organized into the following categories:
    - OFDM configuration
    - Antenna configuration
 
+9. Parameter Aliases
+   - Common aliases for dataset attributes
+
 IMPORTANT: The string values of these constants MUST match exactly the field names 
 used in the respective files (params.mat, scene files, dataclasses, etc.). 
 """
@@ -243,7 +246,75 @@ PARAMSET_ANT_RAD_PAT = 'radiation_pattern'
 PARAMSET_ANT_RAD_PAT_VALS = ['isotropic', 'halfwave-dipole']
 
 #==============================================================================
-# 9. Other Constants
+# 9. Parameter Aliases
+#==============================================================================
+
+# Dictionary of common aliases for dataset attributes
+DATASET_ALIASES = {
+    # LoS aliases
+    'los_status': LOS_PARAM_NAME,
+    
+    # Channel aliases
+    'ch': CHANNEL_PARAM_NAME,
+    'chs': CHANNEL_PARAM_NAME,
+    'channels': CHANNEL_PARAM_NAME,
+
+    # Channel parameters aliases
+    'channel_params': CH_PARAMS_PARAM_NAME,
+    
+    # Power aliases
+    'pwr': POWER_PARAM_NAME,
+    'powers': POWER_PARAM_NAME,
+    'lin_pwr': PWR_LINEAR_PARAM_NAME,
+    'linear_power': PWR_LINEAR_PARAM_NAME,
+    'pwr_lin': PWR_LINEAR_PARAM_NAME,
+    'pwr_ant_gain': PWR_LINEAR_ANT_GAIN_PARAM_NAME,
+    
+    # Position aliases
+    'ue_pos': RX_POS_PARAM_NAME,
+    'rx_loc': RX_POS_PARAM_NAME,
+    'rx_position': RX_POS_PARAM_NAME,
+    'rx_locations': RX_POS_PARAM_NAME,
+    'bs_pos': TX_POS_PARAM_NAME,
+    'tx_loc': TX_POS_PARAM_NAME,
+    'tx_position': TX_POS_PARAM_NAME,
+    'tx_locations': TX_POS_PARAM_NAME,
+    
+    # Pathloss aliases
+    'pl': PATHLOSS_PARAM_NAME,
+    'path_loss': PATHLOSS_PARAM_NAME,
+    
+    # Distance aliases
+    'dist': DIST_PARAM_NAME,
+    'distance': DIST_PARAM_NAME,
+    'dists': DIST_PARAM_NAME,
+    
+    # Angle aliases
+    'aoa_phi': AOA_AZ_PARAM_NAME,
+    'aoa_theta': AOA_EL_PARAM_NAME,
+    'aod_phi': AOD_AZ_PARAM_NAME,
+    'aod_theta': AOD_EL_PARAM_NAME,
+    
+    # Path count aliases
+    'n_paths': NUM_PATHS_PARAM_NAME,
+    
+    # Time of arrival aliases
+    'toa': DELAY_PARAM_NAME,
+    'time_of_arrival': DELAY_PARAM_NAME,
+
+    # Interaction aliases
+    'bounce_type': INTERACTIONS_PARAM_NAME,
+    'interactions': INTERACTIONS_PARAM_NAME,
+    'bounce_pos': INTERACTIONS_POS_PARAM_NAME,
+    'interaction_positions': INTERACTIONS_POS_PARAM_NAME,
+    'interaction_locations': INTERACTIONS_POS_PARAM_NAME,
+
+    # TxRx aliases
+    'tx_rx': TXRX_PARAM_NAME,
+}
+
+#==============================================================================
+# 10. Other Constants
 #==============================================================================
 
 # Invalid characters in scenario names

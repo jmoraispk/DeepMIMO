@@ -177,6 +177,7 @@ def info(param_name: str | object | None = None) -> None:
                    If a string, must be one of the valid parameter names or 'materials'.
                    If an object, displays Python's built-in help for that object.
                    If None or 'all', displays information for all parameters.
+                   If the parameter name is an alias, shows info for the resolved parameter.
     
     Returns:
         None
@@ -184,6 +185,12 @@ def info(param_name: str | object | None = None) -> None:
     if not isinstance(param_name, (str, type(None))):
         help(param_name)
         return
+
+    # Check if it's an alias and resolve it first
+    if param_name in c.DATASET_ALIASES:
+        resolved_name = c.DATASET_ALIASES[param_name]
+        print(f"'{param_name}' is an alias for '{resolved_name}'")
+        param_name = resolved_name
 
     if param_name is None or param_name == 'all':
         _print_section("Fundamental Matrices", FUNDAMENTAL_MATRICES_HELP)
