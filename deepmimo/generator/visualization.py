@@ -269,9 +269,8 @@ def export_xyz_csv(data: Dict[str, Any], z_var: np.ndarray, outfile: str = '',
         writer.writerows(zip(*data_dict.values()))
 
 
-
 def plot_rays(rx_loc: np.ndarray, tx_loc: np.ndarray, inter_pos: np.ndarray,
-              inter: np.ndarray, figsize: tuple = (10,8), dpi: int = 300,
+              inter: np.ndarray, figsize: tuple = (10,8), dpi: int = 100,
               proj_3D: bool = True, color_by_type: bool = False) -> Tuple[Figure, Axes]:
     """Plot ray paths between transmitter and receiver with interaction points.
     
