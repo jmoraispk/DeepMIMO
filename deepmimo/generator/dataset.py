@@ -460,10 +460,10 @@ class Dataset(DotDict):
             # Return unfiltered & unrotated angles and no mask (indicating full FoV)
             return {
                 c.FOV_MASK_PARAM_NAME: None,
-                c.AOD_EL_FOV_PARAM_NAME: self[c.AOD_EL_PARAM_NAME] * np.pi / 180,
-                c.AOD_AZ_FOV_PARAM_NAME: self[c.AOD_AZ_PARAM_NAME] * np.pi / 180,
-                c.AOA_EL_FOV_PARAM_NAME: self[c.AOA_EL_PARAM_NAME] * np.pi / 180,
-                c.AOA_AZ_FOV_PARAM_NAME: self[c.AOA_AZ_PARAM_NAME] * np.pi / 180
+                c.AOD_EL_FOV_PARAM_NAME: self[c.AOD_EL_ROT_PARAM_NAME],
+                c.AOD_AZ_FOV_PARAM_NAME: self[c.AOD_AZ_ROT_PARAM_NAME],
+                c.AOA_EL_FOV_PARAM_NAME: self[c.AOA_EL_ROT_PARAM_NAME],
+                c.AOA_AZ_FOV_PARAM_NAME: self[c.AOA_AZ_ROT_PARAM_NAME],
             }
             
         # Get rotated angles from dataset
