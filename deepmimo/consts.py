@@ -178,10 +178,10 @@ MAX_INTER_PER_PATH = 10  # Maximum number of interactions per path
 POWER_PARAM_NAME = 'power'
 PHASE_PARAM_NAME = 'phase'
 DELAY_PARAM_NAME = 'delay'
-AOA_AZ_PARAM_NAME = 'aoa_az'
-AOA_EL_PARAM_NAME = 'aoa_el'
-AOD_AZ_PARAM_NAME = 'aod_az'
-AOD_EL_PARAM_NAME = 'aod_el'
+AOA_AZ_PARAM_NAME = 'aoa_az'               # Azimuth   angles (degrees)
+AOA_EL_PARAM_NAME = 'aoa_el'               # Elevation angles (degrees)
+AOD_AZ_PARAM_NAME = 'aod_az'               # Azimuth   angles (degrees)
+AOD_EL_PARAM_NAME = 'aod_el'               # Elevation angles (degrees)
 RX_POS_PARAM_NAME = 'rx_pos'
 TX_POS_PARAM_NAME = 'tx_pos'
 INTERACTIONS_PARAM_NAME = 'inter'
@@ -201,16 +201,16 @@ NUM_INTERACTIONS_PARAM_NAME = 'num_interactions'
 NUM_PATHS_FOV_PARAM_NAME = '_num_paths_fov'  # Number of paths within FoV for each user
 
 # Rotated angles (after antenna rotation)
-AOA_AZ_ROT_PARAM_NAME = '_aoa_az_rot'
-AOA_EL_ROT_PARAM_NAME = '_aoa_el_rot'
-AOD_AZ_ROT_PARAM_NAME = '_aod_az_rot'
-AOD_EL_ROT_PARAM_NAME = '_aod_el_rot'
+AOA_AZ_ROT_PARAM_NAME = '_aoa_az_rot'       # Azimuth   angles after rotation (radians)
+AOA_EL_ROT_PARAM_NAME = '_aoa_el_rot'       # Elevation angles after rotation (radians)
+AOD_AZ_ROT_PARAM_NAME = '_aod_az_rot'       # Azimuth   angles after rotation (radians)
+AOD_EL_ROT_PARAM_NAME = '_aod_el_rot'       # Elevation angles after rotation (radians)
 
 # Field of view filtered angles
-AOD_EL_FOV_PARAM_NAME = '_aod_el_rot_fov'  # Elevation angles after rotation and FoV filtering
-AOD_AZ_FOV_PARAM_NAME = '_aod_az_rot_fov'  # Azimuth   angles after rotation and FoV filtering
-AOA_EL_FOV_PARAM_NAME = '_aoa_el_rot_fov'  # Elevation angles after rotation and FoV filtering
-AOA_AZ_FOV_PARAM_NAME = '_aoa_az_rot_fov'  # Azimuth   angles after rotation and FoV filtering
+AOD_EL_FOV_PARAM_NAME = '_aod_el_rot_fov'  # Elevation angles after rotation and FoV filtering (radians)
+AOD_AZ_FOV_PARAM_NAME = '_aod_az_rot_fov'  # Azimuth   angles after rotation and FoV filtering (radians)
+AOA_EL_FOV_PARAM_NAME = '_aoa_el_rot_fov'  # Elevation angles after rotation and FoV filtering (radians)
+AOA_AZ_FOV_PARAM_NAME = '_aoa_az_rot_fov'  # Azimuth   angles after rotation and FoV filtering (radians)
 FOV_MASK_PARAM_NAME = '_fov_mask'          # Boolean mask for FoV filtering
 
 # Power with antenna gain
