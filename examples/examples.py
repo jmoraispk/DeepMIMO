@@ -797,7 +797,7 @@ ch_params.bs_antenna.rotation = np.array([0, 0, -135])
 ch_params.bs_antenna.shape = np.array([32, 1])
 dataset.compute_channels(ch_params)
 
-n_beams = 25
+n_beams = 16
 
 beam_angles = np.around(np.linspace(-60, 60, n_beams), 2)
 
@@ -815,7 +815,7 @@ recv_bf_pwr_dbm[dataset.los != -1] = np.around(20*np.log10(mean_amplitude) + 30,
 
 fig, axes = plt.subplots(1, 3, figsize=(18, 5), dpi=300, tight_layout=True)
 
-for plt_idx, beam_idx in enumerate([8, 12, 16]):
+for plt_idx, beam_idx in enumerate([6, 8, 10]):
     dataset.plot_coverage(recv_bf_pwr_dbm[:, beam_idx], ax=axes[plt_idx], lims=[-180, -60],
                           title=f'Beam # {beam_idx} ({beam_angles[beam_idx]:.1f}º)')
 
