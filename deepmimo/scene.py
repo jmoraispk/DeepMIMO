@@ -249,7 +249,7 @@ class PhysicalElement:
         self._hull_surface_area: float | None = None
         
         # Cache material indices
-        self._material_indices: Optional[Set[int]] = None
+        self._materials: Optional[Set[int]] = None
         
         # Compute bounding box immediately
         self._compute_bounding_box()
@@ -401,11 +401,11 @@ class PhysicalElement:
         return ax.get_figure(), ax
 
     @property
-    def material_indices(self) -> Set[int]:
+    def materials(self) -> Set[int]:
         """Get set of material indices used by this object."""
-        if self._material_indices is None:
-            self._material_indices = {face.material_idx for face in self._faces}
-        return self._material_indices
+        if self._materials is None:
+            self._materials = list({face.material_idx for face in self._faces})
+        return self._materials
 
     def __repr__(self) -> str:
         """Return a concise string representation of the physical element.
@@ -446,7 +446,7 @@ class PhysicalElementGroup:
 
     def get_materials(self) -> List[int]:
         """Get list of material indices used by objects in this group."""
-        return list(set().union(*(obj.material_indices for obj in self._objects)))
+        return list(set().union(*(obj.materials for obj in self._objects)))
     
     def get_objects(self, label: Optional[str] = None, material: Optional[int] = None) -> 'PhysicalElementGroup':
         """Get objects filtered by label and/or material.
@@ -464,7 +464,7 @@ class PhysicalElementGroup:
             objects = [obj for obj in objects if obj.label == label]
             
         if material:
-            objects = [obj for obj in objects if material in obj.material_indices]
+            objects = [obj for obj in objects if material in obj.materials]
             
         return PhysicalElementGroup(objects)
     
@@ -543,7 +543,7 @@ class Scene:
             obj_indices.append(face_indices)
         
         # Track object by materials
-        for material_idx in obj.material_indices:
+        for material_idx in obj.materials:
             if material_idx not in self._objects_by_material:
                 self._objects_by_material[material_idx] = []
             self._objects_by_material[material_idx].append(obj)
