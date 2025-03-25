@@ -445,6 +445,17 @@ class Dataset(DotDict):
         self.bs_fov = bs_fov
         self.ue_fov = ue_fov
     
+    def _is_full_fov(self, fov: np.ndarray) -> bool:
+        """Check if a FoV parameter represents a full sphere view.
+        
+        Args:
+            fov: FoV parameter as [horizontal, vertical] in degrees
+            
+        Returns:
+            bool: True if FoV represents a full sphere view
+        """
+        return fov[0] >= 360 and fov[1] >= 180
+
     def _compute_fov(self) -> Dict[str, np.ndarray]:
         """Compute field of view filtered angles for all users.
         
@@ -455,29 +466,20 @@ class Dataset(DotDict):
         Returns:
             Dict: Dictionary containing FoV filtered angles and mask
         """
-        # Check if FoV parameters exist
-        if self.get('bs_fov') is None and self.get('ue_fov') is None:
-            # Return unfiltered & unrotated angles and no mask (indicating full FoV)
-            return {
-                c.FOV_MASK_PARAM_NAME: None,
-                c.AOD_EL_FOV_PARAM_NAME: self[c.AOD_EL_ROT_PARAM_NAME],
-                c.AOD_AZ_FOV_PARAM_NAME: self[c.AOD_AZ_ROT_PARAM_NAME],
-                c.AOA_EL_FOV_PARAM_NAME: self[c.AOA_EL_ROT_PARAM_NAME],
-                c.AOA_AZ_FOV_PARAM_NAME: self[c.AOA_AZ_ROT_PARAM_NAME],
-            }
-            
         # Get rotated angles from dataset
         aod_theta = self[c.AOD_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
         aod_phi = self[c.AOD_AZ_ROT_PARAM_NAME]    # [n_users, n_paths]
         aoa_theta = self[c.AOA_EL_ROT_PARAM_NAME]  # [n_users, n_paths]
         aoa_phi = self[c.AOA_AZ_ROT_PARAM_NAME]    # [n_users, n_paths]
         
-        # Check if either FoV is restricted (not full sphere)
-        bs_full_fov = (self.bs_fov[0] >= 360 and self.bs_fov[1] >= 180)
-        ue_full_fov = (self.ue_fov[0] >= 360 and self.ue_fov[1] >= 180)
+        # Get FoV parameters and check if they are full sphere
+        bs_fov = self.get('bs_fov')
+        ue_fov = self.get('ue_fov')
+        bs_full = bs_fov is not None and self._is_full_fov(bs_fov)
+        ue_full = ue_fov is not None and self._is_full_fov(ue_fov)
         
-        if bs_full_fov and ue_full_fov:
-            # If both FoVs are full, return rotated angles without filtering
+        # If no FoV params or both are full sphere, return unfiltered angles
+        if (bs_fov is None and ue_fov is None) or (bs_full and ue_full):
             return {
                 c.FOV_MASK_PARAM_NAME: None,
                 c.AOD_EL_FOV_PARAM_NAME: aod_theta,
@@ -490,13 +492,13 @@ class Dataset(DotDict):
         fov_mask = np.ones_like(aod_theta, dtype=bool)
         
         # Only apply BS FoV filtering if restricted
-        if not bs_full_fov:
-            tx_mask = apply_FoV_batch(self.bs_fov, aod_theta, aod_phi)
+        if not bs_full:
+            tx_mask = apply_FoV_batch(bs_fov, aod_theta, aod_phi)
             fov_mask = np.logical_and(fov_mask, tx_mask)
             
         # Only apply UE FoV filtering if restricted
-        if not ue_full_fov:
-            rx_mask = apply_FoV_batch(self.ue_fov, aoa_theta, aoa_phi)
+        if not ue_full:
+            rx_mask = apply_FoV_batch(ue_fov, aoa_theta, aoa_phi)
             fov_mask = np.logical_and(fov_mask, rx_mask)
         
         return {
