@@ -197,12 +197,12 @@ class OFDM_PathGenerator:
                                            np.outer(delay_n.ravel(), self.subcarriers))
         return path_const
 
-def generate_MIMO_channel(array_response_product: np.ndarray,
-                          powers: np.ndarray,
-                          delays: np.ndarray,
-                          phases: np.ndarray,
-                          ofdm_params: Dict,
-                          freq_domain: bool = True) -> np.ndarray:
+def _generate_MIMO_channel(array_response_product: np.ndarray,
+                           powers: np.ndarray,
+                           delays: np.ndarray,
+                           phases: np.ndarray,
+                           ofdm_params: Dict,
+                           freq_domain: bool = True) -> np.ndarray:
     """Generate MIMO channel matrices.
     
     This function generates MIMO channel matrices based on path information and

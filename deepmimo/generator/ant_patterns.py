@@ -18,8 +18,8 @@ import numpy as np
 from .. import consts as c
 
 
-def pattern_isotropic(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
-    """Calculate isotropic antenna pattern (unity gain in all directions).
+def _pattern_isotropic(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+    """Compute isotropic antenna pattern.
     
     Args:
         theta (np.ndarray): Theta angles in radians.
@@ -31,8 +31,8 @@ def pattern_isotropic(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     return 1.
 
 
-def pattern_halfwave_dipole(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
-    """Calculate half-wave dipole antenna pattern.
+def _pattern_halfwave_dipole(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+    """Compute half-wave dipole antenna pattern.
     
     This function implements the theoretical radiation pattern of a half-wave
     dipole antenna, including its characteristic figure-8 shape.
@@ -73,8 +73,8 @@ def pattern_halfwave_dipole(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
 
 # Pattern registry mapping pattern names to their functions
 PATTERN_REGISTRY = {
-    'isotropic': pattern_isotropic,
-    'halfwave-dipole': pattern_halfwave_dipole
+    'isotropic': _pattern_isotropic,
+    'halfwave-dipole': _pattern_halfwave_dipole
 }
 
 

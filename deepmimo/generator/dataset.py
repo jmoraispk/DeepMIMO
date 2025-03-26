@@ -41,19 +41,22 @@ from ..info import info
 from .visualization import plot_coverage, plot_rays
 
 # Channel generation
-from .channel import generate_MIMO_channel, ChannelGenParameters
+from .channel import _generate_MIMO_channel, ChannelGenParameters
 
 # Antenna patterns and geometry
 from .ant_patterns import AntennaPattern
 from .geometry import (
-    rotate_angles_batch,
-    apply_FoV_batch,
-    array_response_batch,
-    ant_indices
+    _rotate_angles_batch,
+    _apply_FoV_batch,
+    _array_response_batch,
+    _ant_indices
 )
 
 # Utilities
-from .utils import dbw2watt, get_uniform_idxs
+from .utils import (
+    dbw2watt,
+    _get_uniform_idxs,
+)
 
 # Parameters that should remain consistent across datasets in a MacroDataset
 SHARED_PARAMS = [
@@ -251,7 +254,7 @@ class Dataset(DotDict):
         
         n_paths_to_gen = params.num_paths
         
-        channel = generate_MIMO_channel(
+        channel = _generate_MIMO_channel(
             array_response_product=array_response_product[..., :n_paths_to_gen],
             powers=self._power_linear_ant_gain[..., :n_paths_to_gen],
             delays=self.delay[..., :n_paths_to_gen],
@@ -335,12 +338,12 @@ class Dataset(DotDict):
             )
             
         # Rotate angles for all users at once
-        aod_theta_rot, aod_phi_rot = rotate_angles_batch(
+        aod_theta_rot, aod_phi_rot = _rotate_angles_batch(
             rotation=tx_ant_params[c.PARAMSET_ANT_ROTATION],
             theta=self[c.AOD_EL_PARAM_NAME],
             phi=self[c.AOD_AZ_PARAM_NAME])
         
-        aoa_theta_rot, aoa_phi_rot = rotate_angles_batch(
+        aoa_theta_rot, aoa_phi_rot = _rotate_angles_batch(
             rotation=ue_rotation,
             theta=self[c.AOA_EL_PARAM_NAME],
             phi=self[c.AOA_AZ_PARAM_NAME])
@@ -388,9 +391,9 @@ class Dataset(DotDict):
         """
         # Use attribute access for antenna parameters
         kd = 2 * np.pi * ant_params.spacing
-        ant_ind = ant_indices(ant_params[c.PARAMSET_ANT_SHAPE])  # tuple complications..
+        ant_ind = _ant_indices(ant_params[c.PARAMSET_ANT_SHAPE])  # tuple complications..
         
-        return array_response_batch(ant_ind=ant_ind, theta=theta, phi=phi, kd=kd)
+        return _array_response_batch(ant_ind=ant_ind, theta=theta, phi=phi, kd=kd)
 
     def _compute_array_response_product(self) -> np.ndarray:
         """Internal method to compute product of TX and RX array responses.
@@ -492,12 +495,12 @@ class Dataset(DotDict):
         
         # Only apply BS FoV filtering if restricted
         if not bs_full:
-            tx_mask = apply_FoV_batch(bs_fov, aod_theta, aod_phi)
+            tx_mask = _apply_FoV_batch(bs_fov, aod_theta, aod_phi)
             fov_mask = np.logical_and(fov_mask, tx_mask)
             
         # Only apply UE FoV filtering if restricted
         if not ue_full:
-            rx_mask = apply_FoV_batch(ue_fov, aoa_theta, aoa_phi)
+            rx_mask = _apply_FoV_batch(ue_fov, aoa_theta, aoa_phi)
             fov_mask = np.logical_and(fov_mask, rx_mask)
         
         return {
@@ -789,7 +792,7 @@ class Dataset(DotDict):
         Raises:
             ValueError: If dataset does not have a valid grid structure
         """
-        return get_uniform_idxs(self.n_ue, self.grid_size, steps)
+        return _get_uniform_idxs(self.n_ue, self.grid_size, steps)
     
 
     ###########################################
@@ -909,7 +912,7 @@ class MacroDataset:
         """
         self.datasets = datasets if datasets is not None else []
         
-    def get_single(self, key):
+    def _get_single(self, key):
         """Get a single value from the first dataset for shared parameters.
         
         Args:
@@ -947,7 +950,7 @@ class MacroDataset:
             
         # Handle shared parameters
         if name in SHARED_PARAMS:
-            return self.get_single(name)
+            return self._get_single(name)
             
         # Default: propagate to all datasets
         results = [getattr(dataset, name) for dataset in self.datasets]
@@ -967,7 +970,7 @@ class MacroDataset:
         if isinstance(idx, (int, slice)):
             return self.datasets[idx]
         if idx in SHARED_PARAMS:
-            return self.get_single(idx)
+            return self._get_single(idx)
         results = [dataset[idx] for dataset in self.datasets]
         return results[0] if len(results) == 1 else results
         

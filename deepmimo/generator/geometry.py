@@ -16,7 +16,7 @@ from typing import Tuple, Optional
 from numpy.typing import NDArray
 
 
-def array_response(ant_ind: NDArray, theta: float, phi: float, kd: float) -> NDArray:
+def _array_response(ant_ind: NDArray, theta: float, phi: float, kd: float) -> NDArray:
     """Calculate the array response vector for given antenna indices and angles.
     
     This function computes the complex array response based on antenna positions and 
@@ -31,11 +31,11 @@ def array_response(ant_ind: NDArray, theta: float, phi: float, kd: float) -> NDA
     Returns:
         NDArray: Complex array response vector with shape matching ant_ind
     """
-    gamma = array_response_phase(theta, phi, kd)
+    gamma = _array_response_phase(theta, phi, kd)
     return np.exp(ant_ind @ gamma.T)
 
 
-def array_response_batch(ant_ind: NDArray, theta: NDArray, phi: NDArray, kd: float) -> NDArray:
+def _array_response_batch(ant_ind: NDArray, theta: NDArray, phi: NDArray, kd: float) -> NDArray:
     """Calculate array response vectors for multiple users/paths simultaneously.
     
     This is a vectorized version of array_response() that can process multiple users
@@ -65,7 +65,7 @@ def array_response_batch(ant_ind: NDArray, theta: NDArray, phi: NDArray, kd: flo
     valid_mask = ~np.isnan(theta)  # [batch_size, n_paths]
     
     # Calculate phase components for all valid angles
-    gamma = array_response_phase(theta[valid_mask], phi[valid_mask], kd)  # [n_valid_paths, 3]
+    gamma = _array_response_phase(theta[valid_mask], phi[valid_mask], kd)  # [n_valid_paths, 3]
     
     # Initialize output array
     result = np.zeros((batch_size, n_ant, n_paths), dtype=np.complex128)
@@ -82,7 +82,7 @@ def array_response_batch(ant_ind: NDArray, theta: NDArray, phi: NDArray, kd: flo
     return result
 
 
-def array_response_phase(theta: float, phi: float, kd: float) -> NDArray:
+def _array_response_phase(theta: float, phi: float, kd: float) -> NDArray:
     """Calculate the phase components of the array response.
     
     This function computes the phase terms for each spatial dimension x,y,z
@@ -102,7 +102,7 @@ def array_response_phase(theta: float, phi: float, kd: float) -> NDArray:
     return np.vstack([gamma_x, gamma_y, gamma_z]).T
 
 
-def ant_indices(panel_size: Tuple[int, int, int]) -> NDArray:
+def _ant_indices(panel_size: Tuple[int, int, int]) -> NDArray:
     """Generate antenna element indices for a rectangular panel.
     
     This function creates an array of indices representing antenna positions 
@@ -120,7 +120,7 @@ def ant_indices(panel_size: Tuple[int, int, int]) -> NDArray:
     return np.vstack([gamma_x, gamma_y, gamma_z]).T
 
 
-def apply_FoV(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+def _apply_FoV(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     """Apply field of view constraints to angles.
     
     This function filters angles based on specified field of view limits
@@ -159,7 +159,7 @@ def apply_FoV(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> n
     return path_inclusion
 
 
-def apply_FoV_batch(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+def _apply_FoV_batch(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
     """Apply field of view constraints to angles in batch.
     
     This function filters angles based on specified field of view limits
@@ -184,16 +184,10 @@ def apply_FoV_batch(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray
     fov = np.deg2rad(fov)      # [2,]
     
     # Check if azimuth angle is within horizontal FoV - exactly matching original function
-    path_inclusion_phi = np.logical_or(
-        phi <= 0 + fov[0]/2,
-        phi >= 2*np.pi - fov[0]/2
-    )  # [batch_size, n_paths]
+    path_inclusion_phi = np.logical_or(phi <= 0 + fov[0]/2, phi >= 2*np.pi - fov[0]/2)
     
     # Check if elevation angle is within vertical FoV - exactly matching original function
-    path_inclusion_theta = np.logical_and(
-        theta <= np.pi/2 + fov[1]/2,
-        theta >= np.pi/2 - fov[1]/2
-    )  # [batch_size, n_paths]
+    path_inclusion_theta = np.logical_and(theta <= np.pi/2 + fov[1]/2, theta >= np.pi/2 - fov[1]/2)
     
     # Combine horizontal and vertical masks - exactly matching original function
     path_inclusion = np.logical_and(path_inclusion_phi, path_inclusion_theta)
@@ -201,7 +195,7 @@ def apply_FoV_batch(fov: Tuple[float, float], theta: np.ndarray, phi: np.ndarray
     return path_inclusion  # [batch_size, n_paths]
 
 
-def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float, 
+def _rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float, 
                  phi: float) -> Tuple[float, float]:
     """Rotate angles based on array rotation.
     
@@ -247,7 +241,7 @@ def rotate_angles(rotation: Optional[Tuple[float, float, float]], theta: float,
     return theta, phi
 
 
-def rotate_angles_batch(rotation: np.ndarray, theta: np.ndarray, phi: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _rotate_angles_batch(rotation: np.ndarray, theta: np.ndarray, phi: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Rotate angles for multiple paths/users simultaneously.
     
     This is a vectorized version of rotate_angles() that can process multiple angles
@@ -340,6 +334,6 @@ def steering_vec(array: NDArray, phi: float = 0, theta: float = 0, spacing: floa
     Returns:
         NDArray: Complex normalized steering (array response) vector
     """
-    idxs = ant_indices(array)
-    resp = array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
+    idxs = _ant_indices(array)
+    resp = _array_response(idxs, phi*np.pi/180, theta*np.pi/180 + np.pi/2, 2*np.pi*spacing)
     return resp / np.linalg.norm(resp)

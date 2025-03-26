@@ -34,31 +34,20 @@ def dbw2watt(val: float | np.ndarray) -> float | np.ndarray:
     """
     return 10**(val/10)
 
-def get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.ndarray:
-    """Return indices of users at uniform intervals in a grid.
+def _get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.ndarray:
+    """Return indices of users at uniform intervals.
     
-    This function generates indices for uniform sampling of users in a grid,
-    allowing for different sampling rates in each dimension. It validates the
-    grid structure and handles edge cases appropriately.
-
     Args:
-        n_ue: Number of users in the dataset
-        grid_size: Array with [x_size, y_size] - number of points in each dimension
+        n_ue: Number of users
+        grid_size: Grid size [x_size, y_size]
         steps: List of sampling steps for each dimension [x_step, y_step]
         
     Returns:
         Array of indices for uniformly sampled users
         
     Raises:
-        ValueError: If dataset does not have a valid grid structure and steps != [1,1]
-        
-    Example:
-        >>> rx_pos = np.array([[0,0], [0,1], [1,0], [1,1]])  # 2x2 grid
-        >>> grid_size = np.array([2, 2])
-        >>> steps = [2, 2]  # Sample every other point
-        >>> get_uniform_idxs(rx_pos, grid_size, steps)
-        array([0])  # Returns index of first point
-    """    
+        ValueError: If dataset does not have a valid grid structure
+    """
     # Check if dataset has valid grid structure
     if np.prod(grid_size) != n_ue:
         print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {n_ue} users in rx_pos")
@@ -73,25 +62,6 @@ def get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.n
         idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
     
     return idxs
-
-def uniform_sampling(steps: List[int], n_rows: int, users_per_row: int) -> np.ndarray:
-    """Return indices of users at uniform intervals.
-    
-    This function generates indices for uniform sampling of users in a grid,
-    allowing for different sampling rates in each dimension.
-
-    Args:
-        steps: List of sampling steps for each dimension
-        n_rows: Number of rows in the grid
-        users_per_row: Number of users per row
-
-    Returns:
-        Array of indices for uniformly sampled users
-    """
-    cols = np.arange(users_per_row, step=steps[0])
-    rows = np.arange(n_rows, step=steps[1])
-    uniform_idxs = np.array([j + i*users_per_row for i in rows for j in cols])
-    return uniform_idxs
 
 
 class LinearPath:
@@ -172,22 +142,17 @@ class LinearPath:
         self.idxs = idxs
 
 def get_idxs_with_limits(data_pos: np.ndarray, **limits) -> np.ndarray:
-    """Get indices of positions within specified coordinate limits.
+    """Return indices of users within specified coordinate limits.
     
-    This function filters position indices based on specified minimum and
-    maximum coordinate values in each dimension. Each limit (x_min, x_max, y_min,
-    y_max, z_min, z_max) is optional and only applied if provided.
-
     Args:
-        data_pos: Array of positions with shape (n_points, n_dims)
-        **limits: Keyword arguments specifying coordinate limits
-                 (x_min, x_max, y_min, y_max, z_min, z_max)
-
+        data_pos: User positions array [n_users, 3]
+        **limits: Coordinate limits as keyword arguments:
+            x_min, x_max: X coordinate limits
+            y_min, y_max: Y coordinate limits
+            z_min, z_max: Z coordinate limits
+            
     Returns:
-        Array of indices for positions within the specified limits
-        
-    Raises:
-        ValueError: If invalid limit keys are provided or dimensions don't match
+        Array of indices for users within limits
     """
     valid_limits = {'x_min', 'x_max', 'y_min', 'y_max', 'z_min', 'z_max'}
     if not all(key in valid_limits for key in limits):

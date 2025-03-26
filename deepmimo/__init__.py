@@ -29,7 +29,6 @@ from .generator.visualization import (
 
 # Utilities
 from .generator.utils import (
-    uniform_sampling,
     get_idxs_with_limits,
     LinearPath,
 )
@@ -91,7 +90,6 @@ __all__ = [
     
     # Utilities
     'LinearPath',
-    'uniform_sampling',
     'get_idxs_with_limits',
     
     # Physical world representation
