@@ -42,7 +42,8 @@ import pandas as pd
 # ]
 
 coordinates = [
-    ((41.404332, 2.174500))
+    (39.992018, -75.170006),
+    (40.047111, -75.098202)
 ]
 
 # Create a DataFrame
@@ -83,9 +84,10 @@ def generate_bounding_boxes(n, city_coords):
     """
     bounding_boxes = []
     
-    for _ in range(n):
+    for k in range(n):
         # Select a random city
-        city_lat, city_lon = random.choice(city_coords)
+        # city_lat, city_lon = random.choice(city_coords)
+        city_lat, city_lon = city_coords[k]
         
         # Offset the center from the city center by up to 0.02° (~2.2 km)
         offset_lat = random.uniform(0, 0) # -0.02, 0.02

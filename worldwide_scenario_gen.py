@@ -33,9 +33,10 @@ def generate_bounding_boxes(city_coords, API_KEY, n=200):
     bounding_boxes = []
     city_names = []
     
-    for _ in range(n):
+    for k in range(n):
         # Select a random city
-        city_lat, city_lon = random.choice(city_coords)
+        # city_lat, city_lon = random.choice(city_coords)
+        city_lat, city_lon = city_coords[k]
         
         # Offset the center from the city center by up to 0.02° (~2.2 km)
         offset_lat = random.uniform(0, 0) # -0.02, 0.02
@@ -101,7 +102,7 @@ def get_city_from_coordinates(lat, lon, api_key):
 
 def fetch_satellite_view(minlat, minlon, maxlat, maxlon, API_KEY):
     # Create a unique folder name based on coordinates (replace dots with dashes)
-    bbox_folder = f"bbox_{minlat}_{minlon}_{maxlat}_{maxlon}".replace(".", "-")
+    bbox_folder = f"bbox_{minlat:.6f}_{minlon:.6f}_{maxlat:.6f}_{maxlon:.6f}".replace(".", "-")
     
     # Define the save directory
     save_dir = os.path.join("scenarios", bbox_folder)
@@ -185,6 +186,10 @@ def worldwide_scenario_gen(coordinates, API_KEY):
     n = len(city_coords)
     bounding_boxes, city_names = generate_bounding_boxes(city_coords, API_KEY, n=n)
 
+    print(bounding_boxes)
+    print(city_names)
+
+
     # Convert to DataFrame and round to 6 decimal places
     df = pd.DataFrame(bounding_boxes)
     df[['minlat', 'minlon', 'maxlat', 'maxlon']] = df[['minlat', 'minlon', 'maxlat', 'maxlon']].round(6)
@@ -203,8 +208,8 @@ def worldwide_scenario_gen(coordinates, API_KEY):
         "scenario_generator.py", 
         "--ue_height", "1.5", 
         "--bs_height", "15", 
-        "--max_reflections", "3", 
-        "--max_diffractions", "1", 
+        "--max_reflections", "1", 
+        "--max_diffractions", "0", 
         "--grid_spacing", "2", 
         "--csv", "bounding_boxes.csv"
     ]
@@ -299,7 +304,8 @@ if __name__ == "__main__":
             print(f"Folder not found, skipping: {folder}")
             
     # Provided coordinates
-    coordinates = [((45.4347492,	12.3390049))]
+    coordinates = [(38.711549, -9.130703),
+                   (55.950136, -3.187862)]
     # Google Maps Static API key
-    API_KEY = "X"
+    API_KEY = "AIzaSyBdkXy9uKsdO-9qTGj6E9VInA-pEgUQ2Ns"
     worldwide_scenario_gen(coordinates, API_KEY)
