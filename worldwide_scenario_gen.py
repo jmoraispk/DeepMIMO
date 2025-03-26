@@ -14,10 +14,11 @@ import os
 import json
 from input_preprocess import DeepMIMO_data_gen, create_labels
 
-# -------------
+# -----------------------------------------------------------------------------
 # 1. MAKE SURE YOUR "Geocoding API" AND "Maps Static API" ARE ENABLED.
 # 2. DON'T FORGET TO ASSIGN YOUR GOOGLE API KEY TO THE "API_KEY" VARIABLE.
-#--------------
+# -----------------------------------------------------------------------------
+
 def generate_bounding_boxes(city_coords, API_KEY, n=200):
     """
     Generate n small bounding boxes in urban areas with a base station in each.
@@ -277,15 +278,28 @@ def worldwide_scenario_gen(coordinates, API_KEY):
             os.rename(scenario_dest_path, new_scenario_dest_path)
             print(f"Renamed '{scenario_dest_path}' to '{new_scenario_dest_path}'")
         
-        plot_propagation(city_names[scenario_idx], task='bp', n_beams=16)
+        # plot_propagation(city_names[scenario_idx], task='bp', n_beams=16)
         plot_propagation(city_names[scenario_idx], task='los')
         
     print("File copying completed.")
     
     
 if __name__ == "__main__":
+    
+    root_dir = '.'  # Current working directory
+    osm_exports_path = os.path.join(root_dir, 'osm_exports')
+    scenarios_path = os.path.join(root_dir, 'scenarios')
+
+    # Remove osm_exports and scenarios folders if they exist
+    for folder in [osm_exports_path, scenarios_path]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+            print(f"Removed folder: {folder}")
+        else:
+            print(f"Folder not found, skipping: {folder}")
+            
     # Provided coordinates
-    coordinates = [((41.404332, 2.174500))]
+    coordinates = [((45.4347492,	12.3390049))]
     # Google Maps Static API key
     API_KEY = "AIzaSyBdkXy9uKsdO-9qTGj6E9VInA-pEgUQ2Ns"
     worldwide_scenario_gen(coordinates, API_KEY)
