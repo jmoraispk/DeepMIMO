@@ -199,6 +199,7 @@ PWR_LINEAR_PARAM_NAME = 'power_linear'
 PATHLOSS_PARAM_NAME = 'pathloss'
 DIST_PARAM_NAME = 'distance'
 INTER_STR_PARAM_NAME = 'inter_str'
+INTER_INT_PARAM_NAME = 'inter_int'
 N_UE_PARAM_NAME = 'n_ue'
 NUM_INTERACTIONS_PARAM_NAME = 'num_interactions'
 NUM_PATHS_FOV_PARAM_NAME = '_num_paths_fov'  # Number of paths within FoV for each user

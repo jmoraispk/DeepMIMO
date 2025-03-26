@@ -605,7 +605,6 @@ class Dataset(DotDict):
         los_mask = first_valid_path == c.INTERACTION_LOS
         los_status[los_mask & has_paths] = 1
         
-        self[c.LOS_PARAM_NAME] = los_status
         return los_status
 
     def _compute_num_paths(self) -> np.ndarray:
@@ -625,13 +624,14 @@ class Dataset(DotDict):
         return result
 
     def _compute_inter_int(self) -> np.ndarray:
-        """Compute the interaction integer.
+        """Compute the interaction integer, with NaN values replaced by -1.
         
         Returns:
-            Array of interaction integer
+            Array of interaction integer with NaN values replaced by -1
         """
-        
-        return self.inter
+        inter_int = self.inter.copy()
+        inter_int[np.isnan(inter_int)] = -1
+        return inter_int.astype(int)
 
     def _compute_inter_str(self) -> np.ndarray:
         """Compute the interaction string.
@@ -862,6 +862,7 @@ class Dataset(DotDict):
 
         # Interactions
         c.INTER_STR_PARAM_NAME: '_compute_inter_str',
+        c.INTER_INT_PARAM_NAME: '_compute_inter_int',
     }
 
     def info(self, param_name: str | None = None) -> None:
