@@ -287,5 +287,5 @@ if __name__ == "__main__":
     # Provided coordinates
     coordinates = [((41.404332, 2.174500))]
     # Google Maps Static API key
-    API_KEY = "AIzaSyBdkXy9uKsdO-9qTGj6E9VInA-pEgUQ2Ns"
+    API_KEY = "X"
     worldwide_scenario_gen(coordinates, API_KEY)
