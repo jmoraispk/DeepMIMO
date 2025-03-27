@@ -1,7 +1,8 @@
 #%% Imports
 
 import time
-from .. import deepmimo as dm
+# from .. import deepmimo as dm
+import deepmimo as dm
 import os
 import json
 
@@ -11,7 +12,8 @@ import json
 EXECUTION_MODE = 'collect_errors' # 'collect_errors' | 'retry_errors'
 ERROR_LOG_FILE = 'conversion_errors.json'
 
-base_path = "F:/deepmimo_loop_ready"
+# base_path = "F:/deepmimo_loop_ready"
+base_path = "P2Ms/new_scenarios_backup"
 subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
 
 # Load previous errors if in retry mode
@@ -27,23 +29,31 @@ timing_results = {}
 
 # For conversion
 # for subfolder in subfolders:
-#     scen_name = os.path.basename(subfolder)
+    # scen_name = os.path.basename(subfolder)
 
 # For zipping
 for scen_name in dm.get_available_scenarios():
 
     # if 'asu' in scen_name:
     #     continue
+
+    if 'city_' in scen_name:
+        city_idx = int(scen_name.split('_')[1])
+        if city_idx <= 20:
+            continue
+    else:
+        continue
     print(f"\nProcessing: {scen_name}")
     # break
     # continue
     start = time.time()
     try:
-        # scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, vis_scene=False)
+        # scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, 
+                            #    vis_scene=False, print_params=False)
         # print(f"Conversion successful: {scen_name}")
         
-        dm.upload(scen_name, key='')
-        print(f"Zip successful: {scen_name}")
+        dm.upload(scen_name, key=MY_API_KEY)
+        print(f"Upload successful: {scen_name}")
     except Exception as e:
         if EXECUTION_MODE == 'retry_errors':
             raise  # Re-raise the exception in retry mode
@@ -52,7 +62,7 @@ for scen_name in dm.get_available_scenarios():
             with open(ERROR_LOG_FILE, 'w') as f:
                 json.dump(error_scenarios, f, indent=2)
     
-    timing_results[scen_name + '+' + 'upload'] = time.time() - start
+    timing_results[scen_name] = time.time() - start
 
 
 if timing_results:
