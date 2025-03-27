@@ -49,7 +49,7 @@ SOURCE_EXTS = SETUP_FILES + ['.kmz']  # Files to copy to ray tracing source zip
 
 def insite_rt_converter(rt_folder: str, copy_source: bool = False,
                         overwrite: Optional[bool] = None, vis_scene: bool = True, 
-                        scenario_name: str = '') -> str:
+                        scenario_name: str = '', print_params: bool = True) -> str:
     """Convert Wireless InSite ray-tracing data to DeepMIMO format.
 
     This function handles the conversion of Wireless InSite ray-tracing simulation 
@@ -111,7 +111,7 @@ def insite_rt_converter(rt_folder: str, copy_source: bool = False,
     }
     cu.save_params(params, output_folder)
     
-    if True:
+    if print_params:
         pprint(params)
 
     # Save scenario to deepmimo scenarios folder
