@@ -96,10 +96,11 @@ for scen_name in scenarios:
 #%% VISUALIZATION: Coverage Maps
 
 main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase',
-             'los', 'distance', 'num_paths']
+             'los', 'num_paths', 'inter_int']
+
 for key in main_keys:
     plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
-    dm.plot_coverage(dataset.rx_pos, plt_var, bs_pos=dataset.tx_pos.T, title=key)
+    dataset.plot_coverage(plt_var, title=key)
 
 #%% VISUALIZATION: Coverage Maps (3D)
 
@@ -987,11 +988,21 @@ from deepmimo.converter.sionna_rt import sionna_exporter
 save_folder = 'sionna_folder/'
 sionna_exporter.export_to_deepmimo(scene, path_list, my_compute_path_params, save_folder)
 
-scen_name_sionna = dm.convert(save_folder)
+#%%
 
+save_folder = 'C:/Users/jmora/Documents/GitHub/DeepMIMO/P2Ms/sionna_test_scen'
+scen_name_sionna = dm.convert(save_folder, overwrite=True)
 dataset_sionna = dm.load(scen_name_sionna)
+dataset_sionna.plot_coverage(dataset_sionna.los)
 
-dm.plot_coverage(dataset_sionna.rx_pos, dataset_sionna.los, bs_pos=dataset_sionna.tx_pos.T)
+#%%
+main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 
+             'delay', 'power', 'phase', 'los', 'num_paths', 'inter_int']
+
+for key in main_keys:
+    mat = dataset_sionna[key]
+    plt_var = mat[:,0] if mat.ndim == 2 else mat
+    dataset_sionna.plot_coverage(plt_var, title=key)
 
 #%% UPLOADING DATASETS
 
