@@ -143,23 +143,21 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 
                 # Angles
                 rad2deg = lambda x: np.rad2deg(x[b, rel_idx, t, path_idxs])
-                data[c.AOA_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_r'])
-                data[c.AOD_AZ_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['phi_t'])
-                data[c.AOA_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_r'])
-                data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
+                data[c.AOA_AZ_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['phi_r'])
+                data[c.AOD_AZ_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['phi_t'])
+                data[c.AOA_EL_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['theta_r'])
+                data[c.AOD_EL_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['theta_t'])
 
                 # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-                vertices = paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :]
                 data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :curr_max_inter, :] = \
-                    np.transpose(vertices, (1,0,2))
+                    np.transpose(paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :], (1,0,2))
 
                 # Interactions types
                 types = paths_dict['types'][b, path_idxs]
                 inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
                 interactions = get_sionna_interaction_types(types, inter_pos_rx)
                 data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
-                print(interactions)
-                print(inter_pos_rx)
+                
                 # Update progress bar only when we actually process a receiver
                 pbar.update(1)
             
