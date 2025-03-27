@@ -80,9 +80,6 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     rx_pos = all_rx_pos[np.sort(unique_indices)]  # Sort indices to maintain original order
     n_rx = len(rx_pos)
 
-    # Get max number of interactions per path
-    max_inter = min(c.MAX_INTER_PER_PATH, path_dict_list[0]['vertices'].shape[0])
-    
     # Initialize inactive indices list
     rx_inactive_idxs_count = 0
     
@@ -99,7 +96,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             c.POWER_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
             c.PHASE_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
             c.INTERACTIONS_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS, max_inter, 3), dtype=c.FP_TYPE) * np.nan,
+            c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS, c.MAX_INTER_PER_PATH, 3), dtype=c.FP_TYPE) * np.nan,
         }
 
         data[c.RX_POS_PARAM_NAME], data[c.TX_POS_PARAM_NAME] = rx_pos, tx_pos_target
@@ -123,6 +120,9 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             
             # Note: we opt for not using squeeze here to work for batch_size = 1
             a = paths_dict['a'][0,:,0,t,0,:,0] # Get users and paths for this TX
+            
+            # Get max number of interactions per path
+            curr_max_inter = min(c.MAX_INTER_PER_PATH, paths_dict['vertices'].shape[0])
 
             # Process each field with proper masking
             for rel_idx in range(batch_size):
@@ -149,8 +149,8 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 data[c.AOD_EL_PARAM_NAME][abs_idx,:n_paths] = rad2deg(paths_dict['theta_t'])
 
                 # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-                vertices = paths_dict['vertices'][:max_inter, rel_idx, t, path_idxs, :]
-                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :max_inter, :] = \
+                vertices = paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :]
+                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :curr_max_inter, :] = \
                     np.transpose(vertices, (1,0,2))
 
                 # Interactions types
@@ -158,7 +158,8 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
                 interactions = get_sionna_interaction_types(types, inter_pos_rx)
                 data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
-                
+                print(interactions)
+                print(inter_pos_rx)
                 # Update progress bar only when we actually process a receiver
                 pbar.update(1)
             
