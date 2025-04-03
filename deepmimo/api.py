@@ -524,3 +524,41 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
     print(f"✓ Scenario '{scenario_name}' ready to use!")
 
     return output_path 
+
+def search(query: Dict) -> Optional[Dict]:
+    """
+    Search for scenarios in the DeepMIMO database.
+
+    Args:
+        query: Dictionary containing search parameters from the following list:
+            - bands: List[str] - Array of frequency bands ['sub6', 'mmW', 'subTHz']
+            - raytracerName: str - Raytracer name or 'all'
+            - environment: str - 'indoor', 'outdoor', or 'all'
+            - numTx: Dict - Numeric range filter {'min': number, 'max': number}
+            - numRx: Dict - Numeric range filter {'min': number, 'max': number}
+            - pathDepth: Dict - Numeric range filter {'min': number, 'max': number}
+            - maxReflections: Dict - Numeric range filter {'min': number, 'max': number}
+            - numRays: Dict - Numeric range filter {'min': number, 'max': number}
+            - multiRxAnt: str - 'all', 'true', or 'false'
+            - multiTxAnt: str - 'all', 'true', or 'false'
+            - dualPolarization: str - 'all', 'true', or 'false'
+            - BS2BS: str - 'all', 'true', or 'false'
+            - dynamic: str - 'all', 'true', or 'false'
+            - diffraction: str - 'all', 'true', or 'false'
+            - scattering: str - 'all', 'true', or 'false'
+            - transmission: str - 'all', 'true', or 'false'
+            - digitalTwin: str - 'all', 'true', or 'false'
+            - city: str - City name text filter
+            - bbCoords: Dict - Bounding box coordinates {'minLat': float, 'minLon': float, 'maxLat': float, 'maxLon': float}
+    
+    Returns:
+        Dict containing count and list of matching scenario names if successful, None otherwise
+    """
+    try:
+        response = requests.post('https://dev.deepmimo.net/api/search/scenarios', json=query)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return None
+
