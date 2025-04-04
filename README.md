@@ -1,38 +1,90 @@
 # DeepMIMO
-DeepMIMO Toolchain: Bridging RayTracers and Simulators (Matlab &amp; Python)
+DeepMIMO Toolchain: Bridging RayTracers and 5G Simulators
 
 **[Goal]** Enabling large-scale AI benchmarking using site-specific wireless raytracing datasets.
 
-**[How]** Converting the outputs of the best ray tracers in wireless to a distributable format readable by the best simulation toolboxes. 
+**[How]** Converting the outputs of the best wireless propagation ray tracers to a distributable format readable by the best simulation toolboxes. 
 
+**[Why]** To revolutionize AI-driven wireless research by making ray tracing data easy to access, share, and benchmark.
+
+## Project Structure
 ```
 deepmimo/
-├── converter/
-│   ├── aodt/
-│   ├── sionna_rt/
-│   └── wireless_insite/
-└── generator/
-    ├── python/
-    └── matlab/
+├── api.py                 # Main API interface for dataset management
+├── scene.py               # Scene management and generation
+├── consts.py              # Constants and configurations
+├── info.py                # Dataset information and metadata
+├── materials.py           # Material properties
+├── txrx.py                # Transmitter and receiver models
+├── rt_params.py           # Ray tracing parameters
+├── general_utilities.py   # Utility functions
+├── converter/             # Ray tracer output converters
+│   ├── aodt/              # AODT converter
+│   ├── sionna_rt/         # Sionna RT converter
+│   ├── wireless_insite/   # Wireless Insite converter
+│   ├── converter.py       # Base converter class
+│   └── converter_utils.py # Converter utilities
+└── generator/             # Dataset generators
+    ├── core.py            # Core generation functionality
+    ├── dataset.py         # Dataset class and management
+    ├── channel.py         # Channel generation
+    ├── geometry.py        # Geometric calculations
+    ├── ant_patterns.py    # Antenna pattern definitions
+    ├── visualization.py   # Visualization tools
+    ├── utils.py           # Generator utilities
+    └── sionna_adapter.py  # Sionna integration
 ```
 
-# Getting Started
+## Installation
 
-Install:
+### Basic Installation
 ```bash
 pip install deepmimo
 ```
 
-Generate a dataset:
-```python
-import deepmimo as dm
-dm.summary('asu_campus_3p5')  # Print summary of the dataset
-dataset = dm.generate('asu_campus_3p5')  # Load and generate the dataset
+### Development Installation
+```bash
+git clone https://github.com/DeepMIMO/DeepMIMO.git
+cd DeepMIMO
+pip install -e .
 ```
 
-Try it out on Colab: ......
+## Usage Examples
 
-# Building the docs
+### Basic Dataset Generation
+```python
+import deepmimo as dm
+
+# Print summary of available datasets
+dm.summary('asu_campus_3p5')
+
+# Generate a dataset
+dataset = dm.generate('asu_campus_3p5')
+
+# Access channel parameters
+channel = dataset.channel
+```
+
+### Converting Ray Tracer Outputs
+```python
+import deepmimo as dm
+
+# Convert Wireless Insite output
+converter = dm.convert('path_to_ray_tracing_output')
+```
+
+### Uploading and Downloading Datasets
+```python
+import deepmimo as dm
+
+# Upload a dataset to the DeepMIMO server
+dm.upload('my_scenario', 'your-api-key')
+
+# Download a dataset
+dm.download('asu_campus_3p5')
+```
+
+## Building Documentation
 
 | Step    | Command                                           | Description                       |
 |---------|---------------------------------------------------|-----------------------------------|
@@ -40,15 +92,34 @@ Try it out on Colab: ......
 | Build   | `cd docs`<br>`sphinx-build -b html . _build/html` | Generate HTML documentation       |
 | Serve   | `cd docs/_build/html`<br>`python -m http.server`  | View docs at http://localhost:8000|
 
-# Contributing
+## Contributing
 
-To contribute, fork the repository and make a pull request. It will get a reply in <24 hours. 
+We welcome contributions to DeepMIMO! Here's how you can help:
 
-Converter: Our priority is maximum feature coverage on the supported ray tracers. 
+1. **Converter Development**
+   - Add support for new ray tracers
+   - Improve existing converter implementations
+   - Add validation and error handling
 
-Generator: We are always looking for what tools are helpful to users. If you used DeepMIMO (e.g., in a paper) and had to create several custom tools to visualize, process, or analyze data, feel free to open a pull request! 
+2. **Generator Enhancements**
+   - Add new dataset generation features
+   - Improve performance and memory efficiency
+   - Add new visualization tools
 
-# Citation
+3. **Documentation**
+   - Improve existing documentation
+   - Add new examples and tutorials
+   - Create guides for common use cases
+
+To contribute:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+We aim to review and respond to pull requests within 24 hours.
+
+## Citation
 
 If you use this software, please cite it as:
 
