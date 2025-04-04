@@ -558,7 +558,7 @@ def search(query: Dict) -> Optional[Dict]:
         response = requests.post('https://dev.deepmimo.net/api/search/scenarios', json=query)
         response.raise_for_status()
         data = response.json()
-        return data
+        return data['scenarios']
     except requests.exceptions.HTTPError as e:
         print(f"HTTP Error: {e}")
         if hasattr(e.response, 'text'):
