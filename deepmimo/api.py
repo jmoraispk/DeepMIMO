@@ -524,3 +524,63 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
     print(f"✓ Scenario '{scenario_name}' ready to use!")
 
     return output_path 
+
+def search(query: Dict) -> Optional[Dict]:
+    """
+    Search for scenarios in the DeepMIMO database.
+
+    Args:
+        query: Dictionary containing search parameters from the following list:
+            - bands: List[str] - Array of frequency bands ['sub6', 'mmW', 'subTHz']
+            - raytracerName: str - Raytracer name or 'all'
+            - environment: str - 'indoor', 'outdoor', or 'all'
+            - numTx: Dict - Numeric range filter {'min': number, 'max': number}
+            - numRx: Dict - Numeric range filter {'min': number, 'max': number}
+            - pathDepth: Dict - Numeric range filter {'min': number, 'max': number}
+            - maxReflections: Dict - Numeric range filter {'min': number, 'max': number}
+            - numRays: Dict - Numeric range filter {'min': number, 'max': number}
+            - multiRxAnt: bool - Boolean filter or 'all' to ignore
+            - multiTxAnt: bool - Boolean filter or 'all' to ignore
+            - dualPolarization: bool - Boolean filter or 'all' to ignore
+            - BS2BS: bool - Boolean filter or 'all' to ignore
+            - dynamic: bool - Boolean filter or 'all' to ignore
+            - diffraction: bool - Boolean filter or 'all' to ignore
+            - scattering: bool - Boolean filter or 'all' to ignore
+            - transmission: bool - Boolean filter or 'all' to ignore
+            - digitalTwin: bool - Boolean filter or 'all' to ignore
+            - city: str - City name text filter
+            - bbCoords: Dict - Bounding box coordinates {'minLat': float, 'minLon': float, 'maxLat': float, 'maxLon': float}
+    
+    Returns:
+        Dict containing count and list of matching scenario names if successful, None otherwise
+    """
+    try:
+        response = requests.post('https://dev.deepmimo.net/api/search/scenarios', json=query)
+        response.raise_for_status()
+        data = response.json()
+        return data['scenarios']
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        if hasattr(e.response, 'text'):
+            try:
+                error_data = e.response.json()
+                print(f"Server error details: {error_data.get('message', e.response.text)}")
+            except:
+                print(f"Server response: {e.response.text}")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("Error: Connection failed. Please check your internet connection and try again.")
+        return None
+    except requests.exceptions.Timeout:
+        print("Error: Request timed out. Please try again later.")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Request Error: {str(e)}")
+        return None
+    except ValueError as e:
+        print(f"Error parsing response: {str(e)}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return None
+
