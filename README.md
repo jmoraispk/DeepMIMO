@@ -31,7 +31,7 @@ deepmimo/
     ├── geometry.py        # Geometric calculations
     ├── ant_patterns.py    # Antenna pattern definitions
     ├── visualization.py   # Visualization tools
-    ├── utils.py           # Generator utilities
+    ├── generator_utils.py # Generator utilities
     └── sionna_adapter.py  # Sionna integration
 ```
 

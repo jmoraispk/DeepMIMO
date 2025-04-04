@@ -53,7 +53,7 @@ from .geometry import (
 )
 
 # Utilities
-from .utils import (
+from .generator_utils import (
     dbw2watt,
     _get_uniform_idxs,
 )

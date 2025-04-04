@@ -28,7 +28,7 @@ from .generator.visualization import (
 )
 
 # Utilities
-from .generator.utils import (
+from .generator.generator_utils import (
     get_idxs_with_limits,
     LinearPath,
 )
