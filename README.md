@@ -10,29 +10,38 @@ DeepMIMO Toolchain: Bridging RayTracers and 5G Simulators
 ## Project Structure
 ```
 deepmimo/
-├── api.py                 # Main API interface for dataset management
-├── scene.py               # Scene management and generation
-├── consts.py              # Constants and configurations
-├── info.py                # Dataset information and metadata
-├── materials.py           # Material properties
-├── txrx.py                # Transmitter and receiver models
-├── rt_params.py           # Ray tracing parameters
-├── general_utils.py   # Utility functions
-├── converter/             # Ray tracer output converters
-│   ├── aodt/              # AODT converter
-│   ├── sionna_rt/         # Sionna RT converter
-│   ├── wireless_insite/   # Wireless Insite converter
-│   ├── converter.py       # Base converter class
-│   └── converter_utils.py # Converter utilities
-└── generator/             # Dataset generators
-    ├── core.py            # Core generation functionality
-    ├── dataset.py         # Dataset class and management
-    ├── channel.py         # Channel generation
-    ├── geometry.py        # Geometric calculations
-    ├── ant_patterns.py    # Antenna pattern definitions
-    ├── visualization.py   # Visualization tools
-    ├── generator_utils.py # Generator utilities
-    └── sionna_adapter.py  # Sionna integration
+├── api.py                  # Main API interface for dataset management
+├── scene.py                # Scene (3D environment) management
+├── consts.py               # Constants and configurations
+├── info.py                 # Information on matrices and parameters
+├── materials.py            # Material properties
+├── txrx.py                 # Transmitter and receiver
+├── rt_params.py            # Ray tracing parameters
+├── general_utils.py        # Utility functions
+├── converter/              # Ray tracer output converters
+│   ├── aodt/               # AODT converter
+│   ├── sionna_rt/          # Sionna RT converter
+│   ├── wireless_insite/    # Wireless Insite converter
+│   ├── converter.py        # Base converter class
+│   └── converter_utils.py  # Converter utilities
+├── generator/              # Dataset generator
+│   ├── core.py             # Core generation functionality
+│   ├── dataset.py          # Dataset class and management
+│   ├── channel.py          # Channel generation
+│   ├── geometry.py         # Geometric calculations
+│   ├── ant_patterns.py     # Antenna pattern definitions
+│   ├── visualization.py    # Visualization tools
+│   └── generator_utils.py  # Generator utilities
+└── integrations/           # Integrations with 5G simulation tools
+    ├── sionna_adapter.py   # Sionna integration
+    └── matlab/             # Matlab 5GNR integration
+
+Additional directories:
+├── pipelines/              # Ray tracing pipelines
+├── scripts/                # Utility scripts
+├── examples/               # Usage examples
+├── docs/                   # Documentation
+└── test/                   # Test suite
 ```
 
 ## Installation
