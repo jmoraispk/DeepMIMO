@@ -15,7 +15,7 @@ from tqdm import tqdm
 from typing import Dict, Optional
 from copy import deepcopy
 from .. import consts as c
-from ..general_utilities import DotDict, compare_two_dicts
+from ..general_utils import DotDict, compare_two_dicts
 
 class ChannelGenParameters(DotDict):
     """Class for managing channel generation parameters.

@@ -19,7 +19,7 @@ import scipy.io
 import shutil
 import pickle
 
-from ..general_utilities import (
+from ..general_utils import (
     get_mat_filename, 
     zip, 
     get_scenario_folder,

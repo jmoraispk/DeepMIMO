@@ -12,7 +12,7 @@ import hashlib
 from tqdm import tqdm
 from typing import Dict, Any, Optional
 from . import consts as c
-from .general_utilities import (
+from .general_utils import (
     get_scenarios_dir,
     get_downloads_dir,
     get_scenario_folder,

@@ -17,7 +17,7 @@ deepmimo/
 ├── materials.py           # Material properties
 ├── txrx.py                # Transmitter and receiver models
 ├── rt_params.py           # Ray tracing parameters
-├── general_utilities.py   # Utility functions
+├── general_utils.py   # Utility functions
 ├── converter/             # Ray tracer output converters
 │   ├── aodt/              # AODT converter
 │   ├── sionna_rt/         # Sionna RT converter

@@ -42,7 +42,7 @@ from .generator.channel import ChannelGenParameters
 
 from .converter.converter import convert
 from .info import info
-from .general_utilities import (
+from .general_utils import (
     summary,
     get_available_scenarios,
     get_params_path,
@@ -67,7 +67,7 @@ from .scene import (
 
 # Import immediate modules
 from . import consts
-from . import general_utilities
+from . import general_utils
 
 __all__ = [
     # Core functionality
@@ -110,5 +110,5 @@ __all__ = [
     
     # Constants
     'consts',
-    'general_utilities',
+    'general_utils',
 ]

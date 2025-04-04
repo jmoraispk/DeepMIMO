@@ -21,7 +21,7 @@ import scipy.io
 
 # Local imports
 from .. import consts as c
-from ..general_utilities import (get_mat_filename, load_dict_from_json, unzip, 
+from ..general_utils import (get_mat_filename, load_dict_from_json, unzip, 
                                  get_scenario_folder, get_params_path, compare_two_dicts)
 from ..scene import Scene
 from .dataset import Dataset, MacroDataset

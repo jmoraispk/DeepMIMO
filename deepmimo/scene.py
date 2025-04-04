@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from .materials import MaterialList
 from .consts import SCENE_PARAM_NUMBER_SCENES
-from .general_utilities import load_dict_from_json, save_dict_as_json
+from .general_utils import load_dict_from_json, save_dict_as_json
 #------------------------------------------------------------------------------
 # Constants
 #------------------------------------------------------------------------------

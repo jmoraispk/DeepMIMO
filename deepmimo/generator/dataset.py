@@ -35,7 +35,7 @@ from typing import Dict, Optional, Any, List
 import numpy as np
 
 # Base utilities
-from ..general_utilities import DotDict
+from ..general_utils import DotDict
 from .. import consts as c
 from ..info import info
 from .visualization import plot_coverage, plot_rays

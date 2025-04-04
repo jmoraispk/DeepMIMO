@@ -8,7 +8,7 @@ to represent transmitter and receiver configurations.
 from dataclasses import dataclass, asdict, field
 from typing import Dict, List, Tuple
 
-from .general_utilities import get_params_path, load_dict_from_json
+from .general_utils import get_params_path, load_dict_from_json
 from . import consts as c
     
 @dataclass
