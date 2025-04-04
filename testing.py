@@ -17,9 +17,11 @@ rt_folder = './P2Ms/asu_campus'
 # rt_folder = 'C:/Users/jmora/Documents/GitHub/AutoRayTracing/all_runs/run_02-02-2025_15H45M26S/scen_0/sionna_export_test2'
 # rt_folder = r'C:\Users\jmora\Downloads\DeepMIMOv4-hao-test\all_runs\run_03-08-2025_15H38M57S\NewYork\sionna_export_full'
 # rt_folder = r'C:\Users\jmora\Documents\GitHub\AutoRayTracing\all_runs\run_03-09-2025_18H18M51S\NewYork\sionna_export_RX'
+rt_folder = 'C:/Users/jmora/Documents/GitHub/DeepMIMO/P2Ms/sionna_test_scen'
 
 scen_name = os.path.basename(rt_folder)
 dm.convert(rt_folder, overwrite=True, scenario_name=scen_name, vis_scene=True)
+
 
 #%%
 
@@ -36,6 +38,21 @@ mi = load_pickle(os.path.join(rt_folder, 'sionna_material_indices.pkl'))
 rt = load_pickle(os.path.join(rt_folder, 'sionna_rt_params.pkl'))
 v  = load_pickle(os.path.join(rt_folder, 'sionna_vertices.pkl'))
 o  = load_pickle(os.path.join(rt_folder, 'sionna_objects.pkl'))
+
+dataset = dm.load(scen_name)
+
+#%%
+
+main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase',
+             'los', 'distance', 'num_paths', 'inter_int']
+
+for key in main_keys:
+    plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
+    dataset.plot_coverage(plt_var, title=key, scat_sz=20)
+
+# Q1: Is phase correct? (should be degrees, but it's probably radians)
+# Q2: los is not correct. Most are multiples reflections.
+# Q3: inter_int is not correct - not accusing multiple reflections.
 
 #%%
 

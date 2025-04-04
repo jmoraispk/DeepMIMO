@@ -3,8 +3,8 @@ requires = ["setuptools>=65", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "DeepMIMOtest"
-version = "4.0.0a9"
+name = "DeepMIMO"
+version = "4.0.0a3"
 authors = [
     { name = "João Morais" },
     { name = "Umut Demirhan" },
