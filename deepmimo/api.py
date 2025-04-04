@@ -539,15 +539,15 @@ def search(query: Dict) -> Optional[Dict]:
             - pathDepth: Dict - Numeric range filter {'min': number, 'max': number}
             - maxReflections: Dict - Numeric range filter {'min': number, 'max': number}
             - numRays: Dict - Numeric range filter {'min': number, 'max': number}
-            - multiRxAnt: str - 'all', 'true', or 'false'
-            - multiTxAnt: str - 'all', 'true', or 'false'
-            - dualPolarization: str - 'all', 'true', or 'false'
-            - BS2BS: str - 'all', 'true', or 'false'
-            - dynamic: str - 'all', 'true', or 'false'
-            - diffraction: str - 'all', 'true', or 'false'
-            - scattering: str - 'all', 'true', or 'false'
-            - transmission: str - 'all', 'true', or 'false'
-            - digitalTwin: str - 'all', 'true', or 'false'
+            - multiRxAnt: bool - Boolean filter or 'all' to ignore
+            - multiTxAnt: bool - Boolean filter or 'all' to ignore
+            - dualPolarization: bool - Boolean filter or 'all' to ignore
+            - BS2BS: bool - Boolean filter or 'all' to ignore
+            - dynamic: bool - Boolean filter or 'all' to ignore
+            - diffraction: bool - Boolean filter or 'all' to ignore
+            - scattering: bool - Boolean filter or 'all' to ignore
+            - transmission: bool - Boolean filter or 'all' to ignore
+            - digitalTwin: bool - Boolean filter or 'all' to ignore
             - city: str - City name text filter
             - bbCoords: Dict - Bounding box coordinates {'minLat': float, 'minLon': float, 'maxLat': float, 'maxLon': float}
     
@@ -557,8 +557,30 @@ def search(query: Dict) -> Optional[Dict]:
     try:
         response = requests.post('https://dev.deepmimo.net/api/search/scenarios', json=query)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        return data
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        if hasattr(e.response, 'text'):
+            try:
+                error_data = e.response.json()
+                print(f"Server error details: {error_data.get('message', e.response.text)}")
+            except:
+                print(f"Server response: {e.response.text}")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("Error: Connection failed. Please check your internet connection and try again.")
+        return None
+    except requests.exceptions.Timeout:
+        print("Error: Request timed out. Please try again later.")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Request Error: {str(e)}")
+        return None
+    except ValueError as e:
+        print(f"Error parsing response: {str(e)}")
+        return None
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Unexpected error: {str(e)}")
         return None
 
