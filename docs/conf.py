@@ -129,9 +129,7 @@ elif THEME == 'sphinx_rtd_theme':
         'collapse_navigation': True,
         'sticky_navigation': True,
         'includehidden': True,
-        'display_version': True,
         'prev_next_buttons_location': 'both',
-        'style_external_links': True,
     }
 
 # Show/hide settings

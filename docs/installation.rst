@@ -21,7 +21,7 @@ DeepMIMO requires Python 3.10 or later. The main dependencies are:
 * pyyaml (>= 6.0.0)
 
 Optional Dependencies
--------------------
+----------------------
 
 For specific features, you may need additional packages:
 
@@ -33,7 +33,7 @@ For specific features, you may need additional packages:
     * networkx (>= 3.0.0)
 
 Development Installation
-----------------------
+-----------------------------------
 
 For development installation, clone the repository and install in editable mode:
 
@@ -56,10 +56,14 @@ To build the documentation locally, you'll need:
 
 .. code-block:: bash
 
-   pip install sphinx nbsphinx furo
+   # Install Sphinx and basic extensions
+   pip install sphinx nbsphinx
+
+   # Install themes
+   pip install furo sphinx-rtd-theme
 
 Troubleshooting
---------------
+---------------------------
 
 Common installation issues:
 
