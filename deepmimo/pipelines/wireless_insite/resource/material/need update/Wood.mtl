@@ -1,0 +1,18 @@
+begin_<Material> Wood
+Material 1
+LayeredDielectric
+begin_<Color> 
+ambient 0.730000 0.380000 0.170000 1.000000
+diffuse 0.730000 0.380000 0.170000 1.000000
+specular 0.730000 0.380000 0.170000 1.000000
+emission 0.000000 0.000000 0.000000 0.000000
+shininess 10.000000
+end_<Color>
+nLayers 1
+begin_<DielectricLayer> Untitled dielectric layer
+conductivity 0.0000
+permittivity 5.0000
+roughness 0.000
+thickness 0.030
+end_<DielectricLayer>
+end_<Material>

@@ -1,0 +1,13 @@
+begin_<Material> Metal
+Material 1
+PEC
+thickness 0.000
+begin_<Color> 
+ambient 0.600000 0.600000 0.600000 1.000000
+diffuse 0.600000 0.600000 0.600000 1.000000
+specular 0.600000 0.600000 0.600000 1.000000
+emission 0.000000 0.000000 0.000000 0.000000
+shininess 75.000000
+end_<Color>
+roughness 0.000
+end_<Material>

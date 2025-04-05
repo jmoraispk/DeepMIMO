@@ -1,0 +1,38 @@
+begin_<Material> Grass
+Material 1
+Biophysical
+thickness 0.000
+begin_<Color> 
+ambient 0.000000 0.247059 0.000000 0.600000
+diffuse 0.000000 0.247059 0.000000 0.600000
+specular 0.000000 0.247059 0.000000 0.600000
+emission 0.000000 0.000000 0.000000 0.000000
+shininess 50.000000
+end_<Color>
+density 0.600000
+IncidenceAngle 90.0000
+DataType TreeParameters
+LeafRadius 0.0500
+LeafThickness 0.0005
+LeafDensity 0.0000
+LeafAngle1 0.0000
+LeafAngle2 180.0000
+BranchRadius 0.0020
+BranchLength 0.4600
+BranchDensity 900.0000
+BranchAngle1 0.0000
+BranchAngle2 45.0000
+PermittivityModel Constant
+AttenuationMeas 1.1000
+FrequencyMeas 869000000.0000
+IncidenceMeas 90.0000
+PolarizationMeas Vertical
+RealLeafPerm 26.0000
+ImagLeafPerm -7.0000
+RealBranchPerm 20.0000
+ImagBranchPerm -7.0000
+LeafCond 0.0850
+BranchCond 0.0850
+LeafPerm 40.0000
+BranchPerm 40.0000
+end_<Material>
