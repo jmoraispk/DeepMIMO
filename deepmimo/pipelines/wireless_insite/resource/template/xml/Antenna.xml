@@ -1,0 +1,38 @@
+<Antenna>
+  <remcom::rxapi::Isotropic>
+    <CableLoss>
+      <remcom::rxapi::Double Value="0"/>
+    </CableLoss>
+    <Polarization>
+      <remcom::rxapi::PolarizationEnum Value="Vertical"/>
+    </Polarization>
+    <PowerThreshold>
+      <remcom::rxapi::Double Value="-250"/>
+    </PowerThreshold>
+    <Temperature>
+      <remcom::rxapi::Double Value="293"/>
+    </Temperature>
+    <VSWR>
+      <remcom::rxapi::Double Value="1"/>
+    </VSWR>
+    <Waveform>
+      <remcom::rxapi::Sinusoid>
+        <Amplitude>
+          <remcom::rxapi::Double Value="1"/>
+        </Amplitude>
+        <Bandwidth>
+          <remcom::rxapi::Double Value="10"/>
+        </Bandwidth>
+        <CarrierFrequency>
+          <remcom::rxapi::Double Value="2400000000"/>
+        </CarrierFrequency>
+        <Dispersive>
+          <remcom::rxapi::Boolean Value="false"/>
+        </Dispersive>
+        <Phase>
+          <remcom::rxapi::Double Value="0"/>
+        </Phase>
+      </remcom::rxapi::Sinusoid>
+    </Waveform>
+  </remcom::rxapi::Isotropic>
+</Antenna>

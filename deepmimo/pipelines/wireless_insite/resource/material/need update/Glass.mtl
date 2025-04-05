@@ -1,0 +1,18 @@
+begin_<Material> Glass
+Material 1
+LayeredDielectric
+begin_<Color> 
+ambient 0.700000 0.700000 0.700000 0.200000
+diffuse 0.700000 0.700000 0.700000 0.200000
+specular 0.700000 0.700000 0.700000 0.200000
+emission 0.000000 0.000000 0.000000 0.000000
+shininess 80.000000
+end_<Color>
+nLayers 1
+begin_<DielectricLayer> Untitled dielectric layer
+conductivity 0.0000
+permittivity 2.4000
+roughness 0.000
+thickness 0.003
+end_<DielectricLayer>
+end_<Material>

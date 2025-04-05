@@ -1,0 +1,79 @@
+<Geometry>
+  <remcom::rxapi::Terrain>
+    <GeometrySource>
+      <remcom::rxapi::WirelessInSiteGeometry>
+        <Filename>
+          <remcom::rxapi::FileDescription>
+            <Filename>
+              <remcom::rxapi::String Value="./pathto.ter"/>
+            </Filename>
+            <FilenameChecksum>
+              <remcom::rxapi::String/>
+            </FilenameChecksum>
+          </remcom::rxapi::FileDescription>
+        </Filename>
+        <MaterialList>
+          <remcom::rxapi::MaterialList>
+            <Material>
+              <remcom::rxapi::DielectricHalfspace>
+                <DielectricLayer>
+                  <remcom::rxapi::DielectricLayer>
+                    <Conductivity>
+                      <remcom::rxapi::Double Value="0.46810000000000002"/>
+                    </Conductivity>
+                    <Description>
+                      <remcom::rxapi::String/>
+                    </Description>
+                    <Permittivity>
+                      <remcom::rxapi::Double Value="21.136679000000001"/>
+                    </Permittivity>
+                    <Roughness>
+                      <remcom::rxapi::Double Value="0"/>
+                    </Roughness>
+                    <Thickness>
+                      <remcom::rxapi::Double Value="0"/>
+                    </Thickness>
+                  </remcom::rxapi::DielectricLayer>
+                </DielectricLayer>
+                <DiffuseScattering>
+                  <remcom::rxapi::DiffuseScatteringMaterialProperties>
+                    <Alpha>
+                      <remcom::rxapi::Integer Value="4"/>
+                    </Alpha>
+                    <Beta>
+                      <remcom::rxapi::Integer Value="4"/>
+                    </Beta>
+                    <CrossPolFraction>
+                      <remcom::rxapi::Double Value="0.40000000000000002"/>
+                    </CrossPolFraction>
+                    <Lambda>
+                      <remcom::rxapi::Double Value="0.75"/>
+                    </Lambda>
+                    <ScatteringFactor>
+                      <remcom::rxapi::Double Value="0.40000000000000002"/>
+                    </ScatteringFactor>
+                    <ScatteringModel>
+                      <remcom::rxapi::DiffuseScatteringModelEnum Value="DirectiveWithBackscatter"/>
+                    </ScatteringModel>
+                    <SubdivideFacets>
+                      <remcom::rxapi::Boolean Value="true"/>
+                    </SubdivideFacets>
+                    <UseReflectionCoefficient>
+                      <remcom::rxapi::UseReflectionCoefficientEnum Value="DoNotUse"/>
+                    </UseReflectionCoefficient>
+                  </remcom::rxapi::DiffuseScatteringMaterialProperties>
+                </DiffuseScattering>
+                <Index>
+                  <remcom::rxapi::Integer Value="1"/>
+                </Index>
+                <Thickness>
+                  <remcom::rxapi::Double Value="0"/>
+                </Thickness>
+              </remcom::rxapi::DielectricHalfspace>
+            </Material>
+          </remcom::rxapi::MaterialList>
+        </MaterialList>
+      </remcom::rxapi::WirelessInSiteGeometry>
+    </GeometrySource>
+  </remcom::rxapi::Terrain>
+</Geometry>

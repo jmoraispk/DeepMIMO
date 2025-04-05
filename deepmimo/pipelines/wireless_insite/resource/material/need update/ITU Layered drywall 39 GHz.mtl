@@ -1,0 +1,38 @@
+begin_<Material> ITU Layered drywall 39 GHz
+Material 1
+LayeredDielectric
+begin_<Color> 
+ambient 0.890000 0.890000 0.890000 1.000000
+diffuse 0.890000 0.890000 0.890000 1.000000
+specular 0.890000 0.890000 0.890000 1.000000
+emission 0.000000 0.000000 0.000000 0.000000
+shininess 5.000000
+end_<Color>
+diffuse_scattering_model directive_with_backscatter
+fields_diffusively_scattered 0.081
+cross_polarized_power 0.400000
+directive_alpha 4
+directive_beta 4
+directive_lambda 0.750000
+subdivide_facets yes
+reflection_coefficient_options do_not_use
+nLayers 3
+begin_<DielectricLayer> Drywall
+conductivity 0.154987
+permittivity 2.94
+roughness 0.000
+thickness 0.013
+end_<DielectricLayer>
+begin_<DielectricLayer> Air
+conductivity 0.0000
+permittivity 1.0000
+roughness 0.000
+thickness 0.089
+end_<DielectricLayer>
+begin_<DielectricLayer> Drywall
+conductivity 0.154987
+permittivity 2.94
+roughness 0.000
+thickness 0.013
+end_<DielectricLayer>
+end_<Material>
