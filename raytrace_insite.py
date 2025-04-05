@@ -54,7 +54,7 @@ def get_grid_info(xmin, ymin, xmax, ymax, grid_spacing):
 
 def run_raytracing_simulation(args):
     # Set up base paths
-    root_dir = Path("C:/Users/salikha4/Desktop/osm2dt")
+    root_dir = Path("C:/Users/namhyunk/Desktop/osm2dt")
     bbox_folder = f"bbox_{args.minlat}_{args.minlon}_{args.maxlat}_{args.maxlon}".replace('.', '-')
     osm_export_path = root_dir / "osm_exports" / bbox_folder
     insite_path, intermediate_path, mat_path, study_area_path = create_directory_structure(osm_export_path, args)
