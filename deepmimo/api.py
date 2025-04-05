@@ -321,12 +321,7 @@ def make_imgs(scenario_name: str) -> list[str]:
     scene_img_path = 'scene.png'
     plt.savefig(scene_img_path)
 
-    # Image 3: GPS
-    gps_img_path = 'gps.png'
-    # passssssssssssss
-    plt.savefig(gps_img_path)
-
-    return [power_img_path, scene_img_path, gps_img_path]
+    return [power_img_path, scene_img_path]
 
 def _upload_imgs(scenario_name: str, key: str, img_paths: list[str]) -> list[str]:
     """Upload images to the server for a given scenario.
