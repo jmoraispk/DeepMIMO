@@ -96,7 +96,7 @@ for scen_name in scenarios:
 #%% VISUALIZATION: Coverage Maps
 
 main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 'delay', 'power', 'phase',
-             'los', 'num_paths', 'inter_int']
+             'los', 'num_paths']
 
 for key in main_keys:
     plt_var = dataset[key][:,0] if dataset[key].ndim == 2 else dataset[key]
