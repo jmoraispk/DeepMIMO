@@ -106,13 +106,13 @@ We welcome contributions to DeepMIMO! Here's how you can help:
 
 1. **Converter Development**
    - Add support for new ray tracers
-   - Improve existing converter implementations
-   - Add validation and error handling
+   - Improve existing converters (AODT, Sionna RT, Wireless InSite)
 
 2. **Generator Enhancements**
-   - Add new dataset generation features
-   - Improve performance and memory efficiency
+   - Add new dataset generation features or abstractions
+   - Improve performance of channel generator
    - Add new visualization tools
+   - Add new beamforming tools
 
 3. **Documentation**
    - Improve existing documentation
@@ -125,7 +125,7 @@ To contribute:
 3. Make your changes
 4. Submit a pull request
 
-We aim to review and respond to pull requests within 24 hours.
+We aim to respond to pull requests within 24 hours.
 
 ## Citation
 
