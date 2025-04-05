@@ -37,7 +37,6 @@ deepmimo/
     └── matlab/             # Matlab 5GNR integration
 
 Additional directories:
-├── pipelines/              # Ray tracing pipelines
 ├── scripts/                # Utility scripts
 ├── examples/               # Usage examples
 ├── docs/                   # Documentation
