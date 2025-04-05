@@ -29,7 +29,7 @@ HEADERS = {
     'Accept': '*/*'
 }
 
-def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
+def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
     """Upload a file to the DeepMIMO API server.
     
     Args:
@@ -55,6 +55,7 @@ def _dm_upload_api_call(link: str, file: str, key: str) -> Optional[Dict]:
             "https://dev.deepmimo.net/api/b2/check-filename",
             params={"filename": filename},
             headers={"Authorization": f"Bearer {key}"},
+            # ANOTHER KEY to be used for upload
         )
         check_response.raise_for_status()
 
@@ -302,6 +303,50 @@ def _format_section(name: str, lines: list) -> dict:
         """
     }
 
+def make_imgs(scenario_name: str) -> list[str]:
+    """Make images for the scenario.
+    
+    Args:
+        scenario_name: Scenario name
+    
+    """
+    # Image 1: Power
+    dm.plot_coverage(dataset.rx_pos, dataset.power[:,0], bs_pos=dataset.tx_pos.T,
+                 title='power', cbar_title='Power [dBW]')
+    power_img_path = 'power.png'
+    plt.savefig(power_img_path)
+
+    # Image 2: Scene
+    dataset.scene.plot()
+    scene_img_path = 'scene.png'
+    plt.savefig(scene_img_path)
+
+    # Image 3: GPS
+    gps_img_path = 'gps.png'
+    # passssssssssssss
+    plt.savefig(gps_img_path)
+
+    return [power_img_path, scene_img_path, gps_img_path]
+
+def _upload_imgs(scenario_name: str, key: str, img_paths: list[str]) -> list[str]:
+    """Upload images to the server for a given scenario.
+    
+    Args:
+        scenario_name: Scenario name
+        key: Upload authorization key
+        img_paths: List of image paths
+    
+    """
+
+    for img in img_paths:
+        _dm_upload_api_call(img, key)
+
+# Add images safeguards:
+#    - filesize
+#    - filetype
+#    - number of files
+       
+
 def upload(scenario_name: str, key: str, description: Optional[str] = None,
            details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, 
            skip_zip: bool = False) -> str:
@@ -372,8 +417,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
 
     try:
         print("Uploading to storage...")
-        upload_result = _dm_upload_api_call("https://dev.deepmimo.net/api/b2/authorize-upload", 
-                                            zip_path, key)
+        upload_result = _dm_upload_api_call(zip_path, key)
     except Exception as e:
         print(f"Error: Failed to upload to storage - {str(e)}")
 
