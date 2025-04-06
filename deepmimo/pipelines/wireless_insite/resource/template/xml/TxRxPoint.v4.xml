@@ -1,0 +1,152 @@
+<TxRxSet>
+  <remcom::rxapi::PointSet>
+    <AdjacencyDistance>
+      <remcom::rxapi::Double Value="10"/>
+    </AdjacencyDistance>
+    <ConformToTerrain>
+      <remcom::rxapi::Boolean Value="true"/>
+    </ConformToTerrain>
+    <ControlPoints>
+      <remcom::rxapi::ProjectedPointList>
+        <ProjectedPoint>
+          <remcom::rxapi::CartesianPoint>
+            <X>
+              <remcom::rxapi::Double Value="-1.6282544220879991"/>
+            </X>
+            <Y>
+              <remcom::rxapi::Double Value="-13.544725214913129"/>
+            </Y>
+            <Z>
+              <remcom::rxapi::Double Value="6"/>
+            </Z>
+          </remcom::rxapi::CartesianPoint>
+        </ProjectedPoint>
+      </remcom::rxapi::ProjectedPointList>
+    </ControlPoints>
+    <OutputID>
+      <remcom::rxapi::Integer Value="1"/>
+    </OutputID>
+    <Receiver>
+      <remcom::rxapi::Receiver>
+        <Antenna>
+          <remcom::rxapi::Isotropic>
+            <CableLoss>
+              <remcom::rxapi::Double Value="0"/>
+            </CableLoss>
+            <Polarization>
+              <remcom::rxapi::PolarizationEnum Value="Vertical"/>
+            </Polarization>
+            <PowerThreshold>
+              <remcom::rxapi::Double Value="-250"/>
+            </PowerThreshold>
+            <Temperature>
+              <remcom::rxapi::Double Value="293"/>
+            </Temperature>
+            <VSWR>
+              <remcom::rxapi::Double Value="1"/>
+            </VSWR>
+            <Waveform>
+              <remcom::rxapi::Sinusoid>
+                <Amplitude>
+                  <remcom::rxapi::Double Value="1"/>
+                </Amplitude>
+                <Bandwidth>
+                  <remcom::rxapi::Double Value="10"/>
+                </Bandwidth>
+                <CarrierFrequency>
+                  <remcom::rxapi::Double Value="2400000000"/>
+                </CarrierFrequency>
+                <Dispersive>
+                  <remcom::rxapi::Boolean Value="false"/>
+                </Dispersive>
+                <Phase>
+                  <remcom::rxapi::Double Value="0"/>
+                </Phase>
+              </remcom::rxapi::Sinusoid>
+            </Waveform>
+          </remcom::rxapi::Isotropic>
+        </Antenna>
+        <AntennaAlignment>
+          <remcom::rxapi::SphericalAlignment>
+            <Phi>
+              <remcom::rxapi::Double Value="0"/>
+            </Phi>
+            <Roll>
+              <remcom::rxapi::Double Value="0"/>
+            </Roll>
+            <Theta>
+              <remcom::rxapi::Double Value="90"/>
+            </Theta>
+          </remcom::rxapi::SphericalAlignment>
+        </AntennaAlignment>
+        <CollectionRadius>
+          <remcom::rxapi::Double Value="0"/>
+        </CollectionRadius>
+      </remcom::rxapi::Receiver>
+    </Receiver>
+    <ShortDescription>
+      <remcom::rxapi::String Value="BS"/>
+    </ShortDescription>
+    <Transmitter>
+      <remcom::rxapi::Transmitter>
+        <Antenna>
+          <remcom::rxapi::Isotropic>
+            <CableLoss>
+              <remcom::rxapi::Double Value="0"/>
+            </CableLoss>
+            <Polarization>
+              <remcom::rxapi::PolarizationEnum Value="Vertical"/>
+            </Polarization>
+            <PowerThreshold>
+              <remcom::rxapi::Double Value="-250"/>
+            </PowerThreshold>
+            <Temperature>
+              <remcom::rxapi::Double Value="293"/>
+            </Temperature>
+            <VSWR>
+              <remcom::rxapi::Double Value="1"/>
+            </VSWR>
+            <Waveform>
+              <remcom::rxapi::Sinusoid>
+                <Amplitude>
+                  <remcom::rxapi::Double Value="1"/>
+                </Amplitude>
+                <Bandwidth>
+                  <remcom::rxapi::Double Value="10"/>
+                </Bandwidth>
+                <CarrierFrequency>
+                  <remcom::rxapi::Double Value="2400000000"/>
+                </CarrierFrequency>
+                <Dispersive>
+                  <remcom::rxapi::Boolean Value="false"/>
+                </Dispersive>
+                <Phase>
+                  <remcom::rxapi::Double Value="0"/>
+                </Phase>
+              </remcom::rxapi::Sinusoid>
+            </Waveform>
+          </remcom::rxapi::Isotropic>
+        </Antenna>
+        <AntennaAlignment>
+          <remcom::rxapi::SphericalAlignment>
+            <Phi>
+              <remcom::rxapi::Double Value="0"/>
+            </Phi>
+            <Roll>
+              <remcom::rxapi::Double Value="0"/>
+            </Roll>
+            <Theta>
+              <remcom::rxapi::Double Value="90"/>
+            </Theta>
+          </remcom::rxapi::SphericalAlignment>
+        </AntennaAlignment>
+        <InputPower>
+          <remcom::rxapi::Double Value="0"/>
+        </InputPower>
+      </remcom::rxapi::Transmitter>
+    </Transmitter>
+    <UseAPGAcceleration>
+      <remcom::rxapi::Boolean Value="false"/>
+    </UseAPGAcceleration>
+  </remcom::rxapi::PointSet>
+</TxRxSet> 
