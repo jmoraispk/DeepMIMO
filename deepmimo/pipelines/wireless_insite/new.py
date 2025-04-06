@@ -16,10 +16,15 @@ import os
 #%% Resources and Constants
 
 # Paths
-OSM_ROOT = r"C:/Users/jmora/Downloads/osm_root"
-BLENDER_PATH = r"C:\Program Files\Blender Foundation\Blender 3.6\blender-launcher.exe"
+OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
+BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender 3.6/blender-launcher.exe"
 BLENDER_SCRIPT_PATH = "./blender_osm_export.py"
-MATERIALS_DIR = "./resource/material"  # Directory containing material resources
+MATERIALS_DIR = "./resource/material"
+
+# Wireless InSite
+WI_EXE = "C:/Program Files/Remcom/Wireless InSite 4.0.0/bin/calc/wibatch.exe"
+WI_LIC = "C:/Users/jmora/Documents/GitHub/DeepMIMO/executables/wireless insite"
+WI_VERSION = "4.0.0"
 
 # Material paths
 BUILDING_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Concrete 3.5 GHz.mtl")
@@ -41,12 +46,12 @@ def create_directory_structure(base_path, rt_params):
     folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_{rt_params['bandwidth']/1e6:.0f}MHz_"
                    f"{rt_params['max_paths']}paths_{rt_params['max_reflections']}ref_{rt_params['max_transmissions']}trans_{rt_params['max_diffractions']}diff")
     
-    insite_path = base_path / folder_name
-    study_area_path = insite_path / "study_area"
+    insite_path = os.path.join(base_path, folder_name)
+    study_area_path = os.path.join(insite_path, "study_area")
 
     # Create directories
     for path in [insite_path, study_area_path]:
-        path.mkdir(parents=True, exist_ok=True)
+        os.makedirs(path, exist_ok=True)
 
     return insite_path, study_area_path
 
@@ -202,7 +207,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     
     # Generate city features
     city_feature_list = generate_city(
-        str(osm_folder) + os.sep,  # Add trailing separator explicitly
+        str(osm_folder) + os.sep,
         str(insite_path) + os.sep,
         minlat=rt_params['min_lat'],
         minlon=rt_params['min_lon'],
@@ -223,12 +228,12 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
 
     folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_{rt_params['bandwidth']/1e6:.0f}MHz_"
                    f"{rt_params['max_paths']}paths_{rt_params['max_reflections']}ref_{rt_params['max_transmissions']}trans_{rt_params['max_diffractions']}diff")
-    insite_path = osm_folder / folder_name
+    insite_path = os.path.join(osm_folder, folder_name)
 
     terrain_editor = TerrainEditor()
     terrain_editor.set_vertex(xmin=xmin_pad, ymin=ymin_pad, xmax=xmax_pad, ymax=ymax_pad)
     terrain_editor.set_material(TERRAIN_MATERIAL_PATH)
-    terrain_editor.save(str(insite_path / "newTerrain.ter"))
+    terrain_editor.save(os.path.join(insite_path, "newTerrain.ter"))
 
     # Configure Tx/Rx
     txrx_editor = TxRxEditor()
@@ -252,7 +257,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
         grid_side=grid_side,
         grid_spacing=grid_spacing
     )
-    txrx_editor.save(str(insite_path / "insite.txrx"))
+    txrx_editor.save(os.path.join(insite_path, "insite.txrx"))
 
     # Calculate grid info
     row_indices, users_per_row = get_grid_info(xmin, ymin, xmax, ymax, grid_spacing)
@@ -289,19 +294,20 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     scenario.save("/insite") # insite
 
     # Generate XML and run simulation
-    xml_generator = XmlGenerator(str(insite_path), "\\insite.setup") # insite.setup
+    xml_generator = XmlGenerator(insite_path, "/insite.setup") # insite.setup
     xml_generator.update()
-    xml_path = insite_path / "insite.study_area.xml"
-    xml_generator.save(str(xml_path))
+    xml_path = os.path.join(insite_path, "insite.study_area.xml")
+    # xml_generator.save(xml_path)
 
+    license_info = ["-set_licenses", WI_LIC] if WI_VERSION.startswith("4") else []
+    
     # Run Wireless InSite
-    wi_path = "C:\\Program Files\\Remcom\\Wireless InSite 3.3.0.4\\bin\\calc\\wibatch.exe"
     subprocess.run([
-        wi_path,
-        "-f", str(xml_path),
-        "-out", str(study_area_path),
-        "-p", "insite"
-    ], check=True)
+        WI_EXE,
+        "-f", xml_path,
+        "-out", study_area_path,
+        "-p", "insite",
+    ] + license_info, check=True)
     
     return insite_path
 
@@ -361,5 +367,6 @@ for index, row in df.iterrows():
 
     print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')
     print('--------------------')
+    break
 
 #%%

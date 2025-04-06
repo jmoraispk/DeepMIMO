@@ -4,7 +4,6 @@ from lxml import etree
 import xml.etree.ElementTree as ET
 from WI_interface.SetupEditor import SetupEditor
 from WI_interface.TxRxEditor import TxRxEditor
-from WI_interface.ObjectEditor import ObjectEditor
 from WI_interface.TerrainEditor import TerrainEditor
 
 class XmlGenerator:

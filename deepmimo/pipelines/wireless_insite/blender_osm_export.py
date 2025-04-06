@@ -7,30 +7,10 @@ import bpy # type: ignore
 import os
 import sys
 import logging
-import pandas as pd
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-# Required Python packages
-REQUIRED_PACKAGES = ["pandas"]
-
-# Function to check if a package is installed
-def is_package_installed(package_name):
-    try:
-        __import__(package_name)
-        return True
-    except ImportError:
-        return False
-
-# Check for missing packages
-missing_packages = [pkg for pkg in REQUIRED_PACKAGES if not is_package_installed(pkg)]
-
-if missing_packages:
-    logger.error(f"❌ Missing required Python packages: {', '.join(missing_packages)}")
-
-logger.info("✅ All required packages and add-ons are installed. Continuing execution...")
 
 # Parse command-line arguments
 try:
