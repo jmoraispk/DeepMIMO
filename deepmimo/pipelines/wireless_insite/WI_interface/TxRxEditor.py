@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class TxRx:
     def __init__(self, txrx_type, is_transmitter, is_receiver, pos, name, id=None, grid_side=None, grid_spacing=None):
         self.txrx_name = name
@@ -12,7 +11,6 @@ class TxRx:
         self.grid_side = grid_side
         self.grid_spacing = grid_spacing
 
-# FIXME the editor only support tx_power = 0
 class TxRxEditor:
     def __init__(self, infile_path=None, template_path="resource/template/txrx"):
         self.infile_path = infile_path
@@ -22,9 +20,8 @@ class TxRxEditor:
 
         self.txrx_file = None
         self.parse()
-        self.txpower = 0
+        self.txpower = 0  # only supports tx_power = 0
         
-
     def read_tx_power(self):
         with open(self.infile_path, "r") as f:
             txrx_file = f.readlines()
@@ -39,7 +36,6 @@ class TxRxEditor:
         if len(power_vals) == 0:
             print("Cannot find transmission power value in .txrx file!")
         return power_vals[0]
-
 
     def parse(self):
         try:
@@ -70,8 +66,6 @@ class TxRxEditor:
             if ("end_<points>" in line) or ("end_<grid>" in line):
                 self.txrx.append(TxRx(txrx_type, is_transmitter, is_receiver, pos, txrx_name, txrx_id, grid_side, grid_spacing))
 
-
-    #TODO this functin has not been tested
     def add_txrx(self, txrx_type, is_transmitter, is_receiver, pos, name, id=None, grid_side=None, grid_spacing=None):
         if not id:
             try:
@@ -81,8 +75,6 @@ class TxRxEditor:
         new_txrx = TxRx(txrx_type, is_transmitter, is_receiver, pos, name, id=id, grid_side=grid_side, grid_spacing=grid_spacing)
         self.txrx.append(new_txrx)
 
-
-    #TODO this functin has not been tested
     def remove_txrx(self, id=None):
         if not id:
             self.txrx = []
@@ -95,7 +87,6 @@ class TxRxEditor:
         pop_idx = pop_idx[::-1]
         for p in pop_idx:
             self.txrx.pop(p)
-
 
     def save(self, outfile_path):
         # clean the output file before writing

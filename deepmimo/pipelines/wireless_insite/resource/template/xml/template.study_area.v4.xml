@@ -513,20 +513,6 @@
         <GeometryList>
           <remcom::rxapi::GeometryList/>
         </GeometryList>
-        <MaterialList>
-          <remcom::rxapi::MaterialList>
-            <Material>
-              <remcom::rxapi::Material>
-                <Name>
-                  <remcom::rxapi::String Value="Default"/>
-                </Name>
-                <Volumetric>
-                  <remcom::rxapi::Boolean Value="false"/>
-                </Volumetric>
-              </remcom::rxapi::Material>
-            </Material>
-          </remcom::rxapi::MaterialList>
-        </MaterialList>
         <Origin>
           <remcom::rxapi::GeographicPoint>
             <Altitude>
