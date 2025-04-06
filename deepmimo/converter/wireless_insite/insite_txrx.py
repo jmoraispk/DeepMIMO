@@ -22,6 +22,7 @@ from typing import Dict, Any, Optional, List, Tuple
 import numpy as np
 from ...txrx import TxRxSet
 from .xml_parser import parse_insite_xml
+from ...config import config
 
 @dataclass
 class InSiteTxRxSet:
@@ -104,16 +105,35 @@ class InSiteTxRxSet:
             return None
             
         ant_data = self.data[tx_rx]['remcom_rxapi_' + tx_rx]
-        return {
-            'antenna': {
-                'polarization': ant_data['Antenna']['remcom_rxapi_Isotropic']['Polarization']['remcom_rxapi_PolarizationEnum'],
-                'power_threshold': ant_data['Antenna']['remcom_rxapi_Isotropic']['PowerThreshold']['remcom_rxapi_Double']
-            },
-            'rotations': {
-                'bearing': ant_data['AntennaRotations']['remcom_rxapi_Rotations']['Bearing']['remcom_rxapi_Double'],
-                'pitch': ant_data['AntennaRotations']['remcom_rxapi_Rotations']['Pitch']['remcom_rxapi_Double'],
-                'roll': ant_data['AntennaRotations']['remcom_rxapi_Rotations']['Roll']['remcom_rxapi_Double']
+        
+        # Get antenna configuration
+        isotropic_dict = ant_data['Antenna']['remcom_rxapi_Isotropic']
+        antenna_config = {
+            'polarization': isotropic_dict['Polarization']['remcom_rxapi_PolarizationEnum'],
+            'power_threshold': isotropic_dict['PowerThreshold']['remcom_rxapi_Double']
+        }
+        
+        # Handle different rotation structures based on Wireless Insite version
+        if config.get('wireless_insite_version').startswith('4.'):
+            # Version 4.x uses AntennaAlignment with SphericalAlignment
+            alignment = ant_data['AntennaAlignment']['remcom_rxapi_SphericalAlignment']
+            rotations = {
+                'bearing': alignment['Phi']['remcom_rxapi_Double'],
+                'pitch': alignment['Theta']['remcom_rxapi_Double'],
+                'roll': alignment['Roll']['remcom_rxapi_Double']
             }
+        else:
+            # Version 3.x uses AntennaRotations with Rotations
+            rot_dict = ant_data['AntennaRotations']['remcom_rxapi_Rotations']
+            rotations = {
+                'bearing': rot_dict['Bearing']['remcom_rxapi_Double'],
+                'pitch': rot_dict['Pitch']['remcom_rxapi_Double'],
+                'roll': rot_dict['Roll']['remcom_rxapi_Double']
+            }
+        
+        return {
+            'antenna': antenna_config,
+            'rotations': rotations
         }
     
     @property
