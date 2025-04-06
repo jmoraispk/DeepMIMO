@@ -1,6 +1,5 @@
 #%% Imports
 from pathlib import Path
-from datetime import datetime as dt 
 from generate_city.generate_city import generate_city
 from WI_interface.XmlGenerator import XmlGenerator
 from WI_interface.SetupEditor import SetupEditor
@@ -14,28 +13,24 @@ import os
 # import deepmimo as dm
 
 
-# Project root directory (use absolute path)
-PROJ_ROOT = '.'
-# BLENDER_PATH = r"/home/joao/blender-3.6.0-linux-x64/blender"
+#%% Resources and Constants
+
+# Paths
+OSM_ROOT = r"C:/Users/jmora/Downloads/osm_root"
 BLENDER_PATH = r"C:\Program Files\Blender Foundation\Blender 3.6\blender-launcher.exe"
+BLENDER_SCRIPT_PATH = "./blender_osm_export.py"
+MATERIALS_DIR = "./resource/material"  # Directory containing material resources
 
-# Material names for scene objects
-BUILDING_MATERIAL = 'itu_concrete'
-ROAD_MATERIAL = 'itu_brick'  # Note: Manually changed to asphalt in Sionna
-FLOOR_MATERIAL = 'itu_wet_ground'
-
-# Add-ons to install, mapping name to zip file
-ADDONS = {
-    "blosm": "blosm_2.7.11.zip",
-    "mitsuba-blender": "mitsuba-blender.zip",
-}
+# Material paths
+BUILDING_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Concrete 3.5 GHz.mtl")
+ROAD_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "Asphalt_1GHz.mtl")
+TERRAIN_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Wet earth 3.5 GHz.mtl")
 
 # Ray-tracing parameters
 UE_HEIGHT = 1.5  # meters
 BS_HEIGHT = 20  # meters
 BATCH_SIZE = 30
 GRID_SPACING = 1.0  # meters
-
 
 
 #%% Functions
@@ -64,7 +59,6 @@ def get_grid_info(xmin, ymin, xmax, ymax, grid_spacing):
     row_indices = np.arange(len(y_coords) - 1)
     users_per_row = len(x_coords) - 1  # Each row has the same number of users
     return row_indices, users_per_row
-
 
 def run_command(command, description):
     """Run a shell command and stream output in real-time."""
@@ -132,7 +126,6 @@ def read_rt_configs(row):
     }
     return rt_params
 
-
 def gen_tx_pos(rt_params):
     num_bs = len(rt_params['bs_lats'])
     print(f"Number of BSs: {num_bs}")
@@ -143,7 +136,7 @@ def gen_tx_pos(rt_params):
     return bs_pos
 
 def gen_rx_pos(row, osm_folder):
-    with open(os.path.join('osm_exports', osm_folder, 'osm_gps_origin.txt'), "r") as f:
+    with open(os.path.join(osm_folder, 'osm_gps_origin.txt'), "r") as f:
         origin_lat, origin_lon = map(float, f.read().split())
     print(f"origin_lat: {origin_lat}, origin_lon: {origin_lon}")
 
@@ -165,8 +158,7 @@ def generate_user_grid(row, origin_lat, origin_lon):
     grid_z = np.zeros_like(grid_x) + UE_HEIGHT
     return np.stack([grid_x.flatten(), grid_y.flatten(), grid_z.flatten()], axis=-1) 
 
-
-def call_blender1(rt_params):
+def call_blender1(rt_params, osm_folder):
     """Process OSM extraction directly without calling a separate script."""
     
     # Extract coordinates from rt_params
@@ -175,73 +167,39 @@ def call_blender1(rt_params):
     maxlat = rt_params['max_lat']
     maxlon = rt_params['max_lon']
     
-    # Generate bbox folder name
-    bbox_folder = f"bbox_{minlat}_{minlon}_{maxlat}_{maxlon}".replace(".", "-")
-    scenario_path = os.path.join(PROJ_ROOT, "osm_exports", bbox_folder)
-    
     # Check if the folder already exists
-    if os.path.exists(scenario_path):
-        print(f"⏩ Folder '{bbox_folder}' already exists. Skipping OSM extraction.")
+    if os.path.exists(osm_folder):
+        print(f"⏩ Folder '{osm_folder}' already exists. Skipping OSM extraction.")
         return
-    
-    # Path to the Blender script
-    script_path = os.path.join(PROJ_ROOT, "blender_osm_export.py")
     
     # Validate paths
     if not os.path.exists(BLENDER_PATH):
-        print(f"❌ Error: Blender executable not found at {BLENDER_PATH}")
-        return
+        raise FileNotFoundError(f"❌ Blender executable not found at {BLENDER_PATH}")
         
-    if not os.path.exists(script_path):
-        print(f"❌ Error: Blender script not found at {script_path}")
-        return
+    if not os.path.exists(BLENDER_SCRIPT_PATH):
+        raise FileNotFoundError(f"❌ Blender script not found at {BLENDER_SCRIPT_PATH}")
     
     # Build command to run Blender
     command = [
         BLENDER_PATH, 
         "--background", 
         "--python", 
-        script_path, 
+        BLENDER_SCRIPT_PATH, 
         "--", 
         "--minlat", str(minlat), 
         "--minlon", str(minlon), 
         "--maxlat", str(maxlat), 
-        "--maxlon", str(maxlon)
+        "--maxlon", str(maxlon),
+        "--output", str(osm_folder)  # Pass the output folder to the Blender script
     ]
     
     # Run the command
     run_command(command, "OSM Extraction")
 
-def call_blender2(rt_params):
-    time_str = dt.now().strftime("%m-%d-%Y_%HH%MM%SS")
-    osm_folder = os.path.join(PROJ_ROOT, 'all_runs', f'run_{time_str}')
-    command = [
-        BLENDER_PATH,
-        '-b',
-        '-P',
-        os.path.join(PROJ_ROOT, 'scene_builder.py'),
-        '--',
-        rt_params['scenario_name'],
-        str(rt_params['min_lat']),
-        str(rt_params['min_lon']),
-        str(rt_params['max_lat']),
-        str(rt_params['max_lon']),
-        osm_folder,
-        time_str
-    ]
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        print("Blender output:")
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print("Errors:", e.stderr)
-
 def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
-    
 
     insite_path, study_area_path = create_directory_structure(osm_folder, rt_params)
-    root_dir = Path("C:/Users/namhyunk/Desktop/osm2dt")
-
+    
     # Generate city features
     city_feature_list = generate_city(
         str(osm_folder) + os.sep,  # Add trailing separator explicitly
@@ -250,8 +208,8 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
         minlon=rt_params['min_lon'],
         maxlat=rt_params['max_lat'],
         maxlon=rt_params['max_lon'],
-        building_mtl_path=str(root_dir / "resource/material/ITU Concrete 3.5 GHz.mtl"),
-        road_mtl_path=str(root_dir / "resource/material/Asphalt_1GHz.mtl"),
+        building_mtl_path=BUILDING_MATERIAL_PATH,
+        road_mtl_path=ROAD_MATERIAL_PATH,
     )
 
     xmin, ymin, xmax, ymax = convert_GpsBBox2CartesianBBox(
@@ -269,7 +227,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
 
     terrain_editor = TerrainEditor()
     terrain_editor.set_vertex(xmin=xmin_pad, ymin=ymin_pad, xmax=xmax_pad, ymax=ymax_pad)
-    terrain_editor.set_material(str(root_dir / "resource/material/ITU Wet earth 3.5 GHz.mtl"))
+    terrain_editor.set_material(TERRAIN_MATERIAL_PATH)
     terrain_editor.save(str(insite_path / "newTerrain.ter"))
 
     # Configure Tx/Rx
@@ -362,22 +320,16 @@ for index, row in df.iterrows():
     rt_params['bandwidth'] = 10e6  # HARD-CODED
     print("✓ Configuration loaded successfully")
     
-    print("\nPHASE 2: Running OSM extraction...")
-    call_blender1(rt_params)
-    print("✓ OSM extraction completed")
-
-    # print("\nPHASE 3: Running Blender scene generation...")
-    # call_blender2(rt_params)
-    # print("✓ Blender scene generation completed")
+    print("\nPHASE 2: Setting up paths and directories...")
+    bbox_folder = f"bbox_{rt_params['min_lat']}_{rt_params['min_lon']}_{rt_params['max_lat']}_{rt_params['max_lon']}"
+    osm_folder = os.path.join(OSM_ROOT, bbox_folder)
     
-    # Identify the paths --
-    print("\nPHASE 4: Setting up paths and directories...")
-    root_dir = Path(r"C:\Users\jmora\Downloads\root")
-    bbox_folder = f"bbox_{rt_params['min_lat']}_{rt_params['min_lon']}_{rt_params['max_lat']}_{rt_params['max_lon']}".replace('.', '-')
-    osm_folder = root_dir / "osm_exports" / bbox_folder
-    csv_path = os.path.join(PROJ_ROOT, 'params.csv')
-
-    with open(os.path.join('osm_exports', osm_folder, 'osm_gps_origin.txt'), "r") as f:
+    print("\nPHASE 3: Running OSM extraction...")
+    call_blender1(rt_params, osm_folder)
+    print("✓ OSM extraction completed")
+    
+    # Read origin coordinates
+    with open(os.path.join(osm_folder, 'osm_gps_origin.txt'), "r") as f:
         rt_params['origin_lat'], rt_params['origin_lon'] = map(float, f.read().split())
     print(f"origin_lat: {rt_params['origin_lat']}, origin_lon: {rt_params['origin_lon']}")
 
@@ -385,14 +337,12 @@ for index, row in df.iterrows():
     print(f"User grid shape: {user_grid.shape}")
     print("✓ Paths and directories set up")
 
-	# TODO3: gen_positions()
-	# Generate XY user grid and BS positions
+	# Generate RX and TX positions
     print("\nPHASE 5: Generating transmitter and receiver positions...")
     rx_pos = gen_rx_pos(row, osm_folder)  # N x 3 (N ~ 20k)
     tx_pos = gen_tx_pos(rt_params)  # M x 3 (M ~ 3)
     print(f"✓ Generated {len(tx_pos)} transmitter positions and {len(rx_pos)} receiver positions")
 
-    # TODO4: insite_raytrace()
 	# Ray Tracing
     print("\nPHASE 6: Running Wireless InSite ray tracing...")
     insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
