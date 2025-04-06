@@ -19,7 +19,8 @@ from typing import Dict
 
 from .. import converter_utils as cu
 from ...rt_params import RayTracingParameters
-from ...consts import RAYTRACER_NAME_SIONNA, RAYTRACER_VERSION_SIONNA
+from ...consts import RAYTRACER_NAME_SIONNA
+from ...config import config
 
 
 def read_rt_params(load_folder: str) -> Dict:
@@ -99,7 +100,7 @@ class SionnaRayTracingParameters(RayTracingParameters):
         params_dict = {
             # Ray Tracing Engine info
             'raytracer_name': RAYTRACER_NAME_SIONNA,
-            'raytracer_version': raw_params.get('raytracer_version', RAYTRACER_VERSION_SIONNA),
+            'raytracer_version': raw_params.get('raytracer_version', config.get('sionna_version')),
 
             # Base required parameters
             'frequency': int(raw_params['frequency']),

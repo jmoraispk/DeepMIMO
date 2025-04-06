@@ -81,7 +81,8 @@ def _get_ray_tracing_params(xml_file: str) -> Dict[str, Any]:
 
     
     from deepmimo.rt_params import RayTracingParameters
-    from deepmimo.consts import RAYTRACER_NAME_WIRELESS_INSITE, RAYTRACER_VERSION_WIRELESS_INSITE
+    from deepmimo.consts import RAYTRACER_NAME_WIRELESS_INSITE
+    from deepmimo.config import config
 
     # Parse XML and get data
     data = parse_insite_xml(xml_file)
@@ -104,7 +105,7 @@ def _get_ray_tracing_params(xml_file: str) -> Dict[str, Any]:
     params = {
         # Ray Tracing Engine info
         'raytracer_name': RAYTRACER_NAME_WIRELESS_INSITE,
-        'raytracer_version': RAYTRACER_VERSION_WIRELESS_INSITE,
+        'raytracer_version': config.get('wireless_insite_version'),
         
         # Frequency from waveform
         'frequency': waveform['CarrierFrequency'][I_DOUBLE],

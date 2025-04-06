@@ -20,7 +20,8 @@ from pprint import pprint
 
 from .setup_parser import parse_file
 from ...rt_params import RayTracingParameters
-from ...consts import RAYTRACER_NAME_WIRELESS_INSITE, RAYTRACER_VERSION_WIRELESS_INSITE
+from ...consts import RAYTRACER_NAME_WIRELESS_INSITE
+from ...config import config
 
 
 def read_rt_params(sim_folder: str | Path) -> Dict:
@@ -155,7 +156,7 @@ class InsiteRayTracingParameters(RayTracingParameters):
         params_dict = {
             # Ray Tracing Engine info
             'raytracer_name': RAYTRACER_NAME_WIRELESS_INSITE,
-            'raytracer_version': RAYTRACER_VERSION_WIRELESS_INSITE,
+            'raytracer_version': config.get('wireless_insite_version'),
 
             # Frequency
             'frequency': waveform_vals['CarrierFrequency'],

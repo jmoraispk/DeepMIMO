@@ -91,13 +91,18 @@ class DeepMIMOConfig:
         """Reset all configuration values to their defaults."""
         self._initialize()
     
+    def get_config_str(self):
+        """Return a string representation of the configuration."""
+        result = "\nDeepMIMO Configuration:\n"
+        result += "-" * 50 + "\n"
+        for key, value in self._config.items():
+            result += f"{key}: {value}\n"
+        result += "-" * 50
+        return result
+    
     def print_config(self):
         """Print all current configuration values."""
-        print("\nDeepMIMO Configuration:")
-        print("-" * 50)
-        for key, value in self._config.items():
-            print(f"{key}: {value}")
-        print("-" * 50)
+        print(self.get_config_str())
     
     def get_all(self):
         """
@@ -150,6 +155,10 @@ class DeepMIMOConfig:
         # If both positional arguments and keyword arguments are provided, raise an error
         if args and kwargs:
             raise ValueError("Cannot mix positional arguments and keyword arguments")
+    
+    def __repr__(self):
+        """Return a string representation of the configuration."""
+        return self.get_config_str()
 
 
 # Create a singleton instance

@@ -14,6 +14,7 @@ import os
 from tqdm import tqdm
 import zipfile
 import json
+from .config import config
 
 K = TypeVar("K", bound=str)
 V = TypeVar("V")
@@ -44,18 +45,7 @@ def get_scenarios_dir() -> str:
     Returns:
         str: Absolute path to the scenarios directory
     """
-    return os.path.join(os.getcwd(), c.SCENARIOS_FOLDER)
-
-def get_downloads_dir() -> str:
-    """Get the absolute path to the downloads directory.
-    
-    This directory is the same as the scenarios directory, which contains both
-    extracted scenarios and downloaded ZIP files.
-    
-    Returns:
-        str: Absolute path to the scenarios directory
-    """
-    return os.path.join(os.getcwd(), c.SCENARIOS_FOLDER)
+    return os.path.join(os.getcwd(), config.get('scenarios_folder'))
 
 def get_scenario_folder(scenario_name: str) -> str:
     """Get the absolute path to a specific scenario folder.

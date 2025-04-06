@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional
 from . import consts as c
 from .general_utils import (
     get_scenarios_dir,
-    get_downloads_dir,
+    get_scenarios_dir,
     get_scenario_folder,
     get_params_path,
     load_dict_from_json,
@@ -446,7 +446,7 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
         Path to downloaded file if successful, None otherwise
     """
     scenarios_dir = get_scenarios_dir()
-    download_dir = output_dir if output_dir else get_downloads_dir()
+    download_dir = output_dir if output_dir else get_scenarios_dir()
     scenario_folder = get_scenario_folder(scenario_name)
     
     # DEV NOTE: when adding new scenario versions, change this check to read the version number
