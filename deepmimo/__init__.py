@@ -69,6 +69,9 @@ from .scene import (
 from . import consts
 from . import general_utils
 
+# Import the config instance
+from .config import config
+
 __all__ = [
     # Core functionality
     'generate',
@@ -108,7 +111,8 @@ __all__ = [
     'get_params_path',
     'load_dict_from_json',
     
-    # Constants
+    # Constants and configuration
     'consts',
     'general_utils',
+    'config',
 ]

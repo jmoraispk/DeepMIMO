@@ -981,21 +981,21 @@ for x in tqdm(range(int(n_rx / n_rx_in_scene)+1), desc='Path computation'):
     
     path_list.append(paths)
 
-#%% CONVERTING DATASETS: From Sionna RT (3) Convert to DeepMIMO
+#%% CONVERTING DATASETS: From Sionna RT (3) Save Ray Tracing Results
 
 from deepmimo.converter.sionna_rt import sionna_exporter
 
 save_folder = 'sionna_folder/'
 sionna_exporter.export_to_deepmimo(scene, path_list, my_compute_path_params, save_folder)
 
-#%%
+#%% CONVERTING DATASETS: From Sionna RT (4) Convert to DeepMIMO
 
-save_folder = 'C:/Users/jmora/Documents/GitHub/DeepMIMO/P2Ms/sionna_test_scen'
 scen_name_sionna = dm.convert(save_folder, overwrite=True)
+
+#%% CONVERTING DATASETS: From Sionna RT (5) Check Scenario & Plot
 dataset_sionna = dm.load(scen_name_sionna)
 dataset_sionna.plot_coverage(dataset_sionna.los)
 
-#%%
 main_keys = ['aoa_az', 'aoa_el', 'aod_az', 'aod_el', 
              'delay', 'power', 'phase', 'los', 'num_paths', 'inter_int']
 
@@ -1008,3 +1008,29 @@ for key in main_keys:
 
 dm.upload(scen_name_insite, key='')
 dm.upload(scen_name_sionna, key='')
+
+#%% Configuring DeepMIMO: 
+
+# Print current config
+dm.config()
+
+# Set ray tracer versions
+dm.config('wireless_insite_version', '4.0.1')
+dm.config('sionna_version', '1.0.1')
+
+# Set other config parameters
+dm.config('use_gpu', True)
+dm.config('gpu_device_id', 0)
+dm.config('scenarios_folder', 'deepmimo_scenarios')
+dm.config('scenarios_download_folder', 'deepmimo_scenarios_dl')
+
+# Print updated config
+dm.config()
+
+# Reset config
+dm.config.reset()
+
+# Print reset config
+dm.config()
+
+
