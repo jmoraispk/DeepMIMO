@@ -1022,7 +1022,6 @@ dm.config('sionna_version', '1.0.1')
 dm.config('use_gpu', True)
 dm.config('gpu_device_id', 0)
 dm.config('scenarios_folder', 'deepmimo_scenarios')
-dm.config('scenarios_download_folder', 'deepmimo_scenarios_dl')
 
 # Print updated config
 dm.config()

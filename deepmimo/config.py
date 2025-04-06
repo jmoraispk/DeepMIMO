@@ -57,8 +57,7 @@ class DeepMIMOConfig:
             'aodt_version': RAYTRACER_VERSION_AODT,
             'use_gpu': False,
             'gpu_device_id': 0,
-            'scenarios_folder': 'deepmimo_scenarios',  # Folder with extracted scenarios
-            'scenarios_download_folder': 'deepmimo_scenarios_downloaded',  # Folder with downloaded ZIP files
+            'scenarios_folder': 'deepmimo_scenarios',  # Folder containing both extracted scenarios and scenario ZIP files
         }
     
     def set(self, key, value):

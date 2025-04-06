@@ -49,12 +49,13 @@ def get_scenarios_dir() -> str:
 def get_downloads_dir() -> str:
     """Get the absolute path to the downloads directory.
     
-    This directory contains downloaded scenario ZIP files before extraction.
+    This directory is the same as the scenarios directory, which contains both
+    extracted scenarios and downloaded ZIP files.
     
     Returns:
-        str: Absolute path to the downloads directory
+        str: Absolute path to the scenarios directory
     """
-    return os.path.join(os.getcwd(), c.SCENARIOS_DOWNLOAD_FOLDER)
+    return os.path.join(os.getcwd(), c.SCENARIOS_FOLDER)
 
 def get_scenario_folder(scenario_name: str) -> str:
     """Get the absolute path to a specific scenario folder.
