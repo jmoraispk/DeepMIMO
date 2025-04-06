@@ -23,6 +23,8 @@ from .general_utils import (
     unzip
 )
 
+API_BASE_URL = "https://dev.deepmimo.net"
+
 # Headers for HTTP requests
 HEADERS = {
     'User-Agent': 'DeepMIMO-Python/1.0',
@@ -33,7 +35,6 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
     """Upload a file to the DeepMIMO API server.
     
     Args:
-        link (str): API endpoint URL
         file (str): Path to file to upload
         key (str): API authentication key
         
@@ -46,33 +47,27 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
         Handles file upload only, no longer returns direct download URLs.
     """
     try:
-        # Get file info first
+        # Get file info
         filename = os.path.basename(file)
         file_size = os.path.getsize(file)
 
-        # First check if file exists on B2
-        check_response = requests.get(
-            "https://dev.deepmimo.net/api/b2/check-filename",
-            params={"filename": filename},
-            headers={"Authorization": f"Bearer {key}"},
-            # ANOTHER KEY to be used for upload
-        )
-        check_response.raise_for_status()
-
-        if check_response.json().get("exists"):
-            print(f"Error: File {filename} already exists on B2")
-            return None
-
-        # Get upload authorization
+        # Get presigned upload URL with filename validation built-in
         auth_response = requests.get(
-            "https://dev.deepmimo.net/api/b2/authorize-upload",
+            f"{API_BASE_URL}/api/b2/authorize-upload",
+            params={"filename": filename},  # Use the actual filename from the file
             headers={"Authorization": f"Bearer {key}"},
         )
         auth_response.raise_for_status()
         auth_data = auth_response.json()
 
-        if not auth_data.get("uploadUrl") or not auth_data.get("authorizationToken"):
+        if not auth_data.get("presignedUrl"):
             print("Error: Invalid authorization response")
+            return None
+
+        # Verify the authorized filename matches our source filename
+        authorized_filename = auth_data.get("filename")
+        if authorized_filename and authorized_filename != filename:
+            print(f"Error: Filename mismatch. Server authorized '{authorized_filename}' but trying to upload '{filename}'")
             return None
 
         # Calculate file hash
@@ -83,7 +78,7 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
         file_hash = sha1.hexdigest()
 
         # Upload file to B2
-        print(f"Uploading {filename} to B2...")
+        print(f"Uploading {authorized_filename} to B2...")
         pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading")
         
         class ProgressFileReader:
@@ -107,14 +102,13 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
         try:
             progress_reader = ProgressFileReader(file, pbar)
             
-            upload_response = requests.post(
-                auth_data["uploadUrl"],
+            # Use the presigned URL for upload
+            upload_response = requests.put(
+                auth_data["presignedUrl"],
                 headers={
-                    "Authorization": auth_data["authorizationToken"],
-                    "X-Bz-File-Name": filename,
-                    "Content-Type": "application/zip",
-                    "X-Bz-Content-Sha1": file_hash,
+                    "Content-Type": auth_data.get("contentType", "application/zip"),
                     "Content-Length": str(file_size),
+                    "X-Bz-Content-Sha1": file_hash,
                 },
                 data=progress_reader
             )
@@ -123,14 +117,16 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
             progress_reader.close()
             pbar.close()
 
+        # Return the authorized filename (not the local filename)
+        # This ensures we're consistent with what was actually uploaded
         return {
-            "filename": filename,
-            "fileId": upload_response.json().get("fileId"),
+            "filename": authorized_filename or filename,
+            "fileId": upload_response.headers.get("x-bz-file-id", "unknown"),
         }
 
     except requests.exceptions.RequestException as e:
         print(f"API call failed: {str(e)}")
-        if hasattr(e.response, "text"):
+        if hasattr(e, "response") and e.response:
             print(f"Server response: {e.response.text}")
         return None
     except Exception as e:
@@ -394,19 +390,6 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         print(f"Error: Failed to generate key components - {str(e)}")
         return None
 
-    submission_data = {
-        "title": scenario_name,
-        "linkName": scenario_name,
-        "subMenu": "v4",
-        "description": description if description else f"A scenario for {scenario_name}",
-        "details": details,
-        "images": [],
-        "keyComponents": key_components["sections"],
-        "download": [],
-        "features": processed_params["primaryParameters"],
-        "advancedParameters": processed_params["advancedParameters"],
-    }
-
     # Zip scenario
     zip_path = scen_folder + ".zip" if skip_zip else zip(scen_folder)
 
@@ -419,21 +402,34 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
     if not upload_result or "filename" not in upload_result:
         raise RuntimeError("Failed to upload to B2")
     print("✓ Upload successful")
-    
-    submission_data["download"] = [
-        {
-            "version": f"v{processed_params['advancedParameters']['dmVersion']}",
-            "description": "Initial version",
-            "zip": upload_result["filename"],  # Store only the filename, not the URL
-            "folder": "",
-            "fileId": upload_result.get("fileId"),
-        }
-    ]
+
+    submission_scenario_name = upload_result["filename"].split(".")[0].split("/")[-1].split("\\")[-1]
+
+    submission_data = {
+        "title": submission_scenario_name or scenario_name,
+        "linkName": submission_scenario_name or scenario_name,
+        "subMenu": "v4",
+        "description": description if description else f"A scenario for {submission_scenario_name or scenario_name}",
+        "details": details,
+        "images": [],
+        "keyComponents": key_components["sections"],
+        "download": [
+            {
+                "version": f"v{processed_params['advancedParameters']['dmVersion']}",
+                "description": "Initial version",
+                "zip": upload_result["filename"],  # Store only the filename, not the URL
+                "folder": "",
+                "fileId": upload_result.get("fileId"),
+            }
+        ],
+        "features": processed_params["primaryParameters"],
+        "advancedParameters": processed_params["advancedParameters"],
+    }
 
     print("Creating website submission...")
     try:
         response = requests.post(
-            "https://dev.deepmimo.net/api/submissions",
+            f"{API_BASE_URL}/api/submissions",
             json={"type": "scenario", "content": submission_data},
             headers={"Authorization": f"Bearer {key}"},
         )
@@ -471,7 +467,7 @@ def _download_url(scenario_name: str) -> str:
         scenario_name += ".zip"
 
     # Return the secure download endpoint URL with the filename as a parameter
-    return f"https://dev.deepmimo.net/api/download/secure?filename={scenario_name}"
+    return f"{API_BASE_URL}/api/download/secure?filename={scenario_name}"
 
 
 def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[str]:
@@ -594,7 +590,7 @@ def search(query: Dict) -> Optional[Dict]:
         Dict containing count and list of matching scenario names if successful, None otherwise
     """
     try:
-        response = requests.post('https://dev.deepmimo.net/api/search/scenarios', json=query)
+        response = requests.post(f"{API_BASE_URL}/api/search/scenarios", json=query)
         response.raise_for_status()
         data = response.json()
         return data['scenarios']
