@@ -2,9 +2,7 @@ from generate_city.convert_ply2city import convert_ply2city
 from pathlib import Path
 
 
-def generate_city(
-    project_root, insite_path, minlat, minlon, maxlat, maxlon, building_mtl_path, road_mtl_path
-):
+def generate_city(project_root, insite_path, building_mtl_path, road_mtl_path):
     """Convert PLY files to Wireless InSite city feature files"""
     city_feature_list = []
 

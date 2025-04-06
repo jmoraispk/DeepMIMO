@@ -192,10 +192,6 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     city_feature_list = generate_city(
         str(osm_folder) + os.sep,
         str(insite_path) + os.sep,
-        minlat=rt_params['min_lat'],
-        minlon=rt_params['min_lon'],
-        maxlat=rt_params['max_lat'],
-        maxlon=rt_params['max_lon'],
         building_mtl_path=BUILDING_MATERIAL_PATH,
         road_mtl_path=ROAD_MATERIAL_PATH,
     )
