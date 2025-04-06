@@ -10,7 +10,10 @@ import pandas as pd
 import numpy as np
 import subprocess
 import os
-# import deepmimo as dm
+
+import sys
+sys.path.append("C:/Users/jmora/Documents/GitHub/DeepMIMO")
+import deepmimo as dm  # type: ignore
 
 
 #%% Resources and Constants
@@ -81,53 +84,33 @@ def run_command(command, description):
     print(f"\n✅ {description} completed!\n")
 
 def read_rt_configs(row):
-    scenario_name = row['scenario_name']
-    min_lat = row['min_lat']
-    min_lon = row['min_lon']
-    max_lat = row['max_lat']
-    max_lon = row['max_lon']
     bs_lats = np.array(row['bs_lat'].split(',')).astype(np.float32)
     bs_lons = np.array(row['bs_lon'].split(',')).astype(np.float32)
     carrier_freq = row['freq (ghz)'] * 1e9
-    n_reflections = row['n_reflections']
-    diffraction = bool(row['ds_enable'])
-    scattering = bool(row['ds_enable'])
-    
-    max_paths = row['max_paths']
-    ray_spacing = row['ray_spacing']
-    max_transmissions = row['max_transmissions']
-    max_diffractions = row['max_diffractions']
-
-    ds_enable = row['ds_enable']
-    ds_max_reflections = row['ds_max_reflections']
-    ds_max_transmissions = row['ds_max_transmissions']
-    ds_max_diffractions = row['ds_max_diffractions']
-    ds_final_interaction_only = row['ds_final_interaction_only']
-    
+    diffraction = scattering = bool(row['ds_enable'])
 
     rt_params = {
-        'scenario_name': scenario_name,
-        'min_lat': min_lat,
-        'min_lon': min_lon,
-        'max_lat': max_lat,
-        'max_lon': max_lon,
+        'name': row['name'],
+        'city': row['city'],
+        'min_lat': row['min_lat'],
+        'min_lon': row['min_lon'],
+        'max_lat': row['max_lat'],
+        'max_lon': row['max_lon'],
         'bs_lats': bs_lats,
         'bs_lons': bs_lons,
         'carrier_freq': carrier_freq,
-        'max_reflections': n_reflections,
+        'max_reflections': row['n_reflections'],
         'diffraction': diffraction,
         'scattering': scattering,
-
-        'max_paths': max_paths,
-        'ray_spacing': ray_spacing,
-        'max_transmissions': max_transmissions,
-        'max_diffractions': max_diffractions,
-
-        'ds_enable': ds_enable,
-        'ds_max_reflections': ds_max_reflections,
-        'ds_max_transmissions': ds_max_transmissions,
-        'ds_max_diffractions': ds_max_diffractions,
-        'ds_final_interaction_only': ds_final_interaction_only
+        'max_paths': row['max_paths'],
+        'ray_spacing': row['ray_spacing'],
+        'max_transmissions': row['max_transmissions'],
+        'max_diffractions': row['max_diffractions'],
+        'ds_enable': row['ds_enable'],
+        'ds_max_reflections': row['ds_max_reflections'],
+        'ds_max_transmissions': row['ds_max_transmissions'],
+        'ds_max_diffractions': row['ds_max_diffractions'],
+        'ds_final_interaction_only': row['ds_final_interaction_only']
     }
     return rt_params
 
@@ -297,7 +280,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     xml_generator = XmlGenerator(insite_path, "/insite.setup") # insite.setup
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")
-    # xml_generator.save(xml_path)
+    xml_generator.save(xml_path)
 
     license_info = ["-set_licenses", WI_LIC] if WI_VERSION.startswith("4") else []
     
@@ -317,7 +300,7 @@ df = pd.read_csv('params.csv')
 
 for index, row in df.iterrows():
     print(f"\n{'='*50}")
-    print(f"STARTING SCENARIO {index+1}/{len(df)}: {row['scenario_name']}")
+    print(f"STARTING SCENARIO {index+1}/{len(df)}: {row['name']}")
     print(f"{'='*50}\n")
     
     print("PHASE 1: Reading ray tracing configurations...")
@@ -328,7 +311,7 @@ for index, row in df.iterrows():
     
     print("\nPHASE 2: Setting up paths and directories...")
     bbox_folder = f"bbox_{rt_params['min_lat']}_{rt_params['min_lon']}_{rt_params['max_lat']}_{rt_params['max_lon']}"
-    osm_folder = os.path.join(OSM_ROOT, bbox_folder)
+    osm_folder = os.path.join(OSM_ROOT, rt_params['name'])
     
     print("\nPHASE 3: Running OSM extraction...")
     call_blender1(rt_params, osm_folder)
@@ -352,17 +335,17 @@ for index, row in df.iterrows():
 	# Ray Tracing
     print("\nPHASE 6: Running Wireless InSite ray tracing...")
     insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
+    # insite_rt_path = "C:/Users/jmora/Downloads/osm_root/bbox_40.68503298_-73.84682129_40.68597435_-73.84336302/insite_3.5GHz_10MHz_10paths_5ref_0trans_0diff"
     print(f"✓ Ray tracing completed. Results saved to: {insite_rt_path}")
-    # sionna_raytrace(rt_params)
 
 	# Convert to DeepMIMO
     # print("\nPHASE 7: Converting to DeepMIMO format...")
-    # scen_insite = dm.convert(insite_rt_path) #-- supposed to be deepmimo
+    scen_insite = dm.convert(insite_rt_path) #-- supposed to be deepmimo
     # print("✓ Conversion to DeepMIMO completed")
 
 	# Test Conversion
     # print("\nPHASE 8: Testing DeepMIMO conversion...")
-    # dataset_insite = dm.load(scen_insite)
+    dataset_insite = dm.load(scen_insite)
     # print("✓ DeepMIMO conversion test completed")
 
     print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')
