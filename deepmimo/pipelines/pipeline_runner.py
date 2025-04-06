@@ -7,7 +7,7 @@ for row in df:
 	
 	rt_params = dm.read_rt_configs(row)  # dict(n_reflections, diffraction, scattering, ...)
 
-	osm_path = dm.pipelines.call_blender(gps_bbox, outputs=['insite', 'sionna'])
+	osm_path = dm.pipelines.call_blender(rt_params['gps_bbox'], outputs=['insite', 'sionna'])
 	
 	# Generate XY user grid and BS positions
 	rx_pos = dm.pipelines.gen_rx_pos(row)  # N x 3 (N ~ 20k)
