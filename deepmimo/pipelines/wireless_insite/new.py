@@ -5,7 +5,7 @@ from WI_interface.XmlGenerator import XmlGenerator
 from WI_interface.SetupEditor import SetupEditor
 from WI_interface.TxRxEditor import TxRxEditor
 from WI_interface.TerrainEditor import TerrainEditor
-from utils.geo_utils import convert_GpsBBox2CartesianBBox, convert_Gps2RelativeCartesian
+from geo_utils import convert_GpsBBox2CartesianBBox, convert_Gps2RelativeCartesian
 import pandas as pd
 import numpy as np
 import subprocess
@@ -273,7 +273,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     scenario.save("/insite") # insite
 
     # Generate XML and run simulation
-    xml_generator = XmlGenerator(insite_path, "/insite.setup") # insite.setup
+    xml_generator = XmlGenerator(insite_path, "/insite.setup", version=int(WI_VERSION[0]))
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")
     xml_generator.save(xml_path)
@@ -292,7 +292,7 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
 
 #%% Main
 
-df = pd.read_csv('params.csv')
+df = pd.read_csv('C:/Users/jmora/Documents/GitHub/DeepMIMO/pipeline_dev/params.csv')
 
 for index, row in df.iterrows():
     print(f"\n{'='*50}")
