@@ -100,4 +100,7 @@ There are no changes anywhere else in terms of file generation.
                         </Theta>
                       </remcom::rxapi::SphericalAlignment>
                     </AntennaAlignment>
-
+6) Add <Ellipsoid> to <remcom::rxapi::Scene>
+        <Ellipsoid>
+          <remcom::rxapi::EllipsoidEnum Value="EarthWGS84"/>
+        </Ellipsoid>

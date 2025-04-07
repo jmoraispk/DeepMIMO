@@ -510,6 +510,9 @@
         <AntennaList>
           <remcom::rxapi::AntennaList/>
         </AntennaList>
+        <Ellipsoid>
+          <remcom::rxapi::EllipsoidEnum Value="EarthWGS84"/>
+        </Ellipsoid>
         <GeometryList>
           <remcom::rxapi::GeometryList/>
         </GeometryList>
