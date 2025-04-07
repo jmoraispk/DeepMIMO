@@ -19,6 +19,7 @@ my_api_key.py
 # Development:
 #   For wireless insite outputs
 executables/*
+pipeline_dev/*
 P2Ms/*
 *.p2m
 conversion_errors.json

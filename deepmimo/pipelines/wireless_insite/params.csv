@@ -1,4 +1,0 @@
-name,city,min_lat,min_lon,max_lat,max_lon,bs_lat,bs_lon,freq (ghz),n_reflections,scattering,max_paths,ray_spacing,max_transmissions,max_diffractions,ds_enable,ds_max_reflections,ds_max_transmissions,ds_max_diffractions,ds_final_interaction_only
-city_0_newyork_3p5,NewYork,40.68503298,-73.84682129,40.68597435,-73.84336302,"40.68575894,40.68578827,40.685554","-73.8446499,-73.84567948,-73.844944",3.5,5,1,10,0.25,0,0,0,2,0,1,1
-city_1_losangeles_3p5,LosAngeles,34.06430723,-118.2630866,34.06560881,-118.2609365,"34.06501496,34.06473123,34.06504731","-118.261547,-118.2619665,-118.2625399",3.5,5,1,10,0.25,0,0,0,2,0,1,1
-city_2_chicago_3p5,Chicago,41.88311487,-87.64432816,41.88437915,-87.64194209,"41.88352912,41.88358452,41.88429354","-87.64343789,-87.64262244,-87.64268196",3.5,5,1,10,0.25,0,0,0,2,0,1,1
