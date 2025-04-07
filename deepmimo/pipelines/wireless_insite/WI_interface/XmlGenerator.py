@@ -6,8 +6,15 @@ from WI_interface.SetupEditor import SetupEditor
 from WI_interface.TxRxEditor import TxRxEditor
 from WI_interface.TerrainEditor import TerrainEditor
 
+# Define constant for XML template path
+XML_TEMPLATE_PATH = "resource/template/xml/"
+
+# Define constant for XML parser
+XML_PARSER = etree.XMLParser(recover=True)
+
 class XmlGenerator:
-    def __init__(self, scenario_path, setup_path):
+    def __init__(self, scenario_path, setup_path, version=3):
+        self.version = version
         self.scenario_path = scenario_path
         self.scenario = SetupEditor(scenario_path, setup_path)
         self.name = self.scenario.name
@@ -17,10 +24,8 @@ class XmlGenerator:
         except:
             self.terrain = None
 
-        self.xml = etree.parse(
-            "resource/template/xml/template.study_area.xml",
-            etree.XMLParser(recover=True),
-        )
+        self.xml = etree.parse(XML_TEMPLATE_PATH + "template.study_area.xml", XML_PARSER)
+
         self.root = self.xml.getroot()
         self.update_name()
 
@@ -28,30 +33,21 @@ class XmlGenerator:
         self.load_templates()
 
     def load_templates(self):
-        self.antenna_template_xml = etree.parse(
-            "resource/template/xml/Antenna.xml",
-            etree.XMLParser(recover=True),
-        )
+        self.antenna_template_xml = etree.parse(XML_TEMPLATE_PATH + "Antenna.xml", XML_PARSER)
 
-        self.geometry_city_template_xml = etree.parse(
-            "resource/template/xml/GeometryCity.xml",
-            etree.XMLParser(recover=True),
-        )
+        self.geometry_city_template_xml = etree.parse(XML_TEMPLATE_PATH + "GeometryCity.xml", XML_PARSER)
 
-        self.geometry_terrain_template_xml = etree.parse(
-            "resource/template/xml/GeometryTerrain.xml",
-            etree.XMLParser(recover=True),
-        )
+        self.geometry_terrain_template_xml = etree.parse(XML_TEMPLATE_PATH + "GeometryTerrain.xml", XML_PARSER)
+        
+        tx_point_path = XML_TEMPLATE_PATH + "TxRxPoint.xml"
+        tx_grid_path = XML_TEMPLATE_PATH + "TxRxGrid.xml"
 
-        self.txrx_point_template_xml = etree.parse(
-            "resource/template/xml/TxRxPoint.xml",
-            etree.XMLParser(recover=True),
-        )
+        if self.version >= 4:
+            tx_point_path = tx_point_path.replace('.xml', '.v4.xml')
+            tx_grid_path = tx_grid_path.replace('.xml', '.v4.xml')
 
-        self.txrx_grid_template_xml = etree.parse(
-            "resource/template/xml/TxRxGrid.xml",
-            etree.XMLParser(recover=True),
-        )
+        self.txrx_point_template_xml = etree.parse(tx_point_path, XML_PARSER)
+        self.txrx_grid_template_xml = etree.parse(tx_grid_path, XML_PARSER)
 
     def update_name(self):
         tmp = self.root.find(".//OutputPrefix")
@@ -126,14 +122,14 @@ class XmlGenerator:
 
     def set_antenna(self):
         antenna_parent = self.scene_root.findall('AntennaList')[0][0]
-        new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), etree.XMLParser(recover=True))
+        new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), XML_PARSER)
         antenna_parent.append(new_antenna) # insert b before a
 
     def set_txrx(self):
         txrx_parent = self.scene_root.findall('TxRxSetList')[0][0]
         for txrx in self.txrx.txrx[::-1]:
             if txrx.txrx_type == 'points':
-                new_txrx = etree.fromstring(etree.tostring(self.txrx_point_template_xml), etree.XMLParser(recover=True))
+                new_txrx = etree.fromstring(etree.tostring(self.txrx_point_template_xml), XML_PARSER)
                 x = new_txrx.findall(".//X")[0]
                 x[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[0]
                 y = new_txrx.findall(".//Y")[0]
@@ -142,7 +138,7 @@ class XmlGenerator:
                 z[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[2]
 
             elif txrx.txrx_type == 'grid':
-                new_txrx = etree.fromstring(etree.tostring(self.txrx_grid_template_xml), etree.XMLParser(recover=True))
+                new_txrx = etree.fromstring(etree.tostring(self.txrx_grid_template_xml), XML_PARSER)
                 x = new_txrx.findall(".//X")[0]
                 x[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[0]
                 y = new_txrx.findall(".//Y")[0]
@@ -167,13 +163,13 @@ class XmlGenerator:
             
             receiver_parent = new_txrx.findall('.//Receiver')[0]
             antenna = receiver_parent.findall('.//Antenna')[0]
-            new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), etree.XMLParser(recover=True))
+            new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), XML_PARSER)
             receiver_parent[0].insert(receiver_parent[0].index(antenna), new_antenna) # insert b before a
             receiver_parent[0].remove(antenna)
 
             transmitter_parent = new_txrx.findall('.//Transmitter')[0]
             antenna = transmitter_parent.findall('.//Antenna')[0]
-            new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), etree.XMLParser(recover=True))
+            new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), XML_PARSER)
             transmitter_parent[0].insert(transmitter_parent[0].index(antenna), new_antenna) # insert b before a
             transmitter_parent[0].remove(antenna)
 
@@ -189,7 +185,7 @@ class XmlGenerator:
         geometry_parent = self.scene_root.findall('GeometryList')[0][0]
         for feature in self.scenario.features:
             if feature.type == 'terrain':
-                new_geometry = etree.fromstring(etree.tostring(self.geometry_terrain_template_xml), etree.XMLParser(recover=True))
+                new_geometry = etree.fromstring(etree.tostring(self.geometry_terrain_template_xml), XML_PARSER)
                 x = new_geometry.findall(".//Conductivity")[0]
                 x[0].attrib["Value"] = "%.17g" %self.terrain.conductivity
 
@@ -233,7 +229,7 @@ class XmlGenerator:
                 raise ValueError("Unsupported Geometry type: "+feature.type)
             
             new_geometry = bytes(new_geometry, 'utf-8')
-            new_geometry = etree.fromstring(new_geometry, etree.XMLParser(recover=True))
+            new_geometry = etree.fromstring(new_geometry, XML_PARSER)
             geometry_parent.append(new_geometry)
 
     def update(self):
