@@ -21,8 +21,7 @@ class ObjectEditor:
                     y = float(vals[1])
                     z = float(vals[2])
 
-                    # Rotation
-                    # TODO: Flat earth assumption - should be extended for slopes
+                    # Rotation (Flat earth assumption) - should be extended for slopes
                     cos_z_rot = cos(radians(rotate_angle))
                     sin_z_rot = sin(radians(rotate_angle))
                     x_new = cos_z_rot * x - sin_z_rot * y

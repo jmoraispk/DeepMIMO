@@ -1,6 +1,4 @@
-from math import cos, sin, radians
 import numpy as np
-
 
 class Terrain:
     def __init__(
@@ -27,7 +25,7 @@ class Terrain:
 
 
 class TerrainEditor:
-    def __init__(self, infile_path="resource/template/feature/newTerrain.ter"):
+    def __init__(self, infile_path="resources/feature/newTerrain.ter"):
         self.infile_path = infile_path
         self.parse()
 
@@ -111,8 +109,8 @@ class TerrainEditor:
 
 
 if __name__ == "__main__":
-    # infile_path = "resource/template/feature/newTerrain.ter"
-    material_path = "resource/material/ITU Wet earth 2.4 GHz.mtl"
+    # infile_path = "resources/feature/newTerrain.ter"
+    material_path = "resources/material/ITU Wet earth 2.4 GHz.mtl"
     outfile_path = "test/newTerrain.ter"
     editor = TerrainEditor()
     editor.set_vertex(-200, -200, 200, 200, 0)

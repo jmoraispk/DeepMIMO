@@ -52,9 +52,9 @@ class SetupEditor:
     def __init__(self, scenario_path, name=None):
         self.scenario_path = scenario_path
 
-        with open("resource/template/setup/feature.txt") as f1:
+        with open("resources/setup/feature.txt") as f1:
             self.feature_template = f1.readlines()
-        with open("resource/template/setup/txrx.txt") as f1:
+        with open("resources/setup/txrx.txt") as f1:
             self.txrx_template = f1.readlines()
 
         self.num_feature = 0
@@ -62,7 +62,7 @@ class SetupEditor:
         self.txrx_sec = self.txrx_template.copy()
 
         if not name:
-            with open("resource/template/setup/template.setup", "r") as f:
+            with open("resources/setup/template.setup", "r") as f:
                 self.setup_file = f.readlines()
         else:
             with open(self.scenario_path + name, "r") as f:
@@ -142,6 +142,8 @@ class SetupEditor:
                 self.features.append(Feature(feature_idx, feature_type, feature_path))
                 if feature_type == "terrain":
                     self.terrain_file_path = feature_path
+                elif feature_type == "city":
+                    self.city_file_path = feature_path
                 continue
 
         self.study_area = StudyArea(
@@ -164,8 +166,10 @@ class SetupEditor:
         )
         return
 
-    def set_carrierFreq_and_bandwidth(self, carrier_frequency, bandwidth):
+    def set_carrierFreq(self, carrier_frequency):
         self.carrier_frequency = carrier_frequency
+
+    def set_bandwidth(self, bandwidth):
         self.bandwidth = bandwidth
 
     def set_study_area(self, zmin, zmax, all_vertex):

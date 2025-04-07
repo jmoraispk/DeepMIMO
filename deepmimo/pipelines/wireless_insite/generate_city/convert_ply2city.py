@@ -20,7 +20,7 @@ def convert_ply2city(ply_path, material_path, save_path, object_name=None):
 
 
 def write_reference_sec(f):
-    with open("resource/template/reference_section.txt") as f1:
+    with open("resources/reference_section.txt") as f1:
         reference_sec = f1.readlines()
     return f.writelines(reference_sec)
 
@@ -57,7 +57,7 @@ def write_face_sec(f, ply_data):
 
 if __name__ == "__main__":
     ply_path = "scenario/city_models/scenario_0/gwc_building.ply"
-    material_path = "resource/material/ITU Concrete 2.4 GHz.mtl"
+    material_path = "resources/material/ITU Concrete 2.4 GHz.mtl"
     save_path = "scenario/city_models/scenario_0/gwc_building.city"
 
     (num_vertex, num_faces) = convert_ply2city(ply_path, material_path, save_path)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     print("Converted %d vertexes and %d faces" % (num_vertex, num_faces))
 
     ply_path = "scenario/city_models/scenario_0/gwc_road.ply"
-    material_path = "resource/material/Asphalt_1GHz.mtl"
+    material_path = "resources/material/Asphalt_1GHz.mtl"
     save_path = "scenario/city_models/scenario_0/gwc_road.city"
 
     (num_vertex, num_faces) = convert_ply2city(ply_path, material_path, save_path)

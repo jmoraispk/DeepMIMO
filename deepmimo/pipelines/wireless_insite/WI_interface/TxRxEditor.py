@@ -12,7 +12,7 @@ class TxRx:
         self.grid_spacing = grid_spacing
 
 class TxRxEditor:
-    def __init__(self, infile_path=None, template_path="resource/template/txrx"):
+    def __init__(self, infile_path=None, template_path="resources/txrx"):
         self.infile_path = infile_path
 
         self.txrx = []
