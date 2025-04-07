@@ -101,7 +101,7 @@
             <ComplexImpulseResponse>
               <remcom::rxapi::OutputRequest>
                 <Requested>
-                  <remcom::rxapi::Boolean Value="true"/>
+                  <remcom::rxapi::Boolean Value="false"/>
                 </Requested>
                 <ValidForModel>
                   <remcom::rxapi::Boolean Value="true"/>
@@ -131,7 +131,7 @@
             <DirectionOfArrival>
               <remcom::rxapi::OutputRequest>
                 <Requested>
-                  <remcom::rxapi::Boolean Value="true"/>
+                  <remcom::rxapi::Boolean Value="false"/>
                 </Requested>
                 <ValidForModel>
                   <remcom::rxapi::Boolean Value="true"/>
@@ -141,7 +141,7 @@
             <DirectionOfDeparture>
               <remcom::rxapi::OutputRequest>
                 <Requested>
-                  <remcom::rxapi::Boolean Value="true"/>
+                  <remcom::rxapi::Boolean Value="false"/>
                 </Requested>
                 <ValidForModel>
                   <remcom::rxapi::Boolean Value="true"/>
@@ -321,7 +321,7 @@
             <PathGain>
               <remcom::rxapi::OutputRequest>
                 <Requested>
-                  <remcom::rxapi::Boolean Value="true"/>
+                  <remcom::rxapi::Boolean Value="false"/>
                 </Requested>
                 <ValidForModel>
                   <remcom::rxapi::Boolean Value="true"/>
