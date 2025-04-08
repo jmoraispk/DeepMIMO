@@ -22,14 +22,16 @@ import deepmimo as dm  # type: ignore
 OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
 BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender 3.6/blender-launcher.exe"
 BLENDER_SCRIPT_PATH = "./blender_osm_export.py"
-MATERIALS_DIR = "./resource/material"
 
 # Wireless InSite
-WI_EXE = "C:/Program Files/Remcom/Wireless InSite 4.0.0/bin/calc/wibatch.exe"
+WI_ROOT = "C:/Program Files/Remcom/Wireless InSite 4.0.0"
+WI_EXE = os.path.join(WI_ROOT, "bin/calc/wibatch.exe")
+WI_MAT = os.path.join(WI_ROOT, "materials")
 WI_LIC = "C:/Users/jmora/Documents/GitHub/DeepMIMO/executables/wireless insite"
-WI_VERSION = "4.0.0"
+WI_VERSION = "4.0.1"
 
 # Material paths
+MATERIALS_DIR = "./resources/material" ## TO DELETE AND USE WI_MAT INSTEAD
 BUILDING_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Concrete 3.5 GHz.mtl")
 ROAD_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "Asphalt_1GHz.mtl")
 TERRAIN_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Wet earth 3.5 GHz.mtl")
@@ -37,7 +39,6 @@ TERRAIN_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Wet earth 3.5 GHz.mtl")
 # Ray-tracing parameters
 UE_HEIGHT = 1.5  # meters
 BS_HEIGHT = 20  # meters
-BATCH_SIZE = 30
 GRID_SPACING = 1.0  # meters
 
 
@@ -188,22 +189,20 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
 
     insite_path, study_area_path = create_directory_structure(osm_folder, rt_params)
     
-    # Generate city features
-    city_feature_list = generate_city(
-        str(osm_folder) + os.sep,
-        str(insite_path) + os.sep,
-        building_mtl_path=BUILDING_MATERIAL_PATH,
-        road_mtl_path=ROAD_MATERIAL_PATH,
-    )
+    # Generate city features (creates roads.city and buildings.city)
+    generate_city(osm_folder + os.sep, insite_path + os.sep, 
+                  building_mtl_path=BUILDING_MATERIAL_PATH, 
+                  road_mtl_path=ROAD_MATERIAL_PATH)
+    
+    # xmin, ymin, xmax, ymax = convert_GpsBBox2CartesianBBox(
+    #     rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
+    #     rt_params['origin_lat'], rt_params['origin_lon'], pad=0
+    # )
 
-    xmin, ymin, xmax, ymax = convert_GpsBBox2CartesianBBox(
-        rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
-        rt_params['origin_lat'], rt_params['origin_lon'], pad=0
-    )
     xmin_pad, ymin_pad, xmax_pad, ymax_pad = convert_GpsBBox2CartesianBBox(
         rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
         rt_params['origin_lat'], rt_params['origin_lon'], pad=30
-    )
+    ) # pad makes the box larger
 
     folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_{rt_params['bandwidth']/1e6:.0f}MHz_"
                    f"{rt_params['max_paths']}paths_{rt_params['max_reflections']}ref_{rt_params['max_transmissions']}trans_{rt_params['max_diffractions']}diff")
@@ -239,11 +238,12 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     txrx_editor.save(os.path.join(insite_path, "insite.txrx"))
 
     # Calculate grid info
-    row_indices, users_per_row = get_grid_info(xmin, ymin, xmax, ymax, grid_spacing)
+    # row_indices, users_per_row = get_grid_info(xmin, ymin, xmax, ymax, grid_spacing)
     
     # Create setup file
     scenario = SetupEditor(str(insite_path))
-    scenario.set_carrierFreq_and_bandwidth(carrier_frequency=rt_params['carrier_freq'], bandwidth=rt_params['bandwidth'])
+    scenario.set_carrierFreq(rt_params['carrier_freq'])
+    scenario.set_bandwidth(rt_params['bandwidth'])
     scenario.set_study_area(
         zmin=-3,
         zmax=20,
@@ -268,8 +268,8 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     )
     scenario.set_txrx("/insite.txrx")
     scenario.add_feature("newTerrain.ter", "terrain")
-    for city_feature in city_feature_list:
-        scenario.add_feature(city_feature, "city")
+    scenario.add_feature('buildings.city', "city")
+    scenario.add_feature('roads.city', "road")
     scenario.save("/insite") # insite
 
     # Generate XML and run simulation
@@ -281,12 +281,9 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     license_info = ["-set_licenses", WI_LIC] if WI_VERSION.startswith("4") else []
     
     # Run Wireless InSite
-    subprocess.run([
-        WI_EXE,
-        "-f", xml_path,
-        "-out", study_area_path,
-        "-p", "insite",
-    ] + license_info, check=True)
+    command = [WI_EXE, "-f", xml_path, "-out", study_area_path, "-p", "insite"] + license_info
+    print('running command: ', ' '.join(command))
+    subprocess.run(command, check=True)
     
     return insite_path
 
@@ -316,11 +313,6 @@ for index, row in df.iterrows():
     # Read origin coordinates
     with open(os.path.join(osm_folder, 'osm_gps_origin.txt'), "r") as f:
         rt_params['origin_lat'], rt_params['origin_lon'] = map(float, f.read().split())
-    print(f"origin_lat: {rt_params['origin_lat']}, origin_lon: {rt_params['origin_lon']}")
-
-    user_grid = generate_user_grid(row, rt_params['origin_lat'], rt_params['origin_lon'])
-    print(f"User grid shape: {user_grid.shape}")
-    print("✓ Paths and directories set up")
 
 	# Generate RX and TX positions
     print("\nPHASE 5: Generating transmitter and receiver positions...")
@@ -331,21 +323,19 @@ for index, row in df.iterrows():
 	# Ray Tracing
     print("\nPHASE 6: Running Wireless InSite ray tracing...")
     insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
-    # insite_rt_path = "C:/Users/jmora/Downloads/osm_root/bbox_40.68503298_-73.84682129_40.68597435_-73.84336302/insite_3.5GHz_10MHz_10paths_5ref_0trans_0diff"
     print(f"✓ Ray tracing completed. Results saved to: {insite_rt_path}")
 
 	# Convert to DeepMIMO
-    # print("\nPHASE 7: Converting to DeepMIMO format...")
-    scen_insite = dm.convert(insite_rt_path) #-- supposed to be deepmimo
-    # print("✓ Conversion to DeepMIMO completed")
+    print("\nPHASE 7: Converting to DeepMIMO format...")
+    dm.config('wireless_insite_version', WI_VERSION)
+    # scen_insite = dm.convert(insite_rt_path)
+    print("✓ Conversion to DeepMIMO completed")
 
 	# Test Conversion
-    # print("\nPHASE 8: Testing DeepMIMO conversion...")
-    dataset_insite = dm.load(scen_insite)
-    # print("✓ DeepMIMO conversion test completed")
+    print("\nPHASE 8: Testing DeepMIMO conversion...")
+    # dataset_insite = dm.load(scen_insite)
+    print("✓ DeepMIMO conversion test completed")
 
     print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')
     print('--------------------')
     break
-
-#%%
