@@ -1,4 +1,12 @@
+"""
+XmlGenerator module for XML file generation.
+
+This module provides functionality to generate XML files for electromagnetic simulations,
+including study area, ray tracing parameters, and features.
+"""
+
 import numpy as np
+from typing import Dict, List, Optional, Tuple, Union
 
 from lxml import etree
 import xml.etree.ElementTree as ET
@@ -12,10 +20,43 @@ XML_TEMPLATE_PATH = "resources/xml/"
 # XML parser
 XML_PARSER = etree.XMLParser(recover=True)
 
+# Format string for floating-point values
 FLOAT_STR = "%.17g"
 
+
 class XmlGenerator:
-    def __init__(self, scenario_path, setup_path, version=3):
+    """Class for generating XML files for electromagnetic simulation.
+    
+    This class provides methods to generate XML files for electromagnetic simulations,
+    including study area, ray tracing parameters, and features.
+    
+    Attributes:
+        version (int): Version of the XML format
+        scenario_path (str): Path to the scenario directory
+        scenario (SetupEditor): SetupEditor instance for the scenario
+        name (str): Name of the scenario
+        txrx (TxRxEditor): TxRxEditor instance for the scenario
+        terrain (Material): Material properties for the terrain
+        city (Material): Material properties for the city
+        road (Material): Material properties for the road
+        xml (etree._ElementTree): XML tree for the study area
+        root (etree._Element): Root element of the XML tree
+        scene_root (etree._Element): Scene element of the XML tree
+        antenna_template_xml (etree._ElementTree): Template for antenna XML
+        geometry_city_template_xml (etree._ElementTree): Template for city geometry XML
+        geometry_terrain_template_xml (etree._ElementTree): Template for terrain geometry XML
+        txrx_point_template_xml (etree._ElementTree): Template for point transmitter/receiver XML
+        txrx_grid_template_xml (etree._ElementTree): Template for grid transmitter/receiver XML
+    """
+    
+    def __init__(self, scenario_path: str, setup_path: str, version: int = 3) -> None:
+        """Initialize the XmlGenerator with a scenario path and setup path.
+        
+        Args:
+            scenario_path (str): Path to the scenario directory
+            setup_path (str): Path to the setup file
+            version (int, optional): Version of the XML format. Defaults to 3.
+        """
         self.version = version
         self.scenario_path = scenario_path
         self.scenario = SetupEditor(scenario_path, setup_path)
@@ -38,7 +79,8 @@ class XmlGenerator:
         self.scene_root = self.root.find(".//Scene")[0]
         self.load_templates()
 
-    def load_templates(self):
+    def load_templates(self) -> None:
+        """Load XML templates for antennas, geometries, and transmitters/receivers."""
         self.antenna_template_xml = etree.parse(XML_TEMPLATE_PATH + "Antenna.xml", XML_PARSER)
 
         self.geometry_city_template_xml = etree.parse(XML_TEMPLATE_PATH + "GeometryCity.xml", XML_PARSER)
@@ -55,26 +97,30 @@ class XmlGenerator:
         self.txrx_point_template_xml = etree.parse(tx_point_path, XML_PARSER)
         self.txrx_grid_template_xml = etree.parse(tx_grid_path, XML_PARSER)
 
-    def update_name(self):
+    def update_name(self) -> None:
+        """Update the name in the XML file."""
         tmp = self.root.find(".//OutputPrefix")
         tmp[0].attrib["Value"] = self.name
 
         tmp = self.root.find(".//PathResultsDatabase")
         tmp[0][0][0][0][0].attrib["Value"] = tmp[0][0][0][0][0].attrib["Value"].replace('template', self.name)
 
-    def set_carrier_freq(self):
+    def set_carrier_freq(self) -> None:
+        """Set the carrier frequency in the XML file."""
         tmp = self.root.findall(".//CarrierFrequency")
         for t in tmp:
             t[0].attrib["Value"] = FLOAT_STR % (self.scenario.carrier_frequency)
 
-    def set_bandwidth(self):
+    def set_bandwidth(self) -> None:
+        """Set the bandwidth in the XML file."""
         tmp = self.root.findall(".//Bandwidth")
         for t in tmp:
             t[0].attrib["Value"] = FLOAT_STR % (
                 self.scenario.bandwidth / 1e6
             )  # bandwidth is in MHz unit in the xml file
 
-    def set_study_area(self):
+    def set_study_area(self) -> None:
+        """Set the study area parameters in the XML file."""
         tmp = self.root.findall(".//StudyArea")[0]
 
         MaxZ = tmp.findall(".//MaxZ")[0]
@@ -93,7 +139,8 @@ class XmlGenerator:
             ["%.6g" % i for i in self.scenario.study_area.all_vertex[:, 1]]
         )
     
-    def set_ray_tracing_param(self):
+    def set_ray_tracing_param(self) -> None:
+        """Set the ray tracing parameters in the XML file."""
         tmp = self.root.findall(".//Model")[0]
 
         x = tmp.findall(".//MaximumPathsPerReceiverPoint")[0]
@@ -126,12 +173,14 @@ class XmlGenerator:
         x = tmp.findall(".//DiffuseScatteringFinalInteractionOnly")[0]
         x[0].attrib["Value"] = str(self.scenario.ray_tracing_param.ds_final_interaction_only).lower()
 
-    def set_antenna(self):
+    def set_antenna(self) -> None:
+        """Set the antenna parameters in the XML file."""
         antenna_parent = self.scene_root.findall('AntennaList')[0][0]
         new_antenna = etree.fromstring(etree.tostring(self.antenna_template_xml), XML_PARSER)
         antenna_parent.append(new_antenna) # insert b before a
 
-    def set_txrx(self):
+    def set_txrx(self) -> None:
+        """Set the transmitter/receiver parameters in the XML file."""
         txrx_parent = self.scene_root.findall('TxRxSetList')[0][0]
         for txrx in self.txrx.txrx[::-1]:
             if txrx.txrx_type == 'points':
@@ -187,7 +236,8 @@ class XmlGenerator:
 
             txrx_parent.append(new_txrx)
 
-    def set_geometry(self):
+    def set_geometry(self) -> None:
+        """Set the geometry parameters in the XML file."""
         geometry_parent = self.scene_root.findall('GeometryList')[0][0]
         
         # Map feature types to their corresponding materials and templates
@@ -228,8 +278,13 @@ class XmlGenerator:
             new_geometry = etree.fromstring(new_geometry, XML_PARSER)
             geometry_parent.append(new_geometry)
     
-    def _set_material_properties(self, geometry, material):
-        """Helper method to set material properties in the geometry XML."""
+    def _set_material_properties(self, geometry: etree._Element, material: Material) -> None:
+        """Set material properties in the geometry XML.
+        
+        Args:
+            geometry (etree._Element): Geometry element
+            material (Material): Material properties
+        """
         properties = [
             ("Conductivity", material.conductivity, FLOAT_STR),
             ("Permittivity", material.permittivity, FLOAT_STR),
@@ -246,7 +301,8 @@ class XmlGenerator:
             x = geometry.findall(f".//{prop_name}")[0]
             x[0].attrib["Value"] = format_str % value
 
-    def update(self):
+    def update(self) -> None:
+        """Update all parameters in the XML file."""
         self.set_antenna()
         self.set_txrx()
         self.set_geometry()
@@ -257,7 +313,12 @@ class XmlGenerator:
 
         self.set_ray_tracing_param()
 
-    def save(self, save_path):
+    def save(self, save_path: str) -> None:
+        """Save the XML file.
+        
+        Args:
+            save_path (str): Path to save the XML file
+        """
         ET.indent(self.root, space="  ", level=0)
         t = str(etree.tostring(self.root, pretty_print=True, encoding="unicode"))
         t = "<!DOCTYPE InSite>\n" + t

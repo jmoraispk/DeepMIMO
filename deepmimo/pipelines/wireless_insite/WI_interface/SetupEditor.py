@@ -1,10 +1,25 @@
-import numpy as np
+"""
+SetupEditor module for electromagnetic simulation setup.
 
+This module provides functionality to create, edit, and save setup files for
+electromagnetic simulations, including study area, ray tracing parameters, and features.
+"""
+
+import numpy as np
 from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
 
 
 @dataclass
 class StudyArea:
+    """Class representing the study area for electromagnetic simulation.
+    
+    Attributes:
+        zmin (float): Minimum z-coordinate of the study area
+        zmax (float): Maximum z-coordinate of the study area
+        num_vertex (int): Number of vertices defining the study area boundary
+        all_vertex (np.ndarray): Array of vertices defining the study area boundary
+    """
     zmin: float
     zmax: float
     num_vertex: int
@@ -13,6 +28,20 @@ class StudyArea:
 
 @dataclass
 class RayTracingParam:
+    """Class representing ray tracing parameters for electromagnetic simulation.
+    
+    Attributes:
+        max_paths (int): Maximum number of paths to render
+        ray_spacing (float): Spacing between rays
+        max_reflections (int): Maximum number of reflections
+        max_transmissions (int): Maximum number of transmissions
+        max_diffractions (int): Maximum number of diffractions
+        ds_enable (bool): Whether diffuse scattering is enabled
+        ds_max_reflections (int): Maximum number of diffuse reflections
+        ds_max_transmissions (int): Maximum number of diffuse transmissions
+        ds_max_diffractions (int): Maximum number of diffuse diffractions
+        ds_final_interaction_only (bool): Whether to only apply diffuse scattering at final interaction
+    """
     max_paths: int
     ray_spacing: float
     max_reflections: int
@@ -27,13 +56,43 @@ class RayTracingParam:
 
 @dataclass
 class Feature:
+    """Class representing a feature in the electromagnetic simulation.
+    
+    Attributes:
+        index (int): Index of the feature
+        type (str): Type of the feature (e.g., 'terrain', 'city', 'road')
+        path (str): Path to the feature file
+    """
     index: int
     type: str
     path: str
 
 
 class SetupEditor:
-    def __init__(self, scenario_path, name=None):
+    """Class for editing setup files for electromagnetic simulation.
+    
+    This class provides methods to create, edit, and save setup files for
+    electromagnetic simulations, including study area, ray tracing parameters, and features.
+    
+    Attributes:
+        scenario_path (str): Path to the scenario directory
+        feature_template (List[str]): Template for feature section
+        txrx_template (List[str]): Template for transmitter/receiver section
+        num_feature (int): Number of features
+        feature_sec (List[str]): Feature section of the setup file
+        txrx_sec (List[str]): Transmitter/receiver section of the setup file
+        setup_file (List[str]): Contents of the setup file
+        name (str): Name of the setup
+        features (List[Feature]): List of features in the setup
+    """
+    
+    def __init__(self, scenario_path: str, name: Optional[str] = None) -> None:
+        """Initialize the SetupEditor with a scenario path and optional setup name.
+        
+        Args:
+            scenario_path (str): Path to the scenario directory
+            name (Optional[str], optional): Name of the setup file. Defaults to None.
+        """
         self.scenario_path = scenario_path
 
         with open("resources/setup/feature.txt") as f1:
@@ -54,7 +113,8 @@ class SetupEditor:
 
         self.parse()
 
-    def parse(self):
+    def parse(self) -> None:
+        """Parse the setup file to extract parameters."""
         self.name = self.setup_file[1].split(" ")[-1][:-1]
         self.features = []
         for i, line in enumerate(self.setup_file):
@@ -152,28 +212,59 @@ class SetupEditor:
         )
         return
 
-    def set_carrierFreq(self, carrier_frequency):
+    def set_carrierFreq(self, carrier_frequency: float) -> None:
+        """Set the carrier frequency.
+        
+        Args:
+            carrier_frequency (float): Carrier frequency in Hz
+        """
         self.carrier_frequency = carrier_frequency
 
-    def set_bandwidth(self, bandwidth):
+    def set_bandwidth(self, bandwidth: float) -> None:
+        """Set the bandwidth.
+        
+        Args:
+            bandwidth (float): Bandwidth in Hz
+        """
         self.bandwidth = bandwidth
 
-    def set_study_area(self, zmin, zmax, all_vertex):
+    def set_study_area(self, zmin: float, zmax: float, all_vertex: np.ndarray) -> None:
+        """Set the study area parameters.
+        
+        Args:
+            zmin (float): Minimum z-coordinate of the study area
+            zmax (float): Maximum z-coordinate of the study area
+            all_vertex (np.ndarray): Array of vertices defining the study area boundary
+        """
         self.study_area = StudyArea(zmin, zmax, all_vertex.shape[0], all_vertex)
 
     def set_ray_tracing_param(
         self,
-        max_paths,
-        ray_spacing,
-        max_reflections,
-        max_transmissions,
-        max_diffractions,
-        ds_enable,
-        ds_max_reflections,
-        ds_max_transmissions,
-        ds_max_diffractions,
-        ds_final_interaction_only,
-    ):
+        max_paths: int,
+        ray_spacing: float,
+        max_reflections: int,
+        max_transmissions: int,
+        max_diffractions: int,
+        ds_enable: bool,
+        ds_max_reflections: int,
+        ds_max_transmissions: int,
+        ds_max_diffractions: int,
+        ds_final_interaction_only: bool,
+    ) -> None:
+        """Set the ray tracing parameters.
+        
+        Args:
+            max_paths (int): Maximum number of paths to render
+            ray_spacing (float): Spacing between rays
+            max_reflections (int): Maximum number of reflections
+            max_transmissions (int): Maximum number of transmissions
+            max_diffractions (int): Maximum number of diffractions
+            ds_enable (bool): Whether diffuse scattering is enabled
+            ds_max_reflections (int): Maximum number of diffuse reflections
+            ds_max_transmissions (int): Maximum number of diffuse transmissions
+            ds_max_diffractions (int): Maximum number of diffuse diffractions
+            ds_final_interaction_only (bool): Whether to only apply diffuse scattering at final interaction
+        """
         self.ray_tracing_param = RayTracingParam(
             max_paths,
             ray_spacing,
@@ -187,7 +278,15 @@ class SetupEditor:
             ds_final_interaction_only,
         )
 
-    def set_txrx(self, txrx_file_path):
+    def set_txrx(self, txrx_file_path: str) -> None:
+        """Set the transmitter/receiver file path.
+        
+        Args:
+            txrx_file_path (str): Path to the transmitter/receiver file
+            
+        Raises:
+            ValueError: If no transmitters/receivers are defined in the file
+        """
         num_txrx = 0
         with open(self.scenario_path + txrx_file_path) as f1:
             txrx_file = f1.readlines()
@@ -208,7 +307,13 @@ class SetupEditor:
         self.first_available_txrx = first_available_txrx
         return
 
-    def add_feature(self, feature_file_path, feature_type="object"):
+    def add_feature(self, feature_file_path: str, feature_type: str = "object") -> None:
+        """Add a feature to the setup.
+        
+        Args:
+            feature_file_path (str): Path to the feature file
+            feature_type (str, optional): Type of the feature. Defaults to "object".
+        """
         tmp = self.feature_template.copy()
         tmp[1] = tmp[1].replace("[index]", str(self.num_feature))
         tmp[2] = tmp[2].replace("[type]", feature_type)
@@ -217,7 +322,8 @@ class SetupEditor:
         self.feature_sec += tmp
         self.num_feature += 1
 
-    def update_carrier_frequency_bandwidth(self):
+    def update_carrier_frequency_bandwidth(self) -> None:
+        """Update the carrier frequency and bandwidth in the setup file."""
         for i, line in enumerate(self.setup_file):
             if line.startswith("CarrierFrequency "):
                 self.setup_file[i] = "CarrierFrequency %.6f\n" % self.carrier_frequency
@@ -226,7 +332,8 @@ class SetupEditor:
                 self.setup_file[i] = "bandwidth %.6f\n" % self.bandwidth
                 continue
     
-    def update_study_area(self):
+    def update_study_area(self) -> None:
+        """Update the study area parameters in the setup file."""
         for i, line in enumerate(self.setup_file):
             if line.startswith("begin_<boundary>"):  # study area boundary
                 self.setup_file[i + 8] = "zmin %.6f\n" % self.study_area.zmin
@@ -240,7 +347,8 @@ class SetupEditor:
                     )
                 return
     
-    def update_ray_tracing_param(self):
+    def update_ray_tracing_param(self) -> None:
+        """Update the ray tracing parameters in the setup file."""
         for i, line in enumerate(self.setup_file):
             if line.startswith("MaxRenderedPaths"):
                 self.setup_file[i] = "MaxRenderedPaths %d\n" % self.ray_tracing_param.max_paths
@@ -269,7 +377,8 @@ class SetupEditor:
                 self.setup_file[i + 5] = "final_interaction_only yes\n" if self.ray_tracing_param.ds_final_interaction_only else "final_interaction_only no\n"
                 continue
 
-    def update_features(self):
+    def update_features(self) -> None:
+        """Update the features in the setup file."""
         for i, line in enumerate(self.setup_file):
             if line.startswith("end_<studyarea>"):
                 self.feature_start = i + 1
@@ -281,13 +390,20 @@ class SetupEditor:
             + self.setup_file[self.feature_start :]
         )
 
-    def update_all(self):
+    def update_all(self) -> None:
+        """Update all parameters in the setup file."""
         self.update_carrier_frequency_bandwidth()
         self.update_study_area()
         self.update_ray_tracing_param()
         self.update_features()
 
-    def save(self, name, save_path=None):
+    def save(self, name: str, save_path: Optional[str] = None) -> None:
+        """Save the setup file.
+        
+        Args:
+            name (str): Name of the setup file
+            save_path (Optional[str], optional): Path to save the setup file. Defaults to None.
+        """
         if not save_path:
             save_path = self.scenario_path + name + ".setup"
         self.update_all()

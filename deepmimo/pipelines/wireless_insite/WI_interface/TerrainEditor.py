@@ -1,63 +1,92 @@
 """
-TerrainEditor - A utility for creating and editing terrain (.ter) files for electromagnetic simulation.
+TerrainEditor module for terrain file manipulation.
 
-This module provides functionality to create and modify terrain files used in electromagnetic
-simulation software. The TerrainEditor class focuses on three main operations:
-
-1. Setting vertex positions for a flat rectangular terrain (creating two triangles)
-2. Incorporating material properties from a material file into the .ter file
-3. Saving the resulting .ter file.
-
-The class is designed to work with a template terrain file, modify specific sections of it,
-and output a new terrain file with the desired properties. 
-
-Example usage:
-    editor = TerrainEditor()
-    editor.set_vertex(-200, -200, 200, 200, 0)  # Create a 400x400 flat terrain at z=0
-    editor.set_material("path/to/material.mtl")  # Apply material properties
-    editor.save("output.ter")  # Save the terrain file
+This module provides functionality to create and edit terrain (.ter) files for
+electromagnetic simulations, including setting vertex positions and material properties.
 """
 
 import numpy as np
+from typing import List, Optional
+
 
 class TerrainEditor:
-    """Class for creating and editing terrain (.ter) files."""
+    """Class for creating and editing terrain (.ter) files.
     
-    def __init__(self, template_ter_file="resources/feature/newTerrain.ter"):
+    This class provides methods to set vertex positions for a flat rectangular terrain,
+    incorporate material properties, and save the resulting terrain file.
+    
+    Attributes:
+        template_ter_file (str): Path to the template terrain file
+        file (List[str]): Contents of the terrain file
+        material_file (Optional[List[str]]): Contents of the material file
+    """
+    
+    def __init__(self, template_ter_file: str = "resources/feature/newTerrain.ter") -> None:
+        """Initialize the TerrainEditor with a template terrain file.
+        
+        Args:
+            template_ter_file (str, optional): Path to the template terrain file. 
+                                              Defaults to "resources/feature/newTerrain.ter".
+        """
         self.template_ter_file = template_ter_file
         with open(self.template_ter_file, "r") as f:
             self.file = f.readlines()
 
-    def set_vertex(self, xmin, ymin, xmax, ymax, z=0):
-        """ Write vertices of the flat rectangular terrain to the file: 2 triangles """
+    def set_vertex(self, xmin: float, ymin: float, xmax: float, ymax: float, z: float = 0) -> None:
+        """Set the vertices of a flat rectangular terrain.
+        
+        Creates a flat rectangular terrain with the specified dimensions by setting
+        the vertices of two triangles that form the rectangle.
+        
+        Args:
+            xmin (float): Minimum x-coordinate
+            ymin (float): Minimum y-coordinate
+            xmax (float): Maximum x-coordinate
+            ymax (float): Maximum y-coordinate
+            z (float, optional): z-coordinate (height). Defaults to 0.
+        """
         v1 = np.asarray([xmin, ymin, z])
         v2 = np.asarray([xmax, ymin, z])
         v3 = np.asarray([xmax, ymax, z])
         v4 = np.asarray([xmin, ymax, z])
 
+        # First triangle (v1, v2, v3)
         self.file[40] = "%.10f %.10f %.10f\n" % (v1[0], v1[1], v1[2])
         self.file[41] = "%.10f %.10f %.10f\n" % (v2[0], v2[1], v2[2])
         self.file[42] = "%.10f %.10f %.10f\n" % (v3[0], v3[1], v3[2])
 
+        # Second triangle (v4, v1, v3)
         self.file[47] = "%.10f %.10f %.10f\n" % (v4[0], v4[1], v4[2])
         self.file[48] = "%.10f %.10f %.10f\n" % (v1[0], v1[1], v1[2])
         self.file[49] = "%.10f %.10f %.10f\n" % (v3[0], v3[1], v3[2])
 
-    def set_material(self, material_path):
-        """ Write material properties to the file """
+    def set_material(self, material_path: str) -> None:
+        """Set the material properties for the terrain.
+        
+        Reads a material file and incorporates its properties into the terrain file.
+        
+        Args:
+            material_path (str): Path to the material file
+        """
         with open(material_path, "r") as f:
             self.material_file = f.readlines()
 
+        # Find the material section in the terrain file
         for i in range(len(self.file)):
             if self.file[i].startswith("begin_<Material>"):
                 start = i
             if self.file[i].startswith("end_<Material>"):
                 end = i
 
+        # Replace the material section with the new material properties
         self.file = self.file[:start] + self.material_file + self.file[end + 1 :]
 
-    def save(self, outfile_path):
-        """Save the terrain file."""
+    def save(self, outfile_path: str) -> None:
+        """Save the terrain file.
+        
+        Args:
+            outfile_path (str): Path to save the terrain file
+        """
         # clean the output file before writing
         open(outfile_path, "w+").close()
 

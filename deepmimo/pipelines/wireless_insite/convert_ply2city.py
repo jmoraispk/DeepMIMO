@@ -1,7 +1,28 @@
+"""
+Convert PLY files to city files for electromagnetic simulation.
+
+This module provides functionality to convert PLY (Polygon File Format) files to
+city files used in electromagnetic simulations, including material properties.
+"""
+
 from plyfile import PlyData
 import os
+from typing import List, Optional, Tuple, Union
 
-def convert_ply2city(ply_path, material_path, save_path, object_name=None):
+
+def convert_ply2city(ply_path: str, material_path: str, save_path: str, object_name: Optional[str] = None) -> Tuple[int, int]:
+    """Convert a PLY file to a city file with material properties.
+    
+    Args:
+        ply_path (str): Path to the PLY file
+        material_path (str): Path to the material file
+        save_path (str): Path to save the city file
+        object_name (Optional[str], optional): Name of the object. 
+                                             If None, derived from ply_path. Defaults to None.
+    
+    Returns:
+        Tuple[int, int]: Number of vertices and faces in the city file
+    """
     if not object_name:
         object_name = ply_path.split(".")[0].split("/")[-1]
 
@@ -19,17 +40,34 @@ def convert_ply2city(ply_path, material_path, save_path, object_name=None):
     return (len(ply_data["vertex"]), len(ply_data["face"]))
 
 
-def write_reference_sec(f):
+def write_reference_sec(f) -> None:
+    """Write the reference section to the city file.
+    
+    Args:
+        f: File object to write to
+    """
     with open("resources/reference_section.txt") as f1:
         reference_sec = f1.readlines()
     return f.writelines(reference_sec)
 
 
-def write_material_sec(f, material_sec):
+def write_material_sec(f, material_sec: List[str]) -> None:
+    """Write the material section to the city file.
+    
+    Args:
+        f: File object to write to
+        material_sec (List[str]): Material section lines
+    """
     return f.writelines(material_sec)
 
 
-def write_face_sec(f, ply_data):
+def write_face_sec(f, ply_data: PlyData) -> None:
+    """Write the face section to the city file.
+    
+    Args:
+        f: File object to write to
+        ply_data (PlyData): PLY data containing vertices and faces
+    """
     f.write("begin_<structure_group> \n")
     f.write("begin_<structure> \n")
     f.write("begin_<sub_structure> \n")
@@ -55,8 +93,18 @@ def write_face_sec(f, ply_data):
     return
 
 
-def convert_to_city_file(ply_root, city_root, feature_name, material_path):
-    """Helper function to convert a PLY file to a city feature file"""
+def convert_to_city_file(ply_root: str, city_root: str, feature_name: str, material_path: str) -> Optional[str]:
+    """Helper function to convert a PLY file to a city feature file.
+    
+    Args:
+        ply_root (str): Root directory containing PLY files
+        city_root (str): Root directory to save city files
+        feature_name (str): Name of the feature
+        material_path (str): Path to the material file
+    
+    Returns:
+        Optional[str]: Name of the city file if conversion successful, None otherwise
+    """
     ply_path = os.path.join(ply_root, f"{feature_name}.ply")
     save_path = os.path.join(city_root, f"{feature_name}.city")
     
@@ -67,6 +115,7 @@ def convert_to_city_file(ply_root, city_root, feature_name, material_path):
     else:
         print(f"Warning: {ply_path} not found. Skipping {feature_name} conversion.")
         return None
+
 
 if __name__ == "__main__":
     ply_path = "scenario/city_models/scenario_0/gwc_building.ply"
