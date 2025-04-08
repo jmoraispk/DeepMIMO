@@ -12,6 +12,8 @@ XML_TEMPLATE_PATH = "resources/xml/"
 # XML parser
 XML_PARSER = etree.XMLParser(recover=True)
 
+FLOAT_STR = "%.17g"
+
 class XmlGenerator:
     def __init__(self, scenario_path, setup_path, version=3):
         self.version = version
@@ -70,12 +72,12 @@ class XmlGenerator:
     def set_carrier_freq(self):
         tmp = self.root.findall(".//CarrierFrequency")
         for t in tmp:
-            t[0].attrib["Value"] = "%.17g" % (self.scenario.carrier_frequency)
+            t[0].attrib["Value"] = FLOAT_STR % (self.scenario.carrier_frequency)
 
     def set_bandwidth(self):
         tmp = self.root.findall(".//Bandwidth")
         for t in tmp:
-            t[0].attrib["Value"] = "%.17g" % (
+            t[0].attrib["Value"] = FLOAT_STR % (
                 self.scenario.bandwidth / 1e6
             )  # bandwidth is in MHz unit in the xml file
 
@@ -83,10 +85,10 @@ class XmlGenerator:
         tmp = self.root.findall(".//StudyArea")[0]
 
         MaxZ = tmp.findall(".//MaxZ")[0]
-        MaxZ[0].attrib["Value"] = "%.17g" % (self.scenario.study_area.zmax)
+        MaxZ[0].attrib["Value"] = FLOAT_STR % (self.scenario.study_area.zmax)
 
         MinZ = tmp.findall(".//MinZ")[0]
-        MinZ[0].attrib["Value"] = "%.17g" % (self.scenario.study_area.zmin)
+        MinZ[0].attrib["Value"] = FLOAT_STR % (self.scenario.study_area.zmin)
 
         X = tmp.findall(".//X")[0]
         X[0].attrib["Value"] = " ".join(
@@ -105,7 +107,7 @@ class XmlGenerator:
         x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.max_paths)
 
         x = tmp.findall(".//RaySpacing")[0]
-        x[0].attrib["Value"] = "%.17g" % (self.scenario.ray_tracing_param.ray_spacing)
+        x[0].attrib["Value"] = FLOAT_STR % (self.scenario.ray_tracing_param.ray_spacing)
 
         x = tmp.findall(".//Reflections")[0]
         x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.max_reflections)
@@ -142,27 +144,27 @@ class XmlGenerator:
             if txrx.txrx_type == 'points':
                 new_txrx = etree.fromstring(etree.tostring(self.txrx_point_template_xml), XML_PARSER)
                 x = new_txrx.findall(".//X")[0]
-                x[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[0]
+                x[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[0]
                 y = new_txrx.findall(".//Y")[0]
-                y[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[1]
+                y[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[1]
                 z = new_txrx.findall(".//Z")[0]
-                z[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[2]
+                z[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[2]
 
             elif txrx.txrx_type == 'grid':
                 new_txrx = etree.fromstring(etree.tostring(self.txrx_grid_template_xml), XML_PARSER)
                 x = new_txrx.findall(".//X")[0]
-                x[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[0]
+                x[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[0]
                 y = new_txrx.findall(".//Y")[0]
-                y[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[1]
+                y[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[1]
                 z = new_txrx.findall(".//Z")[0]
-                z[0].attrib["Value"] = "%.17g" %txrx.txrx_pos[2]
+                z[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[2]
 
                 len_x = new_txrx.findall(".//LengthX")[0]
-                len_x[0].attrib["Value"] = "%.17g" %np.float32(txrx.grid_side[0])
+                len_x[0].attrib["Value"] = FLOAT_STR %np.float32(txrx.grid_side[0])
                 len_y = new_txrx.findall(".//LengthY")[0]
-                len_y[0].attrib["Value"] = "%.17g" %np.float32(txrx.grid_side[1])
+                len_y[0].attrib["Value"] = FLOAT_STR %np.float32(txrx.grid_side[1])
                 grid_spacing = new_txrx.findall(".//Spacing")[0]
-                grid_spacing[0].attrib["Value"] = "%.17g" %txrx.grid_spacing
+                grid_spacing[0].attrib["Value"] = FLOAT_STR %txrx.grid_spacing
 
             else:
                 raise ValueError("Unsupported TxRx type: "+txrx.txrx_type)
@@ -236,15 +238,15 @@ class XmlGenerator:
     def _set_material_properties(self, geometry, material):
         """Helper method to set material properties in the geometry XML."""
         properties = [
-            ("Conductivity", material.conductivity, "%.17g"),
-            ("Permittivity", material.permittivity, "%.17g"),
-            ("Roughness", material.roughness, "%.17g"),
-            ("Thickness", material.thickness, "%.17g"),
+            ("Conductivity", material.conductivity, FLOAT_STR),
+            ("Permittivity", material.permittivity, FLOAT_STR),
+            ("Roughness", material.roughness, FLOAT_STR),
+            ("Thickness", material.thickness, FLOAT_STR),
             ("Alpha", material.directive_alpha, "%d"),
             ("Beta", material.directive_beta, "%d"),
-            ("CrossPolFraction", material.cross_polarized_power, "%.17g"),
-            ("Lambda", material.directive_lambda, "%.17g"),
-            ("ScatteringFactor", material.fields_diffusively_scattered, "%.17g")
+            ("CrossPolFraction", material.cross_polarized_power, FLOAT_STR),
+            ("Lambda", material.directive_lambda, FLOAT_STR),
+            ("ScatteringFactor", material.fields_diffusively_scattered, FLOAT_STR)
         ]
         
         for prop_name, value, format_str in properties:
