@@ -1,5 +1,4 @@
 #%% Imports
-from pathlib import Path
 from generate_city.generate_city import generate_city
 from WI_interface.XmlGenerator import XmlGenerator
 from WI_interface.SetupEditor import SetupEditor
@@ -31,10 +30,9 @@ WI_LIC = "C:/Users/jmora/Documents/GitHub/DeepMIMO/executables/wireless insite"
 WI_VERSION = "4.0.1"
 
 # Material paths
-MATERIALS_DIR = "./resources/material" ## TO DELETE AND USE WI_MAT INSTEAD
-BUILDING_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Concrete 3.5 GHz.mtl")
-ROAD_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "Asphalt_1GHz.mtl")
-TERRAIN_MATERIAL_PATH = str(Path(MATERIALS_DIR) / "ITU Wet earth 3.5 GHz.mtl")
+BUILDING_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Concrete 3.5 GHz.mtl")
+ROAD_MATERIAL_PATH = os.path.join(WI_MAT, "Asphalt_1GHz.mtl")
+TERRAIN_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Wet earth 3.5 GHz.mtl")
 
 # Ray-tracing parameters
 UE_HEIGHT = 1.5  # meters
@@ -328,12 +326,12 @@ for index, row in df.iterrows():
 	# Convert to DeepMIMO
     print("\nPHASE 7: Converting to DeepMIMO format...")
     dm.config('wireless_insite_version', WI_VERSION)
-    # scen_insite = dm.convert(insite_rt_path)
+    scen_insite = dm.convert(insite_rt_path)
     print("✓ Conversion to DeepMIMO completed")
 
 	# Test Conversion
     print("\nPHASE 8: Testing DeepMIMO conversion...")
-    # dataset_insite = dm.load(scen_insite)
+    dataset_insite = dm.load(scen_insite)[0]
     print("✓ DeepMIMO conversion test completed")
 
     print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')

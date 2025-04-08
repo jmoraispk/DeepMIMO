@@ -1,18 +1,23 @@
+"""
+This module provides a dataclass for representing material properties in electromagnetic simulations.
+
+And provides a method to parse material properties from a file. 
+"""
 import numpy as np
 from dataclasses import dataclass, fields
 
 @dataclass
 class Material:
     """Class representing material properties for electromagnetic simulation."""
-    fields_diffusively_scattered: float
-    cross_polarized_power: float
-    directive_alpha: int
-    directive_beta: int
-    directive_lambda: float
-    conductivity: float
-    permittivity: float
-    roughness: float
-    thickness: float
+    fields_diffusively_scattered: float = 0.0
+    cross_polarized_power: float = 0.0
+    directive_alpha: int = 4.0
+    directive_beta: int = 4.0
+    directive_lambda: float = 0.5
+    conductivity: float = 0.0
+    permittivity: float = 1.0
+    roughness: float = 0.0
+    thickness: float = 0.0
     
     @classmethod
     def from_file(cls, file_path):

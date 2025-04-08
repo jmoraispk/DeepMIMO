@@ -47,13 +47,13 @@
                       <remcom::rxapi::Integer Value="4"/>
                     </Beta>
                     <CrossPolFraction>
-                      <remcom::rxapi::Double Value="0.40000000000000002"/>
+                      <remcom::rxapi::Double Value="0.0"/>
                     </CrossPolFraction>
                     <Lambda>
-                      <remcom::rxapi::Double Value="0.75"/>
+                      <remcom::rxapi::Double Value="0.5"/>
                     </Lambda>
                     <ScatteringFactor>
-                      <remcom::rxapi::Double Value="0.40000000000000002"/>
+                      <remcom::rxapi::Double Value="0.0"/>
                     </ScatteringFactor>
                     <ScatteringModel>
                       <remcom::rxapi::DiffuseScatteringModelEnum Value="DirectiveWithBackscatter"/>
