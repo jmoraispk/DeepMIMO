@@ -6,7 +6,7 @@ used in electromagnetic simulations.
 """
 
 from math import cos, sin, radians
-from typing import List, Union, Tuple
+from typing import List
 
 
 class ObjectEditor:

@@ -8,7 +8,7 @@ and Cartesian coordinates, as well as bounding box transformations.
 
 import numpy as np
 import utm
-from typing import Tuple, Union, List
+from typing import Tuple, Union
 
 
 def xy_from_latlong(lat: Union[float, np.ndarray], long: Union[float, np.ndarray]) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray]]:

@@ -5,9 +5,9 @@ This module provides functionality to convert PLY (Polygon File Format) files to
 city files used in electromagnetic simulations, including material properties.
 """
 
-from plyfile import PlyData
 import os
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
+from plyfile import PlyData
 
 
 def convert_ply2city(ply_path: str, material_path: str, save_path: str, object_name: Optional[str] = None) -> Tuple[int, int]:

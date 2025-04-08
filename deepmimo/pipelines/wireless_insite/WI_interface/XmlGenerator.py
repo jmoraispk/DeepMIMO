@@ -5,9 +5,8 @@ This module provides functionality to generate XML files for electromagnetic sim
 including study area, ray tracing parameters, and features.
 """
 
+import os
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
-
 from lxml import etree
 import xml.etree.ElementTree as ET
 from WI_interface.SetupEditor import SetupEditor
@@ -49,24 +48,31 @@ class XmlGenerator:
         txrx_grid_template_xml (etree._ElementTree): Template for grid transmitter/receiver XML
     """
     
-    def __init__(self, scenario_path: str, setup_path: str, version: int = 3) -> None:
-        """Initialize the XmlGenerator with a scenario path and setup path.
+    def __init__(self, scenario_path: str, setup: SetupEditor, version: int = 3) -> None:
+        """Initialize the XmlGenerator with a scenario path and setup instance.
         
         Args:
             scenario_path (str): Path to the scenario directory
-            setup_path (str): Path to the setup file
+            setup (SetupEditor): SetupEditor instance
             version (int, optional): Version of the XML format. Defaults to 3.
         """
         self.version = version
         self.scenario_path = scenario_path
-        self.scenario = SetupEditor(scenario_path, setup_path)
-        self.name = self.scenario.name
-        self.txrx = TxRxEditor(scenario_path + self.scenario.txrx_file_path)
+        self.setup = setup
+        self.name = self.setup.name
+        self.txrx = TxRxEditor(os.path.join(self.scenario_path, 'insite.txrx'))
         
         # Extract material properties from terrain / city / road files
-        self.terrain = Material.from_file(scenario_path + self.scenario.terrain_file_path)
-        self.city = Material.from_file(scenario_path + self.scenario.city_file_path)
-        self.road = Material.from_file(scenario_path + self.scenario.road_file_path)
+        self.terrain = Material.from_file(self.setup.get_terrain_path())
+        self.city = Material.from_file(self.setup.get_city_path())
+        self.road = Material.from_file(self.setup.get_road_path())
+        
+        print('city path: ', self.setup.get_city_path())
+        print('city material: ', self.city)
+        print('terrain path: ', self.setup.get_terrain_path())
+        print('terrain material: ', self.terrain)
+        print('road path: ', self.setup.get_road_path())
+        print('road material: ', self.road)
 
         study_area_template = XML_TEMPLATE_PATH + "template.study_area.xml"
         if self.version >= 4:
@@ -109,14 +115,14 @@ class XmlGenerator:
         """Set the carrier frequency in the XML file."""
         tmp = self.root.findall(".//CarrierFrequency")
         for t in tmp:
-            t[0].attrib["Value"] = FLOAT_STR % (self.scenario.carrier_frequency)
+            t[0].attrib["Value"] = FLOAT_STR % (self.setup.carrier_frequency)
 
     def set_bandwidth(self) -> None:
         """Set the bandwidth in the XML file."""
         tmp = self.root.findall(".//Bandwidth")
         for t in tmp:
             t[0].attrib["Value"] = FLOAT_STR % (
-                self.scenario.bandwidth / 1e6
+                self.setup.bandwidth / 1e6
             )  # bandwidth is in MHz unit in the xml file
 
     def set_study_area(self) -> None:
@@ -124,19 +130,19 @@ class XmlGenerator:
         tmp = self.root.findall(".//StudyArea")[0]
 
         MaxZ = tmp.findall(".//MaxZ")[0]
-        MaxZ[0].attrib["Value"] = FLOAT_STR % (self.scenario.study_area.zmax)
+        MaxZ[0].attrib["Value"] = FLOAT_STR % (self.setup.study_area.zmax)
 
         MinZ = tmp.findall(".//MinZ")[0]
-        MinZ[0].attrib["Value"] = FLOAT_STR % (self.scenario.study_area.zmin)
+        MinZ[0].attrib["Value"] = FLOAT_STR % (self.setup.study_area.zmin)
 
         X = tmp.findall(".//X")[0]
         X[0].attrib["Value"] = " ".join(
-            ["%.6g" % i for i in self.scenario.study_area.all_vertex[:, 0]]
+            ["%.6g" % i for i in self.setup.study_area.all_vertex[:, 0]]
         )
 
         Y = tmp.findall(".//Y")[0]
         Y[0].attrib["Value"] = " ".join(
-            ["%.6g" % i for i in self.scenario.study_area.all_vertex[:, 1]]
+            ["%.6g" % i for i in self.setup.study_area.all_vertex[:, 1]]
         )
     
     def set_ray_tracing_param(self) -> None:
@@ -144,34 +150,34 @@ class XmlGenerator:
         tmp = self.root.findall(".//Model")[0]
 
         x = tmp.findall(".//MaximumPathsPerReceiverPoint")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.max_paths)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.max_paths)
 
         x = tmp.findall(".//RaySpacing")[0]
-        x[0].attrib["Value"] = FLOAT_STR % (self.scenario.ray_tracing_param.ray_spacing)
+        x[0].attrib["Value"] = FLOAT_STR % (self.setup.ray_tracing_param.ray_spacing)
 
         x = tmp.findall(".//Reflections")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.max_reflections)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.max_reflections)
 
         x = tmp.findall(".//Transmissions")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.max_transmissions)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.max_transmissions)
 
         x = tmp.findall(".//Diffractions")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.max_diffractions)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.max_diffractions)
 
         x = tmp.findall(".//DiffuseScatteringEnabled")[0]
-        x[0].attrib["Value"] = str(self.scenario.ray_tracing_param.ds_enable).lower()
+        x[0].attrib["Value"] = str(self.setup.ray_tracing_param.ds_enable).lower()
 
         x = tmp.findall(".//DiffuseScatteringReflections")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.ds_max_reflections)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.ds_max_reflections)
 
         x = tmp.findall(".//DiffuseScatteringTransmissions")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.ds_max_transmissions)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.ds_max_transmissions)
 
         x = tmp.findall(".//DiffuseScatteringDiffractions")[0]
-        x[0].attrib["Value"] = "%d" % (self.scenario.ray_tracing_param.ds_max_diffractions)
+        x[0].attrib["Value"] = "%d" % (self.setup.ray_tracing_param.ds_max_diffractions)
 
         x = tmp.findall(".//DiffuseScatteringFinalInteractionOnly")[0]
-        x[0].attrib["Value"] = str(self.scenario.ray_tracing_param.ds_final_interaction_only).lower()
+        x[0].attrib["Value"] = str(self.setup.ray_tracing_param.ds_final_interaction_only).lower()
 
     def set_antenna(self) -> None:
         """Set the antenna parameters in the XML file."""
@@ -259,7 +265,7 @@ class XmlGenerator:
             }
         }
         
-        for feature in self.scenario.features:
+        for feature in self.setup.features:
             if feature.type not in feature_config:
                 raise ValueError("Unsupported Geometry type: "+feature.type)
                 

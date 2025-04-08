@@ -6,8 +6,6 @@ electromagnetic simulations, including setting vertex positions and material pro
 """
 
 import numpy as np
-from typing import List, Optional
-
 
 class TerrainEditor:
     """Class for creating and editing terrain (.ter) files.

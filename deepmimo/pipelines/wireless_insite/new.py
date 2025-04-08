@@ -307,6 +307,8 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
 
     # Configure Tx/Rx (.txrx)
     txrx_editor = TxRxEditor()
+
+    # TX (BS)
     for b_idx, pos in enumerate(tx_pos):
         txrx_editor.add_txrx(
             txrx_type="points",
@@ -316,6 +318,7 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
             name=f"BS{b_idx+1}"
         )
 
+    # RX (UEs)
     grid_side = [xmax_pad - xmin_pad, ymax_pad - ymin_pad]
     txrx_editor.add_txrx(
         txrx_type="grid",
@@ -332,7 +335,7 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
     # row_indices, users_per_row = get_grid_info(xmin, ymin, xmax, ymax, grid_spacing)
     
     # Create setup file (.setup)
-    scenario = SetupEditor(str(insite_path))
+    scenario = SetupEditor(insite_path)
     scenario.set_carrierFreq(rt_params['carrier_freq'])
     scenario.set_bandwidth(rt_params['bandwidth'])
     scenario.set_study_area(
@@ -348,15 +351,15 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
     # Get ray tracing parameter names from the dataclass
     rt_param_names = {field.name for field in fields(RayTracingParam)}
     rt_params_filtered = {k: v for k, v in rt_params.items() if k in rt_param_names}
-    scenario.set_ray_tracing_param(**rt_params_filtered)
-    scenario.set_txrx("/insite.txrx")
+    scenario.set_ray_tracing_param(rt_params_filtered)
+    scenario.set_txrx("insite.txrx")
     scenario.add_feature(TERRAIN_TEMPLATE, "terrain")
     scenario.add_feature(bldgs_city, "city")
     scenario.add_feature(roads_city, "road")
-    scenario.save("/insite") # insite.setup
+    scenario.save("insite") # insite.setup
 
-    # Generate XML file (.xml) - what Wireless InSite executable actually uses
-    xml_generator = XmlGenerator(insite_path, "/insite.setup", version=int(WI_VERSION[0]))
+    # Generate XML file (.xml) - What Wireless InSite executable actually uses
+    xml_generator = XmlGenerator(insite_path, scenario, version=int(WI_VERSION[0]))
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")
     xml_generator.save(xml_path)
