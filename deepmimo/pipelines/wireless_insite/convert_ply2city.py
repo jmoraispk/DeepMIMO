@@ -1,5 +1,5 @@
 from plyfile import PlyData
-
+import os
 
 def convert_ply2city(ply_path, material_path, save_path, object_name=None):
     if not object_name:
@@ -54,6 +54,19 @@ def write_face_sec(f, ply_data):
     f.write("end_<structure_group>\n")
     return
 
+
+def convert_to_city_file(ply_root, city_root, feature_name, material_path):
+    """Helper function to convert a PLY file to a city feature file"""
+    ply_path = os.path.join(ply_root, f"{feature_name}.ply")
+    save_path = os.path.join(city_root, f"{feature_name}.city")
+    
+    if os.path.exists(ply_path):
+        num_vertex, num_faces = convert_ply2city(ply_path, material_path, save_path)
+        print(f"Converted {num_vertex} vertices and {num_faces} faces for {feature_name}")
+        return f"{feature_name}.city"
+    else:
+        print(f"Warning: {ply_path} not found. Skipping {feature_name} conversion.")
+        return None
 
 if __name__ == "__main__":
     ply_path = "scenario/city_models/scenario_0/gwc_building.ply"

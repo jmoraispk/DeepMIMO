@@ -26,13 +26,6 @@ class XmlGenerator:
         self.terrain = Material.from_file(scenario_path + self.scenario.terrain_file_path)
         self.city = Material.from_file(scenario_path + self.scenario.city_file_path)
         self.road = Material.from_file(scenario_path + self.scenario.road_file_path)
-        
-        print('city path: ', self.scenario.city_file_path)
-        print('city material: ', self.city)
-        print('terrain path: ', self.scenario.terrain_file_path)
-        print('terrain material: ', self.terrain)
-        print('road path: ', self.scenario.road_file_path)
-        print('road material: ', self.road)
 
         study_area_template = XML_TEMPLATE_PATH + "template.study_area.xml"
         if self.version >= 4:

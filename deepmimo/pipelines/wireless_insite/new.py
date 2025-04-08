@@ -1,19 +1,21 @@
 #%% Imports
-from generate_city.generate_city import generate_city
 from WI_interface.XmlGenerator import XmlGenerator
-from WI_interface.SetupEditor import SetupEditor
+from WI_interface.SetupEditor import SetupEditor, RayTracingParam
 from WI_interface.TxRxEditor import TxRxEditor
 from WI_interface.TerrainEditor import TerrainEditor
+from convert_ply2city import convert_to_city_file
 from geo_utils import convert_GpsBBox2CartesianBBox, convert_Gps2RelativeCartesian
 import pandas as pd
 import numpy as np
 import subprocess
 import os
+from dataclasses import fields
 
 import sys
 sys.path.append("C:/Users/jmora/Documents/GitHub/DeepMIMO")
 import deepmimo as dm  # type: ignore
 
+#from .. import deepmimo as dm 
 
 #%% Resources and Constants
 
@@ -45,9 +47,12 @@ def create_directory_structure(base_path, rt_params):
     """Create necessary directories for the scenario with a professional folder name based on parameters."""
     
     # Format folder name with key parameters
-    folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_{rt_params['bandwidth']/1e6:.0f}MHz_"
-                   f"{rt_params['max_paths']}paths_{rt_params['max_reflections']}ref_{rt_params['max_transmissions']}trans_{rt_params['max_diffractions']}diff")
     
+    folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_"
+                   f"{rt_params['max_reflections']}R_{rt_params['max_diffractions']}D_{rt_params['max_diffractions']}D")
+    insite_path = os.path.join(osm_folder, folder_name)
+    os.makedirs(insite_path, exist_ok=True)
+
     insite_path = os.path.join(base_path, folder_name)
     study_area_path = os.path.join(insite_path, "study_area")
 
@@ -98,6 +103,8 @@ def read_rt_configs(row):
         'bs_lats': bs_lats,
         'bs_lons': bs_lons,
         'carrier_freq': carrier_freq,
+
+        # Ray-tracing parameters -> Efficient if they match the dataclass in SetupEditor.py
         'max_reflections': row['n_reflections'],
         'diffraction': diffraction,
         'scattering': scattering,
@@ -188,10 +195,10 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
     insite_path, study_area_path = create_directory_structure(osm_folder, rt_params)
     
     # Generate city features (creates roads.city and buildings.city)
-    generate_city(osm_folder + os.sep, insite_path + os.sep, 
-                  building_mtl_path=BUILDING_MATERIAL_PATH, 
-                  road_mtl_path=ROAD_MATERIAL_PATH)
-    
+    bldgs_city = convert_to_city_file(osm_folder, insite_path, "buildings", BUILDING_MATERIAL_PATH)
+    roads_city = convert_to_city_file(osm_folder, insite_path, "roads", ROAD_MATERIAL_PATH)
+    TERRAIN_TEMPLATE = "newTerrain.ter"
+
     # xmin, ymin, xmax, ymax = convert_GpsBBox2CartesianBBox(
     #     rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
     #     rt_params['origin_lat'], rt_params['origin_lon'], pad=0
@@ -202,14 +209,10 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
         rt_params['origin_lat'], rt_params['origin_lon'], pad=30
     ) # pad makes the box larger
 
-    folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_{rt_params['bandwidth']/1e6:.0f}MHz_"
-                   f"{rt_params['max_paths']}paths_{rt_params['max_reflections']}ref_{rt_params['max_transmissions']}trans_{rt_params['max_diffractions']}diff")
-    insite_path = os.path.join(osm_folder, folder_name)
-
     terrain_editor = TerrainEditor()
     terrain_editor.set_vertex(xmin=xmin_pad, ymin=ymin_pad, xmax=xmax_pad, ymax=ymax_pad)
     terrain_editor.set_material(TERRAIN_MATERIAL_PATH)
-    terrain_editor.save(os.path.join(insite_path, "newTerrain.ter"))
+    terrain_editor.save(os.path.join(insite_path, TERRAIN_TEMPLATE))
 
     # Configure Tx/Rx
     txrx_editor = TxRxEditor()
@@ -252,22 +255,14 @@ def insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params):
             [xmin_pad, ymax_pad, 0]
         ])
     )
-    scenario.set_ray_tracing_param(
-        rt_params['max_paths'],
-        rt_params['ray_spacing'],
-        rt_params['max_reflections'],
-        rt_params['max_transmissions'],
-        rt_params['max_diffractions'],
-        rt_params['ds_enable'],
-        rt_params['ds_max_reflections'],
-        rt_params['ds_max_transmissions'],
-        rt_params['ds_max_diffractions'],
-        rt_params['ds_final_interaction_only']
-    )
+    # Get ray tracing parameter names from the dataclass
+    rt_param_names = {field.name for field in fields(RayTracingParam)}
+    rt_params_filtered = {k: v for k, v in rt_params.items() if k in rt_param_names}
+    scenario.set_ray_tracing_param(**rt_params_filtered)
     scenario.set_txrx("/insite.txrx")
-    scenario.add_feature("newTerrain.ter", "terrain")
-    scenario.add_feature('buildings.city', "city")
-    scenario.add_feature('roads.city', "road")
+    scenario.add_feature(TERRAIN_TEMPLATE, "terrain")
+    scenario.add_feature(bldgs_city, "city")
+    scenario.add_feature(roads_city, "road")
     scenario.save("/insite") # insite
 
     # Generate XML and run simulation
@@ -300,11 +295,9 @@ for index, row in df.iterrows():
     rt_params['bandwidth'] = 10e6  # HARD-CODED
     print("✓ Configuration loaded successfully")
     
-    print("\nPHASE 2: Setting up paths and directories...")
-    bbox_folder = f"bbox_{rt_params['min_lat']}_{rt_params['min_lon']}_{rt_params['max_lat']}_{rt_params['max_lon']}"
     osm_folder = os.path.join(OSM_ROOT, rt_params['name'])
     
-    print("\nPHASE 3: Running OSM extraction...")
+    print("\nPHASE 2: Running OSM extraction...")
     call_blender1(rt_params, osm_folder)
     print("✓ OSM extraction completed")
     
@@ -313,27 +306,29 @@ for index, row in df.iterrows():
         rt_params['origin_lat'], rt_params['origin_lon'] = map(float, f.read().split())
 
 	# Generate RX and TX positions
-    print("\nPHASE 5: Generating transmitter and receiver positions...")
+    print("\nPHASE 3: Generating transmitter and receiver positions...")
     rx_pos = gen_rx_pos(row, osm_folder)  # N x 3 (N ~ 20k)
     tx_pos = gen_tx_pos(rt_params)  # M x 3 (M ~ 3)
     print(f"✓ Generated {len(tx_pos)} transmitter positions and {len(rx_pos)} receiver positions")
 
 	# Ray Tracing
-    print("\nPHASE 6: Running Wireless InSite ray tracing...")
+    print("\nPHASE 4: Running Wireless InSite ray tracing...")
     insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
     print(f"✓ Ray tracing completed. Results saved to: {insite_rt_path}")
 
 	# Convert to DeepMIMO
-    print("\nPHASE 7: Converting to DeepMIMO format...")
+    print("\nPHASE 5: Converting to DeepMIMO format...")
     dm.config('wireless_insite_version', WI_VERSION)
     scen_insite = dm.convert(insite_rt_path)
     print("✓ Conversion to DeepMIMO completed")
 
 	# Test Conversion
-    print("\nPHASE 8: Testing DeepMIMO conversion...")
+    print("\nTesting DeepMIMO conversion...")
     dataset_insite = dm.load(scen_insite)[0]
     print("✓ DeepMIMO conversion test completed")
 
     print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')
     print('--------------------')
     break
+
+# %%
