@@ -170,7 +170,7 @@ def parse_materials_from_file(file: Path) -> List[Material]:
         mat_entries = [mat_entries] if not isinstance(mat_entries, list) else mat_entries
         
         for mat in mat_entries:
-            if 'diffuse_scattering_model' not in mat.values:
+            if 'diffuse_scattering_model' not in mat.values and mat.values.get('thickness', False):
                 # Foliage!
                 insite_mat = InsiteFoliage(
                     name=mat.name,
@@ -185,12 +185,12 @@ def parse_materials_from_file(file: Path) -> List[Material]:
                 # Create InsiteMaterial object
                 insite_mat = InsiteMaterial(
                     name=mat.name,
-                    diffuse_scattering_model=mat.values['diffuse_scattering_model'],
-                    fields_diffusively_scattered=float(mat.values['fields_diffusively_scattered']),
-                    cross_polarized_power=float(mat.values['cross_polarized_power']),
-                    directive_alpha=float(mat.values['directive_alpha']),
-                    directive_beta=float(mat.values['directive_beta']),
-                    directive_lambda=float(mat.values['directive_lambda']),
+                    diffuse_scattering_model=mat.values.get('diffuse_scattering_model', ''),
+                    fields_diffusively_scattered=float(mat.values.get('fields_diffusively_scattered', 0.0)),
+                    cross_polarized_power=float(mat.values.get('cross_polarized_power', 0.0)),
+                    directive_alpha=float(mat.values.get('directive_alpha', 4.0)),
+                    directive_beta=float(mat.values.get('directive_beta', 4.0)),
+                    directive_lambda=float(mat.values.get('directive_lambda', 0.5)),
                     conductivity=float(mat.values['DielectricLayer'].values['conductivity']),
                     permittivity=float(mat.values['DielectricLayer'].values['permittivity']),
                     roughness=float(mat.values['DielectricLayer'].values['roughness']),
