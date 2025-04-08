@@ -4,7 +4,7 @@ from lxml import etree
 import xml.etree.ElementTree as ET
 from WI_interface.SetupEditor import SetupEditor
 from WI_interface.TxRxEditor import TxRxEditor
-from WI_interface.TerrainEditor import TerrainEditor
+from WI_interface.Material import Material
 
 # XML template folder path
 XML_TEMPLATE_PATH = "resources/xml/"
@@ -19,16 +19,18 @@ class XmlGenerator:
         self.scenario = SetupEditor(scenario_path, setup_path)
         self.name = self.scenario.name
         self.txrx = TxRxEditor(scenario_path + self.scenario.txrx_file_path)
-        try:
-            self.terrain = TerrainEditor(scenario_path + self.scenario.terrain_file_path).terrain
-        except:
-            self.terrain = None
-
-        try:
-            self.city = TerrainEditor(scenario_path + self.scenario.city_file_path).terrain
-            print('WORKING WITH CITY')
-        except:
-            self.city = None
+        
+        # Extract material properties from terrain / city / road files
+        self.terrain = Material.from_file(scenario_path + self.scenario.terrain_file_path)
+        self.city = Material.from_file(scenario_path + self.scenario.city_file_path)
+        self.road = Material.from_file(scenario_path + self.scenario.road_file_path)
+        
+        print('city path: ', self.scenario.city_file_path)
+        print('city material: ', self.city)
+        print('terrain path: ', self.scenario.terrain_file_path)
+        print('terrain material: ', self.terrain)
+        print('road path: ', self.scenario.road_file_path)
+        print('road material: ', self.road)
 
         study_area_template = XML_TEMPLATE_PATH + "template.study_area.xml"
         if self.version >= 4:
@@ -192,83 +194,62 @@ class XmlGenerator:
 
     def set_geometry(self):
         geometry_parent = self.scene_root.findall('GeometryList')[0][0]
+        
+        # Map feature types to their corresponding materials and templates
+        feature_config = {
+            'terrain': {
+                'material': self.terrain,
+                'template': self.geometry_terrain_template_xml,
+                'path_replace': './pathto.ter'
+            },
+            'city': {
+                'material': self.city,
+                'template': self.geometry_city_template_xml,
+                'path_replace': './pathto.city'
+            },
+            'road': {
+                'material': self.road,
+                'template': self.geometry_city_template_xml,
+                'path_replace': './pathto.city'
+            }
+        }
+        
         for feature in self.scenario.features:
-            if feature.type == 'terrain':
-                new_geometry = etree.fromstring(etree.tostring(self.geometry_terrain_template_xml), XML_PARSER)
-                x = new_geometry.findall(".//Conductivity")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.conductivity
-
-                x = new_geometry.findall(".//Permittivity")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.permittivity
-
-                x = new_geometry.findall(".//Roughness")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.roughness
-
-                x = new_geometry.findall(".//Thickness")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.thickness
-
-                x = new_geometry.findall(".//Alpha")[0]
-                x[0].attrib["Value"] = "%d" %self.terrain.directive_alpha
-
-                x = new_geometry.findall(".//Beta")[0]
-                x[0].attrib["Value"] = "%d" %self.terrain.directive_beta
-
-                x = new_geometry.findall(".//CrossPolFraction")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.cross_polarized_power
-
-                x = new_geometry.findall(".//Lambda")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.directive_lambda
-
-                x = new_geometry.findall(".//ScatteringFactor")[0]
-                x[0].attrib["Value"] = "%.17g" %self.terrain.fields_diffusively_scattered
-
-                new_geometry = etree.tostring(new_geometry, encoding="unicode")
-                new_geometry = new_geometry.replace('./pathto.ter', feature.path)
-                
-            elif feature.type == 'city':
-                new_geometry = etree.fromstring(etree.tostring(self.geometry_city_template_xml), XML_PARSER)
-                x = new_geometry.findall(".//Conductivity")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.conductivity
-
-                x = new_geometry.findall(".//Permittivity")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.permittivity
-
-                x = new_geometry.findall(".//Roughness")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.roughness
-
-                x = new_geometry.findall(".//Thickness")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.thickness
-
-                x = new_geometry.findall(".//Alpha")[0]
-                x[0].attrib["Value"] = "%d" % self.terrain.directive_alpha
-
-                x = new_geometry.findall(".//Beta")[0]
-                x[0].attrib["Value"] = "%d" % self.terrain.directive_beta
-
-                x = new_geometry.findall(".//CrossPolFraction")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.cross_polarized_power
-
-                x = new_geometry.findall(".//Lambda")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.directive_lambda
-
-                x = new_geometry.findall(".//ScatteringFactor")[0]
-                x[0].attrib["Value"] = "%.17g" % self.terrain.fields_diffusively_scattered
-
-                new_geometry = etree.tostring(new_geometry, encoding="unicode")
-                # new_geometry = etree.tostring(self.geometry_city_template_xml, encoding="unicode")
-                new_geometry = new_geometry.replace('./pathto.city', feature.path)
-
-            #FIXME the following is not tested
-            # elif feature.type == 'object':
-            #     new_geometry = etree.tostring(self.geometry_object_template_xml, encoding="unicode")
-            #     new_geometry = new_geometry.replace('./pathto.object', feature.path)
-
-            else:
+            if feature.type not in feature_config:
                 raise ValueError("Unsupported Geometry type: "+feature.type)
+                
+            config = feature_config[feature.type]
+            new_geometry = etree.fromstring(etree.tostring(config['template']), XML_PARSER)
             
+            # Set material properties
+            self._set_material_properties(new_geometry, config['material'])
+            
+            # Replace path placeholder
+            new_geometry = etree.tostring(new_geometry, encoding="unicode")
+            new_geometry = new_geometry.replace(config['path_replace'], feature.path)
+            
+            # Convert back to XML and append
             new_geometry = bytes(new_geometry, 'utf-8')
             new_geometry = etree.fromstring(new_geometry, XML_PARSER)
             geometry_parent.append(new_geometry)
+    
+    def _set_material_properties(self, geometry, material):
+        """Helper method to set material properties in the geometry XML."""
+        properties = [
+            ("Conductivity", material.conductivity, "%.17g"),
+            ("Permittivity", material.permittivity, "%.17g"),
+            ("Roughness", material.roughness, "%.17g"),
+            ("Thickness", material.thickness, "%.17g"),
+            ("Alpha", material.directive_alpha, "%d"),
+            ("Beta", material.directive_beta, "%d"),
+            ("CrossPolFraction", material.cross_polarized_power, "%.17g"),
+            ("Lambda", material.directive_lambda, "%.17g"),
+            ("ScatteringFactor", material.fields_diffusively_scattered, "%.17g")
+        ]
+        
+        for prop_name, value, format_str in properties:
+            x = geometry.findall(f".//{prop_name}")[0]
+            x[0].attrib["Value"] = format_str % value
 
     def update(self):
         self.set_antenna()

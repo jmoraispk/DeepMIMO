@@ -1,80 +1,35 @@
+"""
+TerrainEditor - A utility for creating and editing terrain (.ter) files for electromagnetic simulation.
+
+This module provides functionality to create and modify terrain files used in electromagnetic
+simulation software. The TerrainEditor class focuses on three main operations:
+
+1. Setting vertex positions for a flat rectangular terrain (creating two triangles)
+2. Incorporating material properties from a material file into the .ter file
+3. Saving the resulting .ter file.
+
+The class is designed to work with a template terrain file, modify specific sections of it,
+and output a new terrain file with the desired properties. 
+
+Example usage:
+    editor = TerrainEditor()
+    editor.set_vertex(-200, -200, 200, 200, 0)  # Create a 400x400 flat terrain at z=0
+    editor.set_material("path/to/material.mtl")  # Apply material properties
+    editor.save("output.ter")  # Save the terrain file
+"""
+
 import numpy as np
 
-class Terrain:
-    def __init__(
-        self,
-        fields_diffusively_scattered,
-        cross_polarized_power,
-        directive_alpha,
-        directive_beta,
-        directive_lambda,
-        conductivity,
-        permittivity,
-        roughness,
-        thickness,
-    ):
-        self.fields_diffusively_scattered = fields_diffusively_scattered
-        self.cross_polarized_power = cross_polarized_power
-        self.directive_alpha = directive_alpha
-        self.directive_beta = directive_beta
-        self.directive_lambda = directive_lambda
-        self.conductivity = conductivity
-        self.permittivity = permittivity
-        self.roughness = roughness
-        self.thickness = thickness
-
-
 class TerrainEditor:
-    def __init__(self, infile_path="resources/feature/newTerrain.ter"):
-        self.infile_path = infile_path
-        self.parse()
-
-    def parse(self):
-        with open(self.infile_path, "r") as f:
+    """Class for creating and editing terrain (.ter) files."""
+    
+    def __init__(self, template_ter_file="resources/feature/newTerrain.ter"):
+        self.template_ter_file = template_ter_file
+        with open(self.template_ter_file, "r") as f:
             self.file = f.readlines()
 
-        for i, line in enumerate(self.file):
-            if line.startswith("fields_diffusively_scattered"):
-                fields_diffusively_scattered = np.float64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("cross_polarized_power"):
-                cross_polarized_power = np.float64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("directive_alpha"):
-                directive_alpha = np.int64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("directive_beta"):
-                directive_beta = np.int64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("directive_lambda"):
-                directive_lambda = np.float64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("conductivity"):
-                conductivity = np.float64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("permittivity"):
-                permittivity = np.float64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("roughness"):
-                roughness = np.float64(line.split(" ")[-1][:-1])
-                continue
-            if line.startswith("thickness"):
-                thickness = np.float64(line.split(" ")[-1][:-1])
-                continue
-
-        self.terrain = Terrain(
-            fields_diffusively_scattered,
-            cross_polarized_power,
-            directive_alpha,
-            directive_beta,
-            directive_lambda,
-            conductivity,
-            permittivity,
-            roughness,
-            thickness,
-        )
-
     def set_vertex(self, xmin, ymin, xmax, ymax, z=0):
+        """ Write vertices of the flat rectangular terrain to the file: 2 triangles """
         v1 = np.asarray([xmin, ymin, z])
         v2 = np.asarray([xmax, ymin, z])
         v3 = np.asarray([xmax, ymax, z])
@@ -89,6 +44,7 @@ class TerrainEditor:
         self.file[49] = "%.10f %.10f %.10f\n" % (v3[0], v3[1], v3[2])
 
     def set_material(self, material_path):
+        """ Write material properties to the file """
         with open(material_path, "r") as f:
             self.material_file = f.readlines()
 
@@ -101,6 +57,7 @@ class TerrainEditor:
         self.file = self.file[:start] + self.material_file + self.file[end + 1 :]
 
     def save(self, outfile_path):
+        """Save the terrain file."""
         # clean the output file before writing
         open(outfile_path, "w+").close()
 
@@ -109,7 +66,6 @@ class TerrainEditor:
 
 
 if __name__ == "__main__":
-    # infile_path = "resources/feature/newTerrain.ter"
     material_path = "resources/material/ITU Wet earth 2.4 GHz.mtl"
     outfile_path = "test/newTerrain.ter"
     editor = TerrainEditor()

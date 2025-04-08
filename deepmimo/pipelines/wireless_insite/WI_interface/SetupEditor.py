@@ -1,51 +1,35 @@
 import numpy as np
 
+from dataclasses import dataclass
 
+
+@dataclass
 class StudyArea:
-    def __init__(
-        self,
-        zmin,
-        zmax,
-        num_vertex,
-        all_vertex,
-    ):
-        self.zmin = zmin
-        self.zmax = zmax
-        self.num_vertex = num_vertex
-        self.all_vertex = all_vertex  # np.empty((num_vertex, 3))
+    zmin: float
+    zmax: float
+    num_vertex: int
+    all_vertex: np.ndarray  # np.empty((num_vertex, 3))
 
 
+@dataclass
 class RayTracingParam:
-    def __init__(
-        self,
-        max_paths,
-        ray_spacing,
-        max_reflections,
-        max_transmissions,
-        max_diffractions,
-        ds_enable,
-        ds_max_reflections,
-        ds_max_transmissions,
-        ds_max_diffractions,
-        ds_final_interaction_only,
-    ):
-        self.max_paths = max_paths
-        self.ray_spacing = ray_spacing
-        self.max_reflections = max_reflections
-        self.max_transmissions = max_transmissions
-        self.max_diffractions = max_diffractions
-        self.ds_enable = ds_enable
-        self.ds_max_reflections = ds_max_reflections
-        self.ds_max_transmissions = ds_max_transmissions
-        self.ds_max_diffractions = ds_max_diffractions
-        self.ds_final_interaction_only = ds_final_interaction_only
+    max_paths: int
+    ray_spacing: float
+    max_reflections: int
+    max_transmissions: int
+    max_diffractions: int
+    ds_enable: bool
+    ds_max_reflections: int
+    ds_max_transmissions: int
+    ds_max_diffractions: int
+    ds_final_interaction_only: bool
 
 
+@dataclass
 class Feature:
-    def __init__(self, index, type, path):
-        self.index = index
-        self.type = type
-        self.path = path
+    index: int
+    type: str
+    path: str
 
 
 class SetupEditor:
@@ -144,6 +128,8 @@ class SetupEditor:
                     self.terrain_file_path = feature_path
                 elif feature_type == "city":
                     self.city_file_path = feature_path
+                elif feature_type == "road":
+                    self.road_file_path = feature_path
                 continue
 
         self.study_area = StudyArea(
