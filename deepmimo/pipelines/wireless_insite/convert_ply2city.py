@@ -7,10 +7,11 @@ city files used in electromagnetic simulations, including material properties.
 
 import os
 from typing import List, Optional, Tuple
-from plyfile import PlyData
+from plyfile import PlyData  # type: ignore
 
 
-def convert_ply2city(ply_path: str, material_path: str, save_path: str, object_name: Optional[str] = None) -> Tuple[int, int]:
+def convert_ply2city(ply_path: str, material_path: str, save_path: str, 
+                     object_name: Optional[str] = None) -> Tuple[int, int]:
     """Convert a PLY file to a city file with material properties.
     
     Args:
@@ -46,7 +47,9 @@ def write_reference_sec(f) -> None:
     Args:
         f: File object to write to
     """
-    with open("resources/reference_section.txt") as f1:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    ref_path = os.path.join(script_dir, "resources", "reference_section.txt")
+    with open(ref_path) as f1:
         reference_sec = f1.readlines()
     return f.writelines(reference_sec)
 

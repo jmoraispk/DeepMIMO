@@ -9,6 +9,7 @@ transmitter and receiver positions.
 from dataclasses import dataclass, field
 from typing import List, Optional
 import numpy as np
+import os
 
 # Constants
 COORD_PREC = 2  # Number of decimal places for coordinate values
@@ -63,12 +64,15 @@ class TxRxEditor:
     This class provides functionality to add, remove, and modify transmitter and receiver
     configurations, supporting both single points and arrays of points.
     """
-    def __init__(self, infile_path: Optional[str] = None, template_path: str = "resources/txrx"):
+    def __init__(self, infile_path: Optional[str] = None, template_path: Optional[str] = None):
         self.infile_path = infile_path
         self.txrx: List[TxRx] = []
-        self.template_path = template_path
         self.txrx_file = None
         self.txpower = 0  # only supports tx_power = 0
+        self.template_path = template_path
+        if template_path is None:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            self.template_path = os.path.join(script_dir, "..", "resources", "txrx")
         
     def add_txrx(self, 
                 txrx_type: str,
@@ -100,7 +104,8 @@ class TxRxEditor:
             except (IndexError, AttributeError):
                 id = 1
         new_txrx = TxRx(txrx_type, is_transmitter, is_receiver, pos, name, txrx_id=id, 
-                        grid_side=grid_side, grid_spacing=grid_spacing, conform_to_terrain=conform_to_terrain)
+                        grid_side=grid_side, grid_spacing=grid_spacing, 
+                        conform_to_terrain=conform_to_terrain)
         self.txrx.append(new_txrx)
 
     def save(self, outfile_path: str) -> None:

@@ -87,18 +87,19 @@ class SetupEditor:
         features (List[Feature]): List of features in the setup
     """
     
-    def __init__(self, scenario_path: str, name: Optional[str] = None) -> None:
+    def __init__(self, scenario_path: str) -> None:
         """Initialize the SetupEditor with a scenario path and optional setup name.
         
         Args:
             scenario_path (str): Path to the scenario directory
-            name (Optional[str], optional): Name of the setup file. Defaults to None.
         """
         self.scenario_path = scenario_path
-
-        with open("resources/setup/feature.txt") as f1:
+        
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        setup_template_folder = os.path.join(script_dir, "..", "resources", "setup")
+        with open(os.path.join(setup_template_folder, "feature.txt")) as f1:
             self.feature_template = f1.readlines()
-        with open("resources/setup/txrx.txt") as f1:
+        with open(os.path.join(setup_template_folder, "txrx.txt")) as f1:
             self.txrx_template = f1.readlines()
 
         self.num_feature = 0
@@ -106,7 +107,7 @@ class SetupEditor:
         self.feature_sec = []
         self.txrx_sec = self.txrx_template.copy()
 
-        with open("resources/setup/template.setup", "r") as f:
+        with open(os.path.join(setup_template_folder, "template.setup"), "r") as f:
             self.setup_file = f.readlines()
         self.name = self.setup_file[1].split(" ")[-1][:-1]
 

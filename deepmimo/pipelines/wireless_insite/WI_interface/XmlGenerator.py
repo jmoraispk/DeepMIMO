@@ -5,14 +5,12 @@ This module provides functionality to generate XML files for electromagnetic sim
 including study area, ray tracing parameters, and features.
 """
 
+import os
 from lxml import etree
 import xml.etree.ElementTree as ET
-from WI_interface.SetupEditor import SetupEditor
-from WI_interface.TxRxEditor import TxRxEditor
-from WI_interface.Material import Material
-
-# XML template folder path
-XML_TEMPLATE_PATH = "resources/xml/"
+from .SetupEditor import SetupEditor
+from .TxRxEditor import TxRxEditor
+from .Material import Material
 
 # XML parser
 XML_PARSER = etree.XMLParser(recover=True)
@@ -65,7 +63,9 @@ class XmlGenerator:
         self.city = Material.from_file(self.setup.get_city_path())
         self.road = Material.from_file(self.setup.get_road_path())
         
-        study_area_template = XML_TEMPLATE_PATH + "template.study_area.xml"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.xml_template_folder = os.path.join(script_dir, "..", "resources", "xml")
+        study_area_template = os.path.join(self.xml_template_folder, "template.study_area.xml")
         if self.version >= 4:
             study_area_template = study_area_template.replace('.xml', '.v4.xml')
         self.xml = etree.parse(study_area_template, XML_PARSER)
@@ -78,14 +78,15 @@ class XmlGenerator:
 
     def load_templates(self) -> None:
         """Load XML templates for antennas, geometries, and transmitters/receivers."""
-        self.antenna_template_xml = etree.parse(XML_TEMPLATE_PATH + "Antenna.xml", XML_PARSER)
+        antenna_path = os.path.join(self.xml_template_folder, "Antenna.xml")
+        geometry_city_path = os.path.join(self.xml_template_folder, "GeometryCity.xml")
+        geometry_terrain_path = os.path.join(self.xml_template_folder, "GeometryTerrain.xml")
+        tx_point_path = os.path.join(self.xml_template_folder, "TxRxPoint.xml")
+        tx_grid_path = os.path.join(self.xml_template_folder, "TxRxGrid.xml")
 
-        self.geometry_city_template_xml = etree.parse(XML_TEMPLATE_PATH + "GeometryCity.xml", XML_PARSER)
-
-        self.geometry_terrain_template_xml = etree.parse(XML_TEMPLATE_PATH + "GeometryTerrain.xml", XML_PARSER)
-        
-        tx_point_path = XML_TEMPLATE_PATH + "TxRxPoint.xml"
-        tx_grid_path = XML_TEMPLATE_PATH + "TxRxGrid.xml"
+        self.antenna_template_xml = etree.parse(antenna_path, XML_PARSER)
+        self.geometry_city_template_xml = etree.parse(geometry_city_path, XML_PARSER)
+        self.geometry_terrain_template_xml = etree.parse(geometry_terrain_path, XML_PARSER)
 
         if self.version >= 4:
             tx_point_path = tx_point_path.replace('.xml', '.v4.xml')

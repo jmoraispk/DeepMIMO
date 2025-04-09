@@ -1,4 +1,3 @@
-# utils/geo_utils.py
 """
 Geographic utilities for coordinate conversion.
 

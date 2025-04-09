@@ -100,7 +100,7 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     # Configure Tx/Rx (.txrx)
     txrx_editor = TxRxEditor()
 
-    # TX (BS)
+    #   TX (BS)
     for b_idx, pos in enumerate(tx_pos):
         txrx_editor.add_txrx(
             txrx_type="points",
@@ -108,18 +108,17 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
             is_receiver=True,
             pos=pos,
             name=f"BS{b_idx+1}",
-            conform_to_terrain=True
-        )
+            conform_to_terrain=True)
 
-    # RX (UEs)
-    # txrx_editor.add_txrx(
-    #         txrx_type="points",
-    #         is_transmitter=False,
-    #         is_receiver=True,
-    #         pos=rx_pos,
-    #         name="user_grid",
-    #         conform_to_terrain=rt_params['conform_to_terrain']
-    #     )
+    #   RX (UEs)
+    if False:
+        txrx_editor.add_txrx(
+                txrx_type="points",
+                is_transmitter=False,
+                is_receiver=True,
+                pos=rx_pos,
+                name="user_grid",
+                conform_to_terrain=rt_params['conform_to_terrain'])
     grid_side = [xmax_pad - xmin_pad - 2 * PAD + rt_params['grid_spacing'], 
                  ymax_pad - ymin_pad - 2 * PAD + rt_params['grid_spacing']]
     txrx_editor.add_txrx(
@@ -134,19 +133,21 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     )
     txrx_editor.save(os.path.join(insite_path, "insite.txrx"))
 
-    # Create setup file (.setup)
-    scenario = SetupEditor(insite_path)
-    scenario.set_carrierFreq(rt_params['carrier_freq'])
-    scenario.set_bandwidth(rt_params['bandwidth'])
+    # Get ray tracing parameter names from the dataclass
+    rt_param_names = {field.name for field in fields(RayTracingParam)}
+    rt_params_filtered = {k: v for k, v in rt_params.items() if k in rt_param_names}
+
+    # Define study area bbox in Cartesian coordinates
     study_area_vertex = np.array([[xmin_pad, ymin_pad, 0],
                                   [xmax_pad, ymin_pad, 0],
                                   [xmax_pad, ymax_pad, 0],
                                   [xmin_pad, ymax_pad, 0]])
-    scenario.set_study_area(zmin=-3, zmax=20, all_vertex=study_area_vertex)
 
-    # Get ray tracing parameter names from the dataclass
-    rt_param_names = {field.name for field in fields(RayTracingParam)}
-    rt_params_filtered = {k: v for k, v in rt_params.items() if k in rt_param_names}
+    # Create setup file (.setup)
+    scenario = SetupEditor(insite_path)
+    scenario.set_carrierFreq(rt_params['carrier_freq'])
+    scenario.set_bandwidth(rt_params['bandwidth'])
+    scenario.set_study_area(zmin=-3, zmax=20, all_vertex=study_area_vertex)
     scenario.set_ray_tracing_param(rt_params_filtered)
     scenario.set_txrx("insite.txrx")
     scenario.add_feature(TERRAIN_TEMPLATE, "terrain")
