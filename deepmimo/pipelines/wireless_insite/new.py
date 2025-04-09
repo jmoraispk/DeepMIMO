@@ -50,6 +50,8 @@ UE_HEIGHT = 1.5  # meters
 BS_HEIGHT = 20  # meters
 GRID_SPACING = 1.0  # meters
 
+POS_PREC = 4
+
 
 #%% Functions
 def create_directory_structure(base_path: str, rt_params: Dict[str, Any]) -> Tuple[str, str]:
@@ -64,7 +66,7 @@ def create_directory_structure(base_path: str, rt_params: Dict[str, Any]) -> Tup
     """
     
     # Format folder name with key parameters
-    folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_"
+    folder_name = (f"insite2_{rt_params['carrier_freq']/1e9:.1f}GHz_"
                    f"{rt_params['max_reflections']}R_{rt_params['max_diffractions']}D_{rt_params['max_diffractions']}D")
     insite_path = os.path.join(osm_folder, folder_name)
     os.makedirs(insite_path, exist_ok=True)
@@ -156,7 +158,7 @@ def gen_tx_pos(rt_params: Dict[str, Any]) -> np.ndarray:
                                                      rt_params['origin_lat'], 
                                                      rt_params['origin_lon'])
         bs_pos.append([bs_cartesian[0], bs_cartesian[1], BS_HEIGHT])
-    return np.array(bs_pos)
+    return np.round(np.array(bs_pos), POS_PREC)
 
 def gen_rx_pos(row: pd.Series, osm_folder: str) -> np.ndarray:
     """Generate receiver positions from GPS coordinates.
@@ -174,7 +176,7 @@ def gen_rx_pos(row: pd.Series, osm_folder: str) -> np.ndarray:
 
     user_grid = generate_user_grid(row, origin_lat, origin_lon)
     print(f"User grid shape: {user_grid.shape}")
-    return user_grid
+    return np.round(user_grid, POS_PREC) 
 
 def generate_user_grid(row: pd.Series, origin_lat: float, origin_lon: float) -> np.ndarray:
     """Generate user grid in Cartesian coordinates.
@@ -295,23 +297,23 @@ def insite_raytrace(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
         )
 
     # RX (UEs)
-    txrx_editor.add_txrx(
-            txrx_type="points",
-            is_transmitter=False,
-            is_receiver=True,
-            pos=rx_pos,
-            name="user_grid"
-        )
-    # grid_side = [xmax_pad - xmin_pad, ymax_pad - ymin_pad]
     # txrx_editor.add_txrx(
-    #     txrx_type="grid",
-    #     is_transmitter=False,
-    #     is_receiver=True,
-    #     pos=[xmin_pad, ymin_pad, rt_params['ue_height']],
-    #     name="UE_grid",
-    #     grid_side=grid_side,
-    #     grid_spacing=GRID_SPACING
-    # )
+    #         txrx_type="points",
+    #         is_transmitter=False,
+    #         is_receiver=True,
+    #         pos=rx_pos,
+    #         name="user_grid"
+    #     )
+    grid_side = [xmax_pad - xmin_pad - 60 + GRID_SPACING, ymax_pad - ymin_pad - 60 + GRID_SPACING]
+    txrx_editor.add_txrx(
+        txrx_type="grid",
+        is_transmitter=False,
+        is_receiver=True,
+        pos=[xmin_pad +30+1e-3, ymin_pad+30, rt_params['ue_height']],
+        name="UE_grid",
+        grid_side=grid_side,
+        grid_spacing=GRID_SPACING
+    )
     txrx_editor.save(os.path.join(insite_path, "insite.txrx"))
 
     # Create setup file (.setup)
@@ -360,7 +362,7 @@ if __name__ == "__main__":
         
         print("PHASE 1: Reading ray tracing configurations...")
         rt_params = read_rt_configs(row)
-        rt_params['ue_height'] = 2     # HARD-CODED
+        rt_params['ue_height'] = UE_HEIGHT     # HARD-CODED
         rt_params['bandwidth'] = 10e6  # HARD-CODED
         print("✓ Configuration loaded successfully")
         
@@ -385,7 +387,6 @@ if __name__ == "__main__":
         insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
         print(f"✓ Ray tracing completed. Results saved to: {insite_rt_path}")
 
-        break
         # Convert to DeepMIMO
         print("\nPHASE 5: Converting to DeepMIMO format...")
         dm.config('wireless_insite_version', WI_VERSION)
@@ -394,12 +395,19 @@ if __name__ == "__main__":
 
         # Test Conversion
         print("\nTesting DeepMIMO conversion...")
-        dataset_insite = dm.load(scen_insite)[0]
+        dataset = dm.load(scen_insite)[0]
         print("✓ DeepMIMO conversion test completed")
-        dataset_insite.plot_coverage(dataset_insite.los)
+        dataset.plot_coverage(dataset.los)
+        dataset.plot_coverage(dataset.pwr[:,0])
 
         print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')
         print('--------------------')
         break
+
+    p = dataset.pwr[:, 0]
+
+    print(rx_pos)
+    print(dataset.rx_pos)
+
 
 # %%

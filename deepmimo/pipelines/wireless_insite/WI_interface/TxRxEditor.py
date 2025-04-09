@@ -9,6 +9,10 @@ transmitter and receiver positions.
 from typing import List, Optional
 import numpy as np
 
+# Constants
+COORD_PREC = 2  # Number of decimal places for coordinate values
+COORD_FORMAT = "%%.%df %%.%df %%.%df\n" % (COORD_PREC, COORD_PREC, COORD_PREC)
+
 class TxRx:
     """
     Class representing a transmitter or receiver in the Wireless InSite simulation.
@@ -118,12 +122,12 @@ class TxRxEditor:
                     # Handle both single point and multiple points cases
                     if x.txrx_pos.ndim == 1:
                         # Single point case
-                        template[i+1] = "%.2f %.2f %.2f\n" % tuple(x.txrx_pos)
+                        template[i+1] = COORD_FORMAT % tuple(x.txrx_pos)
                     else:
                         # Multiple points case - write each point on a new line
                         points_str = ""
                         for point in x.txrx_pos:
-                            points_str += "%.2f %.2f %.2f\n" % tuple(point)
+                            points_str += COORD_FORMAT % tuple(point)
                         template[i+1] = points_str
                 
                 if "is_transmitter" in line:

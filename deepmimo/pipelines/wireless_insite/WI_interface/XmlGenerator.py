@@ -128,12 +128,12 @@ class XmlGenerator:
 
         X = tmp.findall(".//X")[0]
         X[0].attrib["Value"] = " ".join(
-            ["%.6g" % i for i in self.setup.study_area.all_vertex[:, 0]]
+            ["%.4g" % i for i in self.setup.study_area.all_vertex[:, 0]]
         )
 
         Y = tmp.findall(".//Y")[0]
         Y[0].attrib["Value"] = " ".join(
-            ["%.6g" % i for i in self.setup.study_area.all_vertex[:, 1]]
+            ["%.4g" % i for i in self.setup.study_area.all_vertex[:, 1]]
         )
     
     def set_ray_tracing_param(self) -> None:
