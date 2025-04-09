@@ -21,8 +21,8 @@ import scipy.io
 
 # Local imports
 from .. import consts as c
-from ..general_utils import (get_mat_filename, load_dict_from_json, unzip, 
-                                 get_scenario_folder, get_params_path, compare_two_dicts)
+from ..general_utils import (get_mat_filename, load_dict_from_json, 
+                             get_scenario_folder, get_params_path)
 from ..scene import Scene
 from .dataset import Dataset, MacroDataset
 from ..materials import MaterialList
@@ -115,12 +115,12 @@ def load(scen_name: str, **load_params) -> Dataset | MacroDataset:
     n_snapshots = params[c.SCENE_PARAM_NAME][c.SCENE_PARAM_NUMBER_SCENES]
     if n_snapshots > 1: # dynamic
         raise NotImplementedError('Dynamic scenarios not implemented yet')
-        dataset = {}
-        for snapshot_i in range(n_snapshots):
-            snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
-                                           f'scene_{snapshot_i}')
-            print(f'Scene {snapshot_i + 1}/{n_snapshots}')
-            dataset[snapshot_i] = _load_raytracing_scene(snapshot_folder, rt_params, **load_params)
+        # dataset = {}
+        # for snapshot_i in range(n_snapshots):
+        #     snapshot_folder = os.path.join(scen_folder, rt_params[c.PARAMSET_SCENARIO],
+        #                                    f'scene_{snapshot_i}')
+        #     print(f'Scene {snapshot_i + 1}/{n_snapshots}')
+        #     dataset[snapshot_i] = _load_raytracing_scene(snapshot_folder, rt_params, **load_params)
     else: # static
         dataset = _load_raytracing_scene(scen_folder, params[c.TXRX_PARAM_NAME], **load_params)
     
