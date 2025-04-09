@@ -104,3 +104,13 @@ There are no changes anywhere else in terms of file generation.
         <Ellipsoid>
           <remcom::rxapi::EllipsoidEnum Value="EarthWGS84"/>
         </Ellipsoid>
+
+
+## Verifying Wireless InSite pipeline results
+
+The .txrx, .setup, .city, .ter, can be loaded into the UI with right-click -> Import (or Open)
+Some parameters are *not* in these files that need to be changed in the UI, this is the case for:
+- Carrier frequency: Needs to be changed in the waveforms tab for all automatically added waveforms;
+- Antenna type: The default is half-wave dipole, but needs to be changed to Isotropic, by replacement or other methods. 
+
+That's it. Then results should match either perfectly, or very well, i.e. less than 1% of points may have less than 0.3 dB pathloss variation - we are yet to discover what causes this slight difference. 
