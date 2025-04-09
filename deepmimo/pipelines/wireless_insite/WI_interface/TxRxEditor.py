@@ -6,6 +6,7 @@ for Wireless InSite simulations. It supports both single points and arrays of po
 transmitter and receiver positions.
 """
 
+from dataclasses import dataclass, field
 from typing import List, Optional
 import numpy as np
 
@@ -13,6 +14,8 @@ import numpy as np
 COORD_PREC = 2  # Number of decimal places for coordinate values
 COORD_FORMAT = "%%.%df %%.%df %%.%df\n" % (COORD_PREC, COORD_PREC, COORD_PREC)
 
+
+@dataclass
 class TxRx:
     """
     Class representing a transmitter or receiver in the Wireless InSite simulation.
@@ -27,22 +30,20 @@ class TxRx:
         grid_side (Optional[np.ndarray]): Grid dimensions [width, height] if type is 'grid'
         grid_spacing (Optional[float]): Grid spacing if type is 'grid'
     """
-    def __init__(self, 
-                 txrx_type: str,
-                 is_transmitter: bool, 
-                 is_receiver: bool,
-                 pos: List[float] | np.ndarray,
-                 name: str,
-                 id: Optional[int] = None,
-                 grid_side: Optional[List[float]] = None,
-                 grid_spacing: Optional[float] = None):
-        self.txrx_name = name
-        self.txrx_id = id
-        self.txrx_type = txrx_type
-        self.is_transmitter = is_transmitter
-        self.is_receiver = is_receiver
+    txrx_type: str
+    is_transmitter: bool
+    is_receiver: bool
+    pos: List[float] | np.ndarray
+    txrx_name: str
+    txrx_id: Optional[int] = None
+    grid_side: Optional[List[float]] = None
+    grid_spacing: Optional[float] = None
+    conform_to_terrain: Optional[bool] = False
+    txrx_pos: np.ndarray = field(init=False)
+    
+    def __post_init__(self):
         # Convert pos to numpy array and ensure correct shape
-        self.txrx_pos = np.asarray(pos)
+        self.txrx_pos = np.asarray(self.pos)
         if self.txrx_pos.ndim == 1:
             # Single point case - ensure shape (3,)
             self.txrx_pos = self.txrx_pos.reshape(3)
@@ -53,8 +54,7 @@ class TxRx:
         else:
             raise ValueError("Position must be a 1D or 2D array")
             
-        self.grid_side = np.asarray(grid_side) if grid_side is not None else None
-        self.grid_spacing = grid_spacing
+        self.grid_side = np.asarray(self.grid_side) if self.grid_side is not None else None
 
 class TxRxEditor:
     """
@@ -78,7 +78,8 @@ class TxRxEditor:
                 name: str,
                 id: Optional[int] = None,
                 grid_side: Optional[List[float]] = None,
-                grid_spacing: Optional[float] = None) -> None:
+                grid_spacing: Optional[float] = None,
+                conform_to_terrain: Optional[bool] = None) -> None:
         """
         Add a new transmitter or receiver.
         
@@ -91,14 +92,15 @@ class TxRxEditor:
             id: Optional unique identifier (auto-generated if None)
             grid_side: Optional grid dimensions [width, height] if type is 'grid'
             grid_spacing: Optional grid spacing if type is 'grid'
+            conform_to_terrain: Optional flag to conform to terrain if type is 'grid'
         """
         if not id:
             try:
                 id = self.txrx[-1].txrx_id + 1
-            except:
+            except (IndexError, AttributeError):
                 id = 1
-        new_txrx = TxRx(txrx_type, is_transmitter, is_receiver, pos, name, id=id, 
-                        grid_side=grid_side, grid_spacing=grid_spacing)
+        new_txrx = TxRx(txrx_type, is_transmitter, is_receiver, pos, name, txrx_id=id, 
+                        grid_side=grid_side, grid_spacing=grid_spacing, conform_to_terrain=conform_to_terrain)
         self.txrx.append(new_txrx)
 
     def save(self, outfile_path: str) -> None:

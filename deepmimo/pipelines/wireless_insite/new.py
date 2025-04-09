@@ -137,7 +137,8 @@ def read_rt_configs(row: pd.Series) -> Dict[str, Any]:
         'ds_max_reflections': row['ds_max_reflections'],
         'ds_max_transmissions': row['ds_max_transmissions'],
         'ds_max_diffractions': row['ds_max_diffractions'],
-        'ds_final_interaction_only': row['ds_final_interaction_only']
+        'ds_final_interaction_only': row['ds_final_interaction_only'],
+        'conform_to_terrain': row['conform_to_terrain'] == 1
     }
     return rt_params
 
@@ -293,7 +294,8 @@ def insite_raytrace(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
             is_transmitter=True,
             is_receiver=True,
             pos=pos,
-            name=f"BS{b_idx+1}"
+            name=f"BS{b_idx+1}",
+            conform_to_terrain=True
         )
 
     # RX (UEs)
@@ -302,7 +304,8 @@ def insite_raytrace(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     #         is_transmitter=False,
     #         is_receiver=True,
     #         pos=rx_pos,
-    #         name="user_grid"
+    #         name="user_grid",
+    #         conform_to_terrain=rt_params['conform_to_terrain']
     #     )
     grid_side = [xmax_pad - xmin_pad - 60 + GRID_SPACING, ymax_pad - ymin_pad - 60 + GRID_SPACING]
     txrx_editor.add_txrx(
@@ -312,7 +315,8 @@ def insite_raytrace(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
         pos=[xmin_pad +30+1e-3, ymin_pad+30, rt_params['ue_height']],
         name="UE_grid",
         grid_side=grid_side,
-        grid_spacing=GRID_SPACING
+        grid_spacing=GRID_SPACING,
+        conform_to_terrain=rt_params['conform_to_terrain']
     )
     txrx_editor.save(os.path.join(insite_path, "insite.txrx"))
 

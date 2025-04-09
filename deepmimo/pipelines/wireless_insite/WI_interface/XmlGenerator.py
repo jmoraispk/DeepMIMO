@@ -245,6 +245,9 @@ class XmlGenerator:
             else:
                 raise ValueError("Unsupported TxRx type: "+txrx.txrx_type)
             
+            side1 = new_txrx.findall(".//ConformToTerrain")[0]
+            side1[0].attrib["Value"] = "true" if True else "false"
+
             OutputID = new_txrx.findall(".//OutputID")[0]
             OutputID[0].attrib["Value"] = "%d"%txrx.txrx_id
             ShortDescription = new_txrx.findall(".//ShortDescription")[0]
