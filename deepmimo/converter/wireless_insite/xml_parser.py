@@ -1,6 +1,6 @@
 #%%
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any
+from typing import Dict, Any
 from pprint import pprint
 
 # InSite XML type constants

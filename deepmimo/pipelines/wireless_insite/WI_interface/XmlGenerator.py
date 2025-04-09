@@ -5,8 +5,6 @@ This module provides functionality to generate XML files for electromagnetic sim
 including study area, ray tracing parameters, and features.
 """
 
-import os
-import numpy as np
 from lxml import etree
 import xml.etree.ElementTree as ET
 from WI_interface.SetupEditor import SetupEditor
@@ -48,7 +46,7 @@ class XmlGenerator:
         txrx_grid_template_xml (etree._ElementTree): Template for grid transmitter/receiver XML
     """
     
-    def __init__(self, scenario_path: str, setup: SetupEditor, version: int = 3) -> None:
+    def __init__(self, scenario_path: str, setup: SetupEditor, txrx: TxRxEditor, version: int = 3) -> None:
         """Initialize the XmlGenerator with a scenario path and setup instance.
         
         Args:
@@ -60,20 +58,13 @@ class XmlGenerator:
         self.scenario_path = scenario_path
         self.setup = setup
         self.name = self.setup.name
-        self.txrx = TxRxEditor(os.path.join(self.scenario_path, 'insite.txrx'))
+        self.txrx = txrx
         
         # Extract material properties from terrain / city / road files
         self.terrain = Material.from_file(self.setup.get_terrain_path())
         self.city = Material.from_file(self.setup.get_city_path())
         self.road = Material.from_file(self.setup.get_road_path())
         
-        print('city path: ', self.setup.get_city_path())
-        print('city material: ', self.city)
-        print('terrain path: ', self.setup.get_terrain_path())
-        print('terrain material: ', self.terrain)
-        print('road path: ', self.setup.get_road_path())
-        print('road material: ', self.road)
-
         study_area_template = XML_TEMPLATE_PATH + "template.study_area.xml"
         if self.version >= 4:
             study_area_template = study_area_template.replace('.xml', '.v4.xml')
@@ -186,33 +177,70 @@ class XmlGenerator:
         antenna_parent.append(new_antenna) # insert b before a
 
     def set_txrx(self) -> None:
-        """Set the transmitter/receiver parameters in the XML file."""
+        """Set the transmitter/receiver parameters in the XML file.
+        
+        This method handles both single points and arrays of points for the 'points' type,
+        and grid configurations for the 'grid' type.
+        """
         txrx_parent = self.scene_root.findall('TxRxSetList')[0][0]
         for txrx in self.txrx.txrx[::-1]:
             if txrx.txrx_type == 'points':
-                new_txrx = etree.fromstring(etree.tostring(self.txrx_point_template_xml), XML_PARSER)
-                x = new_txrx.findall(".//X")[0]
-                x[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[0]
-                y = new_txrx.findall(".//Y")[0]
-                y[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[1]
-                z = new_txrx.findall(".//Z")[0]
-                z[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[2]
+                if txrx.txrx_pos.ndim == 1:
+                    # Single point case
+                    new_txrx = etree.fromstring(etree.tostring(self.txrx_point_template_xml), XML_PARSER)
+                    x = new_txrx.findall(".//X")[0]
+                    x[0].attrib["Value"] = FLOAT_STR % txrx.txrx_pos[0]
+                    y = new_txrx.findall(".//Y")[0]
+                    y[0].attrib["Value"] = FLOAT_STR % txrx.txrx_pos[1]
+                    z = new_txrx.findall(".//Z")[0]
+                    z[0].attrib["Value"] = FLOAT_STR % txrx.txrx_pos[2]
+                    txrx_parent.append(new_txrx)
+                else:
+                    # Multiple points case - create multiple ControlPoints groups
+                    new_txrx = etree.fromstring(etree.tostring(self.txrx_point_template_xml), XML_PARSER)
+                    control_points_parent = new_txrx.findall('.//ControlPoints')[0]
+                    
+                    control_points_parent.clear()
+                    point_list = etree.SubElement(control_points_parent, 'remcom__rxapi__ProjectedPointList')
+                    
+                    # Add each point as a ProjectedPointList/ProjectedPoint
+                    for point in txrx.txrx_pos:
+                        projected_point = etree.SubElement(point_list, 'ProjectedPoint')
+                        cartesian_point = etree.SubElement(projected_point, 'remcom__rxapi__CartesianPoint')
+                        
+                        x = etree.SubElement(cartesian_point, 'X')
+                        x_value = etree.SubElement(x, 'remcom__rxapi__Double')
+                        x_value.attrib["Value"] = FLOAT_STR % point[0]
+                        
+                        y = etree.SubElement(cartesian_point, 'Y')
+                        y_value = etree.SubElement(y, 'remcom__rxapi__Double')
+                        y_value.attrib["Value"] = FLOAT_STR % point[1]
+                        
+                        z = etree.SubElement(cartesian_point, 'Z')
+                        z_value = etree.SubElement(z, 'remcom__rxapi__Double')
+                        z_value.attrib["Value"] = FLOAT_STR % point[2]
+                    
+                    txrx_parent.append(new_txrx)
 
             elif txrx.txrx_type == 'grid':
                 new_txrx = etree.fromstring(etree.tostring(self.txrx_grid_template_xml), XML_PARSER)
                 x = new_txrx.findall(".//X")[0]
-                x[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[0]
+                x[0].attrib["Value"] = FLOAT_STR % txrx.txrx_pos[0]
                 y = new_txrx.findall(".//Y")[0]
-                y[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[1]
+                y[0].attrib["Value"] = FLOAT_STR % txrx.txrx_pos[1]
                 z = new_txrx.findall(".//Z")[0]
-                z[0].attrib["Value"] = FLOAT_STR %txrx.txrx_pos[2]
-
-                len_x = new_txrx.findall(".//LengthX")[0]
-                len_x[0].attrib["Value"] = FLOAT_STR %np.float32(txrx.grid_side[0])
-                len_y = new_txrx.findall(".//LengthY")[0]
-                len_y[0].attrib["Value"] = FLOAT_STR %np.float32(txrx.grid_side[1])
-                grid_spacing = new_txrx.findall(".//Spacing")[0]
-                grid_spacing[0].attrib["Value"] = FLOAT_STR %txrx.grid_spacing
+                z[0].attrib["Value"] = FLOAT_STR % txrx.txrx_pos[2]
+                
+                # Set grid parameters
+                if txrx.grid_side is not None:
+                    side1 = new_txrx.findall(".//LengthX")[0]
+                    side1[0].attrib["Value"] = FLOAT_STR % txrx.grid_side[0]
+                    side2 = new_txrx.findall(".//LengthY")[0]
+                    side2[0].attrib["Value"] = FLOAT_STR % txrx.grid_side[1]
+                if txrx.grid_spacing is not None:
+                    spacing = new_txrx.findall(".//Spacing")[0]
+                    spacing[0].attrib["Value"] = FLOAT_STR % txrx.grid_spacing
+                txrx_parent.append(new_txrx)
 
             else:
                 raise ValueError("Unsupported TxRx type: "+txrx.txrx_type)
@@ -328,7 +356,7 @@ class XmlGenerator:
         ET.indent(self.root, space="  ", level=0)
         t = str(etree.tostring(self.root, pretty_print=True, encoding="unicode"))
         t = "<!DOCTYPE InSite>\n" + t
-
+        t = t.replace('remcom__rxapi__', 'remcom::rxapi::')
         # clean the output file before writing
         open(save_path, "w+").close()
         with open(save_path, "w") as f:

@@ -78,27 +78,6 @@ def create_directory_structure(base_path: str, rt_params: Dict[str, Any]) -> Tup
 
     return insite_path, study_area_path
 
-def get_grid_info(xmin: float, ymin: float, xmax: float, ymax: float, grid_spacing: float) -> Tuple[np.ndarray, int]:
-    """Calculate the grid layout and extract available rows and users per row.
-    
-    Args:
-        xmin (float): Minimum x-coordinate
-        ymin (float): Minimum y-coordinate
-        xmax (float): Maximum x-coordinate
-        ymax (float): Maximum y-coordinate
-        grid_spacing (float): Spacing between grid points
-        
-    Returns:
-        Tuple[np.ndarray, int]: Row indices and number of users per row
-    """
-    # Create grid
-    x_coords = np.arange(xmin, xmax + grid_spacing, grid_spacing)
-    y_coords = np.arange(ymin, ymax + grid_spacing, grid_spacing)
-    # Indices of rows and number of users per row
-    row_indices = np.arange(len(y_coords) - 1)
-    users_per_row = len(x_coords) - 1  # Each row has the same number of users
-    return row_indices, users_per_row
-
 def run_command(command: List[str], description: str) -> None:
     """Run a shell command and stream output in real-time.
     
@@ -160,7 +139,7 @@ def read_rt_configs(row: pd.Series) -> Dict[str, Any]:
     }
     return rt_params
 
-def gen_tx_pos(rt_params: Dict[str, Any]) -> List[List[float]]:
+def gen_tx_pos(rt_params: Dict[str, Any]) -> np.ndarray:
     """Generate transmitter positions from GPS coordinates.
     
     Args:
@@ -171,11 +150,13 @@ def gen_tx_pos(rt_params: Dict[str, Any]) -> List[List[float]]:
     """
     num_bs = len(rt_params['bs_lats'])
     print(f"Number of BSs: {num_bs}")
-    bs_pos = [[convert_Gps2RelativeCartesian(rt_params['bs_lats'][i], rt_params['bs_lons'][i], rt_params['origin_lat'], rt_params['origin_lon'])[0],
-                convert_Gps2RelativeCartesian(rt_params['bs_lats'][i], rt_params['bs_lons'][i], rt_params['origin_lat'], rt_params['origin_lon'])[1], 
-                BS_HEIGHT]
-                for i in range(num_bs)]
-    return bs_pos
+    bs_pos = []
+    for bs_lat, bs_lon in zip(rt_params['bs_lats'], rt_params['bs_lons']):
+        bs_cartesian = convert_Gps2RelativeCartesian(bs_lat, bs_lon, 
+                                                     rt_params['origin_lat'], 
+                                                     rt_params['origin_lon'])
+        bs_pos.append([bs_cartesian[0], bs_cartesian[1], BS_HEIGHT])
+    return np.array(bs_pos)
 
 def gen_rx_pos(row: pd.Series, osm_folder: str) -> np.ndarray:
     """Generate receiver positions from GPS coordinates.
@@ -261,7 +242,7 @@ def call_blender1(rt_params: Dict[str, Any], osm_folder: str) -> None:
     # Run the command
     run_command(command, "OSM Extraction")
 
-def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarray, **rt_params: Any) -> str:
+def insite_raytrace(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **rt_params: Any) -> str:
     """Run Wireless InSite ray tracing simulation.
     
     This function sets up the simulation environment, generates the necessary files,
@@ -275,7 +256,7 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
     
     Args:
         osm_folder (str): Path to the OSM folder
-        tx_pos (List[List[float]]): Transmitter positions
+        tx_pos (np.ndarray): Transmitter positions
         rx_pos (np.ndarray): Receiver positions
         **rt_params (Any): Ray tracing parameters
         
@@ -288,11 +269,6 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
     bldgs_city = convert_to_city_file(osm_folder, insite_path, "buildings", BUILDING_MATERIAL_PATH)
     roads_city = convert_to_city_file(osm_folder, insite_path, "roads", ROAD_MATERIAL_PATH)
     TERRAIN_TEMPLATE = "newTerrain.ter"
-
-    # xmin, ymin, xmax, ymax = convert_GpsBBox2CartesianBBox(
-    #     rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
-    #     rt_params['origin_lat'], rt_params['origin_lon'], pad=0
-    # )
 
     xmin_pad, ymin_pad, xmax_pad, ymax_pad = convert_GpsBBox2CartesianBBox(
         rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
@@ -319,35 +295,35 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
         )
 
     # RX (UEs)
-    grid_side = [xmax_pad - xmin_pad, ymax_pad - ymin_pad]
     txrx_editor.add_txrx(
-        txrx_type="grid",
-        is_transmitter=False,
-        is_receiver=True,
-        pos=[xmin_pad, ymin_pad, rt_params['ue_height']],
-        name="UE_grid",
-        grid_side=grid_side,
-        grid_spacing=GRID_SPACING
-    )
+            txrx_type="points",
+            is_transmitter=False,
+            is_receiver=True,
+            pos=rx_pos,
+            name="user_grid"
+        )
+    # grid_side = [xmax_pad - xmin_pad, ymax_pad - ymin_pad]
+    # txrx_editor.add_txrx(
+    #     txrx_type="grid",
+    #     is_transmitter=False,
+    #     is_receiver=True,
+    #     pos=[xmin_pad, ymin_pad, rt_params['ue_height']],
+    #     name="UE_grid",
+    #     grid_side=grid_side,
+    #     grid_spacing=GRID_SPACING
+    # )
     txrx_editor.save(os.path.join(insite_path, "insite.txrx"))
 
-    # Calculate grid info
-    # row_indices, users_per_row = get_grid_info(xmin, ymin, xmax, ymax, grid_spacing)
-    
     # Create setup file (.setup)
     scenario = SetupEditor(insite_path)
     scenario.set_carrierFreq(rt_params['carrier_freq'])
     scenario.set_bandwidth(rt_params['bandwidth'])
-    scenario.set_study_area(
-        zmin=-3,
-        zmax=20,
-        all_vertex=np.array([
-            [xmin_pad, ymin_pad, 0],
-            [xmax_pad, ymin_pad, 0],
-            [xmax_pad, ymax_pad, 0],
-            [xmin_pad, ymax_pad, 0]
-        ])
-    )
+    study_area_vertex = np.array([[xmin_pad, ymin_pad, 0],
+                                  [xmax_pad, ymin_pad, 0],
+                                  [xmax_pad, ymax_pad, 0],
+                                  [xmin_pad, ymax_pad, 0]])
+    scenario.set_study_area(zmin=-3, zmax=20, all_vertex=study_area_vertex)
+
     # Get ray tracing parameter names from the dataclass
     rt_param_names = {field.name for field in fields(RayTracingParam)}
     rt_params_filtered = {k: v for k, v in rt_params.items() if k in rt_param_names}
@@ -359,7 +335,7 @@ def insite_raytrace(osm_folder: str, tx_pos: List[List[float]], rx_pos: np.ndarr
     scenario.save("insite") # insite.setup
 
     # Generate XML file (.xml) - What Wireless InSite executable actually uses
-    xml_generator = XmlGenerator(insite_path, scenario, version=int(WI_VERSION[0]))
+    xml_generator = XmlGenerator(insite_path, scenario, txrx_editor, version=int(WI_VERSION[0]))
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")
     xml_generator.save(xml_path)
@@ -409,6 +385,7 @@ if __name__ == "__main__":
         insite_rt_path = insite_raytrace(osm_folder, tx_pos, rx_pos, **rt_params)
         print(f"✓ Ray tracing completed. Results saved to: {insite_rt_path}")
 
+        break
         # Convert to DeepMIMO
         print("\nPHASE 5: Converting to DeepMIMO format...")
         dm.config('wireless_insite_version', WI_VERSION)
@@ -419,6 +396,7 @@ if __name__ == "__main__":
         print("\nTesting DeepMIMO conversion...")
         dataset_insite = dm.load(scen_insite)[0]
         print("✓ DeepMIMO conversion test completed")
+        dataset_insite.plot_coverage(dataset_insite.los)
 
         print('\n✓ SCENARIO COMPLETED SUCCESSFULLY!')
         print('--------------------')

@@ -1,94 +1,109 @@
+"""
+Wireless InSite TxRx Editor.
+
+This module provides functionality to create and edit transmitter and receiver configurations
+for Wireless InSite simulations. It supports both single points and arrays of points for
+transmitter and receiver positions.
+"""
+
+from typing import List, Optional
 import numpy as np
 
 class TxRx:
-    def __init__(self, txrx_type, is_transmitter, is_receiver, pos, name, id=None, grid_side=None, grid_spacing=None):
+    """
+    Class representing a transmitter or receiver in the Wireless InSite simulation.
+    
+    Attributes:
+        txrx_name (str): Name of the transmitter/receiver
+        txrx_id (int): Unique identifier
+        txrx_type (str): Type of transmitter/receiver ('points' or 'grid')
+        is_transmitter (bool): Whether this is a transmitter
+        is_receiver (bool): Whether this is a receiver
+        txrx_pos (np.ndarray): Position(s) of the transmitter/receiver. Shape (3,) for single point or (N, 3) for multiple points
+        grid_side (Optional[np.ndarray]): Grid dimensions [width, height] if type is 'grid'
+        grid_spacing (Optional[float]): Grid spacing if type is 'grid'
+    """
+    def __init__(self, 
+                 txrx_type: str,
+                 is_transmitter: bool, 
+                 is_receiver: bool,
+                 pos: List[float] | np.ndarray,
+                 name: str,
+                 id: Optional[int] = None,
+                 grid_side: Optional[List[float]] = None,
+                 grid_spacing: Optional[float] = None):
         self.txrx_name = name
         self.txrx_id = id
         self.txrx_type = txrx_type
         self.is_transmitter = is_transmitter
         self.is_receiver = is_receiver
-        self.txrx_pos = pos
-        self.grid_side = grid_side
+        # Convert pos to numpy array and ensure correct shape
+        self.txrx_pos = np.asarray(pos)
+        if self.txrx_pos.ndim == 1:
+            # Single point case - ensure shape (3,)
+            self.txrx_pos = self.txrx_pos.reshape(3)
+        elif self.txrx_pos.ndim == 2:
+            # Multiple points case - ensure shape (N, 3)
+            if self.txrx_pos.shape[1] != 3:
+                raise ValueError("Position array must have shape (N, 3) for multiple points")
+        else:
+            raise ValueError("Position must be a 1D or 2D array")
+            
+        self.grid_side = np.asarray(grid_side) if grid_side is not None else None
         self.grid_spacing = grid_spacing
 
 class TxRxEditor:
-    def __init__(self, infile_path=None, template_path="resources/txrx"):
+    """
+    Editor class for managing transmitters and receivers in Wireless InSite simulations.
+    
+    This class provides functionality to add, remove, and modify transmitter and receiver
+    configurations, supporting both single points and arrays of points.
+    """
+    def __init__(self, infile_path: Optional[str] = None, template_path: str = "resources/txrx"):
         self.infile_path = infile_path
-
-        self.txrx = []
+        self.txrx: List[TxRx] = []
         self.template_path = template_path
-
         self.txrx_file = None
-        self.parse()
         self.txpower = 0  # only supports tx_power = 0
         
-    def read_tx_power(self):
-        with open(self.infile_path, "r") as f:
-            txrx_file = f.readlines()
-        power_vals = []
-        for line in txrx_file:
-            if line.split(" ")[0] == "power":
-                power_vals.append(np.float64(line.split(" ")[1]))
-        if len(set(power_vals)) > 1:
-            print(
-                "Power of the transmitters are not uniform. The generator does not support such design!"
-            )
-        if len(power_vals) == 0:
-            print("Cannot find transmission power value in .txrx file!")
-        return power_vals[0]
-
-    def parse(self):
-        try:
-            with open(self.infile_path, "r") as f:
-                txrx_file = f.read().splitlines()
-        except:
-            return
-        for i, line in enumerate(txrx_file):
-            if ("begin_<points>" in line) or ("begin_<grid>" in line):
-                txrx_name = txrx_file[i].split(" ")[1]
-                txrx_id = int(txrx_file[i + 1].split(" ")[1])
-                txrx_type = line.split("<")[1].split(">")[0]
-                grid_side = None
-                grid_spacing = None
-            if "nVertices" in line:
-                pos = np.asarray(
-                    txrx_file[i + 1].split(" "), np.float64
-                )
-            if "is_transmitter" in line:
-                is_transmitter = True if (line.split(" ")[1] == "yes") else False
-            if "is_receiver" in line:
-                is_receiver = True if (line.split(" ")[1] == "yes") else False
-            if "side1" in line:
-                side1 = np.float64(txrx_file[i].split(" ")[1])
-                side2 = np.float64(txrx_file[i + 1].split(" ")[1])
-                grid_spacing = np.float64(txrx_file[i + 2].split(" ")[1])
-                grid_side = np.asarray([side1, side2])
-            if ("end_<points>" in line) or ("end_<grid>" in line):
-                self.txrx.append(TxRx(txrx_type, is_transmitter, is_receiver, pos, txrx_name, txrx_id, grid_side, grid_spacing))
-
-    def add_txrx(self, txrx_type, is_transmitter, is_receiver, pos, name, id=None, grid_side=None, grid_spacing=None):
+    def add_txrx(self, 
+                txrx_type: str,
+                is_transmitter: bool,
+                is_receiver: bool,
+                pos: List[float] | np.ndarray,
+                name: str,
+                id: Optional[int] = None,
+                grid_side: Optional[List[float]] = None,
+                grid_spacing: Optional[float] = None) -> None:
+        """
+        Add a new transmitter or receiver.
+        
+        Args:
+            txrx_type: Type of transmitter/receiver ('points' or 'grid')
+            is_transmitter: Whether this is a transmitter
+            is_receiver: Whether this is a receiver
+            pos: Position(s) as [x, y, z] for single point or array of shape (N, 3) for multiple points
+            name: Name of the transmitter/receiver
+            id: Optional unique identifier (auto-generated if None)
+            grid_side: Optional grid dimensions [width, height] if type is 'grid'
+            grid_spacing: Optional grid spacing if type is 'grid'
+        """
         if not id:
             try:
                 id = self.txrx[-1].txrx_id + 1
             except:
                 id = 1
-        new_txrx = TxRx(txrx_type, is_transmitter, is_receiver, pos, name, id=id, grid_side=grid_side, grid_spacing=grid_spacing)
+        new_txrx = TxRx(txrx_type, is_transmitter, is_receiver, pos, name, id=id, 
+                        grid_side=grid_side, grid_spacing=grid_spacing)
         self.txrx.append(new_txrx)
 
-    def remove_txrx(self, id=None):
-        if not id:
-            self.txrx = []
-            return
+    def save(self, outfile_path: str) -> None:
+        """
+        Save the transmitter/receiver configuration to a file.
         
-        pop_idx = []
-        for i, x in enumerate(self.txrx):
-            if x.txrx_id in id:
-                pop_idx.append(i)
-        pop_idx = pop_idx[::-1]
-        for p in pop_idx:
-            self.txrx.pop(p)
-
-    def save(self, outfile_path):
+        Args:
+            outfile_path: Path to save the configuration file
+        """
         # clean the output file before writing
         open(outfile_path, "w+").close()
         for x in self.txrx:
@@ -100,7 +115,16 @@ class TxRxEditor:
                     template[i+1] = "project_id %d\n" % x.txrx_id
 
                 if "nVertices" in line:
-                    template[i+1] = "%.15f %.15f %.15f\n" % (x.txrx_pos[0], x.txrx_pos[1], x.txrx_pos[2])
+                    # Handle both single point and multiple points cases
+                    if x.txrx_pos.ndim == 1:
+                        # Single point case
+                        template[i+1] = "%.2f %.2f %.2f\n" % tuple(x.txrx_pos)
+                    else:
+                        # Multiple points case - write each point on a new line
+                        points_str = ""
+                        for point in x.txrx_pos:
+                            points_str += "%.2f %.2f %.2f\n" % tuple(point)
+                        template[i+1] = points_str
                 
                 if "is_transmitter" in line:
                     tmp = "yes" if x.is_transmitter else "no"
@@ -110,7 +134,7 @@ class TxRxEditor:
                     tmp = "yes" if x.is_receiver else "no"
                     template[i] = "is_receiver %s\n" % tmp
 
-                if "side1" in line:
+                if "side1" in line and x.grid_side is not None:
                     template[i] = "side1 %.5f\n" % np.float32(x.grid_side[0])
                     template[i+1] = "side2 %.5f\n" % np.float32(x.grid_side[1])
                     template[i+2] = "spacing %.5f\n" % np.float32(x.grid_spacing)
@@ -123,8 +147,12 @@ class TxRxEditor:
 if __name__ == "__main__":
     outfile_path = "test/gwc_test.txrx"
     editor = TxRxEditor()
-    # editor.remove_txrx()
-    editor.add_txrx("points", True, True, [0,0,6], "BS")
-    editor.add_txrx("grid", False, True, [-187,-149,2], "UE_grid", grid_side=[379,299], grid_spacing=5)
+    # Example of single point transmitter
+    editor.add_txrx("points", True, True, [0, 0, 6], "BS")
+    # Example of multiple point receivers
+    rx_points = np.array([[0, 0, 2], [5, 5, 2], [10, 10, 2]])  # 3 receiver points
+    editor.add_txrx("points", False, True, rx_points, "UE_points")
+    # Example of grid receiver
+    editor.add_txrx("grid", False, True, [-187, -149, 2], "UE_grid", grid_side=[379, 299], grid_spacing=5)
     editor.save(outfile_path)
     print("done")

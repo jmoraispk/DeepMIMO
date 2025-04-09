@@ -8,10 +8,10 @@ and Cartesian coordinates, as well as bounding box transformations.
 
 import numpy as np
 import utm
-from typing import Tuple, Union
+from typing import Tuple
 
 
-def xy_from_latlong(lat: Union[float, np.ndarray], long: Union[float, np.ndarray]) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray]]:
+def xy_from_latlong(lat: float | np.ndarray, long: float | np.ndarray) -> Tuple[float | np.ndarray, float | np.ndarray]:
     """Convert latitude and longitude to UTM coordinates.
     
     Assumes lat and long are along row. Returns same row vec/matrix on
@@ -29,15 +29,10 @@ def xy_from_latlong(lat: Union[float, np.ndarray], long: Union[float, np.ndarray
     return x, y
 
 
-def convert_GpsBBox2CartesianBBox(
-    minlat: float, 
-    minlon: float, 
-    maxlat: float, 
-    maxlon: float, 
-    origin_lat: float, 
-    origin_lon: float, 
-    pad: float = 0
-) -> Tuple[float, float, float, float]:
+def convert_GpsBBox2CartesianBBox(minlat: float, minlon: float, 
+                                  maxlat: float, maxlon: float, 
+                                  origin_lat: float, origin_lon: float, 
+                                  pad: float = 0) -> Tuple[float, float, float, float]:
     """Convert a GPS bounding box to a Cartesian bounding box.
     
     Args:
@@ -64,12 +59,10 @@ def convert_GpsBBox2CartesianBBox(
     return xmin-pad, ymin-pad, xmax+pad, ymax+pad
 
 
-def convert_Gps2RelativeCartesian(
-    lat: Union[float, np.ndarray], 
-    lon: Union[float, np.ndarray], 
-    origin_lat: float, 
-    origin_lon: float
-) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray]]:
+def convert_Gps2RelativeCartesian(lat: float | np.ndarray, 
+                                  lon: float | np.ndarray,
+                                  origin_lat: float, 
+                                  origin_lon: float) -> Tuple[float | np.ndarray, float | np.ndarray]:
     """Convert GPS coordinates to relative Cartesian coordinates.
     
     Args:
@@ -79,7 +72,7 @@ def convert_Gps2RelativeCartesian(
         origin_lon (float): Origin longitude in degrees
         
     Returns:
-        Tuple[Union[float, np.ndarray], Union[float, np.ndarray]]: Relative Cartesian coordinates (x, y)
+        Tuple[float | np.ndarray, float | np.ndarray]: Relative Cartesian coordinates (x, y)
     """
     x_origin, y_origin = xy_from_latlong(origin_lat, origin_lon)
     x, y = xy_from_latlong(lat, lon)
