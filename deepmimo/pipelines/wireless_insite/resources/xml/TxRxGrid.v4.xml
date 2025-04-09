@@ -4,7 +4,7 @@
       <remcom::rxapi::Double Value="10"/>
     </AdjacencyDistance>
     <ConformToTerrain>
-      <remcom::rxapi::Boolean Value="true"/>
+      <remcom::rxapi::Boolean Value="false"/>
     </ConformToTerrain>
     <ControlPoints>
       <remcom::rxapi::ProjectedPointList>
