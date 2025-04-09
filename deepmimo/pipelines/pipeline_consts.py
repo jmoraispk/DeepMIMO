@@ -17,10 +17,5 @@ BUILDING_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Concrete 3.5 GHz.mtl")
 ROAD_MATERIAL_PATH = os.path.join(WI_MAT, "Asphalt_1GHz.mtl")
 TERRAIN_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Wet earth 3.5 GHz.mtl")
 
-
-# Ray-tracing parameters ------------->>>>>>>>> ELIMINATE!!!
-UE_HEIGHT = 1.5  # meters
-BS_HEIGHT = 20  # meters
-GRID_SPACING = 1.0  # meters
-
+# Position precision - number of decimal places for coordinates in .txrx and setup files
 POS_PREC = 4
