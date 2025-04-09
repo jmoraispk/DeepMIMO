@@ -18,6 +18,7 @@ my_api_key.py
 
 # Development:
 #   For wireless insite outputs
+testing.py
 executables/*
 pipeline_dev/*
 P2Ms/*
