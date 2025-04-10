@@ -2,9 +2,7 @@
 
 import os
 import subprocess
-import pandas as pd
-import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 
 def run_command(command: List[str], description: str) -> None:
@@ -65,51 +63,23 @@ def call_blender1(rt_params: Dict[str, Any], osm_folder: str, blender_path: str,
         "--minlon", str(minlon), 
         "--maxlat", str(maxlat), 
         "--maxlon", str(maxlon),
-        "--output", str(osm_folder)  # Pass the output folder to the Blender script
+        "--output", osm_folder   # Output folder to the Blender script
     ]
     
     # Run the command
     run_command(command, "OSM Extraction")
 
 
-def read_rt_configs(row: pd.Series) -> Dict[str, Any]:
-    """Read ray tracing configurations from a pandas Series.
+def get_origin_coords(osm_folder: str) -> Tuple[float, float]:
+    """Read the origin coordinates from the OSM folder.
     
     Args:
-        row (pd.Series): Row from the parameters DataFrame
-        
+        osm_folder (str): Path to the OSM folder
+    
     Returns:
-        Dict[str, Any]: Ray tracing parameters
+        Tuple[float, float]: Origin coordinates (latitude, longitude)
     """
-    bs_lats = np.array(row['bs_lat'].split(',')).astype(np.float32)
-    bs_lons = np.array(row['bs_lon'].split(',')).astype(np.float32)
-    carrier_freq = row['freq (ghz)'] * 1e9
-    diffraction = scattering = bool(row['ds_enable'])
+    with open(os.path.join(osm_folder, 'osm_gps_origin.txt'), "r") as f:
+        origin_coords = f.read().split(',')
+    return float(origin_coords[0]), float(origin_coords[1])
 
-    rt_params = {
-        'name': row['name'],
-        'city': row['city'],
-        'min_lat': row['min_lat'],
-        'min_lon': row['min_lon'],
-        'max_lat': row['max_lat'],
-        'max_lon': row['max_lon'],
-        'bs_lats': bs_lats,
-        'bs_lons': bs_lons,
-        'carrier_freq': carrier_freq,
-
-        # Ray-tracing parameters -> Efficient if they match the dataclass in SetupEditor.py
-        'max_reflections': row['n_reflections'],
-        'diffraction': diffraction,
-        'scattering': scattering,
-        'max_paths': row['max_paths'],
-        'ray_spacing': row['ray_spacing'],
-        'max_transmissions': row['max_transmissions'],
-        'max_diffractions': row['max_diffractions'],
-        'ds_enable': row['ds_enable'],
-        'ds_max_reflections': row['ds_max_reflections'],
-        'ds_max_transmissions': row['ds_max_transmissions'],
-        'ds_max_diffractions': row['ds_max_diffractions'],
-        'ds_final_interaction_only': row['ds_final_interaction_only'],
-        'conform_to_terrain': row['conform_to_terrain'] == 1
-    }
-    return rt_params

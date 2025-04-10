@@ -2,7 +2,6 @@ import numpy as np
 from typing import Dict, Any
 
 from .geo_utils import convert_Gps2RelativeCartesian, convert_GpsBBox2CartesianBBox
-from .pipeline_consts import POS_PREC
 
 def gen_tx_pos(rt_params: Dict[str, Any]) -> np.ndarray:
     """Generate transmitter positions from GPS coordinates.
@@ -21,7 +20,7 @@ def gen_tx_pos(rt_params: Dict[str, Any]) -> np.ndarray:
                                                      rt_params['origin_lat'], 
                                                      rt_params['origin_lon'])
         bs_pos.append([bs_cartesian[0], bs_cartesian[1], rt_params['bs_height']])
-    return np.round(np.array(bs_pos), POS_PREC)
+    return np.array(bs_pos)
 
 
 def gen_rx_grid(rt_params: Dict[str, Any]) -> np.ndarray:
@@ -48,4 +47,4 @@ def gen_rx_grid(rt_params: Dict[str, Any]) -> np.ndarray:
     grid_z = np.zeros_like(grid_x) + rt_params['ue_height']
     user_grid = np.stack([grid_x.flatten(), grid_y.flatten(), grid_z.flatten()], axis=-1) 
     print(f"User grid shape: {user_grid.shape}")
-    return np.round(user_grid, POS_PREC) 
+    return user_grid
