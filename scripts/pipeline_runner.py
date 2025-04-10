@@ -32,7 +32,7 @@ from deepmimo.pipelines.pipeline_consts import (OSM_ROOT, BLENDER_PATH, BLENDER_
 # sys.path.append("C:/Users/jmora/Documents/GitHub/DeepMIMO")
 import deepmimo as dm  # type: ignore
 
-from deepmimo.pipelines.TxRxPlacement import gen_rx_pos, gen_tx_pos
+from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 
 from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
 
@@ -57,6 +57,7 @@ for index, row in df.iterrows():
 	
 	print("\nPHASE 2: Running OSM extraction...")
 	call_blender1(rt_params, osm_folder, BLENDER_PATH, BLENDER_SCRIPT_PATH)
+	# osm_path = call_blender2(rt_params['gps_bbox'], outputs=['insite', 'sionna'])
 	print("✓ OSM extraction completed")
 	
 	# Read origin coordinates
@@ -65,7 +66,7 @@ for index, row in df.iterrows():
 
 	# Generate RX and TX positions
 	print("\nPHASE 3: Generating transmitter and receiver positions...")
-	rx_pos = gen_rx_pos(rt_params, osm_folder)  # N x 3 (N ~ 20k)
+	rx_pos = gen_rx_grid(rt_params)  # N x 3 (N ~ 20k)
 	tx_pos = gen_tx_pos(rt_params)        # M x 3 (M ~ 3)
 	print(f"✓ Generated {len(tx_pos)} transmitter positions and {len(rx_pos)} receiver positions")
 
@@ -88,30 +89,3 @@ for index, row in df.iterrows():
 	dataset.plot_coverage(dataset.los)
 	break
 
-#%%
-
-df = pd.read_csv('scenarios.csv')
-
-for index, row in df.iterrows():
-	
-	rt_params = dm.read_rt_configs(row)  # dict(n_reflections, diffraction, scattering, ...)
-
-	osm_path = dm.pipelines.call_blender(rt_params['gps_bbox'], outputs=['insite', 'sionna'])
-	
-	# Generate XY user grid and BS positions
-	rx_pos = dm.pipelines.gen_rx_pos(row)  # N x 3 (N ~ 20k)
-	tx_pos = dm.pipelines.gen_tx_pos(row)  # M x 3 (M ~ 3)
-
-	# Ray Tracing
-	insite_rt_path = dm.pipelines.insite_raytrace(osm_path, tx_pos, rx_pos, **rt_params)
-	sionna_rt_path = dm.pipelines.sionna_raytrace(osm_path, tx_pos, rx_pos, **rt_params)
-	
-	# Convert to DeepMIMO
-	scen_insite = dm.convert(insite_rt_path)
-	scen_sionna = dm.convert(sionna_rt_path)
-
-	# Test Conversion
-	dataset_insite = dm.load(scen_insite)
-	dataset_sionna = dm.load(scen_sionna)
-
-#%%
