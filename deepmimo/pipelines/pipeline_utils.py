@@ -2,7 +2,8 @@
 
 import os
 import subprocess
-from typing import List, Dict, Any, Tuple
+from typing import List, Tuple
+import numpy as np
 
 
 def run_command(command: List[str], description: str) -> None:
@@ -13,8 +14,9 @@ def run_command(command: List[str], description: str) -> None:
         description (str): Description of the command for logging
     """
     print(f"\n🚀 Starting: {description}...\n")
-    print('running command: ', ' '.join(command))
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+    print('\t Running: ', ' '.join(command))
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                               text=True, encoding="utf-8", errors="replace")
 
     # Stream the output in real-time
     for line in iter(process.stdout.readline, ''):
@@ -26,19 +28,20 @@ def run_command(command: List[str], description: str) -> None:
     print(f"\n✅ {description} completed!\n")
 
 
-def call_blender1(rt_params: Dict[str, Any], osm_folder: str, blender_path: str, blender_script_path: str) -> None:
+def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
+                 blender_path: str, blender_script_path: str, outputs: List[str]) -> None:
     """Process OSM extraction directly without calling a separate script.
     
     Args:
-        rt_params (Dict[str, Any]): Ray tracing parameters
+        min_lat (float): Minimum latitude
+        min_lon (float): Minimum longitude
+        max_lat (float): Maximum latitude
+        max_lon (float): Maximum longitude
         osm_folder (str): Path to the OSM folder
+        blender_path (str): Path to the Blender executable
+        blender_script_path (str): Path to the Blender script
+        outputs (List[str]): List of outputs to generate
     """
-    
-    # Extract coordinates from rt_params
-    minlat = rt_params['min_lat']
-    minlon = rt_params['min_lon']
-    maxlat = rt_params['max_lat']
-    maxlon = rt_params['max_lon']
     
     # Check if the folder already exists
     if os.path.exists(osm_folder):
@@ -59,15 +62,18 @@ def call_blender1(rt_params: Dict[str, Any], osm_folder: str, blender_path: str,
         "--python", 
         blender_script_path, 
         "--", 
-        "--minlat", str(minlat), 
-        "--minlon", str(minlon), 
-        "--maxlat", str(maxlat), 
-        "--maxlon", str(maxlon),
+        "--minlat", str(min_lat), 
+        "--minlon", str(min_lon), 
+        "--maxlat", str(max_lat), 
+        "--maxlon", str(max_lon),
         "--output", osm_folder   # Output folder to the Blender script
+        
     ]
     
     # Run the command
     run_command(command, "OSM Extraction")
+    
+    return
 
 
 def get_origin_coords(osm_folder: str) -> Tuple[float, float]:
@@ -80,6 +86,29 @@ def get_origin_coords(osm_folder: str) -> Tuple[float, float]:
         Tuple[float, float]: Origin coordinates (latitude, longitude)
     """
     with open(os.path.join(osm_folder, 'osm_gps_origin.txt'), "r") as f:
-        origin_coords = f.read().split(',')
+        origin_coords = f.read().split('\n')
     return float(origin_coords[0]), float(origin_coords[1])
+
+
+def _split_coords(x: str) -> np.ndarray:
+    """Split comma-separated coordinates into float array."""
+    return np.array(x.split(',')).astype(np.float32)
+
+
+def load_params_from_row(row, params_dict):
+    """Load parameters from a DataFrame row into a parameters dictionary.
+    
+    Args:
+        row (pandas.Series): Row from a DataFrame containing parameters
+        params_dict (Dict): Dictionary of parameters to update
+    """
+    # Update parameters that exist in both the row and params dict
+    for key in params_dict.keys():
+        if key in row.index:
+            params_dict[key] = row[key]
+    
+    # Handle base station coordinates separately
+    params_dict['bs_lats'] = _split_coords(row['bs_lat'])
+    params_dict['bs_lons'] = _split_coords(row['bs_lon'])
+    params_dict['bs_heights'] = _split_coords(row['bs_height'])
 

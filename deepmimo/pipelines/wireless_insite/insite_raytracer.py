@@ -1,16 +1,22 @@
 """
 Wireless InSite Ray Tracing Pipeline.
 
-This module provides a complete pipeline for generating electromagnetic simulation scenarios
-using OpenStreetMap data and running ray tracing simulations with Wireless InSite.
-It handles the entire process from OSM data extraction to DeepMIMO dataset generation.
+This module provides functionality for running electromagnetic simulations using Wireless InSite.
+It handles:
+- Setting up the simulation environment from OpenStreetMap data:
+    - Configuring transmitter and receiver positions 
+    - Generating terrain, building and road models
+    - Creating simulation configuration files (.setup, .txrx, .ter, .city)
+- Running the ray tracing simulation
+
+The module creates both human-readable text files and an XML file used by Wireless InSite.
+The text files are useful for debugging and verification in the Wireless InSite UI.
 """
 
 #%% Imports
 
 # Standard library imports
 import os
-import subprocess
 from dataclasses import fields
 from typing import Dict, Tuple, Any
 
@@ -25,9 +31,8 @@ from .WI_interface.TerrainEditor import TerrainEditor
 from .convert_ply2city import convert_to_city_file
 
 # Project-specific imports
-from ..pipeline_consts import (WI_EXE, WI_LIC, WI_VERSION, BUILDING_MATERIAL_PATH,
-                               ROAD_MATERIAL_PATH, TERRAIN_MATERIAL_PATH)
 from ..geo_utils import convert_GpsBBox2CartesianBBox
+from ..pipeline_utils import run_command
 
 TERRAIN_TEMPLATE = "newTerrain.ter"
 
@@ -58,6 +63,7 @@ def create_directory_structure(osm_folder: str, rt_params: Dict[str, Any]) -> Tu
 
     return insite_path, study_area_path
 
+
 def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **rt_params: Any) -> str:
     """Run Wireless InSite ray tracing simulation.
     
@@ -65,25 +71,48 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     and runs the ray tracing simulation. It creates both human-readable text files
     (.setup, .txrx, .ter, .city) and the XML file that is actually used by Wireless InSite.
     
-    The text files are saved for reference and compatibility with the converter, but
-    the XML file is what is actually used in the simulation. The text files are important
-    because they are human-readable and can be used with the Wireless InSite UI for
-    verification and debugging.
-    
-    Args:
+    Required Parameters:
         osm_folder (str): Path to the OSM folder
-        tx_pos (np.ndarray): Transmitter positions
-        rx_pos (np.ndarray): Receiver positions
-        **rt_params (Any): Ray tracing parameters
-        
+        tx_pos (np.ndarray): Transmitter positions (M x 3 array)
+        rx_pos (np.ndarray): Receiver positions (N x 3 array)
+        rt_params (dict): Dictionary containing:
+            Required Paths:
+                - wi_exe (str): Path to Wireless InSite executable
+                - wi_lic (str): Path to Wireless InSite license
+                - wi_version (str): Wireless InSite version (e.g. "4.0.1")
+                - building_material (str): Path to building material file
+                - road_material (str): Path to road material file
+                - terrain_material (str): Path to terrain material file
+            
+            Required Parameters:
+                - carrier_freq (float): Carrier frequency in Hz
+                - bandwidth (float): Bandwidth in Hz
+                - grid_spacing (float): Grid spacing in meters
+                - ue_height (float): UE height in meters
+                - conform_to_terrain (bool): Whether to conform to terrain
+                - min_lat, min_lon, max_lat, max_lon (float): GPS coordinates of the area
+                - origin_lat, origin_lon (float): Origin GPS coordinates
+            
+            Ray Tracing Parameters:
+                - max_paths (int): Maximum number of paths to render
+                - ray_spacing (float): Spacing between rays
+                - max_reflections (int): Maximum number of reflections
+                - max_transmissions (int): Maximum number of transmissions
+                - max_diffractions (int): Maximum number of diffractions
+                - ds_enable (bool): Whether diffuse scattering is enabled
+                - ds_max_reflections (int): Maximum number of diffuse reflections
+                - ds_max_transmissions (int): Maximum number of diffuse transmissions
+                - ds_max_diffractions (int): Maximum number of diffuse diffractions
+                - ds_final_interaction_only (bool): Whether to only apply diffuse scattering at final interaction
+    
     Returns:
-        str: Path to the insite directory
+        str: Path to the insite directory containing all generated files
     """
     insite_path, study_area_path = create_directory_structure(osm_folder, rt_params)
     
     # Create buildings.city & roads.city files
-    bldgs_city = convert_to_city_file(osm_folder, insite_path, "buildings", BUILDING_MATERIAL_PATH)
-    roads_city = convert_to_city_file(osm_folder, insite_path, "roads", ROAD_MATERIAL_PATH)
+    bldgs_city = convert_to_city_file(osm_folder, insite_path, "buildings", rt_params['building_material'])
+    roads_city = convert_to_city_file(osm_folder, insite_path, "roads", rt_params['road_material'])
 
     PAD = 30
     xmin_pad, ymin_pad, xmax_pad, ymax_pad = convert_GpsBBox2CartesianBBox(
@@ -94,7 +123,7 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     # Create terrain file (.ter)
     terrain_editor = TerrainEditor()
     terrain_editor.set_vertex(xmin=xmin_pad, ymin=ymin_pad, xmax=xmax_pad, ymax=ymax_pad)
-    terrain_editor.set_material(TERRAIN_MATERIAL_PATH)
+    terrain_editor.set_material(rt_params['terrain_material'])
     terrain_editor.save(os.path.join(insite_path, TERRAIN_TEMPLATE))
 
     # Configure Tx/Rx (.txrx)
@@ -108,7 +137,7 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
             is_receiver=True,
             pos=pos,
             name=f"BS{b_idx+1}",
-            conform_to_terrain=True)
+            conform_to_terrain=False)
 
     #   RX (UEs)
     if False:
@@ -156,16 +185,15 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     scenario.save("insite") # insite.setup
 
     # Generate XML file (.xml) - What Wireless InSite executable actually uses
-    xml_generator = XmlGenerator(insite_path, scenario, txrx_editor, version=int(WI_VERSION[0]))
+    xml_generator = XmlGenerator(insite_path, scenario, txrx_editor, version=int(rt_params['wi_version'][0]))
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")
     xml_generator.save(xml_path)
 
-    license_info = ["-set_licenses", WI_LIC] if WI_VERSION.startswith("4") else []
+    license_info = ["-set_licenses", rt_params['wi_lic']] if rt_params['wi_version'].startswith("4") else []
     
     # Run Wireless InSite using the XML file
-    command = [WI_EXE, "-f", xml_path, "-out", study_area_path, "-p", "insite"] + license_info
-    print('running command: ', ' '.join(command))
-    subprocess.run(command, check=True)
+    command = [rt_params['wi_exe'], "-f", xml_path, "-out", study_area_path, "-p", "insite"] + license_info
+    run_command(command, "RAY TRACING: Wireless InSite")
     
     return insite_path
