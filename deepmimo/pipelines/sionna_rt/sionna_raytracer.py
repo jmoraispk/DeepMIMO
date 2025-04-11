@@ -3,7 +3,9 @@
 
 # Standard library imports
 import os
-from typing import Dict, Any
+from typing import Any
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow (excessive) logging
 
 # Third-party imports
 import numpy as np
@@ -44,16 +46,15 @@ class DataLoader:
         self.current_idx = end_idx
         return self.data[batch_indices]
 
-def raytrace_sionna(root_folder: str, bs_pos: np.ndarray, user_grid: np.ndarray,
-                    rt_params: Dict[str, Any]) -> str:
+def raytrace_sionna(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **rt_params: Any) -> str:
         """Run ray tracing for the scene."""
         # Create scene
         scene_name = (f"sionna_{rt_params['carrier_freq']/1e9:.1f}GHz_"
                       f"{rt_params['max_reflections']}R_{rt_params['max_diffractions']}D_"
                       f"{1 if rt_params['ds_enable'] else 0}S")
 
-        scene_folder = os.path.join(root_folder, scene_name)
-        xml_path = os.path.join(root_folder, "scene.xml")  # Created by Blender OSM Export!
+        scene_folder = os.path.join(osm_folder, scene_name)
+        xml_path = os.path.join(osm_folder, "scene.xml")  # Created by Blender OSM Export!
         scene = create_base_scene(xml_path, rt_params['carrier_freq'])
         scene = set_materials(scene)
         
@@ -65,14 +66,14 @@ def raytrace_sionna(root_folder: str, bs_pos: np.ndarray, user_grid: np.ndarray,
         }
 
         # Add BSs
-        num_bs = len(bs_pos)
+        num_bs = len(tx_pos)
         for b in range(num_bs): 
-            tx = Transmitter(position=bs_pos[b], name=f"BS_{b}",
+            tx = Transmitter(position=tx_pos[b], name=f"BS_{b}",
                              power_dbm=tf.Variable(0, dtype=tf.float32))
             scene.add(tx)
-            print(f"Added BS_{b} at position {bs_pos[b]}")
+            print(f"Added BS_{b} at position {tx_pos[b]}")
 
-        indices = np.arange(user_grid.shape[0])
+        indices = np.arange(rx_pos.shape[0])
         indices = np.arange(100)
 
         data_loader = DataLoader(indices, rt_params['batch_size'])
@@ -81,7 +82,7 @@ def raytrace_sionna(root_folder: str, bs_pos: np.ndarray, user_grid: np.ndarray,
         # Ray-tracing BS-BS paths
         print("Ray-tracing BS-BS paths")
         for b in range(num_bs):
-            scene.add(Receiver(name=f"rx_{b}", position=bs_pos[b]))
+            scene.add(Receiver(name=f"rx_{b}", position=tx_pos[b]))
 
         paths = scene.compute_paths(**compute_paths_rt_params)
         paths.normalize_delays = False
@@ -93,7 +94,7 @@ def raytrace_sionna(root_folder: str, bs_pos: np.ndarray, user_grid: np.ndarray,
         # Ray-tracing BS-UE paths
         for batch in tqdm(data_loader, desc="Ray-tracing BS-UE paths", unit='batch'):
             for i in batch:
-                scene.add(Receiver(name=f"rx_{i}", position=user_grid[i]))
+                scene.add(Receiver(name=f"rx_{i}", position=rx_pos[i]))
 
             paths = scene.compute_paths(**compute_paths_rt_params)
             paths.normalize_delays = False

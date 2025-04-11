@@ -56,7 +56,6 @@ logger.info(f"📊 Output formats: {output_formats}")
 
 # Export based on the selected format
 if "insite" in output_formats:
-
     
     # Clear existing objects in Blender
     bpy.ops.object.select_all(action="SELECT")
@@ -140,7 +139,85 @@ if "sionna" in output_formats:
     import bpy # type: ignore
     import bmesh # type: ignore
 
-    from .utils.blender_utils import get_obj_by_name, get_bounding_box, clear_blender, compute_distance
+    print('inside SIONNA')
+
+    # from .utils.blender_utils import get_obj_by_name, get_bounding_box, clear_blender, compute_distance
+    
+    import math
+    import mathutils # type: ignore (comes with blender)
+
+    def get_obj_by_name(name):
+        """
+        Get an object by its name.
+        
+        Args:
+            name (str): Name of the object
+        Returns:
+            bpy.types.Object or None: The object if found, else None
+        """
+        return bpy.data.objects.get(name)
+
+    def clear_blender():
+        """Remove all datablocks from Blender to start with a clean slate."""
+        block_lists = [
+            bpy.data.collections, bpy.data.objects, bpy.data.meshes, bpy.data.materials,
+            bpy.data.textures, bpy.data.images, bpy.data.curves, bpy.data.cameras
+        ]
+        for block_list in block_lists:
+            for block in list(block_list):
+                block_list.remove(block, do_unlink=True)
+
+    def get_bounding_box(obj):
+        """
+        Calculate the world-space bounding box of an object.
+        
+        Args:
+            obj (bpy.types.Object): Mesh object
+        Returns:
+            tuple: (min_x, max_x, min_y, max_y) in world coordinates
+        """
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        if obj.type != 'MESH':
+            return None
+        bbox = obj.bound_box
+        matrix_world = obj.matrix_world
+        min_x = min_y = float('inf')
+        max_x = max_y = float('-inf')
+        for corner in bbox:
+            world_coord = matrix_world @ mathutils.Vector((corner[0], corner[1], corner[2]))
+            min_x = min(min_x, world_coord.x)
+            max_x = max(max_x, world_coord.x)
+            min_y = min(min_y, world_coord.y)
+            max_y = max(max_y, world_coord.y)
+        print(f"Object: {obj.name}")
+        print(f"min_x: {min_x}, max_x: {max_x}")
+        print(f"min_y: {min_y}, max_y: {max_y}")
+        return min_x, max_x, min_y, max_y
+
+    def compute_distance(coord1, coord2):
+        """
+        Compute Haversine distance between two coordinates in meters.
+        
+        Args:
+            coord1 (tuple): (latitude, longitude) of first point
+            coord2 (tuple): (latitude, longitude) of second point
+        Returns:
+            float: Distance in meters
+        Note:
+            Error is ~1m at 10km, negligible for this use case. For higher precision,
+            consider using GeoPy: geopy.distance.geodesic(coord1, coord2).meters
+        """
+        R = 6371.0  # Earth radius in kilometers
+        lat1, lon1 = map(math.radians, coord1)
+        lat2, lon2 = map(math.radians, coord2)
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c * 1000  # Convert to meters
+
+    print('after utils  SIONNA')
 
     ADDONS = {
         "blosm": "blosm_2.7.11.zip",
@@ -314,7 +391,7 @@ if "sionna" in output_formats:
             
             total_faces = len(bm.faces)
             for face in bm.faces:
-                center = bpy.mathutils.Vector((0, 0, 0))
+                center = mathutils.Vector((0, 0, 0))
                 for vert in face.verts:
                     center += vert.co
                 center /= len(face.verts)
@@ -442,7 +519,6 @@ if "sionna" in output_formats:
             logger.info("🌍 Setting up terrain")
             terrain = create_ground_plane(min_lat, max_lat, min_lon, max_lon)
             terrain_bounds = get_bounding_box(terrain)
-
             # Create materials
             logger.info("🎨 Creating materials")
             building_material = bpy.data.materials.new(name=BUILDING_MATERIAL)
@@ -461,6 +537,7 @@ if "sionna" in output_formats:
             scene = bpy.context.scene
             create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_org.png"))
 
+            ################################ 
             # Process buildings
             logger.info("🏢 Processing buildings")
             buildings = join_and_materialize_objects('building', 'buildings', building_material)
@@ -501,8 +578,10 @@ if "sionna" in output_formats:
         except Exception as e:
             logger.error(f"❌ Failed to create scene: {str(e)}")
             raise
+    
 
-if False:
+    # print('inside SIONNA')
+
     # Install required add-ons
     for addon_name in ADDONS:
         install_blender_addon(addon_name)

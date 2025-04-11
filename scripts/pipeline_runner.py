@@ -34,12 +34,17 @@ import deepmimo as dm  # type: ignore
 
 from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 
-from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
-import deepmimo.pipelines.sionna_rt.sionna_raytracer as raytrace_sionna
+# from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
+from deepmimo.pipelines.sionna_rt.sionna_raytracer import raytrace_sionna
 
 # Paths
-OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
-BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender 3.6/blender-launcher.exe"
+# Windows versions
+# OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
+# BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender 3.6/blender-launcher.exe"
+
+# Linux versions
+OSM_ROOT = "/mnt/c/Users/jmora/Downloads/osm_root"
+BLENDER_PATH = "/home/joao/blender-3.6.0-linux-x64/blender"
 
 # Wireless InSite
 WI_ROOT = "C:/Program Files/Remcom/Wireless InSite 4.0.0"
@@ -59,10 +64,15 @@ print('not implemented yet')
 # TODO:
 # - Configure cell size to be ~80m longer in x and y compared to NY. Maybe 200 x 400m. (2x4)
 
-COUNTER = 0
+COUNTER = 5
 #%% Step 2: Iterate over rows of CSV file to extract the map, create TX/RX positions, and run RT
 
-df = pd.read_csv('C:/Users/jmora/Documents/GitHub/DeepMIMO/pipeline_dev/params.csv')
+df = pd.read_csv('./pipeline_dev/params.csv')
+
+# TODO: 
+# For Sionna GPU definition: 
+# gpu_num = 0 # Use "" to use the CPU
+# os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_num}"
 
 # Parameters
 p = {
@@ -122,7 +132,7 @@ for index, row in df.iterrows():
 	call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 			     osm_folder, # Output folder to the Blender script
 				 BLENDER_PATH, 
-				 outputs=['insite']) # List of outputs to generate
+				 outputs=['sionna']) # List of outputs to generate
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
 
 	
@@ -138,13 +148,16 @@ for index, row in df.iterrows():
 	# rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 	
 	rt_path = raytrace_sionna(osm_folder, tx_pos, rx_pos, **p)
-	break
+	
 	# RT Phase 5: Convert to DeepMIMO format
-	dm.config('wireless_insite_version', WI_VERSION)
-	scen_insite = dm.convert(rt_path, overwrite=True)
+	# dm.config('wireless_insite_version', WI_VERSION)
+	dm.config('sionna_version', '0.19.1')
+	scen_name = dm.convert(rt_path, overwrite=True)
 
 	# RT Phase 6: Test Conversion
-	dataset = dm.load(scen_insite)[0]
+	dataset = dm.load(scen_name)[0]
 	dataset.plot_coverage(dataset.los)
 	dataset.plot_coverage(dataset.pwr[:, 0])
 	break
+
+# %%

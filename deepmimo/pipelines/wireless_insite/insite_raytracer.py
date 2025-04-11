@@ -119,7 +119,7 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     xmin_pad, ymin_pad, xmax_pad, ymax_pad = convert_GpsBBox2CartesianBBox(
         rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
         rt_params['origin_lat'], rt_params['origin_lon'], pad=BBOX_PAD
-    ) # pad makes the box larger -> only for terrain placement purposes
+    ) # pad makes the box larger -> only for terrain placement and study area boundary purposes
 
     # Create terrain file (.ter)
     terrain_editor = TerrainEditor()
@@ -150,7 +150,7 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
                 name="user_grid",
                 conform_to_terrain=rt_params['conform_to_terrain'])
     
-    # The user grid should cover the bounding box area fetched from OSM
+    # The user grid should cover the bounding box area that was fetched from OSM
     grid_side = [xmax_pad - xmin_pad - 2 * BBOX_PAD + rt_params['grid_spacing'], 
                  ymax_pad - ymin_pad - 2 * BBOX_PAD + rt_params['grid_spacing']]
     txrx_editor.add_txrx(
