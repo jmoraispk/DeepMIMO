@@ -29,7 +29,7 @@ def run_command(command: List[str], description: str) -> None:
 
 
 def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
-                 blender_path: str, blender_script_path: str, outputs: List[str]) -> None:
+                 blender_path: str, outputs: List[str]) -> None:
     """Process OSM extraction directly without calling a separate script.
     
     Args:
@@ -48,6 +48,9 @@ def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
         print(f"⏩ Folder '{osm_folder}' already exists. Skipping OSM extraction.")
         return
     
+    blender_script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                                       "blender_osm_export.py")
+
     # Validate paths
     if not os.path.exists(blender_path):
         raise FileNotFoundError(f"❌ Blender executable not found at {blender_path}")
@@ -66,8 +69,8 @@ def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
         "--minlon", str(min_lon), 
         "--maxlat", str(max_lat), 
         "--maxlon", str(max_lon),
-        "--output", osm_folder   # Output folder to the Blender script
-        
+        "--output", osm_folder,   # Output folder to the Blender script
+        "--format", "both" if len(outputs) > 1 else outputs[0]
     ]
     
     # Run the command
@@ -85,7 +88,13 @@ def get_origin_coords(osm_folder: str) -> Tuple[float, float]:
     Returns:
         Tuple[float, float]: Origin coordinates (latitude, longitude)
     """
-    with open(os.path.join(osm_folder, 'osm_gps_origin.txt'), "r") as f:
+    origin_file = os.path.join(osm_folder, 'osm_gps_origin.txt')
+    # Check if the file exists
+    if not os.path.exists(origin_file):
+        raise FileNotFoundError(f"❌ Origin coordinates file not found at {origin_file}\n"
+                                "Ensure that Blender has been run successfully.")
+    
+    with open(origin_file, "r") as f:
         origin_coords = f.read().split('\n')
     return float(origin_coords[0]), float(origin_coords[1])
 

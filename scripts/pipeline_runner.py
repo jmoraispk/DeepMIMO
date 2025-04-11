@@ -39,7 +39,6 @@ from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
 # Paths
 OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
 BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender 3.6/blender-launcher.exe"
-BLENDER_SCRIPT_PATH = "./blender_osm_export.py"
 
 # Wireless InSite
 WI_ROOT = "C:/Program Files/Remcom/Wireless InSite 4.0.0"
@@ -118,10 +117,10 @@ for index, row in df.iterrows():
 	call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 			     osm_folder, # Output folder to the Blender script
 				 BLENDER_PATH, 
-				 BLENDER_SCRIPT_PATH,
 				 outputs=['insite', 'sionna']) # List of outputs to generate
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
 
+	break
 	# RT Phase 3: Generate RX and TX positions
 	rx_pos = gen_rx_grid(p)  # N x 3 (N ~ 100k)
 	tx_pos = gen_tx_pos(p)   # M x 3 (M ~ 3)

@@ -4,10 +4,8 @@ import sys
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-import bpy
-import csv
-import bmesh
-from mathutils import Vector
+import bpy # type: ignore
+import bmesh # type: ignore
 from constants import ADDONS, BUILDING_MATERIAL, ROAD_MATERIAL, FLOOR_MATERIAL
 from utils.addon_utils import install_blender_addon
 from utils.blender_utils import get_obj_by_name, get_bounding_box, clear_blender, compute_distance
@@ -65,7 +63,7 @@ def trim_faces_outside_bounds(obj, min_x, max_x, min_y, max_y):
     matrix_world = obj.matrix_world
     faces_to_delete = []
     for face in bm.faces:
-        center = Vector((0, 0, 0))
+        center = bpy.mathutils.Vector((0, 0, 0))
         for vert in face.verts:
             center += vert.co
         center /= len(face.verts)
@@ -107,7 +105,7 @@ def save_osm_origin(scene_folder, origin_lat, origin_lon):
     with open(os.path.join(scene_folder, 'osm_gps_origin.txt'), 'w') as f:
         f.write(f"{origin_lat}\n{origin_lon}\n")
 
-def export_scene(scene_folder, scene_name):
+def export_scene(scene_folder):
     """Export scene to Mitsuba and save .blend file."""
     bpy.ops.export_scene.mitsuba(
         filepath=os.path.join(scene_folder, 'scene.xml'),
@@ -115,7 +113,7 @@ def export_scene(scene_folder, scene_name):
     )
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(scene_folder, 'scene.blend'))
 
-def create_scene(scene_name, positions, osm_folder, time_str):
+def create_scene(scene_name, positions, osm_folder):
     """Create scenes from CSV positions with OSM data and export."""
     scene_folder = os.path.join(osm_folder, scene_name)
     os.makedirs(scene_folder, exist_ok=True)
@@ -182,7 +180,7 @@ def create_scene(scene_name, positions, osm_folder, time_str):
     create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_processed.png"))
 
     # Export scene
-    export_scene(scene_folder, scene_name)
+    export_scene(scene_folder)
 
 if __name__ == '__main__':
     """Main entry point for automated scene creation."""
@@ -194,11 +192,10 @@ if __name__ == '__main__':
     min_lat, min_lon, max_lat, max_lon = map(float, argv[1:5])
     positions = [min_lat, min_lon, max_lat, max_lon]
     osm_folder = argv[5]
-    time_str = argv[6]
 
     # Install required add-ons
     for addon_name in ADDONS:
         install_blender_addon(addon_name)
 
     # Create scenes
-    create_scene(scene_name, positions, osm_folder, time_str)
+    create_scene(scene_name, positions, osm_folder)
