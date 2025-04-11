@@ -70,7 +70,7 @@ def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
         "--maxlat", str(max_lat), 
         "--maxlon", str(max_lon),
         "--output", osm_folder,   # Output folder to the Blender script
-        "--format", "both" if len(outputs) > 1 else outputs[0]
+        "--format", outputs[0] if len(outputs) == 1 else "both"
     ]
     
     # Run the command
