@@ -132,7 +132,6 @@ if "insite" in output_formats:
 if "sionna" in output_formats:
     logger.warning("LOG: ⚠ Nothing to DO HERE YET!!!!!")
 
-if False:
     import sys 
 
     # Add project root to sys.path
@@ -165,10 +164,18 @@ if False:
         Args:
             pckg_name (str): Name of the package to install (e.g., 'mitsuba==3.5.0')
         """
+        logger.info(f"📦 Installing Python package: {pckg_name}")
         python_exe = sys.executable
-        subprocess.call([python_exe, "-m", "ensurepip"])
-        subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "pip"])
-        subprocess.call([python_exe, "-m", "pip", "install", pckg_name])
+        logger.debug(f"Using Python executable: {python_exe}")
+        
+        try:
+            subprocess.call([python_exe, "-m", "ensurepip"])
+            subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "pip"])
+            subprocess.call([python_exe, "-m", "pip", "install", pckg_name])
+            logger.info(f"✅ Successfully installed {pckg_name}")
+        except Exception as e:
+            logger.error(f"❌ Failed to install {pckg_name}: {str(e)}")
+            raise
 
     def install_blender_addon(addon_name):
         """
@@ -177,213 +184,325 @@ if False:
         Args:
             addon_name (str): Name of the add-on to install (e.g., 'blosm')
         """
+        logger.info(f"🔧 Processing Blender add-on: {addon_name}")
         zip_name = ADDONS.get(addon_name)
         if not zip_name:
-            print(f"Error: No zip file defined for add-on '{addon_name}'")
+            logger.error(f"❌ No zip file defined for add-on '{addon_name}'")
             return
         
-        print("Installed add-ons:", list(bpy.context.preferences.addons.keys()))
+        logger.debug(f"Currently installed add-ons: {list(bpy.context.preferences.addons.keys())}")
         
         # Check if add-on is already installed
         if addon_name in bpy.context.preferences.addons.keys():
-            print(f"The add-on '{addon_name}' is already installed.")
+            logger.info(f"📌 Add-on '{addon_name}' is already installed")
             if bpy.context.preferences.addons[addon_name].module:
-                print(f"The add-on '{addon_name}' is enabled.")
+                logger.info(f"✅ Add-on '{addon_name}' is enabled")
             else:
+                logger.info(f"�� Enabling add-on '{addon_name}'")
                 bpy.ops.preferences.addon_enable(module=addon_name)
                 bpy.ops.wm.save_userpref()
-                print(f"The add-on '{addon_name}' has been enabled.")
+                logger.info(f"✅ Add-on '{addon_name}' has been enabled")
         else:
-            print(f"The add-on '{addon_name}' is not installed or enabled.")
+            logger.info(f"📥 Installing new add-on '{addon_name}'")
             addon_zip_path = os.path.join(PROJ_ROOT, "blender_addons", zip_name)
-            bpy.ops.preferences.addon_install(filepath=addon_zip_path)
-            bpy.ops.preferences.addon_enable(module=addon_name)
-            bpy.ops.wm.save_userpref()
-            print(f"Add-on '{addon_name}' installed and enabled.")
+            try:
+                bpy.ops.preferences.addon_install(filepath=addon_zip_path)
+                bpy.ops.preferences.addon_enable(module=addon_name)
+                bpy.ops.wm.save_userpref()
+                logger.info(f"✅ Add-on '{addon_name}' installed and enabled")
+            except Exception as e:
+                logger.error(f"❌ Failed to install/enable add-on '{addon_name}': {str(e)}")
+                raise
         
         # Special handling for Mitsuba
         if addon_name == 'mitsuba-blender':
             try:
                 import mitsuba
+                logger.info("✅ Mitsuba import successful")
             except ImportError:
+                logger.info("📦 Mitsuba not found, installing mitsuba package")
                 install_python_package('mitsuba==3.5.0')
-                print('Packages installed! Restarting Blender to update imports.')
+                logger.warning("🔄 Packages installed! Restarting Blender to update imports")
                 time.sleep(5)
                 sys.exit()
 
     # Configure OSM import
     def configure_osm_import(scene_folder, min_lat, max_lat, min_lon, max_lon):
         """Configure blosm add-on for OSM data import."""
-        prefs = bpy.context.preferences.addons["blosm"].preferences
-        prefs.dataDir = scene_folder
-        scene = bpy.context.scene.blosm
-        scene.mode = '3Dsimple'
-        scene.minLat, scene.maxLat = min_lat, max_lat
-        scene.minLon, scene.maxLon = min_lon, max_lon
-        scene.buildings, scene.highways = True, True
-        scene.water, scene.forests, scene.vegetation, scene.railways = False, False, False, False
-        scene.singleObject, scene.ignoreGeoreferencing = True, True
+        logger.info(f"🗺️ Configuring OSM import for region: [{min_lat}, {min_lon}] to [{max_lat}, {max_lon}]")
+        try:
+            prefs = bpy.context.preferences.addons["blosm"].preferences
+            prefs.dataDir = scene_folder
+            logger.debug(f"Set OSM data directory to: {scene_folder}")
+            
+            scene = bpy.context.scene.blosm
+            scene.mode = '3Dsimple'
+            scene.minLat, scene.maxLat = min_lat, max_lat
+            scene.minLon, scene.maxLon = min_lon, max_lon
+            scene.buildings, scene.highways = True, True
+            scene.water, scene.forests, scene.vegetation, scene.railways = False, False, False, False
+            scene.singleObject, scene.ignoreGeoreferencing = True, True
+            logger.info("✅ OSM import configuration complete")
+        except Exception as e:
+            logger.error(f"❌ Failed to configure OSM import: {str(e)}")
+            raise
 
     def create_ground_plane(min_lat, max_lat, min_lon, max_lon):
         """Create and size a ground plane with FLOOR_MATERIAL."""
-        bpy.ops.mesh.primitive_plane_add(size=1)
-        x_size = compute_distance([min_lat, min_lon], [min_lat, max_lon]) * 1.2
-        y_size = compute_distance([min_lat, min_lon], [max_lat, min_lon]) * 1.2
-        print(f'Creating plane of size [{x_size}, {y_size}]')
-        plane = get_obj_by_name("Plane")
-        plane.scale = (x_size, y_size, 1)
-        plane.name = 'terrain'
-        floor_material = bpy.data.materials.new(name=FLOOR_MATERIAL)
-        plane.data.materials.append(floor_material)
-        return plane
+        logger.info("🌍 Creating ground plane")
+        try:
+            bpy.ops.mesh.primitive_plane_add(size=1)
+            x_size = compute_distance([min_lat, min_lon], [min_lat, max_lon]) * 1.2
+            y_size = compute_distance([min_lat, min_lon], [max_lat, min_lon]) * 1.2
+            logger.debug(f"Ground plane dimensions: [{x_size}, {y_size}]")
+            
+            plane = get_obj_by_name("Plane")
+            plane.scale = (x_size, y_size, 1)
+            plane.name = 'terrain'
+            
+            floor_material = bpy.data.materials.new(name=FLOOR_MATERIAL)
+            plane.data.materials.append(floor_material)
+            logger.info("✅ Ground plane created and configured")
+            return plane
+        except Exception as e:
+            logger.error(f"❌ Failed to create ground plane: {str(e)}")
+            raise
 
     def join_and_materialize_objects(name_pattern, target_name, material):
         """Join objects matching a name pattern and apply a material."""
-        bpy.ops.object.select_all(action='DESELECT')
-        for o in bpy.data.objects:
-            if name_pattern in o.name.lower() and o.type == 'MESH':
-                o.select_set(True)
-        selected = bpy.context.selected_objects
-        print(f"Number of selected objects ({target_name}): {len(selected)}")
-        if len(selected) > 1:
-            bpy.context.view_layer.objects.active = selected[-1]
-            bpy.ops.object.join()
-        elif len(selected) == 1:
-            bpy.context.view_layer.objects.active = selected[0]
-        elif not selected:
-            return None
-        obj = bpy.context.active_object
-        obj.name = target_name
-        obj.data.materials.clear()
-        obj.data.materials.append(material)
-        return obj
+        logger.info(f"🔄 Processing objects matching pattern: {name_pattern}")
+        try:
+            bpy.ops.object.select_all(action='DESELECT')
+            for o in bpy.data.objects:
+                if name_pattern in o.name.lower() and o.type == 'MESH':
+                    o.select_set(True)
+            
+            selected = bpy.context.selected_objects
+            logger.info(f"📊 Found {len(selected)} objects matching '{name_pattern}'")
+            
+            if len(selected) > 1:
+                logger.debug("Joining multiple objects")
+                bpy.context.view_layer.objects.active = selected[-1]
+                bpy.ops.object.join()
+            elif len(selected) == 1:
+                logger.debug("Single object found, setting as active")
+                bpy.context.view_layer.objects.active = selected[0]
+            elif not selected:
+                logger.warning(f"⚠️ No objects found matching pattern: {name_pattern}")
+                return None
+            
+            obj = bpy.context.active_object
+            obj.name = target_name
+            obj.data.materials.clear()
+            obj.data.materials.append(material)
+            logger.info(f"✅ Successfully created and materialized {target_name}")
+            return obj
+        except Exception as e:
+            logger.error(f"❌ Failed to process objects with pattern '{name_pattern}': {str(e)}")
+            raise
 
     def trim_faces_outside_bounds(obj, min_x, max_x, min_y, max_y):
         """Remove faces of an object outside a bounding box in world space."""
-        bpy.ops.object.mode_set(mode='EDIT')
-        bm = bmesh.from_edit_mesh(obj.data)
-        matrix_world = obj.matrix_world
-        faces_to_delete = []
-        for face in bm.faces:
-            center = bpy.mathutils.Vector((0, 0, 0))
-            for vert in face.verts:
-                center += vert.co
-            center /= len(face.verts)
-            world_center = matrix_world @ center
-            x, y = world_center.x, world_center.y
-            if (x < min_x or x > max_x) or (y < min_y or y > max_y):
-                faces_to_delete.append(face)
-        bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
-        bmesh.update_edit_mesh(obj.data)
-        bpy.ops.object.mode_set(mode='OBJECT')
+        logger.info(f"✂️ Trimming faces outside bounds for object: {obj.name}")
+        logger.debug(f"Bounds: x[{min_x}, {max_x}], y[{min_y}, {max_y}]")
+        
+        try:
+            bpy.ops.object.mode_set(mode='EDIT')
+            bm = bmesh.from_edit_mesh(obj.data)
+            matrix_world = obj.matrix_world
+            faces_to_delete = []
+            
+            total_faces = len(bm.faces)
+            for face in bm.faces:
+                center = bpy.mathutils.Vector((0, 0, 0))
+                for vert in face.verts:
+                    center += vert.co
+                center /= len(face.verts)
+                world_center = matrix_world @ center
+                x, y = world_center.x, world_center.y
+                if (x < min_x or x > max_x) or (y < min_y or y > max_y):
+                    faces_to_delete.append(face)
+            
+            if faces_to_delete:
+                logger.info(f"🗑️ Removing {len(faces_to_delete)} faces out of {total_faces}")
+                bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
+                bmesh.update_edit_mesh(obj.data)
+            else:
+                logger.info("✅ No faces needed trimming")
+            
+            bpy.ops.object.mode_set(mode='OBJECT')
+        except Exception as e:
+            logger.error(f"❌ Failed to trim faces for {obj.name}: {str(e)}")
+            raise
 
     def setup_world_lighting():
         """Configure world lighting with a basic emitter."""
-        world = bpy.context.scene.world
-        world.use_nodes = True
-        nodes = world.node_tree.nodes
-        links = world.node_tree.links
-        nodes.clear()
-        background_node = nodes.new('ShaderNodeBackground')
-        output_node = nodes.new('ShaderNodeOutputWorld')
-        background_node.inputs['Color'].default_value = (0.517334, 0.517334, 0.517334, 1.0)
-        background_node.inputs['Strength'].default_value = 1.0
-        links.new(background_node.outputs['Background'], output_node.inputs['Surface'])
+        logger.info("💡 Setting up world lighting")
+        try:
+            world = bpy.context.scene.world
+            world.use_nodes = True
+            nodes = world.node_tree.nodes
+            links = world.node_tree.links
+            nodes.clear()
+            
+            background_node = nodes.new('ShaderNodeBackground')
+            output_node = nodes.new('ShaderNodeOutputWorld')
+            background_node.inputs['Color'].default_value = (0.517334, 0.517334, 0.517334, 1.0)
+            background_node.inputs['Strength'].default_value = 1.0
+            links.new(background_node.outputs['Background'], output_node.inputs['Surface'])
+            logger.info("✅ World lighting configured")
+        except Exception as e:
+            logger.error(f"❌ Failed to setup world lighting: {str(e)}")
+            raise
 
     def create_camera_and_render(scene, output_path, location=(0, 0, 1000), rotation=(0, 0, 0)):
         """Add a camera, render the scene, and delete the camera."""
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.camera_add(location=location, rotation=rotation)
-        camera = bpy.context.active_object
-        scene.camera = camera
-        scene.render.filepath = output_path
-        bpy.ops.render.render(write_still=True)
-        bpy.ops.object.select_all(action='DESELECT')
-        camera.select_set(True)
-        bpy.ops.object.delete()
+        logger.info(f"📸 Setting up camera for render at {output_path}")
+        logger.debug(f"Camera position: {location}, rotation: {rotation}")
+        
+        try:
+            bpy.ops.object.select_all(action='DESELECT')
+            bpy.ops.object.camera_add(location=location, rotation=rotation)
+            camera = bpy.context.active_object
+            scene.camera = camera
+            
+            scene.render.filepath = output_path
+            logger.info("🎬 Starting render")
+            bpy.ops.render.render(write_still=True)
+            logger.info("✅ Render complete")
+            
+            bpy.ops.object.select_all(action='DESELECT')
+            camera.select_set(True)
+            bpy.ops.object.delete()
+            logger.debug("Temporary camera removed")
+        except Exception as e:
+            logger.error(f"❌ Failed to render scene: {str(e)}")
+            raise
 
     def save_osm_origin(scene_folder, origin_lat, origin_lon):
         """Save OSM origin coordinates to a text file."""
-        with open(os.path.join(scene_folder, 'osm_gps_origin.txt'), 'w') as f:
-            f.write(f"{origin_lat}\n{origin_lon}\n")
+        logger.info(f"📍 Saving OSM origin coordinates: [{origin_lat}, {origin_lon}]")
+        try:
+            output_path = os.path.join(scene_folder, 'osm_gps_origin.txt')
+            with open(output_path, 'w') as f:
+                f.write(f"{origin_lat}\n{origin_lon}\n")
+            logger.info("✅ OSM origin saved")
+        except Exception as e:
+            logger.error(f"❌ Failed to save OSM origin: {str(e)}")
+            raise
 
     def export_scene(scene_folder):
         """Export scene to Mitsuba and save .blend file."""
-        bpy.ops.export_scene.mitsuba(
-            filepath=os.path.join(scene_folder, 'scene.xml'),
-            export_ids=True, axis_forward='Y', axis_up='Z'
-        )
-        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(scene_folder, 'scene.blend'))
+        logger.info("📤 Exporting scene")
+        try:
+            mitsuba_path = os.path.join(scene_folder, 'scene.xml')
+            blend_path = os.path.join(scene_folder, 'scene.blend')
+            
+            logger.debug(f"Exporting Mitsuba scene to: {mitsuba_path}")
+            bpy.ops.export_scene.mitsuba(
+                filepath=mitsuba_path,
+                export_ids=True, axis_forward='Y', axis_up='Z'
+            )
+            
+            logger.debug(f"Saving Blender file to: {blend_path}")
+            bpy.ops.wm.save_as_mainfile(filepath=blend_path)
+            logger.info("✅ Scene export complete")
+        except Exception as e:
+            logger.error(f"❌ Failed to export scene: {str(e)}")
+            raise
 
     def create_scene(positions, out_folder):
         """Create scenes from CSV positions with OSM data and export."""
+        logger.info(f"🎨 Creating new scene in: {out_folder}")
         scene_name = os.path.basename(out_folder)
-        os.makedirs(out_folder, exist_ok=True)
-        output_fig_folder = os.path.join(out_folder, 'figs')
-        os.makedirs(output_fig_folder, exist_ok=True)
-
-        min_lat, min_lon, max_lat, max_lon = positions
-
-        # Initialize scene
-        clear_blender()
-        setup_world_lighting()
-
-        # Import OSM data
-        configure_osm_import(output_folder, min_lat, max_lat, min_lon, max_lon)
-        bpy.ops.blosm.import_data()
-        origin_lat = bpy.data.scenes["Scene"]["lat"]
-        origin_lon = bpy.data.scenes["Scene"]["lon"]
-        save_osm_origin(output_folder, origin_lat, origin_lon)
         
-        # Create ground plane
-        terrain = create_ground_plane(min_lat, max_lat, min_lon, max_lon)
-        terrain_bounds = get_bounding_box(terrain)
+        try:
+            os.makedirs(out_folder, exist_ok=True)
+            output_fig_folder = os.path.join(out_folder, 'figs')
+            os.makedirs(output_fig_folder, exist_ok=True)
+            logger.debug(f"Created output directories: {out_folder}, {output_fig_folder}")
 
-        # Create materials
-        building_material = bpy.data.materials.new(name=BUILDING_MATERIAL)
-        building_material.diffuse_color = (0.75, 0.40, 0.16, 1)  # Beige
-        road_material = bpy.data.materials.new(name=ROAD_MATERIAL)
-        road_material.diffuse_color = (0.29, 0.25, 0.21, 1)  # Dark grey
+            min_lat, min_lon, max_lat, max_lon = positions
+            logger.info(f"📍 Scene bounds: [{min_lat}, {min_lon}] to [{max_lat}, {max_lon}]")
 
-        # Convert all to meshes
-        bpy.ops.object.select_all(action='SELECT')
-        bpy.context.view_layer.objects.active = bpy.data.objects[0]
-        bpy.ops.object.convert(target='MESH', keep_original=False)
+            # Initialize scene
+            logger.info("🔄 Initializing scene")
+            clear_blender()
+            setup_world_lighting()
 
-        # Render original scene
-        scene = bpy.context.scene
-        create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_org.png"))
+            # Import OSM data
+            logger.info("🗺️ Importing OSM data")
+            configure_osm_import(out_folder, min_lat, max_lat, min_lon, max_lon)
+            bpy.ops.blosm.import_data()
+            origin_lat = bpy.data.scenes["Scene"]["lat"]
+            origin_lon = bpy.data.scenes["Scene"]["lon"]
+            save_osm_origin(out_folder, origin_lat, origin_lon)
+            
+            # Create ground plane
+            logger.info("🌍 Setting up terrain")
+            terrain = create_ground_plane(min_lat, max_lat, min_lon, max_lon)
+            terrain_bounds = get_bounding_box(terrain)
 
-        # Process buildings
-        buildings = join_and_materialize_objects('building', 'buildings', building_material)
-        if buildings and buildings.type == 'MESH':
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.separate(type='LOOSE')
-            bpy.ops.object.mode_set(mode='OBJECT')
+            # Create materials
+            logger.info("🎨 Creating materials")
+            building_material = bpy.data.materials.new(name=BUILDING_MATERIAL)
+            building_material.diffuse_color = (0.75, 0.40, 0.16, 1)  # Beige
+            road_material = bpy.data.materials.new(name=ROAD_MATERIAL)
+            road_material.diffuse_color = (0.29, 0.25, 0.21, 1)  # Dark grey
 
-        # Process roads
-        bpy.ops.object.select_all(action='DESELECT')
-        for o in bpy.data.objects:
-            if 'terrain' in o.name.lower() or 'buildings' in o.name.lower():
-                o.select_set(True)
-        bpy.ops.object.select_all(action='INVERT')
-        road_objs = bpy.context.selected_objects
-        if road_objs:
-            for obj in road_objs:
-                if terrain_bounds:
-                    trim_faces_outside_bounds(obj, *terrain_bounds)
-                bpy.context.view_layer.objects.active = obj
-                road = bpy.context.active_object
-                road.data.materials.clear()
-                road.data.materials.append(road_material)
-            print(f"Number of selected objects (Roads): {len(road_objs)}")       
+            # Convert all to meshes
+            logger.info("🔄 Converting objects to meshes")
+            bpy.ops.object.select_all(action='SELECT')
+            bpy.context.view_layer.objects.active = bpy.data.objects[0]
+            bpy.ops.object.convert(target='MESH', keep_original=False)
 
-        # Render processed scene
-        create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_processed.png"))
+            # Render original scene
+            logger.info("📸 Rendering original scene")
+            scene = bpy.context.scene
+            create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_org.png"))
 
-        # Export scene
-        export_scene(output_folder)
+            # Process buildings
+            logger.info("🏢 Processing buildings")
+            buildings = join_and_materialize_objects('building', 'buildings', building_material)
+            if buildings and buildings.type == 'MESH':
+                logger.debug("Separating building meshes")
+                bpy.ops.object.mode_set(mode='EDIT')
+                bpy.ops.mesh.separate(type='LOOSE')
+                bpy.ops.object.mode_set(mode='OBJECT')
 
+            # Process roads
+            logger.info("🛣️ Processing roads")
+            bpy.ops.object.select_all(action='DESELECT')
+            for o in bpy.data.objects:
+                if 'terrain' in o.name.lower() or 'buildings' in o.name.lower():
+                    o.select_set(True)
+            bpy.ops.object.select_all(action='INVERT')
+            road_objs = bpy.context.selected_objects
+            if road_objs:
+                logger.info(f"Found {len(road_objs)} road objects to process")
+                for obj in road_objs:
+                    if terrain_bounds:
+                        trim_faces_outside_bounds(obj, *terrain_bounds)
+                    bpy.context.view_layer.objects.active = obj
+                    road = bpy.context.active_object
+                    road.data.materials.clear()
+                    road.data.materials.append(road_material)
+                logger.debug(f"Processed {len(road_objs)} road objects")
+
+            # Render processed scene
+            logger.info("📸 Rendering processed scene")
+            create_camera_and_render(scene, os.path.join(output_fig_folder, f"{scene_name}_processed.png"))
+
+            # Export scene
+            logger.info("📤 Exporting final scene")
+            export_scene(out_folder)
+            logger.info("✅ Scene creation complete")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to create scene: {str(e)}")
+            raise
+
+if False:
     # Install required add-ons
     for addon_name in ADDONS:
         install_blender_addon(addon_name)
