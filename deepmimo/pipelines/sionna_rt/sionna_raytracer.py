@@ -74,7 +74,6 @@ def raytrace_sionna(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
             print(f"Added BS_{b} at position {tx_pos[b]}")
 
         indices = np.arange(rx_pos.shape[0])
-        indices = np.arange(100)
 
         data_loader = DataLoader(indices, rt_params['batch_size'])
         path_list = []
