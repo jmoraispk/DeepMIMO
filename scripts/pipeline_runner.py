@@ -91,10 +91,7 @@ p = {
 	'terrain_material': TERRAIN_MATERIAL_PATH,
 
 	# Sionna specific parameters
-	'batch_size': 5,
-	'n_reflections': 1,
-	'diffraction': True,
-	'scattering': True,
+	'batch_size': 5,  # Number of users to compute at a time (heuristic: 1.5 per GB of GPU VRAM)
 
 	# Ray-tracing parameters -> Efficient if they match the dataclass in SetupEditor.py
 	'carrier_freq': 3.5e9,  # Hz

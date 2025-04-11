@@ -1,12 +1,21 @@
+"""Sionna Ray Tracing Function."""
+
+
+# Standard library imports
 import os
+from typing import Dict, Any
+
+# Third-party imports
 import numpy as np
+import tensorflow as tf  # type: ignore
 from tqdm import tqdm
+
+# Sionna RT imports
+from sionna.rt import Transmitter, Receiver  # type: ignore
+
+# Local imports
 from .sionna_utils import create_base_scene, set_materials
 from ...converter.sionna_rt import sionna_exporter
-
-# Specific imports for Sionna
-import tensorflow as tf  # type: ignore
-from sionna.rt import Transmitter, Receiver  # type: ignore
 
 tf.random.set_seed(1)
 gpus = tf.config.list_physical_devices('GPU')
@@ -35,41 +44,46 @@ class DataLoader:
         self.current_idx = end_idx
         return self.data[batch_indices]
 
-def raytrace_sionna(root_folder, scene_name, bs_pos, user_grid, batch_size=5,
-                    carrier_freq=3.5, n_reflections=1, diffraction=True, scattering=True):
+def raytrace_sionna(root_folder: str, bs_pos: np.ndarray, user_grid: np.ndarray,
+                    rt_params: Dict[str, Any]) -> str:
         """Run ray tracing for the scene."""
         # Create scene
+        scene_name = (f"sionna_{rt_params['carrier_freq']/1e9:.1f}GHz_"
+                      f"{rt_params['max_reflections']}R_{rt_params['max_diffractions']}D_"
+                      f"{1 if rt_params['ds_enable'] else 0}S")
+
         scene_folder = os.path.join(root_folder, scene_name)
-        scene = create_base_scene(os.path.join(scene_folder, "scene.xml"), carrier_freq)
+        xml_path = os.path.join(root_folder, "scene.xml")  # Created by Blender OSM Export!
+        scene = create_base_scene(xml_path, rt_params['carrier_freq'])
         scene = set_materials(scene)
-        rt_params = {
-            "max_depth": n_reflections,
-            "diffraction": diffraction,
-            "scattering": scattering
+        
+        # Map general parameters to Sionna RT parameters
+        compute_paths_rt_params = {
+            "max_depth": rt_params['max_reflections'],
+            "diffraction": bool(rt_params['max_diffractions']),
+            "scattering": rt_params['ds_enable']
         }
 
         # Add BSs
         num_bs = len(bs_pos)
         for b in range(num_bs): 
-            tx = Transmitter(
-                position=bs_pos[b], 
-                name=f"BS_{b}",
-                power_dbm=tf.Variable(0, dtype=tf.float32)
-            )
+            tx = Transmitter(position=bs_pos[b], name=f"BS_{b}",
+                             power_dbm=tf.Variable(0, dtype=tf.float32))
             scene.add(tx)
             print(f"Added BS_{b} at position {bs_pos[b]}")
 
         indices = np.arange(user_grid.shape[0])
         indices = np.arange(100)
 
-        data_loader = DataLoader(indices, batch_size)
+        data_loader = DataLoader(indices, rt_params['batch_size'])
         path_list = []
+
         # Ray-tracing BS-BS paths
         print("Ray-tracing BS-BS paths")
         for b in range(num_bs):
             scene.add(Receiver(name=f"rx_{b}", position=bs_pos[b]))
 
-        paths = scene.compute_paths(**rt_params)
+        paths = scene.compute_paths(**compute_paths_rt_params)
         paths.normalize_delays = False
         path_list.append(paths)
 
@@ -81,14 +95,14 @@ def raytrace_sionna(root_folder, scene_name, bs_pos, user_grid, batch_size=5,
             for i in batch:
                 scene.add(Receiver(name=f"rx_{i}", position=user_grid[i]))
 
-            paths = scene.compute_paths(**rt_params)
+            paths = scene.compute_paths(**compute_paths_rt_params)
             paths.normalize_delays = False
             path_list.append(paths)
             
             for i in batch:
                 scene.remove(f"rx_{i}")
 
-        # Save Sionna outputs
+        # Save Sionna outputs (ideally export only the FULL when it's working)
         print("Saving Sionna outputs")
         sionna_rt_folder_FULL = os.path.join(scene_folder, "sionna_export_full/")
         sionna_exporter.export_to_deepmimo(scene, path_list, rt_params, sionna_rt_folder_FULL)
@@ -96,4 +110,4 @@ def raytrace_sionna(root_folder, scene_name, bs_pos, user_grid, batch_size=5,
         sionna_rt_folder_RX = os.path.join(scene_folder, "sionna_export_RX/")
         sionna_exporter.export_to_deepmimo(scene, path_list[1:], rt_params, sionna_rt_folder_RX)
 
-        return 
+        return sionna_rt_folder_FULL

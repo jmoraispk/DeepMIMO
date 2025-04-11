@@ -50,7 +50,7 @@ def create_directory_structure(osm_folder: str, rt_params: Dict[str, Any]) -> Tu
     """
     
     # Format folder name with key parameters
-    folder_name = (f"insite2_{rt_params['carrier_freq']/1e9:.1f}GHz_"
+    folder_name = (f"insite_{rt_params['carrier_freq']/1e9:.1f}GHz_"
                    f"{rt_params['max_reflections']}R_{rt_params['max_diffractions']}D_"
                    f"{1 if rt_params['ds_enable'] else 0}S")
     insite_path = os.path.join(osm_folder, folder_name)

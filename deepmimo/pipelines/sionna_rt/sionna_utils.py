@@ -1,8 +1,8 @@
 # utils/sionna_utils.py
 import tensorflow as tf
-from sionna.rt import load_scene, PlanarArray, RadioMaterial, BackscatteringPattern
+from sionna.rt import load_scene, PlanarArray, RadioMaterial, BackscatteringPattern, Scene
 
-def set_materials(scene):
+def set_materials(scene: Scene) -> Scene:
     """Set radio material properties for Sionna."""
     for obj in scene.objects.values():
         mat_name = scene.objects[obj.name].radio_material.name
@@ -34,7 +34,7 @@ def set_materials(scene):
 
     return scene
 
-def create_base_scene(scene_path, center_frequency):
+def create_base_scene(scene_path: str, center_frequency: float) -> Scene:
     """Create a base Sionna scene."""
     scene = load_scene(scene_path)
     scene.frequency = center_frequency
