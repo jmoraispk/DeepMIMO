@@ -26,7 +26,7 @@ Steps to run a pipeline:
 import pandas as pd
 import os
 import numpy as np
-from deepmimo.pipelines.pipeline_utils import call_blender, get_origin_coords, load_params_from_row
+from deepmimo.pipelines.utils.pipeline_utils import call_blender, get_origin_coords, load_params_from_row
 
 # import sys
 # sys.path.append("C:/Users/jmora/Documents/GitHub/DeepMIMO")
@@ -35,7 +35,7 @@ import deepmimo as dm  # type: ignore
 from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 
 from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
-import deepmimo.pipelines.sionna_rt.ray_tracer as raytrace_sionna  # TODO: change into function later
+import deepmimo.pipelines.sionna_rt.sionna_raytracer as raytrace_sionna
 
 # Paths
 OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
@@ -90,6 +90,12 @@ p = {
 	'road_material': ROAD_MATERIAL_PATH,
 	'terrain_material': TERRAIN_MATERIAL_PATH,
 
+	# Sionna specific parameters
+	'batch_size': 5,
+	'n_reflections': 1,
+	'diffraction': True,
+	'scattering': True,
+
 	# Ray-tracing parameters -> Efficient if they match the dataclass in SetupEditor.py
 	'carrier_freq': 3.5e9,  # Hz
 	'bandwidth': 10e6,  # Hz
@@ -119,7 +125,7 @@ for index, row in df.iterrows():
 	call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 			     osm_folder, # Output folder to the Blender script
 				 BLENDER_PATH, 
-				 outputs=['sionna']) # List of outputs to generate
+				 outputs=['insite']) # List of outputs to generate
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
 
 	
@@ -132,14 +138,13 @@ for index, row in df.iterrows():
 	tx_pos = np.round(tx_pos, p['pos_prec'])
 
 	# RT Phase 4: Run Wireless InSite ray tracing
-	# insite_rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
+	# rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 	
-	ray_tracer = raytrace_sionna.RayTracer(osm_folder, batch_size=5)
-	ray_tracer.run(tx_pos, rx_pos, p)
+	rt_path = raytrace_sionna(osm_folder, tx_pos, rx_pos, **p)
 	break
 	# RT Phase 5: Convert to DeepMIMO format
 	dm.config('wireless_insite_version', WI_VERSION)
-	scen_insite = dm.convert(insite_rt_path, overwrite=True)
+	scen_insite = dm.convert(rt_path, overwrite=True)
 
 	# RT Phase 6: Test Conversion
 	dataset = dm.load(scen_insite)[0]

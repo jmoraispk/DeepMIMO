@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, Any
 
-from .geo_utils import convert_Gps2RelativeCartesian, convert_GpsBBox2CartesianBBox
+from .utils.geo_utils import convert_Gps2RelativeCartesian, convert_GpsBBox2CartesianBBox
 
 def gen_tx_pos(rt_params: Dict[str, Any]) -> np.ndarray:
     """Generate transmitter positions from GPS coordinates.

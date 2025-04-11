@@ -1,11 +1,12 @@
 import os
 import numpy as np
 from tqdm import tqdm
-from utils.sionna_utils import create_base_scene, set_materials
-from deepmimo.converter.sionna_rt import sionna_exporter
+from .sionna_utils import create_base_scene, set_materials
+from ...converter.sionna_rt import sionna_exporter
 
-import tensorflow as tf
-from sionna.rt import Transmitter, Receiver
+# Specific imports for Sionna
+import tensorflow as tf  # type: ignore
+from sionna.rt import Transmitter, Receiver  # type: ignore
 
 tf.random.set_seed(1)
 gpus = tf.config.list_physical_devices('GPU')

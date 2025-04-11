@@ -140,7 +140,7 @@ if "sionna" in output_formats:
     import bpy # type: ignore
     import bmesh # type: ignore
 
-    from .blender_utils import get_obj_by_name, get_bounding_box, clear_blender, compute_distance
+    from .utils.blender_utils import get_obj_by_name, get_bounding_box, clear_blender, compute_distance
 
     ADDONS = {
         "blosm": "blosm_2.7.11.zip",

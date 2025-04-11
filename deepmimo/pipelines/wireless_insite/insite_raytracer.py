@@ -31,8 +31,8 @@ from .WI_interface.TerrainEditor import TerrainEditor
 from .convert_ply2city import convert_to_city_file
 
 # Project-specific imports
-from ..geo_utils import convert_GpsBBox2CartesianBBox
-from ..pipeline_utils import run_command
+from ..utils.geo_utils import convert_GpsBBox2CartesianBBox
+from ..utils.pipeline_utils import run_command
 
 from ...consts import BBOX_PAD
 

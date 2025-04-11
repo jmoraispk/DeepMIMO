@@ -49,7 +49,7 @@ def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
         return
     
     blender_script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                       "blender_osm_export.py")
+                                       "../blender_osm_export.py")
 
     # Validate paths
     if not os.path.exists(blender_path):
