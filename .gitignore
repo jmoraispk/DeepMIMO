@@ -25,6 +25,8 @@ P2Ms/*
 *.p2m
 conversion_errors.json
 scripts/b2_direct_upload.py
+# scripts/pipeline_runner.py
+logging_*.txt
 
 #   For building visualizations
 building_*
