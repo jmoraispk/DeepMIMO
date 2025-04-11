@@ -134,7 +134,7 @@ for index, row in df.iterrows():
 	# RT Phase 4: Run Wireless InSite ray tracing
 	# insite_rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 	
-	ray_tracer = raytrace_sionna.RayTracer(osm_folder)
+	ray_tracer = raytrace_sionna.RayTracer(osm_folder, batch_size=5)
 	ray_tracer.run(tx_pos, rx_pos, p)
 	break
 	# RT Phase 5: Convert to DeepMIMO format
