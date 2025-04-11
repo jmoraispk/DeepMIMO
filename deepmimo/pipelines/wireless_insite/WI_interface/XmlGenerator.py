@@ -128,14 +128,20 @@ class XmlGenerator:
         MinZ[0].attrib["Value"] = FLOAT_STR % (self.setup.study_area.zmin)
 
         X = tmp.findall(".//X")[0]
-        X[0].attrib["Value"] = " ".join(
-            ["%.4g" % i for i in self.setup.study_area.all_vertex[:, 0]]
-        )
+        X[0].attrib["Value"] = " ".join(["%.4g" % i for i in self.setup.study_area.all_vertex[:, 0]])
 
         Y = tmp.findall(".//Y")[0]
-        Y[0].attrib["Value"] = " ".join(
-            ["%.4g" % i for i in self.setup.study_area.all_vertex[:, 1]]
-        )
+        Y[0].attrib["Value"] = " ".join(["%.4g" % i for i in self.setup.study_area.all_vertex[:, 1]])
+
+    def set_origin(self) -> None:
+        """Set the origin parameters in the XML file."""
+        tmp = self.root.findall(".//Origin")[0]
+
+        Latitude = tmp.findall(".//Latitude")[0]
+        Latitude[0].attrib["Value"] = FLOAT_STR % (self.setup.origin_lat)
+
+        Longitude = tmp.findall(".//Longitude")[0]
+        Longitude[0].attrib["Value"] = FLOAT_STR % (self.setup.origin_lon)
     
     def set_ray_tracing_param(self) -> None:
         """Set the ray tracing parameters in the XML file."""
@@ -345,6 +351,10 @@ class XmlGenerator:
         self.set_txrx()
         self.set_geometry()
         self.set_study_area()
+        
+        # self.set_origin() # NOTE: the lat/lon location of the origin is not used in the ray tracing
+        # It is passed to the setup editor, BUT when we set it in the XML, something breaks.
+        # This needs to be investigated if we want to use solely the XML to convert scenarios.
 
         self.set_carrier_freq()
         self.set_bandwidth()

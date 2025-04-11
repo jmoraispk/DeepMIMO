@@ -137,6 +137,16 @@ class SetupEditor:
         """
         self.study_area = StudyArea(zmin, zmax, all_vertex.shape[0], all_vertex)
 
+    def set_origin(self, origin_lat: float, origin_lon: float) -> None:
+        """Set the origin parameters.
+        
+        Args:
+            origin_lat (float): Latitude of the origin
+            origin_lon (float): Longitude of the origin
+        """
+        self.origin_lat = origin_lat
+        self.origin_lon = origin_lon
+
     def set_ray_tracing_param(self, params: RayTracingParam | Dict[str, Any]) -> None:
         """Set the ray tracing parameters.
         
@@ -225,6 +235,17 @@ class SetupEditor:
                     )
                 return
     
+    def update_origin(self) -> None:
+        """Update the origin parameters in the setup file."""
+        for i, line in enumerate(self.setup_file):
+            if line.startswith("latitude"):
+                self.setup_file[i] = "latitude %.8f\n" % self.origin_lat
+                continue
+            if line.startswith("longitude"):
+                self.setup_file[i] = "longitude %.8f\n" % self.origin_lon
+                continue
+        return
+    
     def update_ray_tracing_param(self) -> None:
         """Update the ray tracing parameters in the setup file."""
         for i, line in enumerate(self.setup_file):
@@ -272,6 +293,7 @@ class SetupEditor:
         """Update all parameters in the setup file."""
         self.update_carrier_frequency_bandwidth()
         self.update_study_area()
+        self.update_origin()
         self.update_ray_tracing_param()
         self.update_features()
 

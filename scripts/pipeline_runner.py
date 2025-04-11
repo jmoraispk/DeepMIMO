@@ -56,6 +56,9 @@ TERRAIN_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Wet earth 3.5 GHz.mtl")
 #%% Step 1: (Optional) Generate CSV with GPS coordinates for map and basestation placement
 
 print('not implemented yet')
+# TODO:
+# - Configure cell size to be ~80m longer in x and y compared to NY. Maybe 200 x 400m. (2x4)
+
 
 #%% Step 2: Iterate over rows of CSV file to extract the map, create TX/RX positions, and run RT
 
@@ -123,7 +126,6 @@ for index, row in df.iterrows():
 	rx_pos = gen_rx_grid(p)  # N x 3 (N ~ 100k)
 	tx_pos = gen_tx_pos(p)   # M x 3 (M ~ 3)
 	
-	
 	# Optional: Round positions (visually *way* better)
 	rx_pos = np.round(rx_pos, p['pos_prec'])
 	tx_pos = np.round(tx_pos, p['pos_prec'])
@@ -131,14 +133,12 @@ for index, row in df.iterrows():
 	# RT Phase 4: Run Wireless InSite ray tracing
 	insite_rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 
-	break
 	# RT Phase 5: Convert to DeepMIMO format
 	dm.config('wireless_insite_version', WI_VERSION)
-	scen_insite = dm.convert(insite_rt_path)
+	scen_insite = dm.convert(insite_rt_path, overwrite=True)
 
 	# RT Phase 6: Test Conversion
 	dataset = dm.load(scen_insite)[0]
 	dataset.plot_coverage(dataset.los)
 	dataset.plot_coverage(dataset.pwr[:, 0])
 	break
-

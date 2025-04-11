@@ -7,7 +7,7 @@ and functionality while allowing engine-specific extensions.
 """
 
 from dataclasses import dataclass, asdict, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from pathlib import Path
 
 @dataclass
@@ -54,6 +54,10 @@ class RayTracingParameters:
     # Ray casting range (when casting method is uniform, centered at antenna boresight)
     ray_casting_range_az : float = 360.0 # casting range in azimuth (degrees)
     ray_casting_range_el : float = 180.0 # casting range in elevation (degrees)
+
+    # GPS Bounding Box
+    gps_bbox: Tuple[float, float, float, float] = (0,0,0,0)  # (min_lat, min_lon, max_lat, max_lon)
+    # This box corresponds to the area fetched from the real world and (usually) to the user grid
 
     # Raw parameters storage
     raw_params: Dict = field(default_factory=dict)  # Store original parameters from engine

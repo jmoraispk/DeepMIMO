@@ -34,6 +34,8 @@ from .convert_ply2city import convert_to_city_file
 from ..geo_utils import convert_GpsBBox2CartesianBBox
 from ..pipeline_utils import run_command
 
+from ...consts import BBOX_PAD
+
 TERRAIN_TEMPLATE = "newTerrain.ter"
 
 def create_directory_structure(osm_folder: str, rt_params: Dict[str, Any]) -> Tuple[str, str]:
@@ -114,11 +116,10 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     bldgs_city = convert_to_city_file(osm_folder, insite_path, "buildings", rt_params['building_material'])
     roads_city = convert_to_city_file(osm_folder, insite_path, "roads", rt_params['road_material'])
 
-    PAD = 30
     xmin_pad, ymin_pad, xmax_pad, ymax_pad = convert_GpsBBox2CartesianBBox(
         rt_params['min_lat'], rt_params['min_lon'], rt_params['max_lat'], rt_params['max_lon'],
-        rt_params['origin_lat'], rt_params['origin_lon'], pad=PAD
-    ) # pad makes the box larger
+        rt_params['origin_lat'], rt_params['origin_lon'], pad=BBOX_PAD
+    ) # pad makes the box larger -> only for terrain placement purposes
 
     # Create terrain file (.ter)
     terrain_editor = TerrainEditor()
@@ -148,13 +149,15 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
                 pos=rx_pos,
                 name="user_grid",
                 conform_to_terrain=rt_params['conform_to_terrain'])
-    grid_side = [xmax_pad - xmin_pad - 2 * PAD + rt_params['grid_spacing'], 
-                 ymax_pad - ymin_pad - 2 * PAD + rt_params['grid_spacing']]
+    
+    # The user grid should cover the bounding box area fetched from OSM
+    grid_side = [xmax_pad - xmin_pad - 2 * BBOX_PAD + rt_params['grid_spacing'], 
+                 ymax_pad - ymin_pad - 2 * BBOX_PAD + rt_params['grid_spacing']]
     txrx_editor.add_txrx(
         txrx_type="grid",
         is_transmitter=False,
         is_receiver=True,
-        pos=[xmin_pad + PAD + 1e-3, ymin_pad + PAD, rt_params['ue_height']],
+        pos=[xmin_pad + BBOX_PAD + 1e-3, ymin_pad + BBOX_PAD, rt_params['ue_height']],
         name="UE_grid",
         grid_side=grid_side,
         grid_spacing=rt_params['grid_spacing'],
@@ -177,6 +180,9 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     scenario.set_carrierFreq(rt_params['carrier_freq'])
     scenario.set_bandwidth(rt_params['bandwidth'])
     scenario.set_study_area(zmin=-3, zmax=20, all_vertex=study_area_vertex)
+    mean_lat = (rt_params['min_lat'] + rt_params['max_lat']) / 2
+    mean_lon = (rt_params['min_lon'] + rt_params['max_lon']) / 2
+    scenario.set_origin(mean_lat, mean_lon)
     scenario.set_ray_tracing_param(rt_params_filtered)
     scenario.set_txrx("insite.txrx")
     scenario.add_feature(TERRAIN_TEMPLATE, "terrain")
@@ -185,12 +191,13 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     scenario.save("insite") # insite.setup
 
     # Generate XML file (.xml) - What Wireless InSite executable actually uses
-    xml_generator = XmlGenerator(insite_path, scenario, txrx_editor, version=int(rt_params['wi_version'][0]))
+    wi_major_version = int(rt_params['wi_version'][0])
+    xml_generator = XmlGenerator(insite_path, scenario, txrx_editor, version=wi_major_version)
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")
     xml_generator.save(xml_path)
 
-    license_info = ["-set_licenses", rt_params['wi_lic']] if rt_params['wi_version'].startswith("4") else []
+    license_info = ["-set_licenses", rt_params['wi_lic']] if wi_major_version >= 4 else []
     
     # Run Wireless InSite using the XML file
     command = [rt_params['wi_exe'], "-f", xml_path, "-out", study_area_path, "-p", "insite"] + license_info

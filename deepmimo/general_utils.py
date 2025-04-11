@@ -346,6 +346,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     summary_str += f"- Casting range (el): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_EL]:.1f}°\n"
     summary_str += f"- Synthetic array: {rt_params[c.RT_PARAM_SYNTHETIC_ARRAY]}\n"
 
+    # Scene
     summary_str += "\n[Scene]\n"
     summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
     summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]:,}\n"
@@ -353,6 +354,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
     summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,}\n"
     summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,}\n"
 
+    # Materials
     summary_str += "\n[Materials]\n"
     summary_str += f"Total materials: {len(material_params)}\n"
     for _, mat_props in material_params.items():
@@ -363,6 +365,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
         summary_str += f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
         summary_str += f"- Cross-polarization coefficient: {mat_props[c.MATERIALS_PARAM_CROSS_POL_COEF]:.2f}\n"
 
+    # TX/RX
     summary_str += "\n[TX/RX Configuration]\n"
 
     # Sum total number of receivers and transmitters
@@ -392,6 +395,15 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
         summary_str += f"- Antennas per point: {set_info[c.TXRX_PARAM_NUM_ANT]}\n"
         summary_str += f"- Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}\n"
 
+    # GPS Bounding Box
+    if rt_params[c.RT_PARAM_GPS_BBOX] != (0,0,0,0):
+        summary_str += "\n[GPS Bounding Box]\n"
+        summary_str += f"- Min latitude: {rt_params[c.RT_PARAM_GPS_BBOX][0]:.2f}\n"
+        summary_str += f"- Min longitude: {rt_params[c.RT_PARAM_GPS_BBOX][1]:.2f}\n"
+        summary_str += f"- Max latitude: {rt_params[c.RT_PARAM_GPS_BBOX][2]:.2f}\n"
+        summary_str += f"- Max longitude: {rt_params[c.RT_PARAM_GPS_BBOX][3]:.2f}\n"
+
+    # Print summary
     if print_summary:
         print(summary_str)
         return None

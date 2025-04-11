@@ -119,6 +119,9 @@ RT_PARAM_SYNTHETIC_ARRAY = 'synthetic_array'
 RT_PARAM_RAY_CASTING_RANGE_AZ = 'ray_casting_range_az'
 RT_PARAM_RAY_CASTING_RANGE_EL = 'ray_casting_range_el'
 
+# GPS Bounding Box
+RT_PARAM_GPS_BBOX = 'gps_bbox'
+
 #==============================================================================
 # 3. Scene Parameters
 #==============================================================================
@@ -325,3 +328,6 @@ DATASET_ALIASES = {
 # Invalid characters in scenario names
 SCENARIO_NAME_INVALID_CHARS = ['/', '\\', ':', '*', '?', '"', "'", '<', '>', '|', 
                                '\n']
+
+# Padding for bounding box in meters (for terrain placement around OSM area)
+BBOX_PAD = 30

@@ -13,14 +13,15 @@ The module serves as the interface between Wireless Insite's parameter format
 and DeepMIMO's standardized ray tracing parameters.
 """
 import os
+import numpy as np
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple
 from dataclasses import dataclass
 from pprint import pprint
 
 from .setup_parser import parse_file
 from ...rt_params import RayTracingParameters
-from ...consts import RAYTRACER_NAME_WIRELESS_INSITE
+from ...consts import RAYTRACER_NAME_WIRELESS_INSITE, BBOX_PAD
 from ...config import config
 
 
@@ -28,6 +29,49 @@ def read_rt_params(sim_folder: str | Path) -> Dict:
     """Read Wireless Insite RT parameters from a folder."""
     return InsiteRayTracingParameters.read_rt_params(sim_folder).to_dict()
 
+
+def _get_gps_bbox(origin_lat: float, origin_lon: float, 
+                  studyarea_vertices: np.ndarray) -> Tuple[float, float, float, float]:
+    """Get the GPS bounding box of a Wireless Insite simulation.
+    This is an approximated method that considers the earth round. 
+    For a typical scenario, the error in latitude should be < 20 micro degress, 
+    and the error in longitude should be < 10 micro degress, which corresponds to
+    an error of < 2 m in the vertical size of the bounding box, and < 1 m in the 
+    horizontal size of the bounding box.
+
+    Args:
+        origin_lat (float): Latitude of the origin
+        origin_lon (float): Longitude of the origin
+        studyarea_vertices (np.ndarray): Vertices of the study area 
+
+    Returns:
+        Tuple[float, float, float, float]: Bounding box of the study area
+
+    """
+    min_vertex = np.min(studyarea_vertices, axis=0)[:2]
+    max_vertex = np.max(studyarea_vertices, axis=0)[:2]
+
+    study_min_x, study_min_y = min_vertex
+    study_max_x, study_max_y = max_vertex
+
+    # Get min and max latitude and longitude
+    x_range = study_max_x - study_min_x - 2 * BBOX_PAD
+    y_range = study_max_y - study_min_y - 2 * BBOX_PAD
+
+    # Transform xy distances to approximate lat/lon distances
+    meter_per_degree_lat = 111320
+    meter_per_degree_lon = 111320 * np.cos(np.radians(origin_lat))
+
+    lat_range = y_range / meter_per_degree_lat
+    lon_range = x_range / meter_per_degree_lon
+
+    # Get min and max latitude and longitude
+    min_lat = origin_lat - lat_range / 2
+    max_lat = origin_lat + lat_range / 2
+    min_lon = origin_lon - lon_range / 2
+    max_lon = origin_lon + lon_range / 2
+
+    return min_lat, min_lon, max_lat, max_lon
 
 @dataclass
 class InsiteRayTracingParameters(RayTracingParameters):
@@ -152,6 +196,14 @@ class InsiteRayTracingParameters(RayTracingParameters):
                                     max(computed_path_depth_no_scattering, 
                                         computed_path_depth_scattering))
         
+        # Get GPS Bounding Box
+        origin_lat = studyarea_vals['boundary'].values['reference'].values['latitude']
+        origin_lon = studyarea_vals['boundary'].values['reference'].values['longitude']
+        studyarea_vertices = studyarea_vals['boundary'].data
+        gps_bbox = _get_gps_bbox(origin_lat=origin_lat,
+                                 origin_lon=origin_lon,
+                                 studyarea_vertices=np.array(studyarea_vertices))
+
         # Build standardized parameter dictionary
         params_dict = {
             # Ray Tracing Engine info
@@ -184,6 +236,9 @@ class InsiteRayTracingParameters(RayTracingParameters):
             'num_rays': num_rays,  # Insite uses ray spacing instead of explicit ray count
             'ray_casting_method': 'uniform',  # Insite uses uniform ray casting
             'synthetic_array': True,  # Currently only synthetic arrays are supported
+
+            # GPS Bounding Box
+            'gps_bbox': gps_bbox,
 
             # Store raw parameters
             'raw_params': raw_params,
