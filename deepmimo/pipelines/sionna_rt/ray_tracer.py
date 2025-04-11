@@ -1,5 +1,4 @@
 import os
-import pickle
 import numpy as np
 from tqdm import tqdm
 from constants import BATCH_SIZE
@@ -8,6 +7,10 @@ from deepmimo.converter.sionna_rt import sionna_exporter
 
 import tensorflow as tf
 from sionna.rt import Transmitter, Receiver
+
+tf.random.set_seed(1)
+gpus = tf.config.list_physical_devices('GPU')
+print("TensorFlow sees GPUs:" if gpus else "No GPUs found.", [gpu.name for gpu in gpus] if gpus else "")
 
 class DataLoader:
     def __init__(self, data, batch_size):
@@ -36,7 +39,8 @@ class RayTracer:
     def __init__(self, root_folder):
         self.root_folder = root_folder    
 
-    def run(self, scene_name, bs_pos, user_grid, carrier_freq, n_reflections, diffraction, scattering):
+    def run(self, scene_name, bs_pos, user_grid, batch_size=5,
+            carrier_freq=3.5, n_reflections=1, diffraction=True, scattering=True):
         """Run ray tracing for the scene."""
         # Create scene
         scene_folder = os.path.join(self.root_folder, scene_name)

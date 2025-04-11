@@ -35,6 +35,7 @@ import deepmimo as dm  # type: ignore
 from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 
 from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
+import deepmimo.pipelines.sionna_rt.ray_tracer as raytrace_sionna  # TODO: change into function later
 
 # Paths
 OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
@@ -58,7 +59,7 @@ print('not implemented yet')
 # TODO:
 # - Configure cell size to be ~80m longer in x and y compared to NY. Maybe 200 x 400m. (2x4)
 
-
+COUNTER = 0
 #%% Step 2: Iterate over rows of CSV file to extract the map, create TX/RX positions, and run RT
 
 df = pd.read_csv('C:/Users/jmora/Documents/GitHub/DeepMIMO/pipeline_dev/params.csv')
@@ -113,14 +114,15 @@ for index, row in df.iterrows():
 	load_params_from_row(row, p)
 
 	# RT Phase 2: Extract OSM data
-	osm_folder = os.path.join(OSM_ROOT, row['name'])
+	COUNTER += 1
+	osm_folder = os.path.join(OSM_ROOT, row['name']) + f'_{COUNTER}'
 	call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 			     osm_folder, # Output folder to the Blender script
 				 BLENDER_PATH, 
-				 outputs=['insite', 'sionna']) # List of outputs to generate
+				 outputs=['sionna']) # List of outputs to generate
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
 
-	break
+	
 	# RT Phase 3: Generate RX and TX positions
 	rx_pos = gen_rx_grid(p)  # N x 3 (N ~ 100k)
 	tx_pos = gen_tx_pos(p)   # M x 3 (M ~ 3)
@@ -130,8 +132,11 @@ for index, row in df.iterrows():
 	tx_pos = np.round(tx_pos, p['pos_prec'])
 
 	# RT Phase 4: Run Wireless InSite ray tracing
-	insite_rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
-
+	# insite_rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
+	
+	ray_tracer = raytrace_sionna.RayTracer(osm_folder)
+	ray_tracer.run(tx_pos, rx_pos, p)
+	break
 	# RT Phase 5: Convert to DeepMIMO format
 	dm.config('wireless_insite_version', WI_VERSION)
 	scen_insite = dm.convert(insite_rt_path, overwrite=True)
