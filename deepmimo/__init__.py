@@ -55,6 +55,7 @@ from .api import (
     upload,
     download,
     search,
+    upload_images,
 )
 
 # Physical world representation
@@ -102,6 +103,7 @@ __all__ = [
     # General utilities
     'summary',
     'upload',
+    'upload_images',
     'download',
     'search',
     'get_available_scenarios',

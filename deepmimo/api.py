@@ -22,6 +22,7 @@ from .general_utils import (
     zip,
     unzip
 )
+import time
 
 API_BASE_URL = "https://dev.deepmimo.net"
 
@@ -117,11 +118,25 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
             progress_reader.close()
             pbar.close()
 
+        # After the upload_response
+        fileId = "unknown"
+        if "getFileIdEndpoint" in auth_data:
+            try:
+                # Wait a moment for B2 to index the file
+                time.sleep(2)
+                file_id_response = requests.get(auth_data["getFileIdEndpoint"], 
+                                              headers={"Authorization": f"Bearer {key}"})
+                file_id_response.raise_for_status()
+                file_id_data = file_id_response.json()
+                fileId = file_id_data.get("fileId", "unknown")
+            except Exception as e:
+                print(f"Warning: Could not retrieve fileId: {str(e)}")
+
         # Return the authorized filename (not the local filename)
         # This ensures we're consistent with what was actually uploaded
         return {
             "filename": authorized_filename or filename,
-            "fileId": upload_response.headers.get("x-bz-file-id", "unknown"),
+            "fileId": fileId,
         }
 
     except requests.exceptions.RequestException as e:
@@ -305,42 +320,230 @@ def make_imgs(scenario_name: str) -> list[str]:
     Args:
         scenario_name: Scenario name
     
+    Returns:
+        List of paths to generated images
     """
-    # Image 1: Power
-    dm.plot_coverage(dataset.rx_pos, dataset.power[:,0], bs_pos=dataset.tx_pos.T,
-                 title='power', cbar_title='Power [dBW]')
-    power_img_path = 'power.png'
-    plt.savefig(power_img_path)
+    import matplotlib.pyplot as plt
+    import deepmimo as dm
+    import os
+    
+    # Create figures directory if it doesn't exist
+    temp_dir = 'figures'
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    # Load the dataset
+    dataset = dm.load(scenario_name)[0]
+    
+    # Image paths
+    img_paths = []
+    
+    try:
+        # Image 1: Line of Sight (LOS)
+        plt.figure(figsize=(10, 8))
+        # Call plot_coverage with correct parameters
+        dataset.plot_coverage(dataset.los)
+        los_img_path = os.path.join(temp_dir, 'los.png')
+        plt.savefig(los_img_path, dpi=100)
+        plt.close()
+        img_paths.append(los_img_path)
+        
+        # Image 2: Power
+        plt.figure(figsize=(10, 8))
+        dataset.plot_coverage(dataset.power[:,0])
+        power_img_path = os.path.join(temp_dir, 'power.png')
+        plt.savefig(power_img_path, dpi=100)
+        plt.close()
+        img_paths.append(power_img_path)
+        
+        # # Image 3: Scene
+        # plt.figure(figsize=(10, 8))
+        # dataset.scene.plot()
+        # scene_img_path = os.path.join(temp_dir, 'scene.png')
+        # plt.savefig(scene_img_path, dpi=100)
+        # plt.close()
+        # img_paths.append(scene_img_path)
+        
+    except Exception as e:
+        print(f"Error generating images: {str(e)}")
+        
+    return img_paths
 
-    # Image 2: Scene
-    dataset.scene.plot()
-    scene_img_path = 'scene.png'
-    plt.savefig(scene_img_path)
-
-    return [power_img_path, scene_img_path]
-
-def _upload_imgs(scenario_name: str, key: str, img_paths: list[str]) -> list[str]:
-    """Upload images to the server for a given scenario.
+def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[dict]:
+    """Upload images and attach them to an existing scenario.
     
     Args:
-        scenario_name: Scenario name
-        key: Upload authorization key
-        img_paths: List of image paths
+        scenario_name: Name of the scenario to attach images to
+        key: API authentication key
+        img_paths: List of paths to image files
     
+    Returns:
+        List of image objects that were successfully uploaded and attached
     """
-
-    for img in img_paths:
-        _dm_upload_api_call(img, key)
-
-# Add images safeguards:
-#    - filesize
-#    - filetype
-#    - number of files
-       
+    import os
+    import requests
+    from tqdm import tqdm
+    
+    if not img_paths:
+        print("No images provided for upload")
+        return []
+    
+    # Check how many images the scenario already has
+    try:
+        # Get the list of submissions to find the one for the scenario
+        response = requests.get(
+            f"{API_BASE_URL}/api/submissions",
+            headers={"Authorization": f"Bearer {key}"}
+        )
+        response.raise_for_status()
+        submissions = response.json()
+        
+        # Find the submission with the matching scenario name
+        target_submission = None
+        for submission in submissions:
+            if submission.get('content', {}).get('title') == scenario_name or \
+               submission.get('content', {}).get('linkName') == scenario_name:
+                target_submission = submission
+                break
+        
+        if not target_submission:
+            print(f"Error: Could not find a submission for scenario '{scenario_name}'")
+            return []
+        
+        # Check existing images count
+        existing_images = target_submission.get('content', {}).get('images', [])
+        existing_count = len(existing_images)
+        
+        if existing_count >= 5:
+            print(f"Warning: Scenario already has {existing_count} images (maximum is 5). No new images will be uploaded.")
+            return []
+        
+        # Calculate how many more images can be added
+        available_slots = 5 - existing_count
+        
+        if len(img_paths) > available_slots:
+            print(f"Warning: Scenario already has {existing_count} images. Terminating upload.")
+            return []
+            
+    except Exception as e:
+        print(f"Warning: Could not check existing images count: {str(e)}")
+        return []
+    
+    image_objects = []
+    
+    # Image type mapping for default titles/descriptions
+    image_types = {
+        'los.png': {
+            'heading': 'Line of Sight',
+            'description': 'Line of sight coverage for the scenario'
+        },
+        'power.png': {
+            'heading': 'Power Distribution',
+            'description': 'Signal power distribution across the scenario'
+        },
+        # 'scene.png': {
+        #     'heading': 'Scenario Layout',
+        #     'description': 'Physical layout of the scenario'
+        # }
+    }
+    
+    # Upload the selected images
+    for img_path in tqdm(img_paths, desc="Uploading images"):
+        # Check file size
+        file_size = os.path.getsize(img_path)
+        max_size = 10 * 1024 * 1024  # 10MB
+        
+        if file_size > max_size:
+            print(f"Warning: Image {os.path.basename(img_path)} exceeds 10MB limit and will be skipped.")
+            continue
+        
+        try:
+            # Get the image filename
+            filename = os.path.basename(img_path)
+            
+            # Set up multipart form data
+            files = {'file': (filename, open(img_path, 'rb'), 'image/png')}
+            
+            # Make the request to the image upload endpoint
+            response = requests.post(
+                f"{API_BASE_URL}/api/upload",
+                headers={"Authorization": f"Bearer {key}"},
+                files=files
+            )
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            if 'url' in result:
+                # Create proper image object with metadata
+                image_info = image_types.get(filename, {
+                    'heading': f"Image {len(image_objects) + 1}",
+                    'description': f"Visualization for {scenario_name}"
+                })
+                
+                image_object = {
+                    'image': result['url'],
+                    'heading': image_info['heading'],
+                    'description': image_info['description']
+                }
+                
+                image_objects.append(image_object)
+                print(f"✓ Uploaded image: {filename}")
+            else:
+                print(f"Warning: Upload succeeded but no URL returned for {filename}")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to upload image {os.path.basename(img_path)}: {str(e)}")
+            if hasattr(e, 'response') and e.response:
+                print(f"Server response: {e.response.text}")
+        except Exception as e:
+            print(f"Error uploading image {os.path.basename(img_path)}: {str(e)}")
+    
+    # Update the submission with the new images
+    if image_objects:
+        try:
+            content = target_submission['content']
+            
+            # Add new images to the existing ones
+            if 'images' not in content:
+                content['images'] = []
+            elif isinstance(content['images'], list) and len(content['images']) > 0:
+                # Make sure we handle existing images correctly
+                # Convert URL strings to objects if needed
+                if isinstance(content['images'][0], str):
+                    # Convert old format (just URLs) to new format (objects)
+                    content['images'] = [
+                        {
+                            'image': url,
+                            'heading': f"Image {i+1}",
+                            'description': f"Visualization for {scenario_name}"
+                        }
+                        for i, url in enumerate(content['images'])
+                    ]
+            
+            content['images'].extend(image_objects)
+            
+            # Update the submission
+            update_response = requests.put(
+                f"{API_BASE_URL}/api/submissions/{target_submission['_id']}",
+                headers={"Authorization": f"Bearer {key}"},
+                json={"type": target_submission['type'], "content": content}
+            )
+            update_response.raise_for_status()
+            
+            print(f"✓ Successfully attached {len(image_objects)} images to scenario '{scenario_name}'")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to update scenario with images: {str(e)}")
+            if hasattr(e, 'response') and e.response:
+                print(f"Server response: {e.response.text}")
+        except Exception as e:
+            print(f"Error updating scenario with images: {str(e)}")
+    
+    return image_objects
 
 def upload(scenario_name: str, key: str, description: Optional[str] = None,
            details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, 
-           skip_zip: bool = False) -> str:
+           skip_zip: bool = False, include_images: bool = True) -> str:
     """Upload a DeepMIMO scenario to the server.
 
     Args:
@@ -365,6 +568,7 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
             Through this, submissions can be 100% automated (via code).
 
         skip_zip: Skip zipping the scenario folder if True
+        include_images: Generate and upload visualization images if True
 
     Returns:
         Scenario name if successful, None otherwise
@@ -447,6 +651,28 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
         print(f"Error: Upload failed - {str(e)}")
         submission_result = None
 
+    # Generate and upload images if requested
+    if include_images:
+        print("Generating scenario visualizations...")
+        try:
+            img_paths = make_imgs(scenario_name)
+            if img_paths:
+                print(f"Generated {len(img_paths)} images")
+                
+                # Upload images to server and attach to scenario
+                upload_images(scenario_name, key, img_paths)
+                
+                # Clean up temporary image files
+                for img_path in img_paths:
+                    try:
+                        if os.path.exists(img_path):
+                            os.remove(img_path)
+                    except Exception as e:
+                        print(f"Warning: Failed to clean up image {img_path}: {str(e)}")
+        
+        except Exception as e:
+            print(f"Warning: Failed to generate or upload images: {str(e)}")
+    
     return submission_result
 
 
