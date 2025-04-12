@@ -23,7 +23,7 @@ from .sionna_scene import read_scene
 
 def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
                         overwrite: bool = None, vis_scene: bool = True, 
-                        scenario_name: str = '') -> str:
+                        scenario_name: str = '', print_params: bool = False) -> str:
     """Convert Sionna ray-tracing data to DeepMIMO format.
 
     This function handles the conversion of Sionna ray-tracing simulation 
@@ -84,7 +84,8 @@ def sionna_rt_converter(rt_folder: str, copy_source: bool = False,
         c.SCENE_PARAM_NAME: scene_dict
     }
     cu.save_params(params, output_folder)
-    pprint(params)
+    if print_params:
+        pprint(params)
 
     # Save scenario to deepmimo scenarios folder
     scen_name = cu.save_scenario(output_folder, scen_name=scenario_name, overwrite=overwrite)
