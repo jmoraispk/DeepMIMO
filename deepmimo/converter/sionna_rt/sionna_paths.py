@@ -47,6 +47,61 @@ def _preallocate_data(n_rx: int) -> Dict:
     
     
 
+def _process_paths_batch(paths_dict: Dict, data: Dict, b: int, 
+                          t: int, curr_max_inter: int, last_idx: int, batch_size: int) -> int:
+    """Process a batch of paths from Sionna format and store in DeepMIMO format.
+    
+    Args:
+        paths_dict: Dictionary containing Sionna path data
+        data: Dictionary to store processed path data
+        b: Batch index
+        t: Transmitter index in current paths dictionary
+        curr_max_inter: Maximum number of interactions per path
+        last_idx: Starting index for storing in data arrays
+        batch_size: Number of receivers in current batch
+        
+    Returns:
+        int: Number of inactive receivers found in this batch
+    """
+    # Get amplitude data for current TX
+    a = paths_dict['a'][0,:,0,t,0,:,0]  # Get users and paths for this TX
+    
+    inactive_count = 0
+    # Process each receiver in the batch
+    for rel_idx in range(batch_size):
+        abs_idx = last_idx + rel_idx
+        
+        path_idxs = np.where(a[rel_idx] != 0)[0][:c.MAX_PATHS]
+        n_paths = len(path_idxs)
+
+        if n_paths == 0:
+            inactive_count += 1
+            continue
+
+        # Power, phase, delay
+        data[c.POWER_PARAM_NAME][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
+        data[c.PHASE_PARAM_NAME][abs_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
+        data[c.DELAY_PARAM_NAME][abs_idx,:n_paths] = paths_dict['tau'][b, rel_idx, t, path_idxs]
+        
+        # Angles
+        rad2deg = lambda x: np.rad2deg(x[b, rel_idx, t, path_idxs])
+        data[c.AOA_AZ_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['phi_r'])
+        data[c.AOD_AZ_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['phi_t'])
+        data[c.AOA_EL_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['theta_r'])
+        data[c.AOD_EL_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['theta_t'])
+
+        # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
+        data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :curr_max_inter, :] = \
+            np.transpose(paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :], (1,0,2))
+
+        # Interactions types
+        types = paths_dict['types'][b, path_idxs]
+        inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
+        interactions = get_sionna_interaction_types(types, inter_pos_rx)
+        data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
+    
+    return inactive_count
+
 def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     """Read and convert path data from Sionna format.
     
@@ -114,7 +169,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         # Create progress bar
         pbar = tqdm(total=n_rx, desc=f"Processing receivers for TX {tx_idx}")
         
-        b = 0 # batch index 
+        b = 0  # batch index 
         last_idx = 0
         bs_bs_paths = False
         # Process each batch of paths
@@ -132,52 +187,19 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 
             t = tx_idx_in_dict[0]  # Get the index of this TX in current paths_dict
             batch_size = paths_dict['a'].shape[1]
-            # batch_size is the number of RXs in the current path dictionary (not sionna batches)
-            
-            # Note: we opt for not using squeeze here to work for batch_size = 1
-            a = paths_dict['a'][0,:,0,t,0,:,0] # Get users and paths for this TX
             
             # Get max number of interactions per path
             curr_max_inter = min(c.MAX_INTER_PER_PATH, paths_dict['vertices'].shape[0])
 
-            # Process each receiver in the batch
-            for rel_idx in range(batch_size):
-                abs_idx = last_idx + rel_idx
-                
-                path_idxs = np.where(a[rel_idx] != 0)[0][:c.MAX_PATHS]
-                n_paths = len(path_idxs)
-
-                if n_paths == 0:
-                    if tx_idx == 0:
-                        rx_inactive_idxs_count += 1
-                    pbar.update(1)
-                    continue
-
-                # Power, phase, delay
-                data[c.POWER_PARAM_NAME][abs_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
-                data[c.PHASE_PARAM_NAME][abs_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
-                data[c.DELAY_PARAM_NAME][abs_idx,:n_paths] = paths_dict['tau'][b, rel_idx, t, path_idxs]
-                
-                # Angles
-                rad2deg = lambda x: np.rad2deg(x[b, rel_idx, t, path_idxs])
-                data[c.AOA_AZ_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['phi_r'])
-                data[c.AOD_AZ_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['phi_t'])
-                data[c.AOA_EL_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['theta_r'])
-                data[c.AOD_EL_PARAM_NAME][abs_idx, :n_paths] = rad2deg(paths_dict['theta_t'])
-
-                # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-                data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths, :curr_max_inter, :] = \
-                    np.transpose(paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :], (1,0,2))
-
-                # Interactions types
-                types = paths_dict['types'][b, path_idxs]
-                inter_pos_rx = data[c.INTERACTIONS_POS_PARAM_NAME][abs_idx, :n_paths]
-                interactions = get_sionna_interaction_types(types, inter_pos_rx)
-                data[c.INTERACTIONS_PARAM_NAME][abs_idx, :n_paths] = interactions
-                
-                # Update progress bar only when we actually process a receiver
-                pbar.update(1)
+            # Process the batch using helper function
+            inactive_count = _process_paths_batch(paths_dict, data, b, t, curr_max_inter,
+                                                  last_idx, batch_size)
             
+            if tx_idx == 0:  # Only count inactive RXs for first TX
+                rx_inactive_idxs_count += inactive_count
+            
+            # Update progress bar for each receiver processed
+            pbar.update(batch_size)
             last_idx += batch_size
 
         pbar.close()
@@ -187,64 +209,33 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         
         # Save each data key
         for key in data.keys():
-            cu.save_mat(data[key], key, save_folder, 0, tx_idx, 1) # Static for Sionna
-        
+            cu.save_mat(data[key], key, save_folder, 0, tx_idx, 1)  # Static for Sionna
         
         if bs_bs_paths:
             print(f'BS-BS paths found for TX {tx_idx}')
             
             paths_dict = path_dict_list[0]
-
             all_bs_pos = paths_dict['sources']
             num_bs = len(all_bs_pos)
             data_bs_bs = _preallocate_data(num_bs)
             data_bs_bs[c.RX_POS_PARAM_NAME] = all_bs_pos
             data_bs_bs[c.TX_POS_PARAM_NAME] = tx_pos_target
             
-            a = paths_dict['a'][0,:,0,t,0,:,0] # Get users and paths for this TX
-            
             # Get max number of interactions per path
             curr_max_inter = min(c.MAX_INTER_PER_PATH, paths_dict['vertices'].shape[0])
 
-            # Process each field with proper masking
-            
-            for rel_idx in range(num_bs):
-                path_idxs = np.where(a[rel_idx] != 0)[0][:c.MAX_PATHS]
-                n_paths = len(path_idxs)
-
-                # Power, phase, delay
-                data_bs_bs[c.POWER_PARAM_NAME][rel_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
-                data_bs_bs[c.PHASE_PARAM_NAME][rel_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
-                data_bs_bs[c.DELAY_PARAM_NAME][rel_idx,:n_paths] = paths_dict['tau'][b, rel_idx, t, path_idxs]
-                
-                # Angles
-                rad2deg = lambda x: np.rad2deg(x[b, rel_idx, t, path_idxs])
-                data_bs_bs[c.AOA_AZ_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['phi_r'])
-                data_bs_bs[c.AOD_AZ_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['phi_t'])
-                data_bs_bs[c.AOA_EL_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['theta_r'])
-                data_bs_bs[c.AOD_EL_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['theta_t'])
-
-                # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
-                data_bs_bs[c.INTERACTIONS_POS_PARAM_NAME][rel_idx, :n_paths, :curr_max_inter, :] = \
-                    np.transpose(paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :], (1,0,2))
-
-                # Interactions types
-                types = paths_dict['types'][b, path_idxs]
-                inter_pos_rx = data_bs_bs[c.INTERACTIONS_POS_PARAM_NAME][rel_idx, :n_paths]
-                interactions = get_sionna_interaction_types(types, inter_pos_rx)
-                data_bs_bs[c.INTERACTIONS_PARAM_NAME][rel_idx, :n_paths] = interactions
-                
+            # Process BS-BS paths using helper function
+            _process_paths_batch(paths_dict, data_bs_bs, b, t, curr_max_inter, 0, num_bs)
             
             # Compress data before saving
             data_bs_bs = cu.compress_path_data(data_bs_bs)
             
             # Save each data key
             for key in data_bs_bs.keys():
-                cu.save_mat(data_bs_bs[key], key, save_folder, 0, tx_idx, 0) # Same RX & TX set
-            continue
+                cu.save_mat(data_bs_bs[key], key, save_folder, 0, tx_idx, 0)  # Same RX & TX set
     
     if bs_bs_paths:
-        txrx_dict['txrx_set_0']['is_rx'] = True # add BS set also as RX
+        txrx_dict['txrx_set_0']['is_rx'] = True  # add BS set also as RX
 
     # Update txrx_dict with tx and rx numbers 
     txrx_dict['txrx_set_0']['num_points'] = n_tx
