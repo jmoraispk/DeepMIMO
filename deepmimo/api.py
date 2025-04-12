@@ -339,29 +339,30 @@ def make_imgs(scenario_name: str) -> list[str]:
     
     try:
         # Image 1: Line of Sight (LOS)
-        plt.figure(figsize=(10, 8))
-        # Call plot_coverage with correct parameters
-        dataset.plot_coverage(dataset.los)
-        los_img_path = os.path.join(temp_dir, 'los.png')
-        plt.savefig(los_img_path, dpi=100)
-        plt.close()
-        img_paths.append(los_img_path)
+        # plt.figure(figsize=(10, 8))
+        # # Call plot_coverage with correct parameters
+        # dm.plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.bs_pos, bs_ori=dataset.bs_ori, 
+        #                  cmap='viridis', cbar_labels='LoS status')
+        # los_img_path = os.path.join(temp_dir, 'los.png')
+        # plt.savefig(los_img_path, dpi=100, bbox_inches='tight')
+        # plt.close()
+        # img_paths.append(los_img_path)
         
         # Image 2: Power
-        plt.figure(figsize=(10, 8))
-        dataset.plot_coverage(dataset.power[:,0])
-        power_img_path = os.path.join(temp_dir, 'power.png')
-        plt.savefig(power_img_path, dpi=100)
-        plt.close()
-        img_paths.append(power_img_path)
+        # plt.figure(figsize=(10, 8))
+        # dataset.plot_coverage(dataset.power[:,0])
+        # power_img_path = os.path.join(temp_dir, 'power.png')
+        # plt.savefig(power_img_path, dpi=100, bbox_inches='tight')
+        # plt.close()
+        # img_paths.append(power_img_path)
         
         # # Image 3: Scene
         # plt.figure(figsize=(10, 8))
-        # dataset.scene.plot()
-        # scene_img_path = os.path.join(temp_dir, 'scene.png')
-        # plt.savefig(scene_img_path, dpi=100)
-        # plt.close()
-        # img_paths.append(scene_img_path)
+        dataset.scene.plot(show=False)
+        scene_img_path = os.path.join(temp_dir, 'scene.png')
+        plt.savefig(scene_img_path, dpi=100, bbox_inches='tight')
+        plt.close()
+        img_paths.append(scene_img_path)
         
     except Exception as e:
         print(f"Error generating images: {str(e)}")
