@@ -20,6 +20,33 @@ INTERACTIONS_MAP = {
     4:  None,  # Sionna RIS is not supported yet
 }
 
+def _preallocate_data(n_rx: int) -> Dict:
+    """Pre-allocate data for path conversion.
+    
+    Args:
+        n_rx: Number of RXs
+
+    Returns:
+        data: Dictionary containing pre-allocated data
+    """
+    data = {
+        c.RX_POS_PARAM_NAME: np.zeros((n_rx, 3), dtype=c.FP_TYPE),
+        c.TX_POS_PARAM_NAME: np.zeros((1, 3), dtype=c.FP_TYPE),
+        c.AOA_AZ_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.AOA_EL_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.AOD_AZ_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.AOD_EL_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.DELAY_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.POWER_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.PHASE_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.INTERACTIONS_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
+        c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS, c.MAX_INTER_PER_PATH, 3), dtype=c.FP_TYPE) * np.nan,
+    }
+    
+    return data
+    
+    
+
 def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     """Read and convert path data from Sionna format.
     
@@ -52,11 +79,6 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
         [batch_size, num_rx, num_tx, max_num_paths], float
 
-    [Mask]
-    - paths_dict['mask'] is the mask that tells which paths are enabled for each receiver
-        [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
-        [batch_size, num_rx, num_tx, max_num_paths], bool
-
     [Types]
     - paths_dict['types'] is the type of the path
         [batch_size, num_rx, num_rx_ant, num_tx, num_tx_ant, max_num_paths] or 
@@ -85,19 +107,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
     
     for tx_idx, tx_pos_target in enumerate(all_tx_pos):
         # Pre-allocate matrices
-        data = {
-            c.RX_POS_PARAM_NAME: np.zeros((n_rx, 3), dtype=c.FP_TYPE),
-            c.TX_POS_PARAM_NAME: np.zeros((1, 3), dtype=c.FP_TYPE),
-            c.AOA_AZ_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.AOA_EL_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.AOD_AZ_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.AOD_EL_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.DELAY_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.POWER_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.PHASE_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.INTERACTIONS_PARAM_NAME:  np.zeros((n_rx, c.MAX_PATHS), dtype=c.FP_TYPE) * np.nan,
-            c.INTERACTIONS_POS_PARAM_NAME: np.zeros((n_rx, c.MAX_PATHS, c.MAX_INTER_PER_PATH, 3), dtype=c.FP_TYPE) * np.nan,
-        }
+        data = _preallocate_data(n_rx)
 
         data[c.RX_POS_PARAM_NAME], data[c.TX_POS_PARAM_NAME] = rx_pos, tx_pos_target
         
@@ -106,13 +116,19 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         
         b = 0 # batch index 
         last_idx = 0
-        
+        bs_bs_paths = False
         # Process each batch of paths
-        for paths_dict in path_dict_list:
+        for path_dict_idx, paths_dict in enumerate(path_dict_list):
             # Find if and where this TX exists in current paths_dict
             tx_idx_in_dict = np.where(np.all(paths_dict['sources'] == tx_pos_target, axis=1))[0]
             if len(tx_idx_in_dict) == 0:
                 continue
+
+            # Check if BS-BS paths exist (they are the first paths_dict)
+            if path_dict_idx == 0:
+                if np.array_equal(paths_dict['sources'], paths_dict['targets']):
+                    bs_bs_paths = True
+                    continue
                 
             t = tx_idx_in_dict[0]  # Get the index of this TX in current paths_dict
             batch_size = paths_dict['a'].shape[1]
@@ -124,7 +140,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
             # Get max number of interactions per path
             curr_max_inter = min(c.MAX_INTER_PER_PATH, paths_dict['vertices'].shape[0])
 
-            # Process each field with proper masking
+            # Process each receiver in the batch
             for rel_idx in range(batch_size):
                 abs_idx = last_idx + rel_idx
                 
@@ -134,6 +150,7 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
                 if n_paths == 0:
                     if tx_idx == 0:
                         rx_inactive_idxs_count += 1
+                    pbar.update(1)
                     continue
 
                 # Power, phase, delay
@@ -171,6 +188,63 @@ def read_paths(load_folder: str, save_folder: str, txrx_dict: Dict) -> None:
         # Save each data key
         for key in data.keys():
             cu.save_mat(data[key], key, save_folder, 0, tx_idx, 1) # Static for Sionna
+        
+        
+        if bs_bs_paths:
+            print(f'BS-BS paths found for TX {tx_idx}')
+            
+            paths_dict = path_dict_list[0]
+
+            all_bs_pos = paths_dict['sources']
+            num_bs = len(all_bs_pos)
+            data_bs_bs = _preallocate_data(num_bs)
+            data_bs_bs[c.RX_POS_PARAM_NAME] = all_bs_pos
+            data_bs_bs[c.TX_POS_PARAM_NAME] = tx_pos_target
+            
+            a = paths_dict['a'][0,:,0,t,0,:,0] # Get users and paths for this TX
+            
+            # Get max number of interactions per path
+            curr_max_inter = min(c.MAX_INTER_PER_PATH, paths_dict['vertices'].shape[0])
+
+            # Process each field with proper masking
+            
+            for rel_idx in range(num_bs):
+                path_idxs = np.where(a[rel_idx] != 0)[0][:c.MAX_PATHS]
+                n_paths = len(path_idxs)
+
+                # Power, phase, delay
+                data_bs_bs[c.POWER_PARAM_NAME][rel_idx,:n_paths] = 20 * np.log10(np.absolute(a[rel_idx, path_idxs]))
+                data_bs_bs[c.PHASE_PARAM_NAME][rel_idx,:n_paths] = np.angle(a[rel_idx, path_idxs], deg=True)
+                data_bs_bs[c.DELAY_PARAM_NAME][rel_idx,:n_paths] = paths_dict['tau'][b, rel_idx, t, path_idxs]
+                
+                # Angles
+                rad2deg = lambda x: np.rad2deg(x[b, rel_idx, t, path_idxs])
+                data_bs_bs[c.AOA_AZ_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['phi_r'])
+                data_bs_bs[c.AOD_AZ_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['phi_t'])
+                data_bs_bs[c.AOA_EL_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['theta_r'])
+                data_bs_bs[c.AOD_EL_PARAM_NAME][rel_idx, :n_paths] = rad2deg(paths_dict['theta_t'])
+
+                # Interaction positions ([depth, num_rx, num_tx, path, 3(xyz)])
+                data_bs_bs[c.INTERACTIONS_POS_PARAM_NAME][rel_idx, :n_paths, :curr_max_inter, :] = \
+                    np.transpose(paths_dict['vertices'][:curr_max_inter, rel_idx, t, path_idxs, :], (1,0,2))
+
+                # Interactions types
+                types = paths_dict['types'][b, path_idxs]
+                inter_pos_rx = data_bs_bs[c.INTERACTIONS_POS_PARAM_NAME][rel_idx, :n_paths]
+                interactions = get_sionna_interaction_types(types, inter_pos_rx)
+                data_bs_bs[c.INTERACTIONS_PARAM_NAME][rel_idx, :n_paths] = interactions
+                
+            
+            # Compress data before saving
+            data_bs_bs = cu.compress_path_data(data_bs_bs)
+            
+            # Save each data key
+            for key in data_bs_bs.keys():
+                cu.save_mat(data_bs_bs[key], key, save_folder, 0, tx_idx, 0) # Same RX & TX set
+            continue
+    
+    if bs_bs_paths:
+        txrx_dict['txrx_set_0']['is_rx'] = True # add BS set also as RX
 
     # Update txrx_dict with tx and rx numbers 
     txrx_dict['txrx_set_0']['num_points'] = n_tx
