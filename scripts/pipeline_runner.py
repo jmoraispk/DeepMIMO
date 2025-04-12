@@ -101,7 +101,8 @@ p = {
 	'terrain_material': TERRAIN_MATERIAL_PATH,
 
 	# Sionna specific parameters
-	'batch_size': 5,  # Number of users to compute at a time (heuristic: 1.5 per GB of GPU VRAM)
+	'batch_size': 15,  # Number of users to compute at a time
+	# (heuristic: 1.5 per GB of GPU VRAM, if using scattering, else 5-10 users per GB)
 
 	# Ray-tracing parameters -> Efficient if they match the dataclass in SetupEditor.py
 	'carrier_freq': 3.5e9,  # Hz
@@ -127,7 +128,7 @@ for index, row in df.iterrows():
 	load_params_from_row(row, p)
 
 	# RT Phase 2: Extract OSM data
-	COUNTER += 1
+	# COUNTER += 1
 	osm_folder = os.path.join(OSM_ROOT, row['name']) + f'_{COUNTER}'
 	call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 			     osm_folder, # Output folder to the Blender script
@@ -148,9 +149,9 @@ for index, row in df.iterrows():
 	# rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 	
 	rt_path = raytrace_sionna(osm_folder, tx_pos, rx_pos, **p)
-	
+
 	# RT Phase 5: Convert to DeepMIMO format
-	# dm.config('wireless_insite_version', WI_VERSION)
+	dm.config('wireless_insite_version', WI_VERSION)
 	dm.config('sionna_version', '0.19.1')
 	scen_name = dm.convert(rt_path, overwrite=True)
 

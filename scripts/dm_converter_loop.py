@@ -5,14 +5,14 @@ import deepmimo as dm
 import os
 import json
 
-# from my_api_key import API_KEY as MY_API_KEY
+from my_api_key import API_KEY as MY_API_KEY
 
 # Main execution
 EXECUTION_MODE = 'collect_errors' # 'collect_errors' | 'retry_errors'
 ERROR_LOG_FILE = 'conversion_errors.json'
 
 # base_path = "F:/deepmimo_loop_ready"
-base_path = "P2Ms/new_scenarios_backup"
+base_path = r"M:\AutoRayTracingSionna\all_runs_sionna\run_04-12-2025_18H13M23S_cleaned"
 subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
 
 # Load previous errors if in retry mode
@@ -27,33 +27,30 @@ if EXECUTION_MODE == 'retry_errors' and os.path.exists(ERROR_LOG_FILE):
 timing_results = {}
 
 # For conversion
-# for subfolder in subfolders:
-    # scen_name = os.path.basename(subfolder)
+for subfolder in subfolders:
+    scen_name = os.path.basename(subfolder)
+    print(f'running: {subfolder}')
 
 # For zipping
-for scen_name in dm.get_available_scenarios():
+# for scen_name in dm.get_available_scenarios():
 
     # if 'asu' in scen_name:
     #     continue
 
-    if 'city_' in scen_name:
-        city_idx = int(scen_name.split('_')[1])
-        if city_idx <= 20:
-            continue
-    else:
+    if not scen_name.startswith('city_'):
         continue
-    print(f"\nProcessing: {scen_name}")
-    # break
-    # continue
+    
     start = time.time()
     try:
-        # scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, 
-                            #    vis_scene=False, print_params=False)
-        # print(f"Conversion successful: {scen_name}")
-        
-        dm.upload(scen_name, key=MY_API_KEY)
-        print(f"Upload successful: {scen_name}")
+        scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, 
+                               vis_scene=True, print_params=False)
+        print(f"Conversion successful: {scen_name}")
+        stop = time.time()
+
+        # dm.upload(scen_name, key=MY_API_KEY)
+        # print(f"Upload successful: {scen_name}")
     except Exception as e:
+        stop = start
         if EXECUTION_MODE == 'retry_errors':
             raise  # Re-raise the exception in retry mode
         error_scenarios.append((scen_name, str(e)))
@@ -61,7 +58,7 @@ for scen_name in dm.get_available_scenarios():
             with open(ERROR_LOG_FILE, 'w') as f:
                 json.dump(error_scenarios, f, indent=2)
     
-    timing_results[scen_name] = time.time() - start
+    timing_results[scen_name] = stop - start
 
 
 if timing_results:
