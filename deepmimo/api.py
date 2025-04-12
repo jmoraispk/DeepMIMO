@@ -339,8 +339,6 @@ def make_imgs(scenario_name: str) -> list[str]:
     
     try:
         # Image 1: Line of Sight (LOS)
-        # plt.figure(figsize=(10, 8))
-        # # Call plot_coverage with correct parameters
         # dm.plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.bs_pos, bs_ori=dataset.bs_ori, 
         #                  cmap='viridis', cbar_labels='LoS status')
         # los_img_path = os.path.join(temp_dir, 'los.png')
@@ -433,18 +431,18 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
     
     # Image type mapping for default titles/descriptions
     image_types = {
-        'los.png': {
-            'heading': 'Line of Sight',
-            'description': 'Line of sight coverage for the scenario'
-        },
-        'power.png': {
-            'heading': 'Power Distribution',
-            'description': 'Signal power distribution across the scenario'
-        },
-        # 'scene.png': {
-        #     'heading': 'Scenario Layout',
-        #     'description': 'Physical layout of the scenario'
-        # }
+        # 'los.png': {
+        #     'heading': 'Line of Sight',
+        #     'description': 'Line of sight coverage for the scenario'
+        # },
+        # 'power.png': {
+        #     'heading': 'Power Distribution',
+        #     'description': 'Signal power distribution across the scenario'
+        # },
+        'scene.png': {
+            'heading': 'Scenario Layout',
+            'description': 'Physical layout of the scenario'
+        }
     }
     
     # Upload the selected images
