@@ -24,14 +24,13 @@ from ...rt_params import RayTracingParameters
 from ...consts import RAYTRACER_NAME_WIRELESS_INSITE, BBOX_PAD
 from ...config import config
 
-
 def read_rt_params(sim_folder: str | Path) -> Dict:
     """Read Wireless Insite RT parameters from a folder."""
     return InsiteRayTracingParameters.read_rt_params(sim_folder).to_dict()
 
 
-def _get_gps_bbox(origin_lat: float, origin_lon: float, 
-                  studyarea_vertices: np.ndarray) -> Tuple[float, float, float, float]:
+def _get_gps_bbox(origin_lat: float, origin_lon: float, studyarea_vertices: np.ndarray, 
+                  pad: float = BBOX_PAD) -> Tuple[float, float, float, float]:
     """Get the GPS bounding box of a Wireless Insite simulation.
     This is an approximated method that considers the earth round. 
     For a typical scenario, the error in latitude should be < 20 micro degress, 
@@ -48,6 +47,9 @@ def _get_gps_bbox(origin_lat: float, origin_lon: float,
         Tuple[float, float, float, float]: Bounding box of the study area
 
     """
+    if origin_lat == 0 and origin_lon == 0:
+        return (0,0,0,0)  # Default bounding box if origin is not available
+    
     min_vertex = np.min(studyarea_vertices, axis=0)[:2]
     max_vertex = np.max(studyarea_vertices, axis=0)[:2]
 
@@ -55,8 +57,8 @@ def _get_gps_bbox(origin_lat: float, origin_lon: float,
     study_max_x, study_max_y = max_vertex
 
     # Get min and max latitude and longitude
-    x_range = study_max_x - study_min_x - 2 * BBOX_PAD
-    y_range = study_max_y - study_min_y - 2 * BBOX_PAD
+    x_range = study_max_x - study_min_x - 2 * pad
+    y_range = study_max_y - study_min_y - 2 * pad
 
     # Transform xy distances to approximate lat/lon distances
     meter_per_degree_lat = 111320
@@ -72,6 +74,7 @@ def _get_gps_bbox(origin_lat: float, origin_lon: float,
     max_lon = origin_lon + lon_range / 2
 
     return min_lat, min_lon, max_lat, max_lon
+
 
 @dataclass
 class InsiteRayTracingParameters(RayTracingParameters):

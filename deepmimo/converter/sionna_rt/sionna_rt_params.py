@@ -17,7 +17,7 @@ import os
 from dataclasses import dataclass
 from typing import Dict
 
-from .. import converter_utils as cu
+from ..converter_utils import load_pickle
 from ...rt_params import RayTracingParameters
 from ...consts import RAYTRACER_NAME_SIONNA
 from ...config import config
@@ -80,7 +80,7 @@ class SionnaRayTracingParameters(RayTracingParameters):
             ValueError: If required parameters are missing or invalid
         """
         # Load original parameters
-        raw_params = cu.load_pickle(os.path.join(load_folder, 'sionna_rt_params.pkl'))
+        raw_params = load_pickle(os.path.join(load_folder, 'sionna_rt_params.pkl'))
         
         # Raise error if los is not present
         if 'los' not in raw_params or not raw_params['los']:
@@ -96,6 +96,13 @@ class SionnaRayTracingParameters(RayTracingParameters):
         n_emmitters = n_tx * n_tx_ant
         n_rays = raw_params['num_samples'] // n_emmitters
         
+        # Check if GPS origin is present (average point of scene, in geographic coordinates)
+        if raw_params.get('min_lat', 0) != 0:
+            gps_bbox = (raw_params['min_lat'], raw_params['min_lon'],
+                        raw_params['max_lat'], raw_params['max_lon'])
+        else:
+            gps_bbox = (0,0,0,0) # default
+
         # Create standardized parameters
         params_dict = {
             # Ray Tracing Engine info
@@ -129,6 +136,10 @@ class SionnaRayTracingParameters(RayTracingParameters):
             'ray_casting_method': raw_params['method'].replace('fibonacci', 'uniform'),
             # The alternative to fibonacci is exhaustive, for which the number of rays is not predictable
 
+            # GPS Bounding Box
+            'gps_bbox': gps_bbox,
+
+            # Store raw parameters
             'raw_params': raw_params,
         }
         
