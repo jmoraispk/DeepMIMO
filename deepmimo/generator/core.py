@@ -159,7 +159,7 @@ def _load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = 
         for rx_set_id, rx_idxs in rx_sets.items():
             for tx_idx in tx_idxs:
                 dataset_list.append({})
-                print(f'\nTX set: {tx_set_id}\nRX set: {rx_set_id}')
+                print(f'\nTX set: {tx_set_id} (tx_idx: {tx_idx})\nRX set: {rx_set_id}')
                 dataset_list[bs_idx] = _load_tx_rx_raydata(scene_folder,
                                                           tx_set_id, rx_set_id,
                                                           tx_idx, rx_idxs,
