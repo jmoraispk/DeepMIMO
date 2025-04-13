@@ -4,7 +4,8 @@ import time
 import deepmimo as dm
 import os
 import json
-
+import shutil
+import matplotlib.pyplot as plt
 from my_api_key import API_KEY as MY_API_KEY
 
 # Main execution
@@ -12,7 +13,7 @@ EXECUTION_MODE = 'collect_errors' # 'collect_errors' | 'retry_errors'
 ERROR_LOG_FILE = 'conversion_errors.json'
 
 # base_path = "F:/deepmimo_loop_ready"
-base_path = r"M:\AutoRayTracingSionna\all_runs_sionna\run_04-12-2025_18H13M23S_cleaned"
+base_path = r"M:\AutoRayTracingSionna\all_runs_sionna\run_04-07-2025_18H13M23S"
 subfolders = [f.path for f in os.scandir(base_path) if f.is_dir()]
 
 # Load previous errors if in retry mode
@@ -42,13 +43,51 @@ for subfolder in subfolders:
     
     start = time.time()
     try:
-        scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, 
-                               vis_scene=True, print_params=False)
-        print(f"Conversion successful: {scen_name}")
+        # scen_name = dm.convert(subfolder, overwrite=True, scenario_name=scen_name, 
+        #                        vis_scene=True, print_params=False)
+        # print(f"Conversion successful: {scen_name}")
         stop = time.time()
 
         # dm.upload(scen_name, key=MY_API_KEY)
         # print(f"Upload successful: {scen_name}")
+        img_name = os.path.basename(subfolder) + '_processed_zoomed.png'
+        img_path = os.path.join(subfolder, 'figs', img_name)
+
+        # print(os.path.exists(img_path))
+        full_dataset = dm.load(scen_name)
+        dataset = dm.load(scen_name)[4]
+        _, ax = dataset.scene.plot(title=False)
+        ax.view_init(elev=90, azim=-90)
+        ax.scatter(xs=full_dataset[0].bs_pos[0,0], 
+                          ys=full_dataset[0].bs_pos[0,1], 
+                          zs=full_dataset[0].bs_pos[0,2], 
+                          s=250, color='red', label='BS 1', marker='*')
+        ax.scatter(xs=full_dataset[1].bs_pos[0,0], 
+                          ys=full_dataset[1].bs_pos[0,1], 
+                          zs=full_dataset[1].bs_pos[0,2], 
+                          s=250, color='blue', label='BS 2', marker='*')
+        ax.scatter(xs=full_dataset[2].bs_pos[0,0], 
+                          ys=full_dataset[2].bs_pos[0,1], 
+                          zs=full_dataset[2].bs_pos[0,2], 
+                          s=250, color='green', label='BS 3', marker='*')
+        ax.legend(ncol=3, loc='center',bbox_to_anchor=(0.5, 0.85), fontsize=20).set_zorder(1e9)
+        img_path = f'{scen_name}_scene.png'
+        # ax.set_position([-0.1, -0.1, 1.2, 1.2])
+        plt.savefig(img_path, dpi=150, bbox_inches='tight')#, pad_inches=0)
+        plt.close()
+        
+        # call PIL to crop image
+        from PIL import Image
+        img = Image.open(img_path)
+        img = img.crop((150, 150, 1550, 1550))
+        img.save(img_path)
+
+        dm.upload_images(scen_name, key=MY_API_KEY, img_paths=[img_path])
+        print(f"Upload successful: {scen_name}")
+        if os.path.exists(img_path):
+            os.remove(img_path)
+            print(f"Deleted image: {img_path}")
+        
     except Exception as e:
         stop = start
         if EXECUTION_MODE == 'retry_errors':
@@ -59,7 +98,6 @@ for subfolder in subfolders:
                 json.dump(error_scenarios, f, indent=2)
     
     timing_results[scen_name] = stop - start
-
 
 if timing_results:
     print("\nPer-scenario timing:")

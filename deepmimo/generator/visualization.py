@@ -56,7 +56,7 @@ def _create_colorbar(scatter_plot: plt.scatter, cov_map: np.ndarray, cmap: str,
         # Create discrete colormap
         if isinstance(cmap, str):
             # Get base colors from the colormap
-            base_cmap = plt.cm.get_cmap(cmap)
+            base_cmap = plt.colormaps[cmap]
             # Create discrete colors
             colors = base_cmap(np.linspace(0, 1, n_cats))
             # Create discrete colormap

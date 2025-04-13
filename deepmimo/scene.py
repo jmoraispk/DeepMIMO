@@ -667,7 +667,7 @@ class Scene:
         
         return scene
     
-    def plot(self, show: bool = True, save: bool = False, filename: str | None = None,
+    def plot(self, title: bool = True, save: bool = False, filename: str | None = None,
              mode: Literal['faces', 'tri_faces'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene.
         
@@ -728,7 +728,8 @@ class Scene:
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         
-        ax.set_title(self._get_title_with_counts())
+        if title:
+            ax.set_title(self._get_title_with_counts())
         
         # Set the view angle for better perspective
         ax.view_init(elev=40, azim=-45)
@@ -737,9 +738,6 @@ class Scene:
             output_file = filename or '3d_scene.png'
             plt.savefig(output_file, dpi=300, bbox_inches='tight')
             print(f"\nPlot saved as '{output_file}'")
-        
-        if show:
-            plt.show()
         
         return fig, ax
     
