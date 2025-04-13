@@ -356,7 +356,7 @@ def make_imgs(scenario_name: str) -> list[str]:
         
         # # Image 3: Scene
         # plt.figure(figsize=(10, 8))
-        dataset.scene.plot(show=False)
+        dataset.scene.plot()
         scene_img_path = os.path.join(temp_dir, 'scene.png')
         plt.savefig(scene_img_path, dpi=100, bbox_inches='tight')
         plt.close()

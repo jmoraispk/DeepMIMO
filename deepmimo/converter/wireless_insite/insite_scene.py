@@ -216,4 +216,4 @@ if __name__ == "__main__":
     scene = read_scene(test_dir)
 
     # Visualize
-    scene.plot(show=True) 
+    scene.plot() 

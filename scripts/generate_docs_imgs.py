@@ -30,7 +30,7 @@ dataset = dm.load('asu_campus_3p5', tx_sets={1: [0]}, rx_sets={2: 'all'})
 
 # 1. Basic Scene Visualization
 print("Generating basic scene visualization...")
-_, ax = dataset.scene.plot(show=False)
+_, ax = dataset.scene.plot()
 ax.set_title(f"DeepMIMO Scene Example: ASU Campus 3.5 GHz ({ax.get_title()})")
 save_fig('basic_scene')
 
