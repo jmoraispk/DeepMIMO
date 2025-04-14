@@ -23,7 +23,8 @@ tf.random.set_seed(1)
 gpus = tf.config.list_physical_devices('GPU')
 print("TensorFlow sees GPUs:", gpus)
 
-class DataLoader:
+class _DataLoader:
+    """DataLoader class for Sionna RT that returns user indices for raytracing."""
     def __init__(self, data, batch_size):
         self.data = np.array(data)
         self.batch_size = batch_size
@@ -75,7 +76,7 @@ def raytrace_sionna(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
 
         indices = np.arange(rx_pos.shape[0])
 
-        data_loader = DataLoader(indices, rt_params['batch_size'])
+        data_loader = _DataLoader(indices, rt_params['batch_size'])
         path_list = []
 
         # Ray-tracing BS-BS paths
