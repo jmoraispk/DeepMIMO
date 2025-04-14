@@ -11,7 +11,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.blender_utils import (log_local_setup, install_all_addons,
-                                 set_LOGGER, create_scene, save_osm_gps_origin,
+                                 set_LOGGER, create_scene, save_osm_origin,
                                  save_scenario_metadata, convert_objects_to_mesh,
                                  export_mesh_obj_to_ply, clear_blender, configure_osm_import)
 
@@ -55,16 +55,16 @@ clear_blender()
 # Configure OSM import
 configure_osm_import(output_folder, minlat, maxlat, minlon, maxlon)
 
+bpy.ops.blosm.import_data()
+logger.info("✅ OSM data imported successfully.")
+
 # Export based on the selected format
 if "insite" in output_formats:
     
-    bpy.ops.blosm.import_data()
-    logger.info("✅ OSM data imported successfully.")
-
     # Save OSM GPS origin
     save_origin = True
     if save_origin:
-        save_osm_gps_origin(output_folder)
+        save_osm_origin(output_folder)
 
     # Save scenario properties to a metadata file
     save_bbox_metadata = False
