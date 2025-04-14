@@ -10,10 +10,9 @@ import shutil
 import requests
 import hashlib
 from tqdm import tqdm
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 from . import consts as c
 from .general_utils import (
-    get_scenarios_dir,
     get_scenarios_dir,
     get_scenario_folder,
     get_params_path,
@@ -31,6 +30,25 @@ HEADERS = {
     'User-Agent': 'DeepMIMO-Python/1.0',
     'Accept': '*/*'
 }
+
+class _ProgressFileReader:
+    """Progress file reader for uploading files to the DeepMIMO API."""
+    def __init__(self, file_path, progress_bar):
+        self.file_path = file_path
+        self.progress_bar = progress_bar
+        self.file_object = open(file_path, 'rb')
+        self.len = os.path.getsize(file_path)
+        self.bytes_read = 0
+
+    def read(self, size=-1):
+        data = self.file_object.read(size)
+        self.bytes_read += len(data)
+        self.progress_bar.n = self.bytes_read
+        self.progress_bar.refresh()
+        return data
+
+    def close(self):
+        self.file_object.close()
 
 def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
     """Upload a file to the DeepMIMO API server.
@@ -82,26 +100,8 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
         print(f"Uploading {authorized_filename} to B2...")
         pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading")
         
-        class ProgressFileReader:
-            def __init__(self, file_path, progress_bar):
-                self.file_path = file_path
-                self.progress_bar = progress_bar
-                self.file_object = open(file_path, 'rb')
-                self.len = os.path.getsize(file_path)
-                self.bytes_read = 0
-
-            def read(self, size=-1):
-                data = self.file_object.read(size)
-                self.bytes_read += len(data)
-                self.progress_bar.n = self.bytes_read
-                self.progress_bar.refresh()
-                return data
-
-            def close(self):
-                self.file_object.close()
-
         try:
-            progress_reader = ProgressFileReader(file, pbar)
+            progress_reader = _ProgressFileReader(file, pbar)
             
             # Use the presigned URL for upload
             upload_response = requests.put(
@@ -125,7 +125,7 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
                 # Wait a moment for B2 to index the file
                 time.sleep(2)
                 file_id_response = requests.get(auth_data["getFileIdEndpoint"], 
-                                              headers={"Authorization": f"Bearer {key}"})
+                                                headers={"Authorization": f"Bearer {key}"})
                 file_id_response.raise_for_status()
                 file_id_data = file_id_response.json()
                 fileId = file_id_data.get("fileId", "unknown")
@@ -378,9 +378,6 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
     Returns:
         List of image objects that were successfully uploaded and attached
     """
-    import os
-    import requests
-    from tqdm import tqdm
     
     if not img_paths:
         print("No images provided for upload")
