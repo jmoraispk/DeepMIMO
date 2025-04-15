@@ -215,9 +215,12 @@ def get_xy_bounds_from_latlon(min_lat: float, min_lon: float, max_lat: float, ma
     Returns:
         tuple[float, float, float, float]: (min_x, max_x, min_y, max_y) in meters
     """
+    LOGGER.info(f"🌐 Converting lat/lon bounds: [{min_lat}, {min_lon}] to [{max_lat}, {max_lon}]")
+    
     # Get center point
     center_lat = (min_lat + max_lat) / 2
     center_lon = (min_lon + max_lon) / 2
+    LOGGER.debug(f"📍 Center point: [{center_lat}, {center_lon}]")
     
     # Constants for conversion (meters per degree at equator)
     METER_PER_DEGREE_LAT = 111320  # Approximately constant
@@ -228,6 +231,10 @@ def get_xy_bounds_from_latlon(min_lat: float, min_lon: float, max_lat: float, ma
     max_y = (max_lat - center_lat) * METER_PER_DEGREE_LAT + pad
     min_x = (min_lon - center_lon) * meter_per_degree_lon - pad
     max_x = (max_lon - center_lon) * meter_per_degree_lon + pad
+    
+    LOGGER.info(f"📐 Converted bounds (meters): x=[{min_x:.2f}, {max_x:.2f}], y=[{min_y:.2f}, {max_y:.2f}]")
+    if pad > 0:
+        LOGGER.debug(f"\t (with padding of {pad} meters to all sides)")
     
     return min_x, max_x, min_y, max_y
 
@@ -294,6 +301,9 @@ def create_camera_and_render(output_path: str,
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
+REJECTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_unclassified', 'map.osm_paths_footway']
+ACCEPTED_ROADS = ['map.osm_roads_residential']
+
 def create_ground_plane(min_lat: float, max_lat: float, 
                         min_lon: float, max_lon: float) -> bpy.types.Object:
     """Create and size a ground plane with FLOOR_MATERIAL."""
@@ -317,7 +327,6 @@ def create_ground_plane(min_lat: float, max_lat: float,
         raise Exception(error_msg)
     
     return plane
-
 
 def join_and_materialize_objects(name_pattern: str, target_name: str, 
                                  material: bpy.types.Material) -> Optional[bpy.types.Object]:
@@ -350,31 +359,50 @@ def join_and_materialize_objects(name_pattern: str, target_name: str,
         LOGGER.error(error_msg)
         raise Exception(error_msg)
 
-def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float, 
+def trim_faces_outside_bounds_new(obj: bpy.types.Object, min_x: float, max_x: float, 
                               min_y: float, max_y: float) -> None:
-    """Remove faces of an object outside a bounding box in world space."""
-    LOGGER.info(f"✂️ Trimming faces outside bounds for object: {obj.name}")
+    """Trim faces of an object at the boundary lines and remove parts outside the bounds."""
+    LOGGER.info(f"✂️ Trimming faces at bounds for object: {obj.name}")
     try:
+        # Switch to edit mode to modify mesh
         bpy.ops.object.mode_set(mode='EDIT')
         bm = bmesh.from_edit_mesh(obj.data)
         matrix_world = obj.matrix_world
-        faces_to_delete = []
+        matrix_world_inv = matrix_world.inverted()
         
-        for face in bm.faces:
-            center = mathutils.Vector((0, 0, 0))
-            for vert in face.verts:
-                center += vert.co
-            center /= len(face.verts)
-            world_center = matrix_world @ center
-            x, y = world_center.x, world_center.y
-            if (x < min_x or x > max_x) or (y < min_y or y > max_y):
-                faces_to_delete.append(face)
+        # Define cutting planes in world space
+        cut_planes = [
+            # (point on plane, normal vector)
+            (mathutils.Vector((min_x, 0, 0)), mathutils.Vector((1, 0, 0))),  # Left plane
+            (mathutils.Vector((max_x, 0, 0)), mathutils.Vector((-1, 0, 0))), # Right plane
+            (mathutils.Vector((0, min_y, 0)), mathutils.Vector((0, 1, 0))),  # Bottom plane
+            (mathutils.Vector((0, max_y, 0)), mathutils.Vector((0, -1, 0)))  # Top plane
+        ]
         
-        if faces_to_delete:
-            bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
-            bmesh.update_edit_mesh(obj.data)
+        # For each cutting plane
+        for plane_point, plane_normal in cut_planes:
+            # Convert plane to local space
+            local_point = matrix_world_inv @ plane_point
+            # Normal needs to be transformed differently (as a direction, not a point)
+            local_normal = matrix_world_inv.transposed() @ plane_normal
+            local_normal.normalize()
+            
+            # Perform the cut
+            geom = bmesh.ops.bisect_plane(
+                bm,
+                geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
+                plane_co=local_point,
+                plane_no=local_normal,
+                clear_outer=True,  # Remove the geometry on the positive side of the plane
+                clear_inner=False  # Keep the geometry on the negative side
+            )
         
+        # Update the mesh
+        bmesh.update_edit_mesh(obj.data)
+        
+        # Switch back to object mode
         bpy.ops.object.mode_set(mode='OBJECT')
+        
     except Exception as e:
         error_msg = f"❌ Failed to trim faces for {obj.name}: {str(e)}"
         LOGGER.error(error_msg)
@@ -395,6 +423,99 @@ def convert_objects_to_mesh() -> None:
         error_msg = f"❌ Failed to convert objects to mesh: {str(e)}"
         LOGGER.error(error_msg)
         raise Exception(error_msg)
+
+
+def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float, 
+                              min_y: float, max_y: float) -> None:
+    """Remove faces of an object outside a bounding box in world space."""
+    LOGGER.info(f"✂️ Trimming faces outside bounds for object: {obj.name}")
+    try:
+        # Ensure object is selected and active before edit mode
+        bpy.ops.object.mode_set(mode='OBJECT')  # Ensure we're in object mode first
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        
+        # Now we can safely switch to edit mode
+        LOGGER.debug(f"Switching to edit mode for {obj.name}")
+        bpy.ops.object.mode_set(mode='EDIT')
+        bm = bmesh.from_edit_mesh(obj.data)
+        matrix_world = obj.matrix_world
+        faces_to_delete = []
+        
+        # Iterate through faces and check if they're outside bounds
+        LOGGER.debug(f"Checking {len(bm.faces)} faces for {obj.name}")
+        for face in bm.faces:
+            # Calculate face center by averaging vertex positions
+            center = mathutils.Vector((0, 0, 0))
+            for vert in face.verts:
+                center += vert.co
+            center /= len(face.verts)
+            
+            # Convert center to world coordinates
+            world_center = matrix_world @ center
+            x, y = world_center.x, world_center.y
+            
+            # Mark face for deletion if outside bounds
+            if (x < min_x or x > max_x) or (y < min_y or y > max_y):
+                faces_to_delete.append(face)
+        
+        # Delete marked faces if any exist
+        if faces_to_delete:
+            LOGGER.debug(f"Deleting {len(faces_to_delete)} faces outside bounds for {obj.name}")
+            bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
+            bmesh.update_edit_mesh(obj.data)
+        else:
+            LOGGER.debug(f"No faces outside bounds found for {obj.name}")
+        
+        # Switch back to object mode
+        LOGGER.debug(f"Switching back to object mode for {obj.name}")
+        bpy.ops.object.mode_set(mode='OBJECT')
+    except Exception as e:
+        error_msg = f"❌ Failed to trim faces for {obj.name}: {str(e)}"
+        LOGGER.error(error_msg)
+        raise Exception(error_msg)
+
+
+def process_roads(terrain_bounds, road_material):
+    """Process roads by rejecting and accepting them.
+    
+    Args:
+        terrain_bounds: Tuple of floats (min_x, max_x, min_y, max_y) in meters
+        road_material: bpy.types.Material object for roads
+    """
+    LOGGER.info("🛣️ Starting road processing")
+    
+    # Select all roads
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in bpy.data.objects:
+        LOGGER.debug(f"🛣️ Checking road: {obj.name}")
+        if 'roads' in obj.name.lower() or 'paths' in obj.name.lower():
+            obj.select_set(True)
+    road_objs = bpy.context.selected_objects
+    
+    LOGGER.debug(f"🛣️ Found {len(road_objs)} road objects")
+    # Define which roads to reject and which to accept
+    if road_objs:
+        for obj in road_objs:
+            if obj.name in REJECTED_ROADS:
+                LOGGER.debug(f"❌ Rejecting road: {obj.name}")
+                bpy.ops.object.select_all(action='DESELECT')
+                obj.select_set(True)
+                bpy.ops.object.delete()
+                continue
+                
+            if obj.name not in ACCEPTED_ROADS:
+                LOGGER.warning(f"⚠️ Accepting uncategorized road: {obj.name}")
+            
+            LOGGER.info(f"🔄 Processing road: {obj.name}")
+            trim_faces_outside_bounds(obj, *terrain_bounds)
+            bpy.context.view_layer.objects.active = obj
+            road = bpy.context.active_object
+            road.data.materials.clear()
+            road.data.materials.append(road_material)
+    else:
+        LOGGER.warning("⚠️ No road objects found in scene")
 
 ###############################################################################
 # SIONNA PIPELINE SPECIFIC

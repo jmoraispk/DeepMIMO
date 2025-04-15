@@ -25,7 +25,7 @@ from utils.blender_utils import (
     setup_world_lighting,
     create_camera_and_render,
     join_and_materialize_objects,
-    trim_faces_outside_bounds,
+    process_roads,
     get_xy_bounds_from_latlon
 )
 
@@ -78,15 +78,11 @@ configure_osm_import(output_folder, minlat, maxlat, minlon, maxlon)
 bpy.ops.blosm.import_data()
 logger.info("✅ OSM data imported successfully.")
 
-# Save OSM GPS origin
-save_origin = True
-if save_origin:
-    save_osm_origin(output_folder)
+# Save OSM GPS origin (needed for pipeline!)
+save_osm_origin(output_folder)
 
-# Save bbox (lats and lons) to a file
-save_bbox = False
-if save_bbox:
-    save_bbox_metadata(output_folder, minlat, minlon, maxlat, maxlon)
+# Save bbox (lats and lons) to a file (just for reference)
+save_bbox_metadata(output_folder, minlat, minlon, maxlat, maxlon)
 
 # Initialize scene
 setup_world_lighting()
@@ -114,32 +110,21 @@ if buildings and buildings.type == 'MESH':
     bpy.ops.mesh.separate(type='LOOSE')
     bpy.ops.object.mode_set(mode='OBJECT')
 
+# TODO: understand if this is only needed because of the material adding,
+#       or if it's needed for the mesh processing
+
+#add_building_materials(building_material)  # add materials
+
 # Process roads
 terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=10)
-bpy.ops.object.select_all(action='DESELECT')
-for obj in bpy.data.objects:
-    if 'terrain' in obj.name.lower() or 'buildings' in obj.name.lower():
-        obj.select_set(True)
-bpy.ops.object.select_all(action='INVERT')
-road_objs = bpy.context.selected_objects
-if road_objs:
-    for obj in road_objs:
-        trim_faces_outside_bounds(obj, *terrain_bounds)
-        bpy.context.view_layer.objects.active = obj
-        road = bpy.context.active_object
-        road.data.materials.clear()
-        road.data.materials.append(road_material)
-
-# TODO: CHECK if some known roads are "better" than others - maybe we don't want ALL of them..
-# known_roads = ['map.osm_roads_residential', 'map.osm_roads_unclassified', 
-#                'map.osm_roads_primary', 'map.osm_paths_footway']
+process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
 
 # TODO: MAKE FUNCTIONS to reduce code in main
 
+# TODO: CHECK THE BLENDER ADDONS - DELETE THE MAIN FILES (+ test installation!)
+
 # Render processed scene
 create_camera_and_render(im_path.replace('.png', '_processed.png'))
-
-# TODO: CHECK THE BLENDER ADDONS - DELETE THE MAIN FILES (+ test installation!)
 
 # Export based on the selected format
 if "insite" in output_formats:
