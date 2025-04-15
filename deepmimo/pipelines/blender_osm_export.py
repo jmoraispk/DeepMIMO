@@ -146,11 +146,9 @@ if "insite" in output_formats:
     logger.info("🔄 Outputting InSite scene...")
     
     # Export buildings and roads
-    export_mesh_obj_to_ply("building", output_folder, logger)
-    export_mesh_obj_to_ply("road", output_folder, logger)
+    export_mesh_obj_to_ply("building", output_folder)
+    export_mesh_obj_to_ply("road", output_folder)
     
-    # TODO: SOMETHING WRONG HERE!!
-
     logger.info("✅ InSite scene exported.")
 
 if "sionna" in output_formats:
@@ -161,8 +159,6 @@ if "sionna" in output_formats:
 
     # Create scene
     export_mitsuba_scene(output_folder)
-
-    # TODO: SOMETHING WRONG HERE!!
 
     logger.info("✅ Sionna scene exported.")
 

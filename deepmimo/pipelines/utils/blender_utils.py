@@ -429,7 +429,7 @@ def export_mesh_obj_to_ply(object_type: str, output_folder: str) -> None:
         obj.select_set(True)
         
     if objects:
-        emoji = "🏗" if object_type == "building" else "🛣"
+        emoji = "🏗" if "building" in object_type else "🛣"
         LOGGER.info(f"{emoji} Exporting {len(objects)} {object_type}s to .ply")
         ply_path = os.path.join(output_folder, f"{object_type}s.ply")
         bpy.ops.export_mesh.ply(filepath=ply_path, use_ascii=True)
