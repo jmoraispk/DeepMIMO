@@ -30,8 +30,6 @@ ADDON_URLS = {
 }
 
 # Material names for scene objects
-BUILDING_MATERIAL = 'itu_concrete'
-ROAD_MATERIAL = 'itu_brick'  # Note: Manually changed to asphalt in Sionna
 FLOOR_MATERIAL = 'itu_wet_ground'
 PROJ_ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -154,7 +152,8 @@ def install_blender_addon(addon_name: str) -> None:
 # BLOSM (OpenStreetMap) UTILITIES
 ###############################################################################
 
-def configure_osm_import(output_folder: str, min_lat: float, max_lat: float, min_lon: float, max_lon: float) -> None:
+def configure_osm_import(output_folder: str, min_lat: float, max_lat: float, 
+                         min_lon: float, max_lon: float) -> None:
     """Configure blosm add-on for OSM data import."""
     LOGGER.info(f"🗺️ Configuring OSM import for region: [{min_lat}, {min_lon}] to [{max_lat}, {max_lon}]")
     try:
@@ -193,10 +192,6 @@ def save_osm_origin(scene_folder: str) -> None:
 # CORE BLENDER UTILITIES
 ###############################################################################
 
-def get_obj_by_name(name: str) -> bpy.types.Object | None:
-    """Get an object by its name."""
-    return bpy.data.objects.get(name)
-
 def clear_blender() -> None:
     """Remove all datablocks from Blender to start with a clean slate."""
     block_lists: List[Any] = [
@@ -207,22 +202,33 @@ def clear_blender() -> None:
         for block in list(block_list):
             block_list.remove(block, do_unlink=True)
 
-def get_bounding_box(obj: bpy.types.Object) -> tuple[float, float, float, float] | None:
-    """Calculate the world-space bounding box of an object."""
-    bpy.ops.object.select_all(action='DESELECT')
-    obj.select_set(True)
-    if obj.type != 'MESH':
-        return None
-    bbox = obj.bound_box
-    matrix_world = obj.matrix_world
-    min_x = min_y = float('inf')
-    max_x = max_y = float('-inf')
-    for corner in bbox:
-        world_coord = matrix_world @ mathutils.Vector((corner[0], corner[1], corner[2]))
-        min_x = min(min_x, world_coord.x)
-        max_x = max(max_x, world_coord.x)
-        min_y = min(min_y, world_coord.y)
-        max_y = max(max_y, world_coord.y)
+def get_xy_bounds_from_latlon(min_lat: float, min_lon: float, max_lat: float, max_lon: float,
+                               pad: float = 0) -> tuple[float, float, float, float]:
+    """Convert lat/lon bounds to XY bounds centered at 0,0.
+    
+    Args:
+        min_lat: Minimum latitude
+        min_lon: Minimum longitude
+        max_lat: Maximum latitude
+        max_lon: Maximum longitude
+    
+    Returns:
+        tuple[float, float, float, float]: (min_x, max_x, min_y, max_y) in meters
+    """
+    # Get center point
+    center_lat = (min_lat + max_lat) / 2
+    center_lon = (min_lon + max_lon) / 2
+    
+    # Constants for conversion (meters per degree at equator)
+    METER_PER_DEGREE_LAT = 111320  # Approximately constant
+    meter_per_degree_lon = 111320 * math.cos(math.radians(center_lat))  # Varies with latitude
+    
+    # Convert lat/lon differences to meters
+    min_y = (min_lat - center_lat) * METER_PER_DEGREE_LAT - pad
+    max_y = (max_lat - center_lat) * METER_PER_DEGREE_LAT + pad
+    min_x = (min_lon - center_lon) * meter_per_degree_lon - pad
+    max_x = (max_lon - center_lon) * meter_per_degree_lon + pad
+    
     return min_x, max_x, min_y, max_y
 
 def compute_distance(coord1: tuple[float, float], coord2: tuple[float, float]) -> float:
@@ -257,9 +263,16 @@ def setup_world_lighting() -> None:
         LOGGER.error(error_msg)
         raise Exception(error_msg)
 
-def create_camera_and_render(scene: bpy.types.Scene, output_path: str, location: tuple[float, float, float] = (0, 0, 1000), rotation: tuple[float, float, float] = (0, 0, 0)) -> None:
+def create_camera_and_render(output_path: str, 
+                             location: tuple[float, float, float] = (0, 0, 1000), 
+                             rotation: tuple[float, float, float] = (0, 0, 0)) -> None:
     """Add a camera, render the scene, and delete the camera."""
     LOGGER.info(f"📸 Setting up camera for render at {output_path}")
+    scene = bpy.context.scene
+    output_folder = os.path.dirname(output_path)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder, exist_ok=True)
+
     try:
         bpy.ops.object.select_all(action='DESELECT')
         bpy.ops.object.camera_add(location=location, rotation=rotation)
@@ -281,7 +294,8 @@ def create_camera_and_render(scene: bpy.types.Scene, output_path: str, location:
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
-def create_ground_plane(min_lat: float, max_lat: float, min_lon: float, max_lon: float) -> bpy.types.Object:
+def create_ground_plane(min_lat: float, max_lat: float, 
+                        min_lon: float, max_lon: float) -> bpy.types.Object:
     """Create and size a ground plane with FLOOR_MATERIAL."""
     LOGGER.info("🌍 Creating ground plane")
     try:
@@ -289,7 +303,7 @@ def create_ground_plane(min_lat: float, max_lat: float, min_lon: float, max_lon:
         x_size = compute_distance([min_lat, min_lon], [min_lat, max_lon]) * 1.2
         y_size = compute_distance([min_lat, min_lon], [max_lat, min_lon]) * 1.2
         
-        plane = get_obj_by_name("Plane")
+        plane = bpy.data.objects.get("Plane")
         if plane is None:
             raise ValueError("Failed to create ground plane")
         plane.scale = (x_size, y_size, 1)
@@ -297,13 +311,16 @@ def create_ground_plane(min_lat: float, max_lat: float, min_lon: float, max_lon:
         
         floor_material = bpy.data.materials.new(name=FLOOR_MATERIAL)
         plane.data.materials.append(floor_material)
-        return plane
     except Exception as e:
         error_msg = f"❌ Failed to create ground plane: {str(e)}"
         LOGGER.error(error_msg)
         raise Exception(error_msg)
+    
+    return plane
 
-def join_and_materialize_objects(name_pattern: str, target_name: str, material: bpy.types.Material) -> bpy.types.Object | None:
+
+def join_and_materialize_objects(name_pattern: str, target_name: str, 
+                                 material: bpy.types.Material) -> Optional[bpy.types.Object]:
     """Join objects matching a name pattern and apply a material."""
     LOGGER.info(f"🔄 Processing objects matching pattern: {name_pattern}")
     try:
@@ -333,7 +350,8 @@ def join_and_materialize_objects(name_pattern: str, target_name: str, material: 
         LOGGER.error(error_msg)
         raise Exception(error_msg)
 
-def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float, min_y: float, max_y: float) -> None:
+def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float, 
+                              min_y: float, max_y: float) -> None:
     """Remove faces of an object outside a bounding box in world space."""
     LOGGER.info(f"✂️ Trimming faces outside bounds for object: {obj.name}")
     try:
@@ -382,90 +400,18 @@ def convert_objects_to_mesh() -> None:
 # SIONNA PIPELINE SPECIFIC
 ###############################################################################
 
-def create_scene(positions: tuple[float, float, float, float], out_folder: str) -> None:
-    """Create scenes from CSV positions with OSM data and export."""
-    LOGGER.info(f"🎨 Creating new scene in: {out_folder}")
-    
-    os.makedirs(out_folder, exist_ok=True)
-    output_fig_folder = os.path.join(out_folder, 'figs')
-    os.makedirs(output_fig_folder, exist_ok=True)
-
-    min_lat, min_lon, max_lat, max_lon = positions
-    LOGGER.info(f"📍 Scene bounds: [{min_lat}, {min_lon}] to [{max_lat}, {max_lon}]")
-
-    # Initialize scene
-    clear_blender()
-    setup_world_lighting()
-
-    # Import OSM data
-    configure_osm_import(out_folder, min_lat, max_lat, min_lon, max_lon)
-    bpy.ops.blosm.import_data()
-    save_osm_origin(out_folder)
-    
-    # Create ground plane
-    terrain = create_ground_plane(min_lat, max_lat, min_lon, max_lon)
-    terrain_bounds = get_bounding_box(terrain)
-    
-    # Create materials
-    building_material = bpy.data.materials.new(name=BUILDING_MATERIAL)
-    building_material.diffuse_color = (0.75, 0.40, 0.16, 1)  # Beige
-    road_material = bpy.data.materials.new(name=ROAD_MATERIAL)
-    road_material.diffuse_color = (0.29, 0.25, 0.21, 1)  # Dark grey
-
-    # Convert all to meshes
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.context.view_layer.objects.active = bpy.data.objects[0]
-    bpy.ops.object.convert(target='MESH', keep_original=False)
-
-    # Render original scene
-    scene = bpy.context.scene
-    im_name = "cam_org.png"
-    create_camera_and_render(scene, os.path.join(output_fig_folder, im_name))
-
-    # Process buildings
-    buildings = join_and_materialize_objects('building', 'buildings', building_material)
-    if buildings and buildings.type == 'MESH':
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.separate(type='LOOSE')
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-    # Process roads
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in bpy.data.objects:
-        if 'terrain' in o.name.lower() or 'buildings' in o.name.lower():
-            o.select_set(True)
-    bpy.ops.object.select_all(action='INVERT')
-    road_objs = bpy.context.selected_objects
-    if road_objs:
-        for obj in road_objs:
-            if terrain_bounds:
-                trim_faces_outside_bounds(obj, *terrain_bounds)
-            bpy.context.view_layer.objects.active = obj
-            road = bpy.context.active_object
-            road.data.materials.clear()
-            road.data.materials.append(road_material)
-
-    # Render processed scene
-    im_name2 = f"{im_name}_processed.png"
-    create_camera_and_render(scene, os.path.join(output_fig_folder, im_name2))
-
-    # Export scene
-    export_scene(out_folder)
-
-def export_scene(scene_folder: str) -> None:
+def export_mitsuba_scene(scene_folder: str) -> None:
     """Export scene to Mitsuba and save .blend file."""
-    LOGGER.info("📤 Exporting scene")
+    LOGGER.info("📤 Exporting Sionna Scene")
     try:
         mitsuba_path = os.path.join(scene_folder, 'scene.xml')
         blend_path = os.path.join(scene_folder, 'scene.blend')
         
-        bpy.ops.export_scene.mitsuba(
-            filepath=mitsuba_path,
-            export_ids=True, axis_forward='Y', axis_up='Z'
-        )
+        bpy.ops.export_scene.mitsuba(filepath=mitsuba_path, export_ids=True,
+                                     axis_forward='Y', axis_up='Z')
         
         bpy.ops.wm.save_as_mainfile(filepath=blend_path)
-        LOGGER.info("✅ Scene export complete")
+        LOGGER.info("✅ Mitsuba scene export complete")
     except Exception as e:
         error_msg = f"❌ Failed to export scene: {str(e)}"
         LOGGER.error(error_msg)
@@ -474,20 +420,6 @@ def export_scene(scene_folder: str) -> None:
 ###############################################################################
 # WIRELESS INSITE PIPELINE SPECIFIC
 ###############################################################################
-
-def save_scenario_metadata(output_folder: str, minlat: float, minlon: float, maxlat: float, maxlon: float, output_formats: list) -> None:
-    """Save scenario properties to a metadata file."""
-    LOGGER.info("📝 Saving scenario metadata")
-    try:
-        metadata_path = os.path.join(output_folder, "scenario_info.txt")
-        with open(metadata_path, "w") as meta_file:
-            meta_file.write(f"Bounding Box: [{minlat}, {minlon}] to [{maxlat}, {maxlon}]\n")
-            meta_file.write(f"Output Formats: {output_formats}\n")
-        LOGGER.info("✅ Scenario metadata saved.")
-    except Exception as e:
-        error_msg = f"❌ Failed to save scenario metadata: {str(e)}"
-        LOGGER.error(error_msg)
-        raise Exception(error_msg)
 
 def export_mesh_obj_to_ply(object_type: str, output_folder: str) -> None:
     """Export mesh objects to PLY format."""
@@ -499,9 +431,25 @@ def export_mesh_obj_to_ply(object_type: str, output_folder: str) -> None:
     if objects:
         emoji = "🏗" if object_type == "building" else "🛣"
         LOGGER.info(f"{emoji} Exporting {len(objects)} {object_type}s to .ply")
-        bpy.ops.export_mesh.ply(
-            filepath=os.path.join(output_folder, f"{object_type}s.ply"),
-            use_ascii=True
-        )
+        ply_path = os.path.join(output_folder, f"{object_type}s.ply")
+        bpy.ops.export_mesh.ply(filepath=ply_path, use_ascii=True)
     else:
         LOGGER.warning(f"⚠ No {object_type}s found for export.")
+
+###############################################################################
+# MISC UTILITIES
+###############################################################################
+
+def save_bbox_metadata(output_folder: str, minlat: float, minlon: float, 
+                       maxlat: float, maxlon: float) -> None:
+    """Save scenario properties to a metadata file."""
+    LOGGER.info("📝 Saving scenario metadata")
+    try:
+        metadata_path = os.path.join(output_folder, "scenario_info.txt")
+        with open(metadata_path, "w") as meta_file:
+            meta_file.write(f"Bounding Box: [{minlat}, {minlon}] to [{maxlat}, {maxlon}]\n")
+        LOGGER.info("✅ Scenario metadata saved.")
+    except Exception as e:
+        error_msg = f"❌ Failed to save scenario metadata: {str(e)}"
+        LOGGER.error(error_msg)
+        raise Exception(error_msg)
