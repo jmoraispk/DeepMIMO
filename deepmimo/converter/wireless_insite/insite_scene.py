@@ -10,6 +10,8 @@ import numpy as np
 from typing import List, Dict, Tuple
 from pathlib import Path
 from scipy.spatial import ConvexHull
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from ...scene import (
     PhysicalElement, 
@@ -81,6 +83,56 @@ def read_scene(folder_path: str | Path) -> Scene:
     return scene
 
 
+def visualize_road_object(name: str, vertices: np.ndarray, faces: List[List[Tuple[float, float, float]]]):
+    """Visualize a road object and its generated faces."""
+    fig = plt.figure(figsize=(15, 5))
+    
+    # Plot original vertices
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax1.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], c='b', marker='o')
+    ax1.set_title(f'Original Vertices\n{name}')
+    
+    # Plot generated faces
+    if faces:
+        ax2 = fig.add_subplot(122, projection='3d')
+        print(f"\nAnalyzing faces for {name}:")
+        for i, face in enumerate(faces):
+            face_array = np.array(face)
+            print(f"Face {i}:")
+            print(f"  Vertices: {len(face)}")
+            print(f"  Unique XY points: {len(np.unique(face_array[:, :2], axis=0))}")
+            print(f"  Z range: {face_array[:, 2].min():.3f} to {face_array[:, 2].max():.3f}")
+            
+            # Plot face as a line connecting vertices
+            face_array_closed = np.vstack([face_array, face_array[0]])  # Close the loop
+            ax2.plot(face_array_closed[:, 0], 
+                    face_array_closed[:, 1], 
+                    face_array_closed[:, 2], 
+                    '-o', alpha=0.5)
+            
+            # Fill face if it has at least 3 unique points
+            unique_points = np.unique(face_array[:, :2], axis=0)
+            if len(unique_points) >= 3:
+                try:
+                    from matplotlib.tri import Triangulation
+                    tri = Triangulation(face_array[:, 0], face_array[:, 1])
+                    ax2.plot_trisurf(face_array[:, 0], 
+                                   face_array[:, 1], 
+                                   face_array[:, 2], 
+                                   triangles=tri.triangles, 
+                                   alpha=0.2)
+                except Exception as e:
+                    print(f"  Warning: Could not triangulate face: {str(e)}")
+            else:
+                print(f"  Warning: Face has fewer than 3 unique points in XY plane")
+        
+        ax2.set_title('Generated Faces')
+    
+    plt.tight_layout()
+    plt.savefig(f'road_debug_{name.replace(" ", "_")}.png')
+    plt.close()
+
+
 class PhysicalObjectParser:
     """Parser for Wireless InSite physical object files (.city, .ter, .veg)."""
     
@@ -115,11 +167,26 @@ class PhysicalObjectParser:
         # Convert each set of vertices into a PhysicalElement object
         objects = []
         for i, vertices in enumerate(object_vertices):
-            # Get faces for this object
-            object_faces = get_object_faces(vertices)
-            
-            if object_faces is None:
-                continue # may happen when vertices are collinear
+            vertices = np.array(vertices)
+            # Use detailed mode for roads to preserve their geometry
+            use_fast_mode = 'road' not in self.name.lower()
+            print(f"Using fast mode: {use_fast_mode} for {self.name}")
+            # Generate faces
+            object_faces = get_object_faces(vertices, fast=use_fast_mode)
+
+            # Special handling and analysis for roads
+            if 'road' in self.name.lower():
+                if object_faces is not None:
+                    # Visualize the road and its faces
+                    visualize_road_object(f"{self.name}_{i}", vertices, object_faces)
+                    print(f"✓ Generated {len(object_faces)} faces")
+                    print(f"  Visualization saved as 'road_debug_{self.name}_{i}.png'")
+                else:
+                    print("❌ Failed to generate faces")
+                    continue
+            else:
+                if object_faces is None:
+                    continue
             
             # Convert faces to Face objects
             faces = [Face(vertices=face) for face in object_faces]
