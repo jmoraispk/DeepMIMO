@@ -359,7 +359,7 @@ def join_and_materialize_objects(name_pattern: str, target_name: str,
         LOGGER.error(error_msg)
         raise Exception(error_msg)
 
-def trim_faces_outside_bounds_new(obj: bpy.types.Object, min_x: float, max_x: float, 
+def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float, 
                               min_y: float, max_y: float) -> None:
     """Trim faces of an object at the boundary lines and remove parts outside the bounds using boolean intersection."""
     LOGGER.info(f"✂️ Trimming faces at bounds for object: {obj.name}")
@@ -448,59 +448,6 @@ def convert_objects_to_mesh() -> None:
         LOGGER.error(error_msg)
         raise Exception(error_msg)
 
-
-def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float, 
-                              min_y: float, max_y: float) -> None:
-    """Remove faces of an object outside a bounding box in world space."""
-    LOGGER.info(f"✂️ Trimming faces outside bounds for object: {obj.name}")
-    try:
-        # Ensure object is selected and active before edit mode
-        bpy.ops.object.mode_set(mode='OBJECT')  # Ensure we're in object mode first
-        bpy.ops.object.select_all(action='DESELECT')
-        obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
-        
-        # Now we can safely switch to edit mode
-        LOGGER.debug(f"Switching to edit mode for {obj.name}")
-        bpy.ops.object.mode_set(mode='EDIT')
-        bm = bmesh.from_edit_mesh(obj.data)
-        matrix_world = obj.matrix_world
-        faces_to_delete = []
-        
-        # Iterate through faces and check if they're outside bounds
-        LOGGER.debug(f"Checking {len(bm.faces)} faces for {obj.name}")
-        for face in bm.faces:
-            # Calculate face center by averaging vertex positions
-            center = mathutils.Vector((0, 0, 0))
-            for vert in face.verts:
-                center += vert.co
-            center /= len(face.verts)
-            
-            # Convert center to world coordinates
-            world_center = matrix_world @ center
-            x, y = world_center.x, world_center.y
-            
-            # Mark face for deletion if outside bounds
-            if (x < min_x or x > max_x) or (y < min_y or y > max_y):
-                faces_to_delete.append(face)
-        
-        # Delete marked faces if any exist
-        if faces_to_delete:
-            LOGGER.debug(f"Deleting {len(faces_to_delete)} faces outside bounds for {obj.name}")
-            bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES')
-            bmesh.update_edit_mesh(obj.data)
-        else:
-            LOGGER.debug(f"No faces outside bounds found for {obj.name}")
-        
-        # Switch back to object mode
-        LOGGER.debug(f"Switching back to object mode for {obj.name}")
-        bpy.ops.object.mode_set(mode='OBJECT')
-    except Exception as e:
-        error_msg = f"❌ Failed to trim faces for {obj.name}: {str(e)}"
-        LOGGER.error(error_msg)
-        raise Exception(error_msg)
-
-
 def process_roads(terrain_bounds, road_material):
     """Process roads by rejecting and accepting them.
     
@@ -533,7 +480,7 @@ def process_roads(terrain_bounds, road_material):
                 LOGGER.warning(f"⚠️ Accepting uncategorized road: {obj.name}")
             
             LOGGER.info(f"🔄 Processing road: {obj.name}")
-            trim_faces_outside_bounds_new(obj, *terrain_bounds)
+            trim_faces_outside_bounds(obj, *terrain_bounds)
             bpy.context.view_layer.objects.active = obj
             road = bpy.context.active_object
             road.data.materials.clear()

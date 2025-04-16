@@ -113,13 +113,13 @@ if buildings and buildings.type == 'MESH':
 # TODO: understand if this is only needed because of the material adding,
 #       or if it's needed for the mesh processing
 
+# TODO: see if we can maintain the labels of the buildings and roads intact from osm extraction
+
 #add_building_materials(building_material)  # add materials
 
 # Process roads
 terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=40)  # Increased padding to 50m
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
-
-# TODO: MAKE FUNCTIONS to reduce code in main
 
 # TODO: CHECK THE BLENDER ADDONS - DELETE THE MAIN FILES (+ test installation!)
 
