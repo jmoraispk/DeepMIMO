@@ -568,18 +568,26 @@ def export_mitsuba_scene(scene_folder: str) -> None:
 
 def export_mesh_obj_to_ply(object_type: str, output_folder: str) -> None:
     """Export mesh objects to PLY format."""
+    # First deselect everything
     bpy.ops.object.select_all(action="DESELECT")
+    
+    # Find and select matching objects
     objects = [o for o in bpy.data.objects if object_type in o.name.lower()]
+    
+    # Log all selected object names
+    LOGGER.debug(f"🔍 Found objects matching '{object_type}':")
     for obj in objects:
+        LOGGER.debug(f"  - {obj.name}")
         obj.select_set(True)
         
     if objects:
         emoji = "🏗" if "building" in object_type else "🛣"
         LOGGER.info(f"{emoji} Exporting {len(objects)} {object_type}s to .ply")
         ply_path = os.path.join(output_folder, f"{object_type}s.ply")
-        bpy.ops.export_mesh.ply(filepath=ply_path, use_ascii=True)
+        bpy.ops.export_mesh.ply(filepath=ply_path, use_ascii=True, use_selection=True)
     else:
         LOGGER.warning(f"⚠ No {object_type}s found for export.")
+    
 
 ###############################################################################
 # MISC UTILITIES
