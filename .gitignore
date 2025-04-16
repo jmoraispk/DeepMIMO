@@ -12,6 +12,7 @@ deepmimo_scenarios*
 
 # Artifacts
 manuals/*
+*.png
 *.pptx
 *.mp4
 my_api_key.py
