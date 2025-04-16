@@ -48,7 +48,7 @@ def log_local_setup(name: str) -> logging.Logger:
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(),  # Console handler
@@ -361,47 +361,71 @@ def join_and_materialize_objects(name_pattern: str, target_name: str,
 
 def trim_faces_outside_bounds_new(obj: bpy.types.Object, min_x: float, max_x: float, 
                               min_y: float, max_y: float) -> None:
-    """Trim faces of an object at the boundary lines and remove parts outside the bounds."""
+    """Trim faces of an object at the boundary lines and remove parts outside the bounds using boolean intersection."""
     LOGGER.info(f"✂️ Trimming faces at bounds for object: {obj.name}")
     try:
-        # Switch to edit mode to modify mesh
-        bpy.ops.object.mode_set(mode='EDIT')
-        bm = bmesh.from_edit_mesh(obj.data)
-        matrix_world = obj.matrix_world
-        matrix_world_inv = matrix_world.inverted()
+        # First check if object is completely outside bounds
+        bbox_corners = [obj.matrix_world @ mathutils.Vector(corner) for corner in obj.bound_box]
+        obj_min_x = min(corner.x for corner in bbox_corners)
+        obj_max_x = max(corner.x for corner in bbox_corners)
+        obj_min_y = min(corner.y for corner in bbox_corners)
+        obj_max_y = max(corner.y for corner in bbox_corners)
         
-        # Define cutting planes in world space
-        cut_planes = [
-            # (point on plane, normal vector)
-            (mathutils.Vector((min_x, 0, 0)), mathutils.Vector((1, 0, 0))),  # Left plane
-            (mathutils.Vector((max_x, 0, 0)), mathutils.Vector((-1, 0, 0))), # Right plane
-            (mathutils.Vector((0, min_y, 0)), mathutils.Vector((0, 1, 0))),  # Bottom plane
-            (mathutils.Vector((0, max_y, 0)), mathutils.Vector((0, -1, 0)))  # Top plane
-        ]
+        LOGGER.debug(f"Object bounds: x=[{obj_min_x:.2f}, {obj_max_x:.2f}], y=[{obj_min_y:.2f}, {obj_max_y:.2f}]")
+        LOGGER.debug(f"Target bounds: x=[{min_x:.2f}, {max_x:.2f}], y=[{min_y:.2f}, {max_y:.2f}]")
         
-        # For each cutting plane
-        for plane_point, plane_normal in cut_planes:
-            # Convert plane to local space
-            local_point = matrix_world_inv @ plane_point
-            # Normal needs to be transformed differently (as a direction, not a point)
-            local_normal = matrix_world_inv.transposed() @ plane_normal
-            local_normal.normalize()
+        # Expand the bounds by a factor to keep more of the roads
+        expansion_factor = 2.0  # Double the bounds to better match road sizes
+        expanded_min_x = min_x * expansion_factor
+        expanded_max_x = max_x * expansion_factor
+        expanded_min_y = min_y * expansion_factor
+        expanded_max_y = max_y * expansion_factor
+        
+        LOGGER.debug(f"Expanded bounds: x=[{expanded_min_x:.2f}, {expanded_max_x:.2f}], y=[{expanded_min_y:.2f}, {expanded_max_y:.2f}]")
+        
+        # If object is completely outside expanded bounds, delete it
+        if (obj_max_x < expanded_min_x or obj_min_x > expanded_max_x or 
+            obj_max_y < expanded_min_y or obj_min_y > expanded_max_y):
+            LOGGER.warning(f"Object {obj.name} is completely outside expanded bounds - skipping")
+            return
+        
+        # If object is completely inside original bounds, keep it
+        if (obj_min_x >= min_x and obj_max_x <= max_x and 
+            obj_min_y >= min_y and obj_max_y <= max_y):
+            LOGGER.info(f"Object {obj.name} is completely inside bounds - keeping as is")
+            return
             
-            # Perform the cut
-            geom = bmesh.ops.bisect_plane(
-                bm,
-                geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
-                plane_co=local_point,
-                plane_no=local_normal,
-                clear_outer=True,  # Remove the geometry on the positive side of the plane
-                clear_inner=False  # Keep the geometry on the negative side
-            )
+        LOGGER.info(f"Initial face count for {obj.name}: {len(obj.data.polygons)}")
         
-        # Update the mesh
-        bmesh.update_edit_mesh(obj.data)
+        # Create a cube that will be our bounding box
+        padding = 0.1  # Small padding to avoid precision issues
+        bpy.ops.mesh.primitive_cube_add(size=1)
+        bound_box = bpy.context.active_object
         
-        # Switch back to object mode
-        bpy.ops.object.mode_set(mode='OBJECT')
+        # Scale and position the bounding box using expanded bounds
+        width = (expanded_max_x - expanded_min_x) + 2 * padding
+        height = (expanded_max_y - expanded_min_y) + 2 * padding
+        depth = 1000  # Make it very tall to ensure it intersects the full height
+        
+        bound_box.scale = (width/2, height/2, depth/2)
+        bound_box.location = ((expanded_max_x + expanded_min_x)/2, (expanded_max_y + expanded_min_y)/2, 0)
+        
+        # Add boolean modifier to the original object
+        bool_mod = obj.modifiers.new(name="Boolean", type='BOOLEAN')
+        bool_mod.object = bound_box
+        bool_mod.operation = 'INTERSECT'
+        
+        # Apply the boolean modifier
+        LOGGER.debug("Applying boolean intersection")
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=bool_mod.name)
+        
+        # Delete the bounding box
+        bpy.ops.object.select_all(action='DESELECT')
+        bound_box.select_set(True)
+        bpy.ops.object.delete()
+        
+        LOGGER.info(f"Final face count for {obj.name}: {len(obj.data.polygons)}")
         
     except Exception as e:
         error_msg = f"❌ Failed to trim faces for {obj.name}: {str(e)}"
@@ -509,7 +533,7 @@ def process_roads(terrain_bounds, road_material):
                 LOGGER.warning(f"⚠️ Accepting uncategorized road: {obj.name}")
             
             LOGGER.info(f"🔄 Processing road: {obj.name}")
-            trim_faces_outside_bounds(obj, *terrain_bounds)
+            trim_faces_outside_bounds_new(obj, *terrain_bounds)
             bpy.context.view_layer.objects.active = obj
             road = bpy.context.active_object
             road.data.materials.clear()

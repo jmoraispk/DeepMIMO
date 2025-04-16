@@ -116,7 +116,7 @@ if buildings and buildings.type == 'MESH':
 #add_building_materials(building_material)  # add materials
 
 # Process roads
-terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=10)
+terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=40)  # Increased padding to 50m
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
 
 # TODO: MAKE FUNCTIONS to reduce code in main
