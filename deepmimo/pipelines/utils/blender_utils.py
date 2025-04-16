@@ -301,8 +301,8 @@ def create_camera_and_render(output_path: str,
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
-REJECTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_unclassified', 'map.osm_paths_footway', 'profile_']
-ACCEPTED_ROADS = ['map.osm_roads_residential']
+REJECTED_ROADS = ['map.osm_roads_unclassified', 'map.osm_paths_footway', 'profile_']
+ACCEPTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_residential']
 
 def create_ground_plane(min_lat: float, max_lat: float, 
                         min_lon: float, max_lon: float) -> bpy.types.Object:
