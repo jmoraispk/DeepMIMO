@@ -831,6 +831,29 @@ def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float
     Returns:
         List of faces, where each face is a list of (x,y,z) vertex coordinates
     """
+    # For roads or thin objects, use a different approach
+    # Check if object is flat by comparing height variation to object dimensions
+    height_variation = np.std(vertices[:, 2])
+    xy_extent = np.max(vertices[:, :2], axis=0) - np.min(vertices[:, :2], axis=0)
+    min_xy_extent = np.min(xy_extent[xy_extent > 0])  # Smallest non-zero extent
+    if height_variation < 0.1 * min_xy_extent:  # If height variation is small relative to xy dimensions
+        # Project to 2D, get convex hull of outline
+        points_2d = vertices[:, :2]
+        try:
+            hull = ConvexHull(points_2d)
+            # Create face using original z-coordinates
+            face_vertices = [(vertices[i, 0], vertices[i, 1], vertices[i, 2]) 
+                           for i in hull.vertices]
+        except Exception as e:
+            if np.linalg.matrix_rank(points_2d - points_2d[0]) < 2:
+                print('Convex hull failed - collinear vertices')
+                return None
+            else:
+                raise e
+        
+        return [face_vertices]  # Single face for flat objects
+
+    # For regular 3D objects, use the original approach
     # Extract base points (x,y coordinates)
     points_2d = vertices[:, :2]
     
@@ -869,92 +892,246 @@ def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float
     return [bottom_face, top_face] + side_faces
 
 def _get_faces_coplanar(vertices: np.ndarray) -> List[List[Tuple[float, float, float]]]:
-    """Generate faces by detecting coplanar sets (detailed but slower).
+    """Generate faces by grouping coplanar vertices and computing possibly concave hulls.
+    
+    This function identifies groups of vertices that lie on the same plane and
+    processes each group into a face. For each coplanar group, it orders vertices
+    to form the best possible boundary shape using a modified gift wrapping 
+    (Jarvis march) algorithm to optimize for convexity.
+    
+    The function can handle:
+    - Multiple separate planes in the same vertex set
+    - Vertices that don't all lie in the same plane
+    - Various road shapes including corners, intersections and complex geometries
     
     Args:
         vertices: Array of vertex coordinates (shape: N x 3)
         
     Returns:
         List of faces, where each face is a list of (x,y,z) vertex coordinates
+        ordered correctly to form a polygon
     """
-    def are_coplanar(points, tolerance=1e-10):
-        """Check if points are coplanar by checking rank of centered points."""
-        if len(points) < 3:
-            return True
-        centered = points - points.mean(axis=0)
-        _, s, _ = np.linalg.svd(centered)
-        return s[2] < tolerance
+    if len(vertices) < 3:
+        return []
     
-    def get_face_normal(points):
-        """Get normal vector of a face using first three points."""
-        v1 = points[1] - points[0]
-        v2 = points[2] - points[0]
-        normal = np.cross(v1, v2)
-        return normal / np.linalg.norm(normal)
+    all_faces = []
     
-    def points_to_2d(points, normal):
-        """Project 3D points onto their best-fit plane."""
-        # Find rotation matrix to rotate normal to z-axis
-        z_axis = np.array([0, 0, 1])
-        if np.allclose(normal, z_axis) or np.allclose(normal, -z_axis):
-            rotation = np.eye(3)
-        else:
-            rotation_axis = np.cross(normal, z_axis)
-            rotation_axis /= np.linalg.norm(rotation_axis)
-            cos_theta = np.dot(normal, z_axis)
-            theta = np.arccos(cos_theta)
+    # 1. Group the vertices into coplanar sets
+    coplanar_groups = _group_coplanar_vertices(vertices)
+    
+    # 2. Process each coplanar group into a face
+    for group_indices in coplanar_groups:
+        if len(group_indices) < 3:
+            continue  # Skip groups with too few vertices to form a face
             
-            # Rodrigues rotation formula
-            K = np.array([[0, -rotation_axis[2], rotation_axis[1]],
-                         [rotation_axis[2], 0, -rotation_axis[0]],
-                         [-rotation_axis[1], rotation_axis[0], 0]])
-            rotation = np.eye(3) + np.sin(theta) * K + (1 - cos_theta) * K @ K
+        group_vertices = vertices[group_indices]
+        face_vertices = _process_coplanar_face(group_vertices)
         
-        # Project points to 2D
-        rotated = points @ rotation.T
-        return rotated[:, :2]
+        if face_vertices:
+            all_faces.append(face_vertices)
     
-    def order_vertices_2d(points_2d):
-        """Order vertices counter-clockwise around their centroid."""
-        center = points_2d.mean(axis=0)
-        angles = np.arctan2(points_2d[:, 1] - center[1],
-                           points_2d[:, 0] - center[0])
-        return np.argsort(angles)
+    return all_faces
+
+def _group_coplanar_vertices(vertices: np.ndarray, tolerance: float = 0.01) -> List[List[int]]:
+    """Group vertices that lie in the same plane.
     
-    # Initialize faces list
-    faces = []
-    unprocessed = set(range(len(vertices)))
+    Args:
+        vertices: Array of vertex coordinates (shape: N x 3)
+        tolerance: Threshold for considering points coplanar (smaller = stricter)
+        
+    Returns:
+        List of lists containing indices of coplanar vertices
+    """
+    if len(vertices) < 3:
+        return []
+        
+    n_vertices = len(vertices)
+    remaining_indices = set(range(n_vertices))
+    coplanar_groups = []
     
-    # Process vertices until all are assigned to faces
-    while unprocessed:
-        # Start new face with first unprocessed vertex
-        current = list(unprocessed)[0]
-        face_vertices = [current]
-        coplanar_points = [vertices[current]]
+    while remaining_indices and len(remaining_indices) >= 3:
+        # Take 3 points to define an initial plane
+        # Try to pick points that are far apart for better plane definition
         
-        # Find all coplanar vertices
-        for idx in list(unprocessed - {current}):
-            test_points = np.array(coplanar_points + [vertices[idx]])
-            if are_coplanar(test_points):
-                face_vertices.append(idx)
-                coplanar_points.append(vertices[idx])
+        # Start with the first available vertex
+        indices = list(remaining_indices)
+        seed_idx = indices[0]
+        seed_point = vertices[seed_idx]
         
-        # Convert to numpy array for easier manipulation
-        coplanar_points = np.array(coplanar_points)
+        # Find a distant point for better plane definition
+        distances = np.sum((vertices - seed_point)**2, axis=1)
+        sorted_indices = np.argsort(distances)[::-1]  # Descending order
         
-        # Get face normal and project to 2D
-        normal = get_face_normal(coplanar_points)
-        points_2d = points_to_2d(coplanar_points, normal)
+        # Find two distant points that are also in remaining_indices
+        distant_indices = []
+        for idx in sorted_indices:
+            if idx in remaining_indices and idx != seed_idx:
+                distant_indices.append(idx)
+                if len(distant_indices) == 2:
+                    break
         
-        # Order vertices counter-clockwise
-        order = order_vertices_2d(points_2d)
-        ordered_vertices = [tuple(vertices[face_vertices[i]]) for i in order]
+        # If we couldn't find two distant points, just use the first available ones
+        if len(distant_indices) < 2:
+            remaining_list = list(remaining_indices)
+            if len(remaining_list) >= 3:
+                plane_indices = remaining_list[:3]
+            else:
+                # Not enough points left
+                break
+        else:
+            plane_indices = [seed_idx] + distant_indices
+            
+        # Define the plane using these three points
+        p1, p2, p3 = vertices[plane_indices]
+        v1 = p2 - p1
+        v2 = p3 - p1
+        plane_normal = np.cross(v1, v2)
+        plane_normal = plane_normal / np.linalg.norm(plane_normal)
+        plane_d = -np.dot(plane_normal, p1)
         
-        # Add face and update unprocessed set
-        faces.append(ordered_vertices)
-        unprocessed -= set(face_vertices)
+        # Find all points that lie on this plane
+        coplanar_indices = []
+        for idx in remaining_indices:
+            point = vertices[idx]
+            # Calculate distance from point to plane
+            dist = abs(np.dot(plane_normal, point) + plane_d)
+            if dist < tolerance:
+                coplanar_indices.append(idx)
+        
+        # If we found a significant coplanar group, add it
+        if len(coplanar_indices) >= 3:
+            coplanar_groups.append(coplanar_indices)
+            # Remove these indices from consideration
+            remaining_indices -= set(coplanar_indices)
+        else:
+            # If we didn't find enough coplanar points, just remove the seed
+            # to avoid getting stuck
+            remaining_indices.remove(seed_idx)
     
-    return faces
+    return coplanar_groups
+
+def _process_coplanar_face(vertices: np.ndarray) -> List[Tuple[float, float, float]]:
+    """Process a set of coplanar vertices into a face with properly ordered vertices.
+    
+    Args:
+        vertices: Array of coplanar vertex coordinates (shape: N x 3)
+        
+    Returns:
+        List of (x,y,z) tuples representing the face vertices in proper order
+    """
+    if len(vertices) < 3:
+        return []
+    
+    # 1. Find the best-fit plane using SVD for the coplanar vertices
+    centroid = np.mean(vertices, axis=0)
+    centered_pts = vertices - centroid
+    _, s, vh = np.linalg.svd(centered_pts)
+    
+    # Normal vector is the last right singular vector
+    normal = vh[2]
+    
+    # Verify these points are actually coplanar
+    if s[2] / s[0] > 0.01:
+        print(f"Warning: Points may not be coplanar. Planarity ratio: {s[2]/s[0]:.6f}")
+    
+    # 2. Project points onto the best-fit plane for 2D processing
+    # Find two basis vectors for the plane
+    proj_basis = np.array([
+        np.array([1, 0, 0]) - normal[0] * normal,
+        np.array([0, 1, 0]) - normal[1] * normal
+    ])
+    
+    # Normalize basis vectors
+    proj_basis[0] = proj_basis[0] / np.linalg.norm(proj_basis[0])
+    proj_basis[1] = proj_basis[1] / np.linalg.norm(proj_basis[1])
+    
+    # Project points onto these basis vectors
+    points_2d = np.array([
+        np.array([np.dot(v - centroid, proj_basis[0]), np.dot(v - centroid, proj_basis[1])])
+        for v in vertices
+    ])
+    
+    # 3. Apply gift wrapping algorithm to find boundary points
+    hull_points = []
+    leftmost_idx = np.argmin(points_2d[:, 0])
+    point_on_hull = leftmost_idx
+    
+    # Jarvis march algorithm
+    i = 0
+    max_iterations = 2 * len(vertices)  # Safety check to prevent infinite loops
+    
+    while (point_on_hull not in hull_points or len(hull_points) == 0) and i < max_iterations:
+        hull_points.append(point_on_hull)
+        endpoint = 0  # Initial endpoint for comparison
+        
+        for j in range(len(vertices)):
+            if endpoint == point_on_hull or _is_left_turn(
+                points_2d[point_on_hull], 
+                points_2d[endpoint], 
+                points_2d[j]
+            ):
+                endpoint = j
+                
+        point_on_hull = endpoint
+        i += 1
+    
+    # 4. Create the face from the ordered vertices
+    face_vertices = [(float(vertices[i, 0]), float(vertices[i, 1]), float(vertices[i, 2])) 
+                     for i in hull_points]
+    
+    # 5. Post-processing for cleaning up the boundary
+    # Remove collinear or very close points
+    filtered_vertices = _remove_collinear_points(face_vertices)
+    
+    return filtered_vertices
+
+def _is_left_turn(p1, p2, p3):
+    """Check if the path from p1->p2->p3 makes a left turn.
+    
+    Args:
+        p1, p2, p3: 2D points as numpy arrays
+        
+    Returns:
+        True if p1->p2->p3 makes a left turn (counter-clockwise)
+    """
+    # Calculate the cross product of vectors p1p2 and p1p3
+    # If positive, it's a left turn (counter-clockwise)
+    return ((p2[0] - p1[0]) * (p3[1] - p1[1]) - 
+            (p2[1] - p1[1]) * (p3[0] - p1[0])) > 0
+
+def _remove_collinear_points(vertices, tolerance=1e-5):
+    """Remove collinear points from a sequence of vertices.
+    
+    Args:
+        vertices: List of (x,y,z) tuples
+        tolerance: Tolerance for considering points collinear
+        
+    Returns:
+        Filtered list of vertices with collinear points removed
+    """
+    if len(vertices) <= 3:
+        return vertices
+    
+    result = [vertices[0]]
+    
+    for i in range(1, len(vertices) - 1):
+        p1 = np.array(vertices[i-1])
+        p2 = np.array(vertices[i])
+        p3 = np.array(vertices[i+1])
+        
+        # Calculate the cross product magnitude to check for collinearity
+        v1 = p2 - p1
+        v2 = p3 - p2
+        cross_mag = np.linalg.norm(np.cross(v1, v2))
+        
+        # If the points are not collinear, keep the middle point
+        if cross_mag > tolerance * np.linalg.norm(v1) * np.linalg.norm(v2):
+            result.append(vertices[i])
+    
+    # Always add the last point
+    result.append(vertices[-1])
+    
+    return result
 
 def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = True) -> List[List[Tuple[float, float, float]]]:
     """Generate faces for a physical object from its vertices.
