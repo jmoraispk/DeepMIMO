@@ -451,6 +451,10 @@ def plot_2d_road(ax: plt.Axes, geometry: RoadGeometry):
     ax.scatter(points[:, 0], points[:, 1], 
               c='blue', marker='o', label='Regular Points')
     
+    # Add vertex numbers
+    for i, (x, y) in enumerate(points):
+        ax.annotate(f'{i}', (x, y), xytext=(5, 5), textcoords='offset points')
+    
     # Plot endpoints in red
     ax.scatter(geometry.left_endpoints[:, 0], geometry.left_endpoints[:, 1],
               c='red', marker='o', label='Left Endpoints')
@@ -510,6 +514,74 @@ def validate_road_properties(vertices: np.ndarray, points_2d: np.ndarray) -> dic
     
     return properties
 
+def check_path_intersections(points_2d: np.ndarray) -> list[tuple[int, int, int, int]]:
+    """Check if any non-adjacent segments in the path intersect.
+    
+    Args:
+        points_2d: Array of 2D points ordered in a path
+        
+    Returns:
+        list: List of tuples (i,j,k,l) where segment i->j intersects with k->l
+    """
+    def ccw(A, B, C):
+        return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+    
+    def segments_intersect(p1, p2, q1, q2):
+        return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
+    
+    intersections = []
+    n_points = len(points_2d)
+    
+    # Check each pair of non-adjacent segments
+    for i in range(n_points - 1):
+        for j in range(i + 2, n_points - 1):  # Start from i+2 to skip adjacent segments
+            if segments_intersect(points_2d[i], points_2d[i+1], 
+                                points_2d[j], points_2d[j+1]):
+                intersections.append((i, i+1, j, j+1))
+    
+    return intersections
+
+def analyze_path_angles(points_2d: np.ndarray) -> np.ndarray:
+    """Calculate angles at each point relative to the previous line segment.
+    
+    Args:
+        points_2d: Array of 2D points ordered in a path
+        
+    Returns:
+        np.ndarray: Array of angles in degrees at each point.
+        Angle is measured as the deviation from a straight line:
+        0° or 180° = straight line (no turn)
+        90° = right angle turn
+        Angles are in [0, 180].
+    """
+    n_points = len(points_2d)
+    if n_points < 3:
+        return np.zeros(n_points)
+        
+    # Calculate vectors between consecutive points, including from last to first
+    vectors = np.zeros((n_points, 2))
+    vectors[:-1] = np.diff(points_2d, axis=0)  # Regular vectors
+    vectors[-1] = points_2d[0] - points_2d[-1]  # Vector from last to first point
+    
+    # Normalize vectors
+    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    
+    # Calculate angles between consecutive vectors
+    angles = np.zeros(n_points)
+    for i in range(n_points):
+        # For any point i, we want the vector arriving at i and the vector leaving i
+        v1 = vectors[i-1]  # Vector arriving at point
+        v2 = vectors[i]    # Vector leaving point
+        
+        # Calculate the angle between vectors using dot product
+        dot_product = np.clip(np.dot(v1, v2), -1.0, 1.0)  # Clip to avoid numerical errors
+        angle = np.degrees(np.arccos(dot_product))
+        
+        # The angle we want is either angle or 180-angle, whichever is smaller
+        angles[i] = min(angle, 180 - angle)
+    
+    return angles
+
 # Load road vertices
 road_vertices = np.load('road_vertices_roads_3.npy')
 print(f"\nLoaded road vertices: {len(road_vertices)} points")
@@ -521,32 +593,50 @@ print(f"After filtering: {len(filtered_vertices)} points")
 # Process the road geometry
 geometry = process_road_vertices(filtered_vertices)
 
-# Create figure for visualization
-fig = plt.figure(figsize=(15, 6))
+# Check for path intersections
+intersections = check_path_intersections(geometry.points_2d)
+if intersections:
+    print("\nFound path intersections between segments:")
+    for i, j, k, l in intersections:
+        print(f"Segment {i}->{j} intersects with {k}->{l}")
+else:
+    print("\nNo path intersections found")
 
-# 3D visualization
-ax1 = fig.add_subplot(121, projection='3d')
-plot_3d_road(ax1, geometry, filtered_vertices)
-ax1.set_title('3D View')
+# Analyze angles
+angles = analyze_path_angles(geometry.points_2d)
+print("\nAngles at each vertex (deviation from straight line):")
+print("Point |  Angle  | Note")
+print("-" * 40)
+for i, angle in enumerate(angles):
+    note = ""
+    if angle > 1:  # Only print angles > 1 degree
+        if angle > 150:
+            note = "hairpin turn!"
+        elif angle > 120:
+            note = "very sharp turn!"
+        elif angle > 90:
+            note = "sharp turn!"
+        elif angle > 60:
+            note = "moderate turn"
+        elif angle > 30:
+            note = "gentle turn"
+        print(f"{i:5d} | {angle:7.2f}° | {note}")
 
 # 2D visualization
-ax2 = fig.add_subplot(122)
-plot_2d_road(ax2, geometry)
-ax2.set_title('2D Projection')
-
+f, ax = plt.subplots(dpi=100)
+plot_2d_road(ax, geometry)
 plt.tight_layout()
 plt.show()
 
-# Print road properties analysis
-if geometry and geometry.properties:
-    print("\nRoad Properties Analysis:")
-    props = geometry.properties
-    print(f"Valid point count: {props.get('valid_point_count', False)}")
-    print(f"Number of points: {props.get('n_points', 0)}")
-    print(f"Is curved: {props.get('is_curved', False)}")
-    if props.get('is_curved', False):
-        print(f"Total curvature: {np.rad2deg(props.get('total_curvature', 0)):.1f} degrees")
-    print(f"Max angle change: {np.rad2deg(props.get('max_angle_change', 0)):.1f} degrees")
-    print(f"Has sharp turns: {props.get('has_sharp_turns', False)}")
+print("\nSuggestions for improvement:")
+print("1. The path should be reordered to minimize deviations from straight lines")
+print("2. Consider using a path optimization that:")
+print("   - Starts from endpoints")
+print("   - At each step, chooses the next point that creates the smallest angle deviation")
+print("   - Avoids creating intersections")
+print("3. Could use dynamic programming to find the optimal path that:")
+print("   - Minimizes the angles at each vertex (prefers straight lines)")
+print("   - Penalizes intersections heavily")
+print("   - Enforces endpoint constraints")
 
 # %%
