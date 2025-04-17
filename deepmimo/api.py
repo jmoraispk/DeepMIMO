@@ -50,7 +50,7 @@ class _ProgressFileReader:
     def close(self):
         self.file_object.close()
 
-def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
+def _dm_upload_api_call(file: str, key: str) -> Optional[str]:
     """Upload a file to the DeepMIMO API server.
     
     Args:
@@ -58,7 +58,7 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
         key (str): API authentication key
         
     Returns:
-        Optional[Dict]: Response data containing filename and fileId if successful,
+        Optional[str]: Filename if successful,
                        None if upload fails
         
     Notes:
@@ -118,26 +118,10 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[Dict]:
             progress_reader.close()
             pbar.close()
 
-        # After the upload_response
-        fileId = "unknown"
-        if "getFileIdEndpoint" in auth_data:
-            try:
-                # Wait a moment for B2 to index the file
-                time.sleep(2)
-                file_id_response = requests.get(auth_data["getFileIdEndpoint"], 
-                                                headers={"Authorization": f"Bearer {key}"})
-                file_id_response.raise_for_status()
-                file_id_data = file_id_response.json()
-                fileId = file_id_data.get("fileId", "unknown")
-            except Exception as e:
-                print(f"Warning: Could not retrieve fileId: {str(e)}")
 
         # Return the authorized filename (not the local filename)
         # This ensures we're consistent with what was actually uploaded
-        return {
-            "filename": authorized_filename or filename,
-            "fileId": fileId,
-        }
+        return authorized_filename or filename
 
     except requests.exceptions.RequestException as e:
         print(f"API call failed: {str(e)}")
@@ -619,7 +603,6 @@ def upload(scenario_name: str, key: str, description: Optional[str] = None,
                 "description": "Initial version",
                 "zip": upload_result["filename"],  # Store only the filename, not the URL
                 "folder": "",
-                "fileId": upload_result.get("fileId"),
             }
         ],
         "features": processed_params["primaryParameters"],
