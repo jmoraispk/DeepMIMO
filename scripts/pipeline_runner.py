@@ -185,17 +185,72 @@ class RoadGeometry(NamedTuple):
     points_2d: np.ndarray    # 2D coordinates in the plane
     normal: np.ndarray       # Normal vector of the plane
     properties: dict         # Road-specific properties
+    left_endpoints: np.ndarray   # Left endpoint coordinates (2D)
+    right_endpoints: np.ndarray  # Right endpoint coordinates (2D)
 
+def filter_close_points(points: np.ndarray, min_dist_threshold: float = 0.5) -> np.ndarray:
+    """Filter out points that are too close to each other.
+    
+    Args:
+        points: Array of points (N x 3 for 3D points)
+        min_dist_threshold: Minimum distance between points in meters
+        
+    Returns:
+        np.ndarray: Filtered points array
+    """
+    n_points = len(points)
+    
+    # Calculate all pairwise distances
+    distances = np.zeros((n_points, n_points))
+    for i in range(n_points):
+        distances[i] = np.sqrt(np.sum((points - points[i])**2, axis=1))
+    
+    # Keep points that don't have any neighbors closer than threshold
+    # (except themselves, hence the distances[i] > 0 condition)
+    to_keep = []
+    for i in range(n_points):
+        min_dist = np.min(distances[i][distances[i] > 0])
+        if min_dist >= min_dist_threshold:
+            to_keep.append(i)
+    
+    return points[to_keep]
+
+def detect_endpoints(points_2d: np.ndarray, n_endpoints: int = 2) -> tuple[np.ndarray, np.ndarray]:
+    """Detect the endpoints of a road by finding extreme points in X direction.
+    
+    Args:
+        points_2d: Array of 2D points (N x 2)
+        n_endpoints: Number of points to consider as endpoints on each side
+        
+    Returns:
+        tuple: (left_end_indices, right_end_indices) - Arrays of indices for left and right endpoints
+    """
+    # Find the extreme points in X direction
+    x_sorted_indices = np.argsort(points_2d[:, 0])
+    left_end_indices = x_sorted_indices[:n_endpoints]  # leftmost points
+    right_end_indices = x_sorted_indices[-n_endpoints:]  # rightmost points
+    
+    # Print endpoint information
+    print("\nEndpoint Analysis:")
+    print("Left endpoints:", left_end_indices)
+    print("Left endpoint coordinates:")
+    print(points_2d[left_end_indices])
+    print("\nRight endpoints:", right_end_indices)
+    print("Right endpoint coordinates:")
+    print(points_2d[right_end_indices])
+    
+    return left_end_indices, right_end_indices
 
 def process_road_vertices(vertices: np.ndarray) -> RoadGeometry:
     """Process road vertices to find the best-fit plane and ordered vertices."""
     if len(vertices) < 3:
-        return RoadGeometry([], None, None, None, None, {})
+        return RoadGeometry([], None, None, None, None, {}, 
+                          np.array([]), np.array([]))
         
     # Find the best-fit plane using SVD
     centroid_3d = np.mean(vertices, axis=0)
     centered_pts = vertices - centroid_3d
-    _, s, vh = np.linalg.svd(centered_pts)
+    _, _, vh = np.linalg.svd(centered_pts)
     
     # Normal vector is the last right singular vector
     normal = vh[2]
@@ -208,43 +263,30 @@ def process_road_vertices(vertices: np.ndarray) -> RoadGeometry:
     basis2 = np.cross(normal, basis1)
     
     # Project points onto their best-fit plane
-    projected_vertices = vertices - np.outer(
-        np.dot(centered_pts, normal),
-        normal
-    )
+    projected_vertices = vertices - np.outer(np.dot(centered_pts, normal), normal)
     
     # Get 2D coordinates in the plane
     centered_projected = projected_vertices - centroid_3d
     x_coords = np.dot(centered_projected, basis1)
     y_coords = np.dot(centered_projected, basis2)
     points_2d = np.column_stack([x_coords, y_coords])
+    centroid_2d = np.mean(points_2d, axis=0)
     
     # Print point coordinates and distances
-    print("\nPoint coordinates and nearest neighbor distances:")
-    print("Point ID  |     X     |     Y     | Nearest Dist")
-    print("-" * 45)
+    print("\nPoint coordinates and distances:")
+    print("Point ID  |     X     |     Y     | Min Distance")
+    print("-" * 55)
     for i, point in enumerate(points_2d):
-        dists = np.sqrt(np.sum((points_2d - point)**2, axis=1))
-        dists[i] = np.inf
-        print(f"{i:8d} | {point[0]:8.2f} | {point[1]:8.2f} | {min(dists):11.2f}")
+        # Calculate distances to all other points
+        distances = np.sqrt(np.sum((points_2d - point)**2, axis=1))
+        # Get minimum non-zero distance (exclude distance to self)
+        min_dist = np.min(distances[distances > 0])
+        print(f"{i:8d} | {point[0]:8.2f} | {point[1]:8.2f} | {min_dist:8.2f}")
     
-    # Filter points closer than threshold
-    min_dist_threshold = .5
-    print(f"Filtering points closer than {min_dist_threshold:.2f} units")
-    
-    filtered_indices = []
-    used_mask = np.zeros(len(points_2d), dtype=bool)
-    for i in range(len(points_2d)):
-        if not used_mask[i]:
-            filtered_indices.append(i)
-            used_mask |= np.sqrt(np.sum((points_2d[i] - points_2d)**2, axis=1)) < min_dist_threshold
-    
-    print(f"Filtered from {len(points_2d)} to {len(filtered_indices)} points")
-    print("Kept points:", filtered_indices)
-    
-    points_2d = points_2d[filtered_indices]
-    projected_vertices = projected_vertices[filtered_indices]
-    centroid_2d = np.mean(points_2d, axis=0)
+    # Detect endpoints
+    left_indices, right_indices = detect_endpoints(points_2d)
+    left_endpoints = points_2d[left_indices]
+    right_endpoints = points_2d[right_indices]
     
     def segment_intersects(p1, p2, q1, q2):
         """Check if line segments p1p2 and q1q2 intersect."""
@@ -268,15 +310,6 @@ def process_road_vertices(vertices: np.ndarray) -> RoadGeometry:
     x_sorted_indices = np.argsort(points_2d[:, 0])
     left_end_indices = x_sorted_indices[:2]  # 2 leftmost points
     right_end_indices = x_sorted_indices[-2:]  # 2 rightmost points
-    
-    # Print endpoint information
-    print("\nEndpoint Analysis:")
-    print("Left endpoints:", left_end_indices)
-    print("Left endpoint coordinates:")
-    print(points_2d[left_end_indices])
-    print("\nRight endpoints:", right_end_indices)
-    print("Right endpoint coordinates:")
-    print(points_2d[right_end_indices])
     
     # Start with the leftmost point
     start_idx = left_end_indices[0]
@@ -373,12 +406,11 @@ def process_road_vertices(vertices: np.ndarray) -> RoadGeometry:
     area = abs(area) / 2.0
     
     # Analyze road properties
-    properties = {}
+    properties = validate_road_properties(vertices, ordered_2d)
     properties['area'] = area
     properties['perimeter'] = perimeter
     
-    return RoadGeometry(face_vertices, centroid_3d, centroid_2d, ordered_2d, normal, properties)
-
+    return RoadGeometry(face_vertices, centroid_3d, centroid_2d, ordered_2d, normal, properties, left_endpoints, right_endpoints)
 
 def plot_3d_road(ax: plt.Axes, geometry: RoadGeometry, vertices: np.ndarray):
     """Plot 3D visualization of road processing.
@@ -401,12 +433,6 @@ def plot_3d_road(ax: plt.Axes, geometry: RoadGeometry, vertices: np.ndarray):
     ax.scatter(geometry.centroid_3d[0], geometry.centroid_3d[1], geometry.centroid_3d[2], 
               c='red', marker='*', s=200, label='Centroid')
     
-    # Plot normal vector
-    normal_scale = np.max(np.ptp(vertices, axis=0)) * 0.2  # 20% of max range
-    ax.quiver(geometry.centroid_3d[0], geometry.centroid_3d[1], geometry.centroid_3d[2],
-             geometry.normal[0], geometry.normal[1], geometry.normal[2],
-             length=normal_scale, color='orange', label='Normal')
-    
     # Plot face as a polygon
     face_poly = Poly3DCollection([face_array], alpha=0.2)
     face_poly.set_facecolor('blue')
@@ -417,24 +443,19 @@ def plot_3d_road(ax: plt.Axes, geometry: RoadGeometry, vertices: np.ndarray):
     ax.set_zlabel('Z')
     ax.legend()
 
-
 def plot_2d_road(ax: plt.Axes, geometry: RoadGeometry):
     """Plot 2D visualization of road processing with road properties."""
     points = geometry.points_2d
-    n_points = len(points)
     
-    # Identify endpoints (first/last 4 points)
-    endpoint_mask = np.zeros(n_points, dtype=bool)
-    endpoint_mask[:4] = True  # First 4 points
-    endpoint_mask[-4:] = True  # Last 4 points
-    
-    # Plot regular points in blue, endpoints in red
-    regular_points = points[~endpoint_mask]
-    end_points = points[endpoint_mask]
-    ax.scatter(regular_points[:, 0], regular_points[:, 1], 
+    # Plot regular points in blue
+    ax.scatter(points[:, 0], points[:, 1], 
               c='blue', marker='o', label='Regular Points')
-    ax.scatter(end_points[:, 0], end_points[:, 1],
-              c='red', marker='o', label='End Points')
+    
+    # Plot endpoints in red
+    ax.scatter(geometry.left_endpoints[:, 0], geometry.left_endpoints[:, 1],
+              c='red', marker='o', label='Left Endpoints')
+    ax.scatter(geometry.right_endpoints[:, 0], geometry.right_endpoints[:, 1],
+              c='red', marker='o')
     
     # Plot 2D centroid
     ax.scatter(geometry.centroid_2d[0], geometry.centroid_2d[1], 
@@ -453,69 +474,79 @@ def plot_2d_road(ax: plt.Axes, geometry: RoadGeometry):
     ax.set_ylabel('Y in plane')
     ax.axis('equal')
     
+    ax.legend()
 
-def visualize_road_processing(vertices: np.ndarray, name: str = "road"):
-    """Create complete visualization of road processing.
+def validate_road_properties(vertices: np.ndarray, points_2d: np.ndarray) -> dict:
+    """Analyze road-specific properties with enhanced curve detection."""
+    properties = {}
     
-    Args:
-        vertices: Array of vertex coordinates (shape: N x 3)
-        name: Name of the road for plot titles
-    """
-    # Process vertices
-    geometry = process_road_vertices(vertices)
-    if not geometry.face_vertices:
-        print("Not enough vertices to process")
-        return
-        
-    # Create figure with two subplots
-    fig = plt.figure(figsize=(15, 6))
+    # Basic validation
+    n_points = len(vertices)
+    properties['valid_point_count'] = n_points >= 4
+    properties['n_points'] = n_points
     
-    # 3D plot
-    ax1 = fig.add_subplot(121, projection='3d')
-    plot_3d_road(ax1, geometry, vertices)
-    ax1.set_title(f'{name} - 3D View')
+    if n_points < 4:
+        return properties
     
-    # 2D plot
-    ax2 = fig.add_subplot(122)
-    plot_2d_road(ax2, geometry)
-    ax2.set_title(f'{name} - 2D Projection')
+    # Segment Analysis
+    segments = np.diff(points_2d, axis=0)
+    segment_lengths = np.sqrt(np.sum(segments**2, axis=1))
     
-    plt.tight_layout()
-    plt.savefig(f'{name}_analysis.png')
-    plt.show()
+    # Calculate angles between consecutive segments
+    segment_vectors = segments / segment_lengths[:, np.newaxis]
+    dot_products = np.sum(segment_vectors[:-1] * segment_vectors[1:], axis=1)
+    angle_changes = np.arccos(np.clip(dot_products, -1.0, 1.0))
     
-    return geometry
+    # Curvature Analysis (excluding endpoints)
+    middle_angles = angle_changes[1:-1]  # Exclude first and last angle changes
+    properties['max_angle_change'] = np.max(np.abs(middle_angles)) if len(middle_angles) > 0 else 0
+    properties['total_curvature'] = np.sum(np.abs(middle_angles))
+    properties['avg_curvature_per_segment'] = properties['total_curvature'] / max(1, len(middle_angles))
+    
+    # Classify road type
+    properties['is_straight'] = properties['max_angle_change'] < np.pi/6  # < 30 degrees
+    properties['is_curved'] = properties['total_curvature'] > np.pi/2  # > 90 degrees total
+    properties['has_sharp_turns'] = properties['max_angle_change'] > np.pi/3  # > 60 degrees
+    
+    return properties
 
-# Load and process road vertices
+# Load road vertices
 road_vertices = np.load('road_vertices_roads_3.npy')
-print("\nProcessing road vertices:")
-print(f"Number of vertices: {len(road_vertices)}")
+print(f"\nLoaded road vertices: {len(road_vertices)} points")
 
-# Process and visualize
-geometry = visualize_road_processing(road_vertices, "road_3")
+# Filter close points
+filtered_vertices = filter_close_points(road_vertices)
+print(f"After filtering: {len(filtered_vertices)} points")
 
-# Print detailed road analysis
+# Process the road geometry
+geometry = process_road_vertices(filtered_vertices)
+
+# Create figure for visualization
+fig = plt.figure(figsize=(15, 6))
+
+# 3D visualization
+ax1 = fig.add_subplot(121, projection='3d')
+plot_3d_road(ax1, geometry, filtered_vertices)
+ax1.set_title('3D View')
+
+# 2D visualization
+ax2 = fig.add_subplot(122)
+plot_2d_road(ax2, geometry)
+ax2.set_title('2D Projection')
+
+plt.tight_layout()
+plt.show()
+
+# Print road properties analysis
 if geometry and geometry.properties:
     print("\nRoad Properties Analysis:")
     props = geometry.properties
     print(f"Valid point count: {props.get('valid_point_count', False)}")
     print(f"Number of points: {props.get('n_points', 0)}")
-    print(f"Has parallel edges: {props.get('has_parallel_edges', False)}")
-    print(f"Parallel edge count: {props.get('parallel_edge_count', 0)}")
-    
-    if props.get('has_parallel_edges', False):
-        print(f"Aspect ratio: {props.get('aspect_ratio', 'N/A'):.2f}")
-        print(f"Valid aspect ratio: {props.get('valid_aspect_ratio', False)}")
-        print(f"Min parallel angle: {np.rad2deg(props.get('min_parallel_angle', np.pi)):.1f} degrees")
-    
     print(f"Is curved: {props.get('is_curved', False)}")
     if props.get('is_curved', False):
         print(f"Total curvature: {np.rad2deg(props.get('total_curvature', 0)):.1f} degrees")
     print(f"Max angle change: {np.rad2deg(props.get('max_angle_change', 0)):.1f} degrees")
     print(f"Has sharp turns: {props.get('has_sharp_turns', False)}")
-    
-    if props.get('consistent_width', False):
-        print(f"Average width: {props.get('avg_width', 0):.2f}")
-        print(f"Width variation: {props.get('width_consistency', 0)*100:.1f}%")
 
 # %%
