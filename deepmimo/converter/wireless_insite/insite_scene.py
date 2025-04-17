@@ -85,6 +85,11 @@ def read_scene(folder_path: str | Path) -> Scene:
 
 def visualize_road_object(name: str, vertices: np.ndarray, faces: List[List[Tuple[float, float, float]]]):
     """Visualize a road object and its generated faces."""
+    # Save vertices for testing
+    save_path = f'road_vertices_{name.replace(" ", "_")}.npy'
+    np.save(save_path, vertices)
+    print(f"Saved vertices to {save_path}")
+    
     fig = plt.figure(figsize=(15, 5))
     
     # Plot original vertices
