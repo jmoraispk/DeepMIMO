@@ -282,17 +282,69 @@ def trim_points(points, max_points=14):
         points = np.delete(points, j, axis=0)
     return points
 
+def compress_path(points, path, angle_threshold=1.0):
+    """Compress a path by removing points that are nearly collinear with their neighbors.
+    
+    Args:
+        points: Array of point coordinates (N x 2)
+        path: List of indices forming the path
+        angle_threshold: Minimum angle deviation (in degrees) to keep a point
+        
+    Returns:
+        List of indices forming the compressed path
+    """
+    if len(path) <= 3:  # Can't compress paths with 3 or fewer points
+        return path
+        
+    # We'll build the compressed path starting with the first point
+    compressed = [path[0]]
+    
+    # Iterate through interior points (skip first and last)
+    for i in range(1, len(path)-1):
+        # Get the previous, current, and next points
+        prev_idx = compressed[-1]  # Last point in compressed path
+        curr_idx = path[i]        # Current point we're considering
+        next_idx = path[i+1]      # Next point in original path
+        
+        # Calculate angle at current point
+        angle = calculate_angle_deviation(
+            points[prev_idx],
+            points[curr_idx],
+            points[next_idx]
+        )
+        
+        # If angle is significant (> threshold), keep the point
+        if angle > angle_threshold:
+            compressed.append(curr_idx)
+    
+    # Always add the last point to close the loop
+    compressed.append(path[-1])
+    
+    return compressed
+
 #%% FULL EXAMPLE
 
-for i in range(10):
+for i in [4]:#range(10):
 
     road_vertices = np.load(f'road_vertices_roads_{i}.npy')[:, :2]
     print(f"\nLoaded road vertices: {len(road_vertices)} points")
 
     points_raw = trim_points(road_vertices, max_points=10)
 
-    # plot_points(road_vertices, title="raw points")
-    # plot_points(points_raw, title="filtered points")
+    plot_points(road_vertices, title="raw points")
+    plot_points(points_raw, title="filtered points")
 
     best_cost, best_path = tsp_held_karp_no_intersections(points_raw)
-    # plot_points(points_raw, best_path, title="filtered")
+    print(f"Best path: {best_path}")
+    plot_points(points_raw, best_path, title="filtered")
+
+    # Compress the path by removing the points that are in line with the previous point
+    compressed_path = compress_path(points_raw, best_path, angle_threshold=1.0)
+    print(f"Compressed path: {compressed_path}")
+    length_compressed, length_raw = len(compressed_path) - 1, len(best_path) - 1
+    print(f"Length compressed: {length_compressed}, length raw: {length_raw}")
+    points_compressed = points_raw[compressed_path[:-1]]
+    plot_points(points_compressed, [i for i in range(length_compressed)]+[0], title="compressed")
+
+
+# %%
