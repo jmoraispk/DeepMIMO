@@ -1021,8 +1021,8 @@ print(results_held_karp)
 # Also, if we include the blender screenshot, we might not even have to HAVE roads.
 
 # ------------------------------------------------------------------------------
-# DeepMIMO is not supposed to be a simulation of a real city. 
-# But an okay representation of it. The buildings don't have to be perfect. 
+# DeepMIMO is not supposed to be a perfect representation of a real city. 
+# Just a pragmatic representation of it. The buildings don't have to be perfect. 
 # The roads don't have to be perfect. (or even existent!)
 # Better lightweight, simple, and fast conversion, than lossless, perfect, and slow.
 # We care about the ray tracing, not a perfect representation of the scene.

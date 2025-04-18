@@ -639,11 +639,184 @@ print("   - Minimizes the angles at each vertex (prefers straight lines)")
 print("   - Penalizes intersections heavily")
 print("   - Enforces endpoint constraints")
 
-# %% NEW CODE HERE!
+# %% NEW CODE HERE! (extracting functions)
 
-import itertools
+# Re-import necessary modules
 import numpy as np
 import matplotlib.pyplot as plt
+import itertools
+
+# Function to calculate angle deviation
+def calculate_angle_deviation(p1, p2, p3):
+    """Calculate the deviation from a straight line at point p2.
+    Returns angle in degrees, where:
+    - 0° means the path p1->p2->p3 forms a straight line
+    - 180° means the path doubles back on itself
+    """
+    if np.allclose(p1, p2) or np.allclose(p2, p3):
+        return 180.0
+    v1 = p2 - p1  # Vector from p1 to p2
+    v2 = p3 - p2  # Vector from p2 to p3
+    v1_norm = v1 / np.linalg.norm(v1)
+    v2_norm = v2 / np.linalg.norm(v2)
+    dot_product = np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0)
+
+    return np.degrees(np.arccos(dot_product))
+
+# Plot helper
+def plot_points(points, path=None, title=""):
+    plt.figure(figsize=(8, 6))
+    plt.scatter(points[:, 0], points[:, 1], color='blue')
+    for i, (x, y) in enumerate(points):
+        plt.text(x + 1, y + 1, str(i), fontsize=9)
+    if path:
+        for i in range(len(path) - 1):
+            p1, p2 = points[path[i]], points[path[i+1]]
+            plt.plot([p1[0], p2[0]], [p1[1], p2[1]], 'r-')
+    plt.title(title)
+    plt.axis('equal')
+    plt.grid(True)
+    plt.show()
+
+# Intersection check for line segments
+def segments_intersect(p1, p2, q1, q2):
+    def ccw(a, b, c):
+        return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
+    return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
+
+# Held-Karp TSP with angle penalty + intersection check
+def tsp_held_karp_no_intersections(points):
+    n = len(points)
+    C = {}
+    
+    for k in range(1, n):
+        dist = np.linalg.norm(points[0] - points[k])
+        C[(1 << k, k)] = (dist, [0, k])
+
+    for subset_size in range(2, n):
+        for subset in itertools.combinations(range(1, n), subset_size):
+            bits = sum(1 << x for x in subset)
+            for k in subset:
+                prev_bits = bits & ~(1 << k)
+                res = []
+                for m in subset:
+                    if m == k:
+                        continue
+                    prev_cost, prev_path = C.get((prev_bits, m), (float('inf'), []))
+                    if not prev_path:
+                        continue
+                    # Check for intersections
+                    new_seg = (points[m], points[k])
+                    intersects = False
+                    for i in range(len(prev_path) - 2):
+                        a, b = prev_path[i], prev_path[i + 1]
+                        if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
+                            intersects = True
+                            break
+                    if intersects:
+                        continue
+                    angle_cost = calculate_angle_deviation(points[prev_path[-2]], points[m], points[k]) if len(prev_path) > 1 else 0
+                    cost = prev_cost + np.linalg.norm(points[m] - points[k]) + angle_cost
+                    res.append((cost, prev_path + [k]))
+                if res:
+                    C[(bits, k)] = min(res)
+
+    bits = (1 << n) - 2
+    res = []
+    for k in range(1, n):
+        if (bits, k) not in C:
+            continue
+        cost, path = C[(bits, k)]
+        new_seg = (points[k], points[0])
+        intersects = False
+        for i in range(len(path) - 2):
+            a, b = path[i], path[i + 1]
+            if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
+                intersects = True
+                break
+        if intersects:
+            continue
+        angle_cost = calculate_angle_deviation(points[path[-2]], points[k], points[0])
+        final_cost = cost + np.linalg.norm(points[k] - points[0]) + angle_cost
+        res.append((final_cost, path + [0]))
+
+    return min(res) if res else (float('inf'), [])
+
+
+def trim_points(points, max_points=14):
+    """ Deletes the point that is closest to the average of all points. """
+    while len(points) > max_points:
+        dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
+        np.fill_diagonal(dists, np.inf)
+        _, j = np.unravel_index(np.argmin(dists), dists.shape)
+        points = np.delete(points, j, axis=0)
+    return points
+
+#%% FILTERING WITH PROTECTED POINTS
+
+def filter_with_protected(points, protected_indices, target_count):
+    assert target_count >= len(protected_indices), "Target count must be >= number of protected points"
+    
+    protected_indices = set(protected_indices)
+    total_indices = list(range(len(points)))
+    removable_indices = [i for i in total_indices if i not in protected_indices]
+
+    # Build full distance matrix
+    dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
+    np.fill_diagonal(dists, np.inf)  # avoid self-pairs
+
+    # While we have too many points, remove the closest removable point
+    while len(protected_indices) + len(removable_indices) > target_count:
+        # Consider only distances between removable points
+        min_dist = float('inf')
+        to_remove = None
+        for i in removable_indices:
+            for j in removable_indices:
+                if i >= j:
+                    continue
+                if dists[i][j] < min_dist:
+                    min_dist = dists[i][j]
+                    to_remove = i if np.mean(dists[i]) < np.mean(dists[j]) else j
+        removable_indices.remove(to_remove)
+
+    # Final set of indices to keep
+    final_indices = sorted(list(protected_indices) + removable_indices)
+    return points[final_indices], final_indices
+
+
+def trim_points_protected(points, protected_indices, max_points=14):
+    """ Deletes points while preserving protected indices until max_points is reached. """
+    protected_indices = set(protected_indices)
+    assert len(points) >= max_points >= len(protected_indices), "max_points must be >= number of protected points"
+    
+    while len(points) > max_points:
+        # Calculate pairwise distances
+        dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
+        np.fill_diagonal(dists, np.inf)
+        
+        # Mask out protected indices
+        for idx in protected_indices:
+            dists[idx, :] = np.inf
+            dists[:, idx] = np.inf
+            
+        # Find closest pair of non-protected points
+        _, j = np.unravel_index(np.argmin(dists), dists.shape)
+        
+        # Update protected indices after deletion
+        new_protected = set()
+        for idx in protected_indices:
+            if idx < j:
+                new_protected.add(idx)
+            else:
+                new_protected.add(idx - 1)
+        protected_indices = new_protected
+        
+        points = np.delete(points, j, axis=0)
+        
+    return points
+
+
+#%% tsp_held_karp_custom
 
 # Provided list of vertices
 points_raw = np.array([
@@ -666,42 +839,24 @@ points_raw = np.array([
 ])
 
 
-points_raw = np.array([
-    [-85.58, 107.70], 
-    [-76.82, 107.70],
-    [26.87, -37.58],
-    [41.20, -77.20],
-    [27.76, -41.83],
-    [0.90, 12.30],
-    [-4.58, 7.95],
-    [-67.64, 83.88],
-    [30.11, -26.84],
-    [35.19, -77.20],
-    [24.14, -18.42],
-    [18.49, -22.55],
-    [-62.15, 88.22],
-    [34.61, -40.39],
-    [23.92, -30.21],
-    [33.59, -35.54]
-])
-
-# Function to calculate angle deviation
-def calculate_angle_deviation(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray) -> float:
-    if np.allclose(p1, p2) or np.allclose(p2, p3):
-        return 180.0
-    v1 = p2 - p1
-    v2 = p3 - p2
-    v1_norm = v1 / np.linalg.norm(v1)
-    v2_norm = v2 / np.linalg.norm(v2)
-    dot_product = np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0)
-    angle = np.degrees(np.arccos(dot_product))
-    return min(angle, 180.0 - angle)
-
-# Distance-based cost function with angle penalty
-def custom_cost(a, b, c):
-    distance = np.linalg.norm(points_raw[b] - points_raw[c])
-    angle_deviation = calculate_angle_deviation(points_raw[a], points_raw[b], points_raw[c])
-    return distance + angle_deviation  # combined cost
+# points_raw = np.array([
+#     [-85.58, 107.70], 
+#     [-76.82, 107.70],
+#     [26.87, -37.58],
+#     [41.20, -77.20],
+#     [27.76, -41.83],
+#     [0.90, 12.30],
+#     [-4.58, 7.95],
+#     [-67.64, 83.88],
+#     [30.11, -26.84],
+#     [35.19, -77.20],
+#     [24.14, -18.42],
+#     [18.49, -22.55],
+#     [-62.15, 88.22],
+#     [34.61, -40.39],
+#     [23.92, -30.21],
+#     [33.59, -35.54]
+# ])
 
 # Trim points if more than 15 (keep only farthest-spread points)
 def trim_points(points, max_points=14):
@@ -711,21 +866,6 @@ def trim_points(points, max_points=14):
         i, j = np.unravel_index(np.argmin(dists), dists.shape)
         points = np.delete(points, j, axis=0)
     return points
-
-# Plot helper
-def plot_points(points, path=None, title=""):
-    plt.figure(figsize=(8, 6))
-    plt.scatter(points[:, 0], points[:, 1], color='blue')
-    for i, (x, y) in enumerate(points):
-        plt.text(x + 1, y + 1, str(i), fontsize=9)
-    if path:
-        for i in range(len(path) - 1):
-            p1, p2 = points[path[i]], points[path[i+1]]
-            plt.plot([p1[0], p2[0]], [p1[1], p2[1]], 'r-')
-    plt.title(title)
-    plt.axis('equal')
-    plt.grid(True)
-    plt.show()
 
 # Plot before trimming
 plot_points(points_raw, title="Original Points")
@@ -786,107 +926,17 @@ plot_points(points, best_path, title="Optimal Path with Angle-Aware Cost")
 
 #%% ANGLE-BASED TSP (WORKING VERY WELL!)
 
-# Intersection check for line segments
-def segments_intersect(p1, p2, q1, q2):
-    def ccw(a, b, c):
-        return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
-    return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
-
-# Angle deviation calculator
-def calculate_angle_deviation(p1, p2, p3):
-    if np.allclose(p1, p2) or np.allclose(p2, p3):
-        return 180.0
-    v1, v2 = p2 - p1, p3 - p2
-    v1 /= np.linalg.norm(v1)
-    v2 /= np.linalg.norm(v2)
-    dot_product = np.clip(np.dot(v1, v2), -1.0, 1.0)
-    angle = np.degrees(np.arccos(dot_product))
-    return min(angle, 180.0 - angle)
-
-# Plot function
-def plot_points(points, path=None, title=""):
-    plt.figure(figsize=(8, 6))
-    plt.scatter(points[:, 0], points[:, 1], color='blue')
-    for i, (x, y) in enumerate(points):
-        plt.text(x + 1, y + 1, str(i), fontsize=9)
-    if path:
-        for i in range(len(path) - 1):
-            p1, p2 = points[path[i]], points[path[i+1]]
-            plt.plot([p1[0], p2[0]], [p1[1], p2[1]], 'r-')
-    plt.title(title)
-    plt.axis('equal')
-    plt.grid(True)
-    plt.show()
-
-# Held-Karp TSP with angle penalty + intersection check
-def tsp_held_karp_no_intersections(points):
-    n = len(points)
-    C = {}
-    
-    for k in range(1, n):
-        dist = np.linalg.norm(points[0] - points[k])
-        C[(1 << k, k)] = (dist, [0, k])
-
-    for subset_size in range(2, n):
-        for subset in itertools.combinations(range(1, n), subset_size):
-            bits = sum(1 << x for x in subset)
-            for k in subset:
-                prev_bits = bits & ~(1 << k)
-                res = []
-                for m in subset:
-                    if m == k:
-                        continue
-                    prev_cost, prev_path = C.get((prev_bits, m), (float('inf'), []))
-                    if not prev_path:
-                        continue
-                    # Check for intersections
-                    new_seg = (points[m], points[k])
-                    intersects = False
-                    for i in range(len(prev_path) - 2):
-                        a, b = prev_path[i], prev_path[i + 1]
-                        if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
-                            intersects = True
-                            break
-                    if intersects:
-                        continue
-                    angle_cost = calculate_angle_deviation(points[prev_path[-2]], points[m], points[k]) if len(prev_path) > 1 else 0
-                    cost = prev_cost + np.linalg.norm(points[m] - points[k]) + angle_cost
-                    res.append((cost, prev_path + [k]))
-                if res:
-                    C[(bits, k)] = min(res)
-
-    bits = (1 << n) - 2
-    res = []
-    for k in range(1, n):
-        if (bits, k) not in C:
-            continue
-        cost, path = C[(bits, k)]
-        new_seg = (points[k], points[0])
-        intersects = False
-        for i in range(len(path) - 2):
-            a, b = path[i], path[i + 1]
-            if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
-                intersects = True
-                break
-        if intersects:
-            continue
-        angle_cost = calculate_angle_deviation(points[path[-2]], points[k], points[0])
-        final_cost = cost + np.linalg.norm(points[k] - points[0]) + angle_cost
-        res.append((final_cost, path + [0]))
-
-    return min(res) if res else (float('inf'), [])
-
 points_raw = np.array([
-    [26.87, -37.58],
-    [41.20, -77.20],
-    [27.76, -41.83],
-    [0.90, 12.30],
-    [-4.58, 7.95],
+    [26.87,  -37.58],
+    [41.20,  -77.20],
+    [27.76,  -41.83],
+    [0.90,    12.30],
+    [-4.58,    7.95],
     [-76.82, 107.70],
-    [-67.64, 83.88],
-    [30.11, -26.84], # less great if this is removed
+    [-67.64,  83.88],
+    [30.11,  -26.84], # less great if this is removed
     [-85.58, 107.70],
-    [35.19, -77.20]
+    [35.19,  -77.20]
 ])
 
 # Run and plot
@@ -897,37 +947,6 @@ best_cost, best_path = tsp_held_karp_no_intersections(points)
 plot_points(points, best_path, title="Non-Intersecting Angle-Aware Optimal Path")
 
 #%% FILTERING WITH PROTECTED POINTS (GOOD!!)
-
-import numpy as np
-
-def filter_with_protected(points, protected_indices, target_count):
-    assert target_count >= len(protected_indices), "Target count must be >= number of protected points"
-    
-    protected_indices = set(protected_indices)
-    total_indices = list(range(len(points)))
-    removable_indices = [i for i in total_indices if i not in protected_indices]
-
-    # Build full distance matrix
-    dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
-    np.fill_diagonal(dists, np.inf)  # avoid self-pairs
-
-    # While we have too many points, remove the closest removable point
-    while len(protected_indices) + len(removable_indices) > target_count:
-        # Consider only distances between removable points
-        min_dist = float('inf')
-        to_remove = None
-        for i in removable_indices:
-            for j in removable_indices:
-                if i >= j:
-                    continue
-                if dists[i][j] < min_dist:
-                    min_dist = dists[i][j]
-                    to_remove = i if np.mean(dists[i]) < np.mean(dists[j]) else j
-        removable_indices.remove(to_remove)
-
-    # Final set of indices to keep
-    final_indices = sorted(list(protected_indices) + removable_indices)
-    return points[final_indices], final_indices
 
 # Test with your full list of 16 points and 4 protected ones
 points_raw = np.array([
@@ -966,12 +985,7 @@ axs[1].set_title(f"Filtered Points ({filtered_points.shape[0]} total)")
 plt.tight_layout()
 plt.show()
 
-#%% ENFORCED EDGES
-
-# Re-import necessary modules
-import numpy as np
-import matplotlib.pyplot as plt
-import itertools
+#%% ENFORCED EDGES (Try without)
 
 # Reuse points and enforced edges
 points_raw = np.array([
@@ -987,30 +1001,7 @@ points_raw = np.array([
 ])
 
 # enforced_edges = [(1, 8)]  # Fixed connections to always include
-# enforced_edges = [(5, 7)]  # Fixed connections to always include
-
-def calculate_angle_deviation(p1, p2, p3):
-    """Calculate the deviation from a straight line at point p2.
-    Returns angle in degrees, where:
-    - 0° means the path p1->p2->p3 forms a straight line
-    - 180° means the path doubles back on itself
-    """
-    if np.allclose(p1, p2) or np.allclose(p2, p3):
-        return 180.0
-    v1 = p2 - p1  # Vector from p1 to p2
-    v2 = p3 - p2  # Vector from p2 to p3
-    v1_norm = v1 / np.linalg.norm(v1)
-    v2_norm = v2 / np.linalg.norm(v2)
-    dot_product = np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0)
-    # The angle between vectors - this is already what we want
-    # 0° = same direction (straight line)
-    # 180° = opposite direction (doubling back)
-    return np.degrees(np.arccos(dot_product))
-
-def segments_intersect(p1, p2, q1, q2):
-    def ccw(a, b, c):
-        return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
-    return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
+enforced_edges = [(0, 2)]  # Fixed connections to always include
 
 def check_all_intersections(points, path):
     edges = [(path[i], path[i+1]) for i in range(len(path) - 1)]
@@ -1023,21 +1014,7 @@ def check_all_intersections(points, path):
                 return True
     return False
 
-def plot_points(points, path=None, title=""):
-    plt.figure(figsize=(8, 6))
-    plt.scatter(points[:, 0], points[:, 1], color='blue')
-    for i, (x, y) in enumerate(points):
-        plt.text(x + 1, y + 1, str(i), fontsize=9)
-    if path:
-        for i in range(len(path) - 1):
-            p1, p2 = points[path[i]], points[path[i+1]]
-            plt.plot([p1[0], p2[0]], [p1[1], p2[1]], 'r-')
-    plt.title(title)
-    plt.axis('equal')
-    plt.grid(True)
-    plt.show()
-
-def analyze_path(points, path):
+def analyze_path(points, path):  # JUST PRINTING!
     """Analyze a path's angles and distances."""
     print("\nPath Analysis:")
     print(f"Path sequence: {path}")
@@ -1058,7 +1035,7 @@ def fully_correct_tsp(points, enforced_edges):
     forced_nodes = set(i for a, b in enforced_edges for i in (a, b))
     remaining_nodes = list(all_nodes - forced_nodes)
 
-    print(f"\nStarting TSP with:")
+    print("\nStarting TSP with:")
     print(f"Enforced edges: {enforced_edges}")
     print(f"Forced nodes: {forced_nodes}")
     print(f"Remaining nodes: {remaining_nodes}")
@@ -1142,41 +1119,17 @@ def fully_correct_tsp(points, enforced_edges):
 final_cost, final_path = fully_correct_tsp(points_raw, enforced_edges)
 
 plot_points(points_raw, final_path, title="Final Non-Intersecting Path with Enforced Edges")
-#%%
-# Reuse points and enforced edges
-points_raw = np.array([
-    [26.87, -37.58],    # 0
-    [41.20, -77.20],    # 1
-    [27.76, -41.83],    # 2
-    [0.90, 12.30],      # 3
-    [-4.58, 7.95],      # 4
-    [-76.82, 107.70],   # 5 - enforced
-    [-67.64, 83.88],    # 6
-    [-85.58, 107.70],   # 7 - enforced
-    [35.19, -77.20]     # 8 - enforced
-])
+#%% FULL EXAMPLE
 
-# Function to calculate angle deviation
-def calculate_angle_deviation(p1, p2, p3):
-    """Calculate the deviation from a straight line at point p2.
-    Returns angle in degrees, where:
-    - 0° means the path p1->p2->p3 forms a straight line
-    - 180° means the path doubles back on itself
-    """
-    if np.allclose(p1, p2) or np.allclose(p2, p3):
-        return 180.0
-    v1 = p2 - p1  # Vector from p1 to p2
-    v2 = p3 - p2  # Vector from p2 to p3
-    v1_norm = v1 / np.linalg.norm(v1)
-    v2_norm = v2 / np.linalg.norm(v2)
-    dot_product = np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0)
-    # The angle between vectors - this is already what we want
-    # 0° = same direction (straight line)
-    # 180° = opposite direction (doubling back)
-    return np.degrees(np.arccos(dot_product))
+for i in range(10):
 
-# Test the angles
-angle1 = calculate_angle_deviation(points_raw[0], points_raw[2], points_raw[1])  # Should be small
-angle2 = calculate_angle_deviation(points_raw[0], points_raw[1], points_raw[2])  # Should be large
-print(f"Angle 0->2->1: {angle1:.2f}°")  # Should be small
-print(f"Angle 0->1->2: {angle2:.2f}°")  # Should be large
+    road_vertices = np.load(f'road_vertices_roads_{i}.npy')[:, :2]
+    print(f"\nLoaded road vertices: {len(road_vertices)} points")
+
+    points_raw = trim_points(road_vertices, max_points=10)
+
+    # plot_points(road_vertices, title="raw points")
+    # plot_points(points_raw, title="filtered points")
+
+    best_cost, best_path = tsp_held_karp_no_intersections(points_raw)
+    # plot_points(points_raw, best_path, title="filtered")
