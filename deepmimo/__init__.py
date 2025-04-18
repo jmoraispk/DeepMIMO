@@ -53,6 +53,7 @@ from .general_utils import (
 
 from .api import (
     upload,
+    upload_rt_source,
     download,
     search,
     upload_images,
@@ -106,6 +107,7 @@ __all__ = [
     # General utilities
     'summary',
     'upload',
+    'upload_rt_source',
     'upload_images',
     'download',
     'search',

@@ -516,7 +516,6 @@ def _make_submission_on_server(submission_scenario_name: str, key: str, params_d
     
     return submission_scenario_name
 
-
 def upload(scenario_name: str, key: str,
            details: Optional[list[str]] = None, extra_metadata: Optional[dict] = None, 
            skip_zip: bool = False, submission_only: bool = False, include_images: bool = True) -> str:
@@ -604,6 +603,104 @@ def upload(scenario_name: str, key: str,
     # Return the scenario name used for submission
     return submission_scenario_name
 
+def upload_rt_source(scenario_name: str, rt_zip_path: str, key: str) -> bool:
+    """Upload a Ray Tracing (RT) source file to B2 storage.
+
+    Args:
+        scenario_name: The name of the corresponding scenario already uploaded.
+                       The RT source will be stored under `<scenario_name>.zip`.
+        rt_zip_path: Path to the zipped RT source file to upload.
+        key: API authentication key.
+
+    Returns:
+        True if the upload was successful, False otherwise.
+    """
+    print(f"Attempting to upload RT source for scenario: {scenario_name}")
+    print(f"Using RT source file: {rt_zip_path}")
+
+    if not os.path.exists(rt_zip_path):
+        print(f"Error: RT source file not found at {rt_zip_path}")
+        return False
+
+    target_filename = f"{scenario_name}.zip"
+    file_size = os.path.getsize(rt_zip_path)
+
+    try:
+        # 1. Get presigned upload URL for the RT bucket
+        print("Requesting RT upload authorization from server...")
+        auth_response = requests.get(
+            f"{API_BASE_URL}/api/b2/authorize-rt-upload",
+            params={"scenario_name": scenario_name}, # Server expects scenario_name
+            headers={"Authorization": f"Bearer {key}"},
+        )
+        auth_response.raise_for_status()
+        auth_data = auth_response.json()
+
+        if not auth_data.get("presignedUrl"):
+            print("Error: Invalid authorization response from server.")
+            return False
+
+        # Server confirms the filename it authorized for the RT bucket
+        authorized_filename = auth_data.get("filename")
+        if not authorized_filename or authorized_filename != target_filename:
+             print(f"Error: Filename mismatch. Server authorized RT upload for '{authorized_filename}' but expected '{target_filename}'")
+             return False
+
+        print(f"✓ Authorization granted. Uploading to RT bucket as '{authorized_filename}'...")
+
+        # 2. Calculate file hash (using the local rt_zip_path file)
+        sha1 = hashlib.sha1()
+        with open(rt_zip_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                sha1.update(chunk)
+        file_hash = sha1.hexdigest()
+
+        # 3. Upload file to B2 RT Bucket using the presigned URL
+        pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading RT Source")
+        progress_reader = None
+        try:
+            progress_reader = _ProgressFileReader(rt_zip_path, pbar)
+
+            upload_response = requests.put(
+                auth_data["presignedUrl"],
+                headers={
+                    "Content-Type": auth_data.get("contentType", "application/zip"),
+                    "Content-Length": str(file_size),
+                    "X-Bz-Content-Sha1": file_hash, # Required by B2
+                },
+                data=progress_reader
+            )
+            upload_response.raise_for_status()
+        finally:
+            if progress_reader:
+                progress_reader.close()
+            pbar.close()
+
+        print(f"✓ RT source uploaded successfully as {authorized_filename}")
+
+        # Joao's requested print:
+        print("\n--- Usage Example ---")
+        print(f"rt_folder = 'path/to/your/rt/source/folder'") # Replace with actual path variable if known
+        print(f"rt_zipped = zip(rt_folder)")
+        print(f"upload_rt_source(scenario_name='{scenario_name}', rt_zip_path=rt_zipped, key='YOUR_API_KEY')")
+        print("--------------------\n")
+
+        return True
+
+    except requests.exceptions.HTTPError as e:
+        print(f"API call failed: {e.response.status_code}")
+        try:
+            error_details = e.response.json()
+            print(f"Server Error: {error_details.get('message', e.response.text)}")
+        except ValueError:
+            print(f"Server Response: {e.response.text}")
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"Network or request error during RT upload: {str(e)}")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred during RT upload: {str(e)}")
+        return False
 
 def _download_url(scenario_name: str) -> str:
     """Get the secure download endpoint URL for a DeepMIMO scenario.
@@ -623,7 +720,6 @@ def _download_url(scenario_name: str) -> str:
 
     # Return the secure download endpoint URL with the filename as a parameter
     return f"{API_BASE_URL}/api/download/secure?filename={scenario_name}"
-
 
 def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[str]:
     """Download a DeepMIMO scenario from B2 storage.
