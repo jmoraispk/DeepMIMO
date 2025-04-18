@@ -1002,7 +1002,7 @@ def tsp_held_karp(dist_matrix):
 
 # Time the Held-Karp algorithm for n=3 to n=10
 results_held_karp = []
-for n in range(3, 15):
+for n in range(3, 17):
     dist_matrix = generate_random_dist_matrix(n)
     start_time = time.time()
     _, _ = tsp_held_karp(dist_matrix)
@@ -1010,3 +1010,26 @@ for n in range(3, 15):
     results_held_karp.append((n, duration))
 
 print(results_held_karp)
+
+# 14 points is the first to cross the 0.1 second mark.
+
+# beyond that we may start trimming points or partitioning roads. 
+# If there are roads longer than 14 that we can't trim, we may just not do it. 
+# I.e. Conversion without converting the roads. 
+# Otherwise it becomes a whole new problem. And buildings + plane is enough. 
+# Therefore, we may only support roads for a couple of locations. 
+# Also, if we include the blender screenshot, we might not even have to HAVE roads.
+
+# ------------------------------------------------------------------------------
+# DeepMIMO is not supposed to be a simulation of a real city. 
+# But an okay representation of it. The buildings don't have to be perfect. 
+# The roads don't have to be perfect. (or even existent!)
+# Better lightweight, simple, and fast conversion, than lossless, perfect, and slow.
+# We care about the ray tracing, not a perfect representation of the scene.
+# For that, people can use Blender. And we can include the blender file for the scene.
+
+#%%
+
+
+
+
