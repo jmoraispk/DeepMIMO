@@ -396,7 +396,7 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
         summary_str += f"- Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}\n"
 
     # GPS Bounding Box
-    if rt_params[c.RT_PARAM_GPS_BBOX] != (0,0,0,0):
+    if rt_params.get(c.RT_PARAM_GPS_BBOX, (0,0,0,0)) != (0,0,0,0):
         summary_str += "\n[GPS Bounding Box]\n"
         summary_str += f"- Min latitude: {rt_params[c.RT_PARAM_GPS_BBOX][0]:.2f}\n"
         summary_str += f"- Min longitude: {rt_params[c.RT_PARAM_GPS_BBOX][1]:.2f}\n"
