@@ -40,7 +40,7 @@ from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
 # from deepmimo.pipelines.sionna_rt.sionna_raytracer import raytrace_sionna
 
-# Paths
+# Absolute Paths
 # Windows versions
 OSM_ROOT = "C:/Users/jmora/Downloads/osm_root"
 BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender 3.6/blender-launcher.exe"
@@ -61,7 +61,7 @@ BUILDING_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Concrete 3.5 GHz.mtl")
 ROAD_MATERIAL_PATH = os.path.join(WI_MAT, "Asphalt_1GHz.mtl")
 TERRAIN_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Wet earth 3.5 GHz.mtl")
 
-COUNTER = 112
+COUNTER = 118
 #%% Step 1: (Optional) Generate CSV with GPS coordinates for map and basestation placement
 
 print('not implemented yet')
@@ -167,7 +167,7 @@ for index, row in df.iterrows():
 	dataset = dm.load(scen_name)[0]
 	dataset.plot_coverage(dataset.los)
 	dataset.plot_coverage(dataset.pwr[:, 0])
-	break
+	# break
 
 #%% ROAD PROCESSING ESSENTIAL FUNCTIONS
 
@@ -324,7 +324,7 @@ def compress_path(points, path, angle_threshold=1.0):
 
 #%% FULL EXAMPLE
 
-for i in [4]:#range(10):
+for i in [3]:#range(10):
 
     road_vertices = np.load(f'road_vertices_roads_{i}.npy')[:, :2]
     print(f"\nLoaded road vertices: {len(road_vertices)} points")
