@@ -145,8 +145,7 @@ def install_blender_addon(addon_name: str) -> None:
             LOGGER.info("📦 Mitsuba not found, installing mitsuba package")
             install_python_package('mitsuba==3.5.0')
             LOGGER.warning("🔄 Packages installed! Restarting Blender to update imports")
-            time.sleep(5)
-            sys.exit()
+            bpy.ops.wm.quit_blender()
 
 ###############################################################################
 # BLOSM (OpenStreetMap) UTILITIES
