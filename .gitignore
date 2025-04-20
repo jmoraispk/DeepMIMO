@@ -17,6 +17,7 @@ manuals/*
 *.png
 *.pptx
 *.mp4
+*.npy
 my_api_key.py
 
 # Development:
