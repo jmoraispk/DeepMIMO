@@ -271,20 +271,21 @@ def create_camera_and_render(output_path: str,
     output_folder = os.path.dirname(output_path)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
+        LOGGER.debug(f"📸 Created output folder = {output_folder}")
+
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.object.camera_add(location=location, rotation=rotation)
+    camera = bpy.context.active_object
+    scene.camera = camera
+    LOGGER.debug(f"📸 Camera = {camera}")
+    scene.render.filepath = output_path
+    LOGGER.debug(f"📸 Path = {scene.render.filepath}")
 
     try:
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.camera_add(location=location, rotation=rotation)
-        camera = bpy.context.active_object
-        scene.camera = camera
-        
-        LOGGER.debug(f"📸📸📸 Camera = {camera}")
-        scene.render.filepath = output_path
-        LOGGER.debug(f"📸📸📸 Camera ready")
         bpy.ops.render.render(write_still=True)
-        LOGGER.debug(f"📸📸📸 Camera Rendered -> deleting cam!")
-        
+        LOGGER.debug("📸 Camera Rendered -> deleting cam!")
         bpy.data.objects.remove(camera, do_unlink=True)
+        LOGGER.debug("📸 Camera deleted!")
     except Exception as e:
         error_msg = f"❌ Failed to render scene: {str(e)}"
         LOGGER.error(error_msg)

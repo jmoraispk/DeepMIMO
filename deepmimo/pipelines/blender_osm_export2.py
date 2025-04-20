@@ -88,7 +88,7 @@ convert_objects_to_mesh()
 
 # Render original scene (no processing)
 im_path = os.path.join(output_folder, 'figs', 'cam_org.png')
-# create_camera_and_render(im_path)
+create_camera_and_render(im_path)
 
 # Process buildings
 buildings = join_and_materialize_objects('building', 'buildings', building_material)
@@ -102,14 +102,14 @@ if buildings and buildings.type == 'MESH':
 
 # TODO: see if we can maintain the labels of the buildings and roads intact from osm extraction
 
-#add_building_materials(building_material)  # add materials
+# add_building_materials(building_material)  # add materials
 
 # Process roads
 terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=40)  # Increased padding to 50m
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
 
 # Render processed scene
-# create_camera_and_render(im_path.replace('.png', '_processed.png'))
+create_camera_and_render(im_path.replace('.png', '_processed.png'))
 
 # Export based on the selected format
 if "insite" in output_formats:
