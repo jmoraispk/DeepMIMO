@@ -9,9 +9,7 @@ import re
 import numpy as np
 from typing import List, Dict, Tuple
 from pathlib import Path
-from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 from ...scene import (
     PhysicalElement, 
@@ -175,23 +173,23 @@ class PhysicalObjectParser:
             vertices = np.array(vertices)
             # Use detailed mode for roads to preserve their geometry
             use_fast_mode = 'road' not in self.name.lower()
-            print(f"Using fast mode: {use_fast_mode} for {self.name}")
+            # print(f"Using fast mode: {use_fast_mode} for {self.name}")
             # Generate faces
             object_faces = get_object_faces(vertices, fast=use_fast_mode)
 
             # Special handling and analysis for roads
-            if 'road' in self.name.lower():
-                if object_faces is not None:
-                    # Visualize the road and its faces
-                    visualize_road_object(f"{self.name}_{i}", vertices, object_faces)
-                    print(f"✓ Generated {len(object_faces)} faces")
-                    print(f"  Visualization saved as 'road_debug_{self.name}_{i}.png'")
-                else:
-                    print("❌ Failed to generate faces")
-                    continue
-            else:
-                if object_faces is None:
-                    continue
+            # if 'road' in self.name.lower():
+            #     if object_faces is not None:
+            #         # Visualize the road and its faces
+            #         # visualize_road_object(f"{self.name}_{i}", vertices, object_faces)
+            #         print(f"✓ Generated {len(object_faces)} faces")
+            #         print(f"  Visualization saved as 'road_debug_{self.name}_{i}.png'")
+            #     else:
+            #         print("❌ Failed to generate faces")
+            #         continue
+            # else:
+            #     if object_faces is None:
+            #         continue
             
             # Convert faces to Face objects
             faces = [Face(vertices=face) for face in object_faces]
