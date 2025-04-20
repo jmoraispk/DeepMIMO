@@ -10,7 +10,7 @@ import shutil
 import requests
 import hashlib
 from tqdm import tqdm
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from . import consts as c
 from .general_utils import (
     get_scenarios_dir,
@@ -21,7 +21,7 @@ from .general_utils import (
     zip,
     unzip
 )
-import time
+import json
 
 API_BASE_URL = "https://dev.deepmimo.net"
 
@@ -121,15 +121,32 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[str]:
 
         # Return the authorized filename (not the local filename)
         # This ensures we're consistent with what was actually uploaded
-        return authorized_filename or filename
+        if upload_response.status_code == 200:
+            return authorized_filename or filename
+        else:
+            return None
 
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.HTTPError as e: # Catch HTTPError specifically
+        print(f"API call failed: {str(e)}") # Print standard HTTP error
+        if e.response is not None:
+            try:
+                # Try to parse the JSON response from the server
+                error_data = e.response.json()
+                # Extract the specific error message using the 'error' key
+                server_message = error_data.get('error', 'No specific error message found in JSON.')
+                print(f"Server Error ({e.response.status_code}): {server_message}")
+            except ValueError: # Handle cases where response body isn't valid JSON
+                print(f"Server Response ({e.response.status_code}): {e.response.text}") # Fallback to raw text
+        else:
+            print("API call failed without receiving a response from the server.")
+        return None
+    except requests.exceptions.RequestException as e: # Catch other network/request errors
         print(f"API call failed: {str(e)}")
         if hasattr(e, "response") and e.response:
-            print(f"Server response: {e.response.text}")
+            print(f"Server response: {json.loads(e.response.text)['error']}")
         return None
     except Exception as e:
-        print(f"Upload failed: {str(e)}")
+        print(f"Upload failed due to an unexpected error: {str(e)}")
         return None
 
 
@@ -369,7 +386,7 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
 
     if (len(img_paths) > 5):
         print("Warning: You cannot upload more than 5 images to a submission.")
-        return []
+        return [] 
 
     uploaded_image_objects = []
     # Endpoint URL structure
@@ -377,14 +394,14 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
     
     # Image type mapping for default titles/descriptions
     image_types = {
-        'los.png': {
-            'heading': 'Line of Sight',
-            'description': 'Line of sight coverage for the scenario'
-        },
-        'power.png': {
-            'heading': 'Power Distribution',
-            'description': 'Signal power distribution across the scenario'
-        },
+        # 'los.png': {
+        #     'heading': 'Line of Sight',
+        #     'description': 'Line of sight coverage for the scenario'
+        # },
+        # 'power.png': {
+        #     'heading': 'Power Distribution',
+        #     'description': 'Signal power distribution across the scenario'
+        # },
         'scene.png': {
             'heading': 'Scenario Layout',
             'description': 'Physical layout of the scenario'
@@ -393,8 +410,17 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
 
     print(f"Attempting to upload {len(img_paths)} images for scenario '{scenario_name}'...")
 
-    for i, img_path in enumerate(tqdm(img_paths, desc="Uploading images individually")):
+    # Initialize tqdm manually before the loop
+    pbar = tqdm(total=len(img_paths), desc="Uploading images", unit="image")
+    
+    # Iterate directly over img_paths
+    for i, img_path in enumerate(img_paths):
         filename = os.path.basename(img_path)
+        filesize = os.path.getsize(img_path)
+
+        if filesize > 10 * 1024 * 1024:
+            print(f"Warning: Image {filename} is too large to upload. Skipping...")
+            continue
 
         try:
             # Get default metadata or create generic ones
@@ -404,52 +430,40 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
             })
 
             # Prepare form data
-            files = {'image': (filename, open(img_path, 'rb'), 'image/png')} # Key is 'image' now
-            data = {
-                'heading': default_info['heading'],
-                'description': default_info['description']
-            }
+            with open(img_path, 'rb') as img_file:
+                files = {'image': (filename, img_file, 'image/png')} # Key is 'image' now
+                data = {
+                    'heading': default_info['heading'],
+                    'description': default_info['description']
+                }
 
-            # Make the POST request to the new endpoint for each image
-            response = requests.post(
-                upload_url_template,
-                headers={"Authorization": f"Bearer {key}"},
-                files=files,
-                data=data # Send heading/description in form data
-            )
-            
-            # Check response status
+                # Make the POST request to the new endpoint for each image
+                response = requests.post(
+                    upload_url_template,
+                    headers={"Authorization": f"Bearer {key}"},
+                    files=files,
+                    data=data # Send heading/description in form data
+                )
+
             response.raise_for_status() # Raises HTTPError for bad responses (4xx or 5xx)
 
             # If successful, server returns the metadata of the uploaded image
             result = response.json()
             uploaded_image_objects.append(result)
             print(f"✓ Successfully uploaded and attached: {filename}")
-
-        except requests.exceptions.HTTPError as e:
-            # Handle specific errors from the server
-            if e.response.status_code == 400:
-                try:
-                    error_data = e.response.json()
-                    print(f"✗ Failed to upload {filename}: {error_data.get('message', e.response.text)} (Server rejected)")
-                except ValueError: # Handle cases where response is not JSON
-                     print(f"✗ Failed to upload {filename}: {e.response.status_code} - {e.response.text} (Server rejected)")
-                # If the error is max images reached, we can stop trying
-                if "Maximum number of images" in e.response.text:
-                    print("Maximum image limit reached on server. Stopping further uploads.")
-                    break
-            elif e.response.status_code == 404:
-                 print(f"✗ Failed to upload {filename}: Submission '{scenario_name}' not found or not accessible.")
-                 # If submission not found, no point continuing
-                 break
-            else:
-                print(f"✗ Failed to upload {filename}: HTTP Error {e.response.status_code} - {e.response.text}")
-        except requests.exceptions.RequestException as e:
-            # Handle connection errors, timeouts, etc.
-            print(f"✗ Network error uploading image {filename}: {str(e)}")
+            
+            # Update the progress bar ONLY after successful upload
+            pbar.update(1)
         except Exception as e:
-            # Handle other potential errors (e.g., file reading issues)
-            print(f"✗ Unexpected error uploading image {filename}: {str(e)}")
+            if e.response is not None: 
+                server_message = json.loads(e.response.text)["error"]
+                print(f"✗ Failed to upload {filename}: {server_message} (Server Response Code: {e.response.status_code})")
+            else:
+                # Handle cases where the error didn't have a response object
+                 print(f"✗ Failed to upload {filename}: {e}")
+
+    # Close the progress bar after the loop finishes or breaks
+    pbar.close()
 
     # No need for the final PUT request to update the submission, server handles it per image.
 
@@ -472,14 +486,15 @@ def _upload_to_b2(scen_folder: str, key: str, skip_zip: bool = False) -> str:
     except Exception as e:
         print(f"Error: Failed to upload to storage - {str(e)}")
 
-    if not upload_result or "filename" not in upload_result:
+    if not upload_result:
+        print(f"Error: Failed to upload to B2")
         raise RuntimeError("Failed to upload to B2")
     print("✓ Upload successful")
 
-    submission_scenario_name = upload_result["filename"].split(".")[0].split("/")[-1].split("\\")[-1]
+    submission_scenario_name = upload_result.split(".")[0].split("/")[-1].split("\\")[-1]
     return submission_scenario_name
     
-def _make_submission_on_server(submission_scenario_name: str, key: str, params_dict: dict, details: list[str], extra_metadata: dict) -> str:
+def _make_submission_on_server(submission_scenario_name: str, key: str, params_dict: dict, details: list[str], extra_metadata: dict, include_images: bool = True) -> str:
     """Make a submission on the server."""
 
     try:
@@ -487,7 +502,8 @@ def _make_submission_on_server(submission_scenario_name: str, key: str, params_d
         processed_params = _process_params_data(params_dict, extra_metadata)
         key_components = _generate_key_components(summary(submission_scenario_name, print_summary=False))
     except Exception as e:
-        raise RuntimeError(f"Error: Failed to process parameters and generate key components - {str(e)}")
+        print(f"Error: Failed to process parameters and generate key components")
+        raise RuntimeError(f"Failed to process parameters and generate key components - {str(e)}")
 
     submission_data = {
         "title": submission_scenario_name,
@@ -512,8 +528,43 @@ def _make_submission_on_server(submission_scenario_name: str, key: str, params_d
         print('The admins have been notified and will get to it ASAP.')
     
     except Exception as e:
-        raise RuntimeError(f"Error: Failed to create submission - {str(e)}")
+        print(f"Error: Failed to create submission for {submission_scenario_name}")
+        print(json.loads(response.text)["error"])
+        raise RuntimeError(f"Failed to create submission - {str(e)}")
     
+    # Generate and upload images if requested
+    if include_images:
+        print("Generating scenario visualizations...")
+        try:
+            img_paths = make_imgs(submission_scenario_name)
+            if img_paths:
+                uploaded_images_meta = upload_images(submission_scenario_name, key, img_paths)
+                print(f"Image upload process completed. {len(uploaded_images_meta)} images attached.")
+
+        except Exception as e:
+            print(f"Warning: Failed during image generation or upload phase")
+        finally:
+            # Clean up locally generated temporary image files
+            if img_paths:
+                print("Cleaning up local image files...")
+                cleaned_count = 0
+                for img_path in img_paths:
+                    try:
+                        if os.path.exists(img_path):
+                            os.remove(img_path)
+                            cleaned_count += 1
+                    except Exception as e:
+                        print(f"Warning: Failed to clean up image {img_path}: {str(e)}")
+                print(f"Cleaned up {cleaned_count} local image files.")
+                # Clean up the 'figures' directory if it's empty
+                temp_dir = 'figures'
+                try:
+                    if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                        os.rmdir(temp_dir)
+                        print(f"Removed empty directory: {temp_dir}")
+                except Exception as e:
+                    print(f"Warning: Failed to remove directory {temp_dir}: {str(e)}")
+
     return submission_scenario_name
 
 def upload(scenario_name: str, key: str,
@@ -558,47 +609,15 @@ def upload(scenario_name: str, key: str,
         params_dict = load_dict_from_json(params_path)
         print("✓ Parameters parsed successfully")
     except Exception as e:
-        raise RuntimeError(f"Error: Failed to parse parameters - {str(e)}")
+        print(f"Error: Failed to parse parameters")
+        raise RuntimeError(f"Failed to parse parameters - {str(e)}")
 
     if not submission_only:
         submission_scenario_name = _upload_to_b2(scen_folder, key, skip_zip)
     else:
         submission_scenario_name = scenario_name
 
-    _make_submission_on_server(submission_scenario_name, key, params_dict, details, extra_metadata)
-
-    # Generate and upload images if requested
-    if include_images:
-        print("Generating scenario visualizations...")
-        try:
-            img_paths = make_imgs(scenario_name)
-            if img_paths:
-                uploaded_images_meta = upload_images(submission_scenario_name, key, img_paths)
-                print(f"Image upload process completed. {len(uploaded_images_meta)} images attached.")
-
-        except Exception as e:
-            raise RuntimeError(f"Warning: Failed during image generation or upload phase: {str(e)}")
-        finally:
-            # Clean up locally generated temporary image files
-            if img_paths:
-                print("Cleaning up local image files...")
-                cleaned_count = 0
-                for img_path in img_paths:
-                    try:
-                        if os.path.exists(img_path):
-                            os.remove(img_path)
-                            cleaned_count += 1
-                    except Exception as e:
-                        print(f"Warning: Failed to clean up image {img_path}: {str(e)}")
-                print(f"Cleaned up {cleaned_count} local image files.")
-                # Clean up the 'figures' directory if it's empty
-                temp_dir = 'figures'
-                try:
-                    if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                        os.rmdir(temp_dir)
-                        print(f"Removed empty directory: {temp_dir}")
-                except Exception as e:
-                    print(f"Warning: Failed to remove directory {temp_dir}: {str(e)}")
+    _make_submission_on_server(submission_scenario_name, key, params_dict, details, extra_metadata, include_images)
 
     # Return the scenario name used for submission
     return submission_scenario_name
@@ -691,7 +710,7 @@ def upload_rt_source(scenario_name: str, rt_zip_path: str, key: str) -> bool:
         print(f"API call failed: {e.response.status_code}")
         try:
             error_details = e.response.json()
-            print(f"Server Error: {error_details.get('message', e.response.text)}")
+            print(f"Server Error: {error_details.get('error', e.response.text)}")
         except ValueError:
             print(f"Server Response: {e.response.text}")
         return False
@@ -811,7 +830,7 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
 
     return output_path 
 
-def search(query: Dict) -> Optional[Dict]:
+def search(query: Dict) -> Optional[List[str]]:
     """
     Search for scenarios in the DeepMIMO database.
 
@@ -846,11 +865,11 @@ def search(query: Dict) -> Optional[Dict]:
         data = response.json()
         return data['scenarios']
     except requests.exceptions.HTTPError as e:
-        print(f"HTTP Error: {e}")
+        print(f"HTTP Error: {str(e)}")
         if hasattr(e.response, 'text'):
             try:
                 error_data = e.response.json()
-                print(f"Server error details: {error_data.get('message', e.response.text)}")
+                print(f"Server error details: {error_data.get('error', e.response.text)}")
             except:
                 print(f"Server response: {e.response.text}")
         return None
