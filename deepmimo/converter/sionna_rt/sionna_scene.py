@@ -69,7 +69,8 @@ def read_scene(load_folder: str, material_indices: List[int]) -> Scene:
                 object_vertices.append(vertex_tuple)
             
             # Generate faces using convex hull approach
-            generated_faces = get_object_faces(object_vertices)
+            use_fast_mode = 'road' not in name.lower()
+            generated_faces = get_object_faces(object_vertices, fast=use_fast_mode)
             
             # Create Face objects with material indices
             object_faces = []

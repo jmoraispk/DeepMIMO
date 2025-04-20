@@ -3,6 +3,7 @@ Blender Script: Convert OSM Data to PLY Files (Folder Naming Based on Bounding B
 Each scenario's output is stored in a folder named after its bounding box.
 """
 
+#%%
 import bpy # type: ignore
 import os
 import sys
@@ -29,35 +30,19 @@ from utils.blender_utils import (
     get_xy_bounds_from_latlon
 )
 
+minlat = 40.68503298
+minlon = -73.84682129
+maxlat = 40.68597435
+maxlon = -73.84336302
+output_folder = "C:/Users/jmora/Downloads/osm_root/city_0_newyork_3p5_119"
+output_formats = ["insite"]#, "sionna"] if output_fmt == "both" else [output_fmt]
+
+
+
+#%%
 # Setup logging to both console and file (great for debugging)
 logger = log_local_setup('logging_blender_osm.txt')
 set_LOGGER(logger)  # So the inner functions can log
-
-# Parse command-line arguments
-try:
-    minlat = float(sys.argv[sys.argv.index("--minlat") + 1])
-    minlon = float(sys.argv[sys.argv.index("--minlon") + 1])
-    maxlat = float(sys.argv[sys.argv.index("--maxlat") + 1])
-    maxlon = float(sys.argv[sys.argv.index("--maxlon") + 1])
-    output_folder = sys.argv[sys.argv.index("--output") + 1]
-    
-    output_formats = ["insite"] # Default format
-    if "--format" in sys.argv:
-        output_fmt = sys.argv[sys.argv.index("--format") + 1]
-
-        valid_formats = ["insite", "sionna", "both"]
-        if output_fmt not in valid_formats:
-            err = f"❌ Invalid format: {output_fmt}. Valid formats are: {', '.join(valid_formats)}"
-            logger.error(err)
-            raise Exception(err)
-        
-        output_formats = ["insite", "sionna"] if output_fmt == "both" else [output_fmt]
-    
-except (ValueError, IndexError):
-    err = "❌ Invalid input format. Provide explicit coordinates " \
-          "(--minlat --minlon --maxlat --maxlon) and --output for custom output directory."
-    logger.error(err)
-    raise Exception(err)
 
 # Create output directory if it doesn't exist
 os.makedirs(output_folder, exist_ok=True)
@@ -74,6 +59,7 @@ install_blender_addon('blosm')
 if "sionna" in output_formats:
     install_blender_addon('mitsuba-blender')
 
+#%%
 # Configure & Fetch OSM data
 configure_osm_import(output_folder, minlat, maxlat, minlon, maxlon)
 bpy.ops.blosm.import_data()
@@ -102,7 +88,7 @@ convert_objects_to_mesh()
 
 # Render original scene (no processing)
 im_path = os.path.join(output_folder, 'figs', 'cam_org.png')
-# create_camera_and_render(im_path)
+create_camera_and_render(im_path)
 
 # Process buildings
 buildings = join_and_materialize_objects('building', 'buildings', building_material)
@@ -116,14 +102,14 @@ if buildings and buildings.type == 'MESH':
 
 # TODO: see if we can maintain the labels of the buildings and roads intact from osm extraction
 
-#add_building_materials(building_material)  # add materials
+# add_building_materials(building_material)  # add materials
 
 # Process roads
 terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=40)  # Increased padding to 50m
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
 
 # Render processed scene
-# create_camera_and_render(im_path.replace('.png', '_processed.png'))
+create_camera_and_render(im_path.replace('.png', '_processed.png'))
 
 # Export based on the selected format
 if "insite" in output_formats:

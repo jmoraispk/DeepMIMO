@@ -11,9 +11,13 @@
 deepmimo_scenarios*
 
 # Artifacts
+**/osm_root/*
+**/blender_addons/*
 manuals/*
+*.png
 *.pptx
 *.mp4
+*.npy
 my_api_key.py
 
 # Development:

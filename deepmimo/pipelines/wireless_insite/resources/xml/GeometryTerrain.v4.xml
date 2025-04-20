@@ -1,11 +1,11 @@
 <Geometry>
-  <remcom::rxapi::City>
+  <remcom::rxapi::Terrain>
     <GeometrySource>
       <remcom::rxapi::WirelessInSiteGeometry>
         <Filename>
           <remcom::rxapi::FileDescription>
             <Filename>
-              <remcom::rxapi::String Value="./pathto.city"/>
+              <remcom::rxapi::String Value="./pathto.ter"/>
             </Filename>
             <FilenameChecksum>
               <remcom::rxapi::String/>
@@ -16,6 +16,9 @@
           <remcom::rxapi::MaterialList>
             <Material>
               <remcom::rxapi::DielectricHalfspace>
+                <Volumetric>
+                  <remcom::rxapi::Boolean Value="false"/>
+                </Volumetric>
                 <DielectricLayer>
                   <remcom::rxapi::DielectricLayer>
                     <Conductivity>
@@ -75,5 +78,5 @@
         </MaterialList>
       </remcom::rxapi::WirelessInSiteGeometry>
     </GeometrySource>
-  </remcom::rxapi::City>
+  </remcom::rxapi::Terrain>
 </Geometry>

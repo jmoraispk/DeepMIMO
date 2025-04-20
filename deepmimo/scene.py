@@ -18,6 +18,7 @@ Module Organization:
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import itertools
 from scipy.spatial import ConvexHull
 from scipy.io import savemat, loadmat
 from typing import List, Dict, Tuple, Literal, Optional, Set
@@ -831,6 +832,29 @@ def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float
     Returns:
         List of faces, where each face is a list of (x,y,z) vertex coordinates
     """
+    # For roads or thin objects, use a different approach
+    # Check if object is flat by comparing height variation to object dimensions
+    height_variation = np.std(vertices[:, 2])
+    xy_extent = np.max(vertices[:, :2], axis=0) - np.min(vertices[:, :2], axis=0)
+    min_xy_extent = np.min(xy_extent[xy_extent > 0])  # Smallest non-zero extent
+    if height_variation < 0.1 * min_xy_extent:  # If height variation is small relative to xy dimensions
+        # Project to 2D, get convex hull of outline
+        points_2d = vertices[:, :2]
+        try:
+            hull = ConvexHull(points_2d)
+            # Create face using original z-coordinates
+            face_vertices = [(vertices[i, 0], vertices[i, 1], vertices[i, 2]) 
+                           for i in hull.vertices]
+        except Exception as e:
+            if np.linalg.matrix_rank(points_2d - points_2d[0]) < 2:
+                print('Convex hull failed - collinear vertices')
+                return None
+            else:
+                raise e
+        
+        return [face_vertices]  # Single face for flat objects
+
+    # For regular 3D objects, use the original approach
     # Extract base points (x,y coordinates)
     points_2d = vertices[:, :2]
     
@@ -868,93 +892,167 @@ def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float
     
     return [bottom_face, top_face] + side_faces
 
-def _get_faces_coplanar(vertices: np.ndarray) -> List[List[Tuple[float, float, float]]]:
-    """Generate faces by detecting coplanar sets (detailed but slower).
+# Function to calculate angle deviation
+def calculate_angle_deviation(p1, p2, p3):
+    """Calculate the deviation from a straight line at point p2.
+    Returns angle in degrees, where:
+    - 0° means the path p1->p2->p3 forms a straight line
+    - 180° means the path doubles back on itself
+    """
+    if np.allclose(p1, p2) or np.allclose(p2, p3):
+        return 180.0
+    v1 = p2 - p1  # Vector from p1 to p2
+    v2 = p3 - p2  # Vector from p2 to p3
+    v1_norm = v1 / np.linalg.norm(v1)
+    v2_norm = v2 / np.linalg.norm(v2)
+    dot_product = np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0)
+
+    return np.degrees(np.arccos(dot_product))
+
+# Intersection check for line segments
+def segments_intersect(p1, p2, q1, q2):
+    def ccw(a, b, c):
+        return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
+    return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
+
+# Held-Karp TSP with angle penalty + intersection check
+def tsp_held_karp_no_intersections(points):
+    n = len(points)
+    C = {}
+    
+    for k in range(1, n):
+        dist = np.linalg.norm(points[0] - points[k])
+        C[(1 << k, k)] = (dist, [0, k])
+
+    for subset_size in range(2, n):
+        for subset in itertools.combinations(range(1, n), subset_size):
+            bits = sum(1 << x for x in subset)
+            for k in subset:
+                prev_bits = bits & ~(1 << k)
+                res = []
+                for m in subset:
+                    if m == k:
+                        continue
+                    prev_cost, prev_path = C.get((prev_bits, m), (float('inf'), []))
+                    if not prev_path:
+                        continue
+                    # Check for intersections
+                    new_seg = (points[m], points[k])
+                    intersects = False
+                    for i in range(len(prev_path) - 2):
+                        a, b = prev_path[i], prev_path[i + 1]
+                        if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
+                            intersects = True
+                            break
+                    if intersects:
+                        continue
+                    angle_cost = calculate_angle_deviation(points[prev_path[-2]], points[m], points[k]) if len(prev_path) > 1 else 0
+                    cost = prev_cost + np.linalg.norm(points[m] - points[k]) + angle_cost
+                    res.append((cost, prev_path + [k]))
+                if res:
+                    C[(bits, k)] = min(res)
+
+    bits = (1 << n) - 2
+    res = []
+    for k in range(1, n):
+        if (bits, k) not in C:
+            continue
+        cost, path = C[(bits, k)]
+        new_seg = (points[k], points[0])
+        intersects = False
+        for i in range(len(path) - 2):
+            a, b = path[i], path[i + 1]
+            if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
+                intersects = True
+                break
+        if intersects:
+            continue
+        angle_cost = calculate_angle_deviation(points[path[-2]], points[k], points[0])
+        final_cost = cost + np.linalg.norm(points[k] - points[0]) + angle_cost
+        res.append((final_cost, path + [0]))
+
+    return min(res) if res else (float('inf'), [])
+
+def trim_points(points, max_points=14):
+    """ Deletes the point that is closest to the average of all points. """
+    while len(points) > max_points:
+        dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
+        np.fill_diagonal(dists, np.inf)
+        _, j = np.unravel_index(np.argmin(dists), dists.shape)
+        points = np.delete(points, j, axis=0)
+    return points
+
+def compress_path(points, path, angle_threshold=1.0):
+    """Compress a path by removing points that are nearly collinear with their neighbors.
+    
+    Args:
+        points: Array of point coordinates (N x 2)
+        path: List of indices forming the path
+        angle_threshold: Minimum angle deviation (in degrees) to keep a point
+        
+    Returns:
+        List of indices forming the compressed path
+    """
+    if len(path) <= 3:  # Can't compress paths with 3 or fewer points
+        return path
+        
+    # We'll build the compressed path starting with the first point
+    compressed = [path[0]]
+    
+    # Iterate through interior points (skip first and last)
+    for i in range(1, len(path)-1):
+        # Get the previous, current, and next points
+        prev_idx = compressed[-1]  # Last point in compressed path
+        curr_idx = path[i]        # Current point we're considering
+        next_idx = path[i+1]      # Next point in original path
+        
+        # Calculate angle at current point
+        angle = calculate_angle_deviation(
+            points[prev_idx],
+            points[curr_idx],
+            points[next_idx]
+        )
+        
+        # If angle is significant (> threshold), keep the point
+        if angle > angle_threshold:
+            compressed.append(curr_idx)
+    
+    # Always add the last point to close the loop
+    compressed.append(path[-1])
+    
+    return compressed
+
+def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int = 11,
+                 compress: bool = False, angle_threshold: float = 1.0) -> List[Tuple[float, float, float]]:
+    """Generate a 2D face from a set of vertices.
     
     Args:
         vertices: Array of vertex coordinates (shape: N x 3)
+        z_tolerance: Tolerance for z-coordinate variation - targetted for roads
+        max_points: Maximum number of points to consider
+        angle_threshold: Angle threshold for collinearity
         
     Returns:
-        List of faces, where each face is a list of (x,y,z) vertex coordinates
+        List of (x,y,z) vertex coordinates for the face
     """
-    def are_coplanar(points, tolerance=1e-10):
-        """Check if points are coplanar by checking rank of centered points."""
-        if len(points) < 3:
-            return True
-        centered = points - points.mean(axis=0)
-        _, s, _ = np.linalg.svd(centered)
-        return s[2] < tolerance
+    # Ensure vertices are 2D (simple test - if z-coordinates are within tolerance)
+    if not np.allclose(vertices[:, 2], vertices[0, 2], atol=z_tolerance):
+        raise ValueError("Vertices are not 2D")
     
-    def get_face_normal(points):
-        """Get normal vector of a face using first three points."""
-        v1 = points[1] - points[0]
-        v2 = points[2] - points[0]
-        normal = np.cross(v1, v2)
-        return normal / np.linalg.norm(normal)
+    # Filter points and convert to 2D (by discarding z-coordinate)
+    points_filtered = trim_points(vertices, max_points=max_points)
+
+    _, best_path = tsp_held_karp_no_intersections(points_filtered[:, :2])
+    # print(f"Best path: {best_path}")
+    # plot_points(points_filtered, best_path, title="filtered")
+    if compress:
+        compressed_path = compress_path(points_filtered, best_path, angle_threshold=angle_threshold)
+        final_points = points_filtered[compressed_path[:-1]]
+    else:
+        final_points = points_filtered[best_path[:-1]]
     
-    def points_to_2d(points, normal):
-        """Project 3D points onto their best-fit plane."""
-        # Find rotation matrix to rotate normal to z-axis
-        z_axis = np.array([0, 0, 1])
-        if np.allclose(normal, z_axis) or np.allclose(normal, -z_axis):
-            rotation = np.eye(3)
-        else:
-            rotation_axis = np.cross(normal, z_axis)
-            rotation_axis /= np.linalg.norm(rotation_axis)
-            cos_theta = np.dot(normal, z_axis)
-            theta = np.arccos(cos_theta)
-            
-            # Rodrigues rotation formula
-            K = np.array([[0, -rotation_axis[2], rotation_axis[1]],
-                         [rotation_axis[2], 0, -rotation_axis[0]],
-                         [-rotation_axis[1], rotation_axis[0], 0]])
-            rotation = np.eye(3) + np.sin(theta) * K + (1 - cos_theta) * K @ K
-        
-        # Project points to 2D
-        rotated = points @ rotation.T
-        return rotated[:, :2]
-    
-    def order_vertices_2d(points_2d):
-        """Order vertices counter-clockwise around their centroid."""
-        center = points_2d.mean(axis=0)
-        angles = np.arctan2(points_2d[:, 1] - center[1],
-                           points_2d[:, 0] - center[0])
-        return np.argsort(angles)
-    
-    # Initialize faces list
-    faces = []
-    unprocessed = set(range(len(vertices)))
-    
-    # Process vertices until all are assigned to faces
-    while unprocessed:
-        # Start new face with first unprocessed vertex
-        current = list(unprocessed)[0]
-        face_vertices = [current]
-        coplanar_points = [vertices[current]]
-        
-        # Find all coplanar vertices
-        for idx in list(unprocessed - {current}):
-            test_points = np.array(coplanar_points + [vertices[idx]])
-            if are_coplanar(test_points):
-                face_vertices.append(idx)
-                coplanar_points.append(vertices[idx])
-        
-        # Convert to numpy array for easier manipulation
-        coplanar_points = np.array(coplanar_points)
-        
-        # Get face normal and project to 2D
-        normal = get_face_normal(coplanar_points)
-        points_2d = points_to_2d(coplanar_points, normal)
-        
-        # Order vertices counter-clockwise
-        order = order_vertices_2d(points_2d)
-        ordered_vertices = [tuple(vertices[face_vertices[i]]) for i in order]
-        
-        # Add face and update unprocessed set
-        faces.append(ordered_vertices)
-        unprocessed -= set(face_vertices)
-    
-    return faces
+    return [final_points]  # Return as list of faces (single face)
+
 
 def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = True) -> List[List[Tuple[float, float, float]]]:
     """Generate faces for a physical object from its vertices.
@@ -984,7 +1082,28 @@ def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = Tr
     if fast:
         faces = _get_faces_convex_hull(vertices)
     else:
-        faces = _get_faces_coplanar(vertices)
+        faces = _get_2d_face(vertices)
     
     return faces
 
+if __name__ == "__main__":
+    # Test the functions
+    points = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
+    path = [0, 1, 2, 3]
+    compressed = compress_path(points, path)
+    print(compressed)
+
+    # Plot helper
+    def plot_points(points, path=None, title=""):
+        plt.figure(figsize=(8, 6))
+        plt.scatter(points[:, 0], points[:, 1], color='blue')
+        for i, (x, y) in enumerate(points):
+            plt.text(x + 1, y + 1, str(i), fontsize=9)
+        if path:
+            for i in range(len(path) - 1):
+                p1, p2 = points[path[i]], points[path[i+1]]
+                plt.plot([p1[0], p2[0]], [p1[1], p2[1]], 'r-')
+        plt.title(title)
+        plt.axis('equal')
+        plt.grid(True)
+        plt.show()

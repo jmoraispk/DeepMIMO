@@ -6,7 +6,6 @@ Many of them will only work inside Blender.
 import math
 import os
 import subprocess
-import time
 import sys
 import requests
 import logging
@@ -14,7 +13,6 @@ from typing import Optional, List, Any
 
 # Blender imports
 import bpy # type: ignore
-import bmesh # type: ignore
 import mathutils # type: ignore (comes with blender)  # noqa: E402
 
 ADDONS = {
@@ -65,11 +63,6 @@ def set_LOGGER(logger: Any) -> None:
 ###############################################################################
 # ADD-ON INSTALLATION UTILITIES
 ###############################################################################
-
-def install_all_addons() -> None:
-    """Install all addons from the ADDON_URLS dictionary."""
-    for addon_name, _ in ADDONS.items():
-        install_blender_addon(addon_name)
 
 def download_addon(addon_name: str) -> str:
     """Download a file from a URL and save it to a local path."""
@@ -145,8 +138,7 @@ def install_blender_addon(addon_name: str) -> None:
             LOGGER.info("📦 Mitsuba not found, installing mitsuba package")
             install_python_package('mitsuba==3.5.0')
             LOGGER.warning("🔄 Packages installed! Restarting Blender to update imports")
-            time.sleep(5)
-            sys.exit()
+            bpy.ops.wm.quit_blender()
 
 ###############################################################################
 # BLOSM (OpenStreetMap) UTILITIES
@@ -279,19 +271,21 @@ def create_camera_and_render(output_path: str,
     output_folder = os.path.dirname(output_path)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
+        LOGGER.debug(f"📸 Created output folder = {output_folder}")
+
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.object.camera_add(location=location, rotation=rotation)
+    camera = bpy.context.active_object
+    scene.camera = camera
+    LOGGER.debug(f"📸 Camera = {camera}")
+    scene.render.filepath = output_path
+    LOGGER.debug(f"📸 Path = {scene.render.filepath}")
 
     try:
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.camera_add(location=location, rotation=rotation)
-        camera = bpy.context.active_object
-        scene.camera = camera
-        
-        scene.render.filepath = output_path
         bpy.ops.render.render(write_still=True)
-        
-        bpy.ops.object.select_all(action='DESELECT')
-        camera.select_set(True)
-        bpy.ops.object.delete()
+        LOGGER.debug("📸 Camera Rendered -> deleting cam!")
+        bpy.data.objects.remove(camera, do_unlink=True)
+        LOGGER.debug("📸 Camera deleted!")
     except Exception as e:
         error_msg = f"❌ Failed to render scene: {str(e)}"
         LOGGER.error(error_msg)
@@ -301,7 +295,9 @@ def create_camera_and_render(output_path: str,
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
-REJECTED_ROADS = ['map.osm_roads_unclassified', 'map.osm_paths_footway', 'profile_']
+REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_secondary', 'roads_tertiary',
+                          'paths_footway', 'roads_service''profile_']
+
 ACCEPTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_residential']
 
 def create_ground_plane(min_lat: float, max_lat: float, 
@@ -421,9 +417,7 @@ def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float,
         bpy.ops.object.modifier_apply(modifier=bool_mod.name)
         
         # Delete the bounding box
-        bpy.ops.object.select_all(action='DESELECT')
-        bound_box.select_set(True)
-        bpy.ops.object.delete()
+        bpy.data.objects.remove(bound_box, do_unlink=True)
         
         LOGGER.info(f"Final face count for {obj.name}: {len(obj.data.polygons)}")
         
@@ -469,11 +463,9 @@ def process_roads(terrain_bounds, road_material):
     # Define which roads to reject and which to accept
     if road_objs:
         for obj in road_objs:
-            if obj.name in REJECTED_ROADS:
+            if any(keyword in obj.name for keyword in REJECTED_ROAD_KEYWORDS):
                 LOGGER.debug(f"❌ Rejecting road: {obj.name}")
-                bpy.ops.object.select_all(action='DESELECT')
-                obj.select_set(True)
-                bpy.ops.object.delete()
+                bpy.data.objects.remove(obj, do_unlink=True)
                 continue
                 
             if obj.name not in ACCEPTED_ROADS:
