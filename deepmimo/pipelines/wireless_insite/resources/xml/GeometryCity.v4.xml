@@ -16,6 +16,9 @@
           <remcom::rxapi::MaterialList>
             <Material>
               <remcom::rxapi::DielectricHalfspace>
+                <Volumetric>
+                  <remcom::rxapi::Boolean Value="false"/>
+                </Volumetric>
                 <DielectricLayer>
                   <remcom::rxapi::DielectricLayer>
                     <Conductivity>

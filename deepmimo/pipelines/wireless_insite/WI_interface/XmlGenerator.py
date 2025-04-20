@@ -84,14 +84,14 @@ class XmlGenerator:
         tx_point_path = os.path.join(self.xml_template_folder, "TxRxPoint.xml")
         tx_grid_path = os.path.join(self.xml_template_folder, "TxRxGrid.xml")
 
+        if self.version >= 4:
+            paths_to_replace = [tx_point_path, tx_grid_path, geometry_city_path, geometry_terrain_path]
+            for path in paths_to_replace:
+                path = path.replace('.xml', '.v4.xml')
+        
         self.antenna_template_xml = etree.parse(antenna_path, XML_PARSER)
         self.geometry_city_template_xml = etree.parse(geometry_city_path, XML_PARSER)
         self.geometry_terrain_template_xml = etree.parse(geometry_terrain_path, XML_PARSER)
-
-        if self.version >= 4:
-            tx_point_path = tx_point_path.replace('.xml', '.v4.xml')
-            tx_grid_path = tx_grid_path.replace('.xml', '.v4.xml')
-
         self.txrx_point_template_xml = etree.parse(tx_point_path, XML_PARSER)
         self.txrx_grid_template_xml = etree.parse(tx_grid_path, XML_PARSER)
 
