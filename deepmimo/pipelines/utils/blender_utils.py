@@ -294,7 +294,9 @@ def create_camera_and_render(output_path: str,
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
-REJECTED_ROADS = ['map.osm_roads_unclassified', 'map.osm_paths_footway', 'profile_']
+REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_secondary', 'roads_tertiary',
+                          'paths_footway', 'roads_service''profile_']
+
 ACCEPTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_residential']
 
 def create_ground_plane(min_lat: float, max_lat: float, 
@@ -460,7 +462,7 @@ def process_roads(terrain_bounds, road_material):
     # Define which roads to reject and which to accept
     if road_objs:
         for obj in road_objs:
-            if obj.name in REJECTED_ROADS:
+            if any(keyword in obj.name for keyword in REJECTED_ROAD_KEYWORDS):
                 LOGGER.debug(f"❌ Rejecting road: {obj.name}")
                 bpy.data.objects.remove(obj, do_unlink=True)
                 continue
