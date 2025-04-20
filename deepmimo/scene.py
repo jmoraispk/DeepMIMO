@@ -1022,8 +1022,8 @@ def compress_path(points, path, angle_threshold=1.0):
     
     return compressed
 
-def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, 
-                 max_points: int = 11, angle_threshold: float = 1.0) -> List[Tuple[float, float, float]]:
+def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int = 11,
+                 compress: bool = False, angle_threshold: float = 1.0) -> List[Tuple[float, float, float]]:
     """Generate a 2D face from a set of vertices.
     
     Args:
@@ -1045,14 +1045,13 @@ def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1,
     _, best_path = tsp_held_karp_no_intersections(points_filtered[:, :2])
     # print(f"Best path: {best_path}")
     # plot_points(points_filtered, best_path, title="filtered")
-
-    compressed_path = compress_path(points_filtered, best_path, angle_threshold=angle_threshold)
-    # print(f"Compressed path: {compressed_path}")
-    # length_compressed, length_raw = len(compressed_path) - 1, len(best_path) - 1
-    # print(f"Length compressed: {length_compressed}, length raw: {length_raw}")
-    points_compressed = points_filtered[compressed_path[:-1]]
+    if compress:
+        compressed_path = compress_path(points_filtered, best_path, angle_threshold=angle_threshold)
+        final_points = points_filtered[compressed_path[:-1]]
+    else:
+        final_points = points_filtered[best_path[:-1]]
     
-    return [points_compressed]  # Return as list of faces (single face)
+    return [final_points]  # Return as list of faces (single face)
 
 
 def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = True) -> List[List[Tuple[float, float, float]]]:
