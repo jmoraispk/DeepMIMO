@@ -28,6 +28,10 @@ dependencies = [
     "tqdm>=4.59.0",
 ]
 
+[project.optional-dependencies]
+all = ["mitsuba=3.5.0", "utm", "lxml", "pandas", "bpy=3.6.0", "sionna-rt"]
+dev = ["pytest"]
+
 [tool.setuptools.packages.find]
 include = ["deepmimo*"]
 
