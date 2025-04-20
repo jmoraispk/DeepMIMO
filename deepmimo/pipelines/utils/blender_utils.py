@@ -278,12 +278,13 @@ def create_camera_and_render(output_path: str,
         camera = bpy.context.active_object
         scene.camera = camera
         
+        LOGGER.debug(f"📸📸📸 Camera = {camera}")
         scene.render.filepath = output_path
+        LOGGER.debug(f"📸📸📸 Camera ready")
         bpy.ops.render.render(write_still=True)
+        LOGGER.debug(f"📸📸📸 Camera Rendered -> deleting cam!")
         
-        bpy.ops.object.select_all(action='DESELECT')
-        camera.select_set(True)
-        bpy.ops.object.delete()
+        bpy.data.objects.remove(camera, do_unlink=True)
     except Exception as e:
         error_msg = f"❌ Failed to render scene: {str(e)}"
         LOGGER.error(error_msg)
@@ -413,9 +414,7 @@ def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float,
         bpy.ops.object.modifier_apply(modifier=bool_mod.name)
         
         # Delete the bounding box
-        bpy.ops.object.select_all(action='DESELECT')
-        bound_box.select_set(True)
-        bpy.ops.object.delete()
+        bpy.data.objects.remove(bound_box, do_unlink=True)
         
         LOGGER.info(f"Final face count for {obj.name}: {len(obj.data.polygons)}")
         
@@ -463,9 +462,7 @@ def process_roads(terrain_bounds, road_material):
         for obj in road_objs:
             if obj.name in REJECTED_ROADS:
                 LOGGER.debug(f"❌ Rejecting road: {obj.name}")
-                bpy.ops.object.select_all(action='DESELECT')
-                obj.select_set(True)
-                bpy.ops.object.delete()
+                bpy.data.objects.remove(obj, do_unlink=True)
                 continue
                 
             if obj.name not in ACCEPTED_ROADS:

@@ -23,14 +23,13 @@ from utils.blender_utils import (
     configure_osm_import,
     create_ground_plane,
     setup_world_lighting,
-    create_camera_and_render,
+    create_camera_and_render,  # sometimes incompatible in headless servers
     join_and_materialize_objects,
     process_roads,
     get_xy_bounds_from_latlon
 )
 
 # Setup logging to both console and file (great for debugging)
-# root_dir = os.path.dirname(os.path.abspath(__file__))  # TODO: Check if this is NEEDED
 logger = log_local_setup('logging_blender_osm.txt')
 set_LOGGER(logger)  # So the inner functions can log
 
@@ -103,7 +102,7 @@ convert_objects_to_mesh()
 
 # Render original scene (no processing)
 im_path = os.path.join(output_folder, 'figs', 'cam_org.png')
-create_camera_and_render(im_path)
+# create_camera_and_render(im_path)
 
 # Process buildings
 buildings = join_and_materialize_objects('building', 'buildings', building_material)
@@ -124,7 +123,7 @@ terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=4
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
 
 # Render processed scene
-create_camera_and_render(im_path.replace('.png', '_processed.png'))
+# create_camera_and_render(im_path.replace('.png', '_processed.png'))
 
 # Export based on the selected format
 if "insite" in output_formats:
