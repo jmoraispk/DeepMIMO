@@ -6,7 +6,6 @@ Many of them will only work inside Blender.
 import math
 import os
 import subprocess
-import time
 import sys
 import requests
 import logging
@@ -14,7 +13,6 @@ from typing import Optional, List, Any
 
 # Blender imports
 import bpy # type: ignore
-import bmesh # type: ignore
 import mathutils # type: ignore (comes with blender)  # noqa: E402
 
 ADDONS = {
@@ -65,11 +63,6 @@ def set_LOGGER(logger: Any) -> None:
 ###############################################################################
 # ADD-ON INSTALLATION UTILITIES
 ###############################################################################
-
-def install_all_addons() -> None:
-    """Install all addons from the ADDON_URLS dictionary."""
-    for addon_name, _ in ADDONS.items():
-        install_blender_addon(addon_name)
 
 def download_addon(addon_name: str) -> str:
     """Download a file from a URL and save it to a local path."""

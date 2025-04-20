@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.blender_utils import (
     log_local_setup,
-    install_all_addons,
+    install_blender_addon,
     set_LOGGER,
     export_mitsuba_scene,
     save_osm_origin,
@@ -71,7 +71,9 @@ logger.info(f"📊 Output formats: {output_formats}")
 clear_blender()
 
 # Automatically install all addons
-install_all_addons()
+install_blender_addon('blosm')
+if "sionna" in output_formats:
+    install_blender_addon('mitsuba-blender')
 
 # Configure & Fetch OSM data
 configure_osm_import(output_folder, minlat, maxlat, minlon, maxlon)
@@ -120,8 +122,6 @@ if buildings and buildings.type == 'MESH':
 # Process roads
 terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=40)  # Increased padding to 50m
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
-
-# TODO: CHECK THE BLENDER ADDONS - DELETE THE MAIN FILES (+ test installation!)
 
 # Render processed scene
 create_camera_and_render(im_path.replace('.png', '_processed.png'))
