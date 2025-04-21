@@ -6,10 +6,12 @@ from Wireless InSite into DeepMIMO's physical object representation.
 """
 
 import re
+import os
 import numpy as np
 from typing import List, Dict, Tuple
 from pathlib import Path
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from ...scene import (
     PhysicalElement, 
@@ -164,33 +166,27 @@ class PhysicalObjectParser:
         with open(self.file_path, 'r') as f:
             content = f.read()
         
+        file_base = os.path.basename(self.file_path)
+
         # Extract objects using extract_objects
         object_vertices = extract_objects(content)
         
         # Convert each set of vertices into a PhysicalElement object
+        n_obj = len(object_vertices)
         objects = []
-        for i, vertices in enumerate(object_vertices):
+        for i, vertices in tqdm(enumerate(object_vertices), total=n_obj, desc=f"Processing objs in {file_base}"):
             vertices = np.array(vertices)
+            
             # Use detailed mode for roads to preserve their geometry
             use_fast_mode = 'road' not in self.name.lower()
-            # print(f"Using fast mode: {use_fast_mode} for {self.name}")
+            self.name = f"{self.name}_{i}"
+
             # Generate faces
             object_faces = get_object_faces(vertices, fast=use_fast_mode)
-
-            # Special handling and analysis for roads
-            # if 'road' in self.name.lower():
-            #     if object_faces is not None:
-            #         # Visualize the road and its faces
-            #         # visualize_road_object(f"{self.name}_{i}", vertices, object_faces)
-            #         print(f"✓ Generated {len(object_faces)} faces")
-            #         print(f"  Visualization saved as 'road_debug_{self.name}_{i}.png'")
-            #     else:
-            #         print("❌ Failed to generate faces")
-            #         continue
-            # else:
-            #     if object_faces is None:
-            #         continue
-            
+            if object_faces is None:
+                print(f"Failed to generate faces for object {self.name}")
+                continue
+                
             # Convert faces to Face objects
             faces = [Face(vertices=face) for face in object_faces]
             
