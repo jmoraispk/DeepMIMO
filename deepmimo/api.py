@@ -31,6 +31,9 @@ HEADERS = {
     'Accept': '*/*'
 }
 
+FILE_SIZE_LIMIT = 1 * 1024 * 1024 * 1024 # 1GB
+RT_FILE_SIZE_LIMIT = 5 * 1024 * 1024 * 1024 # 5GB
+
 class _ProgressFileReader:
     """Progress file reader for uploading files to the DeepMIMO API."""
     def __init__(self, file_path, progress_bar):
@@ -69,6 +72,10 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[str]:
         # Get file info
         filename = os.path.basename(file)
         file_size = os.path.getsize(file)
+
+        if file_size > FILE_SIZE_LIMIT:
+            print(f"Error: File size limit of {FILE_SIZE_LIMIT / 1024 / 1024 / 1024} GB exceeded.")
+            return None
 
         # Get presigned upload URL with filename validation built-in
         auth_response = requests.get(
@@ -465,8 +472,6 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
     # Close the progress bar after the loop finishes or breaks
     pbar.close()
 
-    # No need for the final PUT request to update the submission, server handles it per image.
-
     if uploaded_image_objects:
          print(f"✓ Finished image upload process. Successfully attached {len(uploaded_image_objects)} images.")
     else:
@@ -644,6 +649,10 @@ def upload_rt_source(scenario_name: str, rt_zip_path: str, key: str) -> bool:
     target_filename = f"{scenario_name}.zip"
     file_size = os.path.getsize(rt_zip_path)
 
+    if file_size > RT_FILE_SIZE_LIMIT:
+        print(f"Error: RT source file size limit of {RT_FILE_SIZE_LIMIT / 1024 / 1024 / 1024} GB exceeded.")
+        return False
+
     try:
         # 1. Get presigned upload URL for the RT bucket
         print("Requesting RT upload authorization from server...")
@@ -696,13 +705,6 @@ def upload_rt_source(scenario_name: str, rt_zip_path: str, key: str) -> bool:
             pbar.close()
 
         print(f"✓ RT source uploaded successfully as {authorized_filename}")
-
-        # Joao's requested print:
-        print("\n--- Usage Example ---")
-        print(f"rt_folder = 'path/to/your/rt/source/folder'") # Replace with actual path variable if known
-        print(f"rt_zipped = zip(rt_folder)")
-        print(f"upload_rt_source(scenario_name='{scenario_name}', rt_zip_path=rt_zipped, key='YOUR_API_KEY')")
-        print("--------------------\n")
 
         return True
 
