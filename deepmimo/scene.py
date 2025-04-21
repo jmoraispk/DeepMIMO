@@ -1002,14 +1002,48 @@ def detect_endpoints(points_2d: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     # Return indices
     return [i1, i2, j1, j2]
 
-def trim_points_protected(points, protected_indices, max_points=14):
+def _signed_distance_to_curve(point, curve_fit, x_range):
+    """Calculate signed perpendicular distance from point to curve.
+    Positive distance means point is on one side, negative on the other."""
+    x, y = point
+    
+    # Generate points along the curve
+    curve_x = np.linspace(x_range[0], x_range[1], 1000)
+    curve_y = curve_fit(curve_x)
+    curve_points = np.column_stack((curve_x, curve_y))
+    
+    # Find closest point on curve
+    distances = np.linalg.norm(curve_points - point, axis=1)
+    closest_idx = np.argmin(distances)
+    closest_point = curve_points[closest_idx]
+    
+    # Get tangent vector at closest point
+    if closest_idx < len(curve_x) - 1:
+        tangent = curve_points[closest_idx + 1] - curve_points[closest_idx]
+    else:
+        tangent = curve_points[closest_idx] - curve_points[closest_idx - 1]
+    tangent = tangent / np.linalg.norm(tangent)
+    
+    # Get normal vector (rotate tangent 90 degrees counterclockwise)
+    normal = np.array([-tangent[1], tangent[0]])
+    
+    # Calculate signed distance
+    vec_to_point = point - closest_point
+    signed_dist = np.dot(vec_to_point, normal)
+    
+    return signed_dist, closest_point
+
+
+def trim_points_protected(points, protected_indices, max_points=14, debug=True):
     """Trims points while preserving protected indices and maintaining road shape.
-    Uses a corridor-based approach to ensure points are removed evenly from both sides.
+    Uses reference points along the curve to select closest points above and below.
+    Assumes endpoints are included in protected_indices.
     
     Args:
         points: Array of point coordinates (N x 2)
         protected_indices: List of indices that should not be removed
         max_points: Maximum number of points to keep
+        debug: Whether to show debug plots
         
     Returns:
         List of indices of the kept points
@@ -1019,61 +1053,56 @@ def trim_points_protected(points, protected_indices, max_points=14):
     assert max_points >= len(protected_indices), "max_points must be >= number of protected points"
     assert len(points) >= len(protected_indices), "len(points) must be >= max_points"
     
-    # Keep track of original indices
-    kept_indices = set(range(len(points)))
+    # Fit initial curve through all points
+    x = points[:, 0]
+    y = points[:, 1]
+    z = np.polyfit(x, y, 3)
+    curve_fit = np.poly1d(z)
+    x_range = (x.min(), x.max())
     
-    while len(kept_indices) > max_points:
-        # 1. Find the main road direction by fitting a line through protected points
-        protected_points = points[list(protected_indices)]
-        direction = np.polyfit(protected_points[:, 0], protected_points[:, 1], 1)
-        line_angle = np.arctan(direction[0])
+    # Calculate signed distances for all points
+    distances_and_closest = [
+        _signed_distance_to_curve(points[i], curve_fit, x_range) 
+        for i in range(len(points))
+    ]
+    distances = np.array([d for d, _ in distances_and_closest])
+    
+    # Generate reference points at 1/4, 2/4 and 3/4 along the curve
+    ref_positions = [0.25, 0.5, 0.75]  # 1/4, 2/4, 3/4
+    x_refs = x_range[0] + (x_range[1] - x_range[0]) * np.array(ref_positions)
+    ref_points = np.column_stack((x_refs, curve_fit(x_refs)))
+    
+    # Start with protected points
+    kept_indices = set(protected_indices)
+    
+    for ref_point in ref_points:
+        # Calculate distances to this reference point
+        dists_to_ref = np.linalg.norm(points - ref_point, axis=1)
         
-        # 2. Project all points onto the perpendicular direction
-        perp_angle = line_angle + np.pi/2
-        projection_vector = np.array([np.cos(perp_angle), np.sin(perp_angle)])
-        projections = np.dot(points, projection_vector)
+        # Split points into above and below curve
+        above_curve = distances > 0
+        below_curve = distances < 0
         
-        # 3. Group points into positive and negative sides of the road
-        median_proj = np.median(projections)
-        pos_side = projections > median_proj
-        neg_side = ~pos_side
+        # Find closest non-protected points above and below
+        above_indices = [i for i in range(len(points)) 
+                        if above_curve[i] and i not in protected_indices]
+        below_indices = [i for i in range(len(points)) 
+                        if below_curve[i] and i not in protected_indices]
         
-        # 4. Count points on each side (excluding protected points)
-        pos_count = sum(1 for i in kept_indices if pos_side[i] and i not in protected_indices)
-        neg_count = sum(1 for i in kept_indices if neg_side[i] and i not in protected_indices)
+        # Sort by distance to reference point
+        above_indices = sorted(above_indices, key=lambda i: dists_to_ref[i])
+        below_indices = sorted(below_indices, key=lambda i: dists_to_ref[i])
         
-        # 5. Decide which side to remove from (the side with more points)
-        remove_from_pos = pos_count > neg_count
-        candidate_mask = pos_side if remove_from_pos else neg_side
+        # Take exactly one point from above and one from below (that aren't already kept)
+        for idx in above_indices:
+            if idx not in kept_indices:
+                kept_indices.add(idx)
+                break
         
-        # 6. Among candidate points, find the one closest to its neighbors
-        candidate_indices = [i for i in kept_indices if candidate_mask[i] and i not in protected_indices]
-        if not candidate_indices:  # If no candidates on preferred side, take from other side
-            candidate_indices = [i for i in kept_indices if i not in protected_indices]
-        
-        min_spacing = float('inf')
-        point_to_remove = None
-        
-        for idx in candidate_indices:
-            # Calculate distances to neighboring points
-            current_kept = list(kept_indices)
-            distances = np.linalg.norm(points[current_kept] - points[idx], axis=1)
-            # Map back to original indices for exclusions
-            idx_in_kept = current_kept.index(idx)
-            distances[idx_in_kept] = float('inf')  # Exclude self
-            for protected_idx in protected_indices:
-                if protected_idx in kept_indices:
-                    protected_idx_in_kept = current_kept.index(protected_idx)
-                    distances[protected_idx_in_kept] = float('inf')  # Exclude protected points
-            
-            # Find minimum distance to neighbors
-            min_dist = np.min(distances)
-            if min_dist < min_spacing:
-                min_spacing = min_dist
-                point_to_remove = idx
-        
-        # 7. Remove the selected point from kept indices
-        kept_indices.remove(point_to_remove)
+        for idx in below_indices:
+            if idx not in kept_indices:
+                kept_indices.add(idx)
+                break
     
     return sorted(list(kept_indices))
 
