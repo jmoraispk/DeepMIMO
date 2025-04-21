@@ -46,6 +46,16 @@ def convert(path_to_rt_folder: str, **conversion_params: Dict[str, Any]) -> Opti
     else:
         print("Unknown ray tracer type")
         return None
-    
-    scenario = rt_converter(path_to_rt_folder, **conversion_params)
-    return scenario
+    try:
+        scenario = rt_converter(path_to_rt_folder, **conversion_params)
+        return scenario
+    except KeyError as e:
+        print(f"KeyError: {e}")
+        print("Ensure that the ray tracer version is correctly specified.\n"
+              "Example for Wireless Insite: dm.config('wireless_insite_version', '3.3.0') .\n"
+              "Example for Sionna: dm.config('sionna_version', '0.19.1') .\n"
+              )
+        return None
+    except Exception as e:
+        print(f"Error converting scenario: {e}")
+        return None
