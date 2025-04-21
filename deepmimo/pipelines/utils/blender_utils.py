@@ -296,7 +296,7 @@ def create_camera_and_render(output_path: str,
 ###############################################################################
 
 REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_secondary', 'roads_tertiary',
-                          'paths_footway', 'roads_service''profile_']
+                          'paths_footway', 'roads_service', 'profile_']
 
 ACCEPTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_residential']
 
