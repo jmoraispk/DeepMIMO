@@ -324,31 +324,23 @@ def create_ground_plane(min_lat: float, max_lat: float,
     
     return plane
 
-def join_and_materialize_objects(name_pattern: str, target_name: str, 
-                                 material: bpy.types.Material) -> Optional[bpy.types.Object]:
+def add_materials_to_objs(name_pattern: str, material: bpy.types.Material) -> Optional[bpy.types.Object]:
     """Join objects matching a name pattern and apply a material."""
     LOGGER.info(f"🔄 Processing objects matching pattern: {name_pattern}")
+    bpy.ops.object.select_all(action='DESELECT')
+
+    # Find mesh objects
+    mesh_objs = [o for o in bpy.data.objects 
+                 if name_pattern in o.name.lower() and o.type == 'MESH']
+    
+    if not mesh_objs:
+        LOGGER.warning(f"⚠️ No objects found matching pattern: {name_pattern}")
+        return None
+    
     try:
-        bpy.ops.object.select_all(action='DESELECT')
-        for o in bpy.data.objects:
-            if name_pattern in o.name.lower() and o.type == 'MESH':
-                o.select_set(True)
-        
-        selected = bpy.context.selected_objects
-        if not selected:
-            LOGGER.warning(f"⚠️ No objects found matching pattern: {name_pattern}")
-            return None
-        
-        if len(selected) > 1:
-            bpy.context.view_layer.objects.active = selected[-1]
-            bpy.ops.object.join()
-        else:
-            bpy.context.view_layer.objects.active = selected[0]
-        
-        obj = bpy.context.active_object
-        obj.name = target_name
-        obj.data.materials.clear()
-        obj.data.materials.append(material)
+        for obj in mesh_objs:
+            obj.data.materials.clear()
+            obj.data.materials.append(material)
         return obj
     except Exception as e:
         error_msg = f"❌ Failed to process objects with pattern '{name_pattern}': {str(e)}"
@@ -429,9 +421,9 @@ def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float,
 def convert_objects_to_mesh() -> None:
     """Convert all selected objects to mesh type."""
     LOGGER.info("🔄 Converting objects to mesh")
+    bpy.ops.object.select_all(action="SELECT")
     try:
-        bpy.ops.object.select_all(action="SELECT")
-        if len(bpy.context.selected_objects) > 0:
+        if len(bpy.context.selected_objects):
             bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
             bpy.ops.object.convert(target="MESH", keep_original=False)
             LOGGER.info("✅ All objects successfully converted to mesh.")
