@@ -973,7 +973,7 @@ def tsp_held_karp_no_intersections(points):
 
     return min(res) if res else (float('inf'), [])
 
-def detect_endpoints(points_2d: np.ndarray, min_distance: float = 5.0) -> tuple[np.ndarray, np.ndarray]:
+def detect_endpoints(points_2d: np.ndarray, min_distance: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
     """Detect the endpoints of a road by finding pairs of points that are furthest from each other.
     Points that are closer than min_distance to each other are considered duplicates and only one is kept.
     
