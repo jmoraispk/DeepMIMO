@@ -973,55 +973,109 @@ def tsp_held_karp_no_intersections(points):
 
     return min(res) if res else (float('inf'), [])
 
-def detect_endpoints(points_2d: np.ndarray, n_endpoints: int = 2) -> tuple[np.ndarray, np.ndarray]:
-     """Detect the endpoints of a road by finding extreme points in X direction.
-     
-     Args:
-         points_2d: Array of 2D points (N x 2)
-         n_endpoints: Number of points to consider as endpoints on each side
-         
-     Returns:
-         tuple: (left_end_indices, right_end_indices) - Arrays of indices for left and right endpoints
-     """
-     # Find the extreme points in Y direction
-     x_sorted_indices = np.argsort(points_2d[:, 1])
-     left_end_indices = x_sorted_indices[:n_endpoints]  # leftmost points
-     right_end_indices = x_sorted_indices[-n_endpoints:]  # rightmost points
-     
-     return left_end_indices.tolist() + right_end_indices.tolist()
+def detect_endpoints(points_2d: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Detect the endpoints of a road by finding pairs of points that are furthest from each other.
+    
+    Args:
+        points_2d: Array of 2D points (N x 2)
+        
+    Returns:
+        List of indices for the endpoints, alternating between pairs
+        (first point of pair 1, first point of pair 2, second point of pair 1, second point of pair 2)
+    """
+    # Calculate pairwise distances between all points
+    distances = np.linalg.norm(points_2d[:, np.newaxis] - points_2d, axis=2)
+    
+    # Find the first pair of points (maximally distant)
+    i1, j1 = np.unravel_index(np.argmax(distances), distances.shape)
+    
+    # Mask out the first pair to find second pair
+    distances_masked = distances.copy()
+    distances_masked[i1, :] = -np.inf
+    distances_masked[:, i1] = -np.inf
+    distances_masked[j1, :] = -np.inf
+    distances_masked[:, j1] = -np.inf
+    
+    # Find the second pair of points
+    i2, j2 = np.unravel_index(np.argmax(distances_masked), distances_masked.shape)
+    
+    # Return indices
+    return [i1, i2, j1, j2]
 
-def trim_points_protected(points, protected_indices, max_points=10):
-    """ Deletes points while preserving protected indices until max_points is reached. """
+def trim_points_protected(points, protected_indices, max_points=14):
+    """Trims points while preserving protected indices and maintaining road shape.
+    Uses a corridor-based approach to ensure points are removed evenly from both sides.
+    
+    Args:
+        points: Array of point coordinates (N x 2)
+        protected_indices: List of indices that should not be removed
+        max_points: Maximum number of points to keep
+        
+    Returns:
+        List of indices of the kept points
+    """
     protected_indices = set(protected_indices)
     
     assert max_points >= len(protected_indices), "max_points must be >= number of protected points"
     assert len(points) >= len(protected_indices), "len(points) must be >= max_points"
-
-    while len(points) > max_points:
-        # Calculate pairwise distances
-        dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
-        np.fill_diagonal(dists, np.inf)
+    
+    # Keep track of original indices
+    kept_indices = set(range(len(points)))
+    
+    while len(kept_indices) > max_points:
+        # 1. Find the main road direction by fitting a line through protected points
+        protected_points = points[list(protected_indices)]
+        direction = np.polyfit(protected_points[:, 0], protected_points[:, 1], 1)
+        line_angle = np.arctan(direction[0])
         
-        # Mask out protected indices
-        for idx in protected_indices:
-            dists[idx, :] = np.inf
-            dists[:, idx] = np.inf
+        # 2. Project all points onto the perpendicular direction
+        perp_angle = line_angle + np.pi/2
+        projection_vector = np.array([np.cos(perp_angle), np.sin(perp_angle)])
+        projections = np.dot(points, projection_vector)
+        
+        # 3. Group points into positive and negative sides of the road
+        median_proj = np.median(projections)
+        pos_side = projections > median_proj
+        neg_side = ~pos_side
+        
+        # 4. Count points on each side (excluding protected points)
+        pos_count = sum(1 for i in kept_indices if pos_side[i] and i not in protected_indices)
+        neg_count = sum(1 for i in kept_indices if neg_side[i] and i not in protected_indices)
+        
+        # 5. Decide which side to remove from (the side with more points)
+        remove_from_pos = pos_count > neg_count
+        candidate_mask = pos_side if remove_from_pos else neg_side
+        
+        # 6. Among candidate points, find the one closest to its neighbors
+        candidate_indices = [i for i in kept_indices if candidate_mask[i] and i not in protected_indices]
+        if not candidate_indices:  # If no candidates on preferred side, take from other side
+            candidate_indices = [i for i in kept_indices if i not in protected_indices]
+        
+        min_spacing = float('inf')
+        point_to_remove = None
+        
+        for idx in candidate_indices:
+            # Calculate distances to neighboring points
+            current_kept = list(kept_indices)
+            distances = np.linalg.norm(points[current_kept] - points[idx], axis=1)
+            # Map back to original indices for exclusions
+            idx_in_kept = current_kept.index(idx)
+            distances[idx_in_kept] = float('inf')  # Exclude self
+            for protected_idx in protected_indices:
+                if protected_idx in kept_indices:
+                    protected_idx_in_kept = current_kept.index(protected_idx)
+                    distances[protected_idx_in_kept] = float('inf')  # Exclude protected points
             
-        # Find closest pair of non-protected points
-        _, j = np.unravel_index(np.argmin(dists), dists.shape)
+            # Find minimum distance to neighbors
+            min_dist = np.min(distances)
+            if min_dist < min_spacing:
+                min_spacing = min_dist
+                point_to_remove = idx
         
-        # Update protected indices after deletion
-        new_protected = set()
-        for idx in protected_indices:
-            if idx < j:
-                new_protected.add(idx)
-            else:
-                new_protected.add(idx - 1)
-        protected_indices = new_protected
-        
-        points = np.delete(points, j, axis=0)
-        
-    return points
+        # 7. Remove the selected point from kept indices
+        kept_indices.remove(point_to_remove)
+    
+    return sorted(list(kept_indices))
 
 def compress_path(points, path, angle_threshold=1.0):
     """Compress a path by removing points that are nearly collinear with their neighbors.
@@ -1063,8 +1117,8 @@ def compress_path(points, path, angle_threshold=1.0):
     
     return compressed
 
-def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int = 11,
-                 compress: bool = False, angle_threshold: float = 1.0) -> List[Tuple[float, float, float]]:
+def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int = 10,
+                 compress: bool = True, angle_threshold: float = 1.0) -> List[Tuple[float, float, float]]:
     """Generate a 2D face from a set of vertices.
     
     Args:
@@ -1081,17 +1135,19 @@ def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int
         raise ValueError("Vertices are not 2D")
     
     # Detect endpoints  
-    endpoints = detect_endpoints(vertices[:, :2], n_endpoints=2)
+    endpoints = detect_endpoints(vertices[:, :2])
     
     # Filter points and convert to 2D (by discarding z-coordinate)
-    points_filtered = trim_points_protected(vertices, protected_indices=endpoints, 
-                                            max_points=max_points)
+    kept_indices = trim_points_protected(vertices[:, :2], 
+                                         protected_indices=endpoints, 
+                                         max_points=max_points)
+    points_filtered = vertices[kept_indices]
 
     _, best_path = tsp_held_karp_no_intersections(points_filtered[:, :2])
-    # print(f"Best path: {best_path}")
-    # plot_points(points_filtered, best_path, title="filtered")
+
     if compress:
-        compressed_path = compress_path(points_filtered, best_path, angle_threshold=angle_threshold)
+        compressed_path = compress_path(points_filtered, best_path, 
+                                        angle_threshold=angle_threshold)
         final_points = points_filtered[compressed_path[:-1]]
     else:
         final_points = points_filtered[best_path[:-1]]
