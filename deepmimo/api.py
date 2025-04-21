@@ -31,8 +31,9 @@ HEADERS = {
     'Accept': '*/*'
 }
 
-FILE_SIZE_LIMIT = 1 * 1024 * 1024 * 1024 # 1GB
-RT_FILE_SIZE_LIMIT = 5 * 1024 * 1024 * 1024 # 5GB
+FILE_SIZE_LIMIT = 1 * 1024 ** 3    # Scenario zip file size limit: 1GB
+RT_FILE_SIZE_LIMIT = 5 * 1024 ** 3 # RT source zip file size limit: 5GB
+IMAGE_SIZE_LIMIT = 10 * 1024 ** 2  # Image size limit: 10MB
 
 class _ProgressFileReader:
     """Progress file reader for uploading files to the DeepMIMO API."""
@@ -74,7 +75,7 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[str]:
         file_size = os.path.getsize(file)
 
         if file_size > FILE_SIZE_LIMIT:
-            print(f"Error: File size limit of {FILE_SIZE_LIMIT / 1024 / 1024 / 1024} GB exceeded.")
+            print(f"Error: File size limit of {FILE_SIZE_LIMIT / 1024 ** 3} GB exceeded.")
             return None
 
         # Get presigned upload URL with filename validation built-in
@@ -156,7 +157,6 @@ def _dm_upload_api_call(file: str, key: str) -> Optional[str]:
         print(f"Upload failed due to an unexpected error: {str(e)}")
         return None
 
-
 def _process_params_data(params_dict: Dict, extra_metadata: Optional[Dict] = None) -> Dict:
     """Process params.mat data into submission format - used in DeepMIMO database.
 
@@ -236,7 +236,6 @@ def _process_params_data(params_dict: Dict, extra_metadata: Optional[Dict] = Non
         "primaryParameters": primary_params,
         "advancedParameters": advanced_params
     }
-
 
 def _generate_key_components(summary_str: str) -> Dict:
     """Generate key components sections from summary string.
@@ -425,7 +424,7 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
         filename = os.path.basename(img_path)
         filesize = os.path.getsize(img_path)
 
-        if filesize > 10 * 1024 * 1024:
+        if filesize > IMAGE_SIZE_LIMIT:
             print(f"Warning: Image {filename} is too large to upload. Skipping...")
             continue
 
@@ -499,7 +498,9 @@ def _upload_to_b2(scen_folder: str, key: str, skip_zip: bool = False) -> str:
     submission_scenario_name = upload_result.split(".")[0].split("/")[-1].split("\\")[-1]
     return submission_scenario_name
     
-def _make_submission_on_server(submission_scenario_name: str, key: str, params_dict: dict, details: list[str], extra_metadata: dict, include_images: bool = True) -> str:
+def _make_submission_on_server(submission_scenario_name: str, key: str, 
+                               params_dict: dict, details: list[str], extra_metadata: dict, 
+                               include_images: bool = True) -> str:
     """Make a submission on the server."""
 
     try:
@@ -650,7 +651,7 @@ def upload_rt_source(scenario_name: str, rt_zip_path: str, key: str) -> bool:
     file_size = os.path.getsize(rt_zip_path)
 
     if file_size > RT_FILE_SIZE_LIMIT:
-        print(f"Error: RT source file size limit of {RT_FILE_SIZE_LIMIT / 1024 / 1024 / 1024} GB exceeded.")
+        print(f"Error: RT source file size limit of {RT_FILE_SIZE_LIMIT / 1024 ** 3} GB exceeded.")
         return False
 
     try:
@@ -671,7 +672,8 @@ def upload_rt_source(scenario_name: str, rt_zip_path: str, key: str) -> bool:
         # Server confirms the filename it authorized for the RT bucket
         authorized_filename = auth_data.get("filename")
         if not authorized_filename or authorized_filename != target_filename:
-             print(f"Error: Filename mismatch. Server authorized RT upload for '{authorized_filename}' but expected '{target_filename}'")
+             print("Error: Filename mismatch.")
+             print(f"Server authorized RT upload for '{authorized_filename}' but expected '{target_filename}'")
              return False
 
         print(f"✓ Authorization granted. Uploading to RT bucket as '{authorized_filename}'...")
@@ -756,10 +758,6 @@ def download(scenario_name: str, output_dir: Optional[str] = None) -> Optional[s
     download_dir = output_dir if output_dir else get_scenarios_dir()
     scenario_folder = get_scenario_folder(scenario_name)
     
-    # DEV NOTE: when adding new scenario versions, change this check to read the version number
-    #           and ask for compatibility with the current version of DeepMIMO.
-    #           This may require downloading the zip again if the version is not compatible.
-
     # Check if file already exists in scenarios folder
     if os.path.exists(scenario_folder):
         print(f'Scenario "{scenario_name}" already exists in {scenarios_dir}')
@@ -856,7 +854,8 @@ def search(query: Dict) -> Optional[List[str]]:
             - transmission: bool - Boolean filter or 'all' to ignore
             - digitalTwin: bool - Boolean filter or 'all' to ignore
             - city: str - City name text filter
-            - bbCoords: Dict - Bounding box coordinates {'minLat': float, 'minLon': float, 'maxLat': float, 'maxLon': float}
+            - bbCoords: Dict - Bounding box coordinates 
+              {'minLat': float, 'minLon': float, 'maxLat': float, 'maxLon': float}
     
     Returns:
         Dict containing count and list of matching scenario names if successful, None otherwise
