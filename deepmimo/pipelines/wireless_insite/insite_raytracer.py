@@ -186,8 +186,12 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     scenario.set_ray_tracing_param(rt_params_filtered)
     scenario.set_txrx("insite.txrx")
     scenario.add_feature(TERRAIN_TEMPLATE, "terrain")
-    scenario.add_feature(bldgs_city, "city")
-    scenario.add_feature(roads_city, "road")
+    if bldgs_city:
+        scenario.add_feature(bldgs_city, "city")
+    else:
+        raise Exception('No buildings found. Check Blender Export to ply.')
+    if roads_city:
+        scenario.add_feature(roads_city, "road")
     scenario.save("insite") # insite.setup
 
     # Generate XML file (.xml) - What Wireless InSite executable actually uses
