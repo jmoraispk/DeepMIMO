@@ -296,7 +296,7 @@ def create_camera_and_render(output_path: str,
 ###############################################################################
 
 REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_secondary', 'roads_tertiary',
-                          'paths_footway', 'roads_service''profile_']
+                          'paths_footway', 'roads_service', 'profile_']
 
 ACCEPTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_residential']
 
@@ -324,31 +324,23 @@ def create_ground_plane(min_lat: float, max_lat: float,
     
     return plane
 
-def join_and_materialize_objects(name_pattern: str, target_name: str, 
-                                 material: bpy.types.Material) -> Optional[bpy.types.Object]:
+def add_materials_to_objs(name_pattern: str, material: bpy.types.Material) -> Optional[bpy.types.Object]:
     """Join objects matching a name pattern and apply a material."""
     LOGGER.info(f"🔄 Processing objects matching pattern: {name_pattern}")
+    bpy.ops.object.select_all(action='DESELECT')
+
+    # Find mesh objects
+    mesh_objs = [o for o in bpy.data.objects 
+                 if name_pattern in o.name.lower() and o.type == 'MESH']
+    
+    if not mesh_objs:
+        LOGGER.warning(f"⚠️ No objects found matching pattern: {name_pattern}")
+        return None
+    
     try:
-        bpy.ops.object.select_all(action='DESELECT')
-        for o in bpy.data.objects:
-            if name_pattern in o.name.lower() and o.type == 'MESH':
-                o.select_set(True)
-        
-        selected = bpy.context.selected_objects
-        if not selected:
-            LOGGER.warning(f"⚠️ No objects found matching pattern: {name_pattern}")
-            return None
-        
-        if len(selected) > 1:
-            bpy.context.view_layer.objects.active = selected[-1]
-            bpy.ops.object.join()
-        else:
-            bpy.context.view_layer.objects.active = selected[0]
-        
-        obj = bpy.context.active_object
-        obj.name = target_name
-        obj.data.materials.clear()
-        obj.data.materials.append(material)
+        for obj in mesh_objs:
+            obj.data.materials.clear()
+            obj.data.materials.append(material)
         return obj
     except Exception as e:
         error_msg = f"❌ Failed to process objects with pattern '{name_pattern}': {str(e)}"
@@ -429,9 +421,9 @@ def trim_faces_outside_bounds(obj: bpy.types.Object, min_x: float, max_x: float,
 def convert_objects_to_mesh() -> None:
     """Convert all selected objects to mesh type."""
     LOGGER.info("🔄 Converting objects to mesh")
+    bpy.ops.object.select_all(action="SELECT")
     try:
-        bpy.ops.object.select_all(action="SELECT")
-        if len(bpy.context.selected_objects) > 0:
+        if len(bpy.context.selected_objects):
             bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
             bpy.ops.object.convert(target="MESH", keep_original=False)
             LOGGER.info("✅ All objects successfully converted to mesh.")
@@ -452,18 +444,14 @@ def process_roads(terrain_bounds, road_material):
     LOGGER.info("🛣️ Starting road processing")
     
     # Select all roads
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in bpy.data.objects:
-        LOGGER.debug(f"🛣️ Checking road: {obj.name}")
-        if 'roads' in obj.name.lower() or 'paths' in obj.name.lower():
-            obj.select_set(True)
-    road_objs = bpy.context.selected_objects
+    road_objs = [obj for obj in bpy.data.objects
+                 if 'roads' in obj.name.lower() or 'paths' in obj.name.lower()]
     
     LOGGER.debug(f"🛣️ Found {len(road_objs)} road objects")
     # Define which roads to reject and which to accept
     if road_objs:
         for obj in road_objs:
-            if any(keyword in obj.name for keyword in REJECTED_ROAD_KEYWORDS):
+            if any(keyword in obj.name.lower() for keyword in REJECTED_ROAD_KEYWORDS):
                 LOGGER.debug(f"❌ Rejecting road: {obj.name}")
                 bpy.data.objects.remove(obj, do_unlink=True)
                 continue

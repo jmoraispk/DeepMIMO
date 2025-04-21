@@ -24,7 +24,7 @@ from utils.blender_utils import (
     create_ground_plane,
     setup_world_lighting,
     create_camera_and_render,  # sometimes incompatible in headless servers
-    join_and_materialize_objects,
+    add_materials_to_objs,
     process_roads,
     get_xy_bounds_from_latlon
 )
@@ -105,18 +105,7 @@ im_path = os.path.join(output_folder, 'figs', 'cam_org.png')
 # create_camera_and_render(im_path)
 
 # Process buildings
-buildings = join_and_materialize_objects('building', 'buildings', building_material)
-if buildings and buildings.type == 'MESH':
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.separate(type='LOOSE')
-    bpy.ops.object.mode_set(mode='OBJECT')
-
-# TODO: understand if this is only needed because of the material adding,
-#       or if it's needed for the mesh processing
-
-# TODO: see if we can maintain the labels of the buildings and roads intact from osm extraction
-
-#add_building_materials(building_material)  # add materials
+buildings = add_materials_to_objs('building', building_material)
 
 # Process roads
 terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=40)  # Increased padding to 50m
