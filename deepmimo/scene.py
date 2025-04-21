@@ -12,7 +12,21 @@ Module Organization:
    - PhysicalElement: Base class for physical objects
    - PhysicalElementGroup: Group operations on physical elements
    - Scene: Complete physical environment representation
-3. Utilities - Standalone geometric and conversion functions used by converters
+3. Object handling: Get faces of objects as lists of vertices
+    - get_object_faces: Generate faces for physical objects
+    - Road object handling:
+        - _get_2d_face: Get 2D face of road objects (calls all functions below)
+        - _detect_endpoints: Detect endpoints (terminations) of road objects
+        - _trim_points_protected: Trim points of road objects
+        - _compress_path: Compress path of road objects
+        - _calculate_angle_deviation: Calculate angle deviation 
+          (used in _compress_path and _tsp_held_karp_no_intersections)
+        - _ccw: Check if points are in counter-clockwise order (used in _segments_intersect)
+        - _segments_intersect: Check if two line segments intersect (used in _tsp_held_karp_no_intersections)
+        - _tsp_held_karp_no_intersections: Held-Karp TSP with angle penalty + intersection check
+          (used in _get_2d_face)
+        - _signed_distance_to_curve: Calculate signed distance from point to curve
+          (used in _trim_points_protected to trim along the road)
 """
 
 import numpy as np
@@ -892,8 +906,7 @@ def _get_faces_convex_hull(vertices: np.ndarray) -> List[List[Tuple[float, float
     
     return [bottom_face, top_face] + side_faces
 
-# Function to calculate angle deviation
-def calculate_angle_deviation(p1, p2, p3):
+def _calculate_angle_deviation(p1, p2, p3):
     """Calculate the deviation from a straight line at point p2.
     Returns angle in degrees, where:
     - 0° means the path p1->p2->p3 forms a straight line
@@ -909,14 +922,19 @@ def calculate_angle_deviation(p1, p2, p3):
 
     return np.degrees(np.arccos(dot_product))
 
-# Intersection check for line segments
-def segments_intersect(p1, p2, q1, q2):
-    def ccw(a, b, c):
-        return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
-    return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
+def _ccw(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> bool:
+    """Check if points are in counter-clockwise order."""
+    return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
 
-# Held-Karp TSP with angle penalty + intersection check
-def tsp_held_karp_no_intersections(points):
+def _segments_intersect(p1: np.ndarray, p2: np.ndarray, q1: np.ndarray, q2: np.ndarray) -> bool:
+    """Check if two line segments intersect."""
+    return _ccw(p1, q1, q2) != _ccw(p2, q1, q2) and _ccw(p1, p2, q1) != _ccw(p1, p2, q2)
+
+def _tsp_held_karp_no_intersections(points: np.ndarray) -> Tuple[float, List[int]]:
+    """Held-Karp TSP with angle penalty + intersection check.
+    Returns:
+        Tuple[float, List[int]]: Minimum cost and path
+    """
     n = len(points)
     C = {}
     
@@ -941,12 +959,12 @@ def tsp_held_karp_no_intersections(points):
                     intersects = False
                     for i in range(len(prev_path) - 2):
                         a, b = prev_path[i], prev_path[i + 1]
-                        if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
+                        if _segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
                             intersects = True
                             break
                     if intersects:
                         continue
-                    angle_cost = calculate_angle_deviation(points[prev_path[-2]], points[m], points[k]) if len(prev_path) > 1 else 0
+                    angle_cost = _calculate_angle_deviation(points[prev_path[-2]], points[m], points[k]) if len(prev_path) > 1 else 0
                     cost = prev_cost + np.linalg.norm(points[m] - points[k]) + angle_cost
                     res.append((cost, prev_path + [k]))
                 if res:
@@ -962,18 +980,18 @@ def tsp_held_karp_no_intersections(points):
         intersects = False
         for i in range(len(path) - 2):
             a, b = path[i], path[i + 1]
-            if segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
+            if _segments_intersect(points[a], points[b], new_seg[0], new_seg[1]):
                 intersects = True
                 break
         if intersects:
             continue
-        angle_cost = calculate_angle_deviation(points[path[-2]], points[k], points[0])
+        angle_cost = _calculate_angle_deviation(points[path[-2]], points[k], points[0])
         final_cost = cost + np.linalg.norm(points[k] - points[0]) + angle_cost
         res.append((final_cost, path + [0]))
 
     return min(res) if res else (float('inf'), [])
 
-def detect_endpoints(points_2d: np.ndarray, min_distance: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
+def _detect_endpoints(points_2d: np.ndarray, min_distance: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
     """Detect the endpoints of a road by finding pairs of points that are furthest from each other.
     Points that are closer than min_distance to each other are considered duplicates and only one is kept.
     
@@ -1026,11 +1044,19 @@ def detect_endpoints(points_2d: np.ndarray, min_distance: float = 2.0) -> tuple[
     # Return indices in alternating order
     return original_indices
 
-def _signed_distance_to_curve(point, curve_fit, x_range):
+def _signed_distance_to_curve(point: np.ndarray, curve_fit: np.poly1d, 
+                              x_range: Tuple[float, float]) -> Tuple[float, np.ndarray]:
     """Calculate signed perpendicular distance from point to curve.
-    Positive distance means point is on one side, negative on the other."""
-    x, y = point
+    Positive distance means point is on one side, negative on the other.
     
+    Args:
+        point: Point to calculate distance to
+        curve_fit: Polynomial fit to the curve
+        x_range: Range of x-values for the curve
+        
+    Returns:
+        Tuple[float, np.ndarray]: Signed distance and closest point on curve
+    """
     # Generate points along the curve
     curve_x = np.linspace(x_range[0], x_range[1], 1000)
     curve_y = curve_fit(curve_x)
@@ -1057,8 +1083,8 @@ def _signed_distance_to_curve(point, curve_fit, x_range):
     
     return signed_dist, closest_point
 
-
-def trim_points_protected(points, protected_indices, max_points=14, debug=True):
+def _trim_points_protected(points: np.ndarray, protected_indices: List[int], 
+                           max_points: int = 14) -> List[int]:
     """Trims points while preserving protected indices and maintaining road shape.
     Uses reference points along the curve to select closest points above and below.
     Assumes endpoints are included in protected_indices.
@@ -1130,7 +1156,7 @@ def trim_points_protected(points, protected_indices, max_points=14, debug=True):
     
     return sorted(list(kept_indices))
 
-def compress_path(points, path, angle_threshold=1.0):
+def _compress_path(points: np.ndarray, path: List[int], angle_threshold: float = 1.0) -> List[int]:
     """Compress a path by removing points that are nearly collinear with their neighbors.
     
     Args:
@@ -1155,7 +1181,7 @@ def compress_path(points, path, angle_threshold=1.0):
         next_idx = path[i+1]      # Next point in original path
         
         # Calculate angle at current point
-        angle = calculate_angle_deviation(
+        angle = _calculate_angle_deviation(
             points[prev_idx],
             points[curr_idx],
             points[next_idx]
@@ -1188,25 +1214,24 @@ def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int
         raise ValueError("Vertices are not 2D")
     
     # Detect endpoints  
-    endpoints = detect_endpoints(vertices[:, :2])
+    endpoints = _detect_endpoints(vertices[:, :2])
     
     # Filter points and convert to 2D (by discarding z-coordinate)
-    kept_indices = trim_points_protected(vertices[:, :2], 
+    kept_indices = _trim_points_protected(vertices[:, :2], 
                                          protected_indices=endpoints, 
                                          max_points=max_points)
     points_filtered = vertices[kept_indices]
 
-    _, best_path = tsp_held_karp_no_intersections(points_filtered[:, :2])
+    _, best_path = _tsp_held_karp_no_intersections(points_filtered[:, :2])
 
     if compress:
-        compressed_path = compress_path(points_filtered, best_path, 
+        compressed_path = _compress_path(points_filtered, best_path, 
                                         angle_threshold=angle_threshold)
         final_points = points_filtered[compressed_path[:-1]]
     else:
         final_points = points_filtered[best_path[:-1]]
     
     return [final_points]  # Return as list of faces (single face)
-
 
 def get_object_faces(vertices: List[Tuple[float, float, float]], fast: bool = True) -> List[List[Tuple[float, float, float]]]:
     """Generate faces for a physical object from its vertices.
@@ -1244,7 +1269,7 @@ if __name__ == "__main__":
     # Test the functions
     points = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
     path = [0, 1, 2, 3]
-    compressed = compress_path(points, path)
+    compressed = _compress_path(points, path)
     print(compressed)
 
     # Plot helper
