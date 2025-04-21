@@ -1111,10 +1111,8 @@ def _trim_points_protected(points: np.ndarray, protected_indices: List[int],
     x_range = (x.min(), x.max())
     
     # Calculate signed distances for all points
-    distances_and_closest = [
-        _signed_distance_to_curve(points[i], curve_fit, x_range) 
-        for i in range(len(points))
-    ]
+    distances_and_closest = [_signed_distance_to_curve(points[i], curve_fit, x_range) 
+                             for i in range(len(points))]
     distances = np.array([d for d, _ in distances_and_closest])
     
     # Generate reference points at 1/4, 2/4 and 3/4 along the curve

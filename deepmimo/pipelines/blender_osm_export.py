@@ -102,7 +102,7 @@ convert_objects_to_mesh()
 
 # Render original scene (no processing)
 im_path = os.path.join(output_folder, 'figs', 'cam_org.png')
-# create_camera_and_render(im_path)
+create_camera_and_render(im_path)
 
 # Process buildings
 buildings = add_materials_to_objs('building', building_material)
@@ -112,7 +112,7 @@ terrain_bounds = get_xy_bounds_from_latlon(minlat, minlon, maxlat, maxlon, pad=4
 process_roads(terrain_bounds, road_material)  # Filter, trim to bounds and add material
 
 # Render processed scene
-# create_camera_and_render(im_path.replace('.png', '_processed.png'))
+create_camera_and_render(im_path.replace('.png', '_processed.png'))
 
 # Export based on the selected format
 if "insite" in output_formats:
