@@ -452,18 +452,14 @@ def process_roads(terrain_bounds, road_material):
     LOGGER.info("🛣️ Starting road processing")
     
     # Select all roads
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in bpy.data.objects:
-        LOGGER.debug(f"🛣️ Checking road: {obj.name}")
-        if 'roads' in obj.name.lower() or 'paths' in obj.name.lower():
-            obj.select_set(True)
-    road_objs = bpy.context.selected_objects
+    road_objs = [obj for obj in bpy.data.objects
+                 if 'roads' in obj.name.lower() or 'paths' in obj.name.lower()]
     
     LOGGER.debug(f"🛣️ Found {len(road_objs)} road objects")
     # Define which roads to reject and which to accept
     if road_objs:
         for obj in road_objs:
-            if any(keyword in obj.name for keyword in REJECTED_ROAD_KEYWORDS):
+            if any(keyword in obj.name.lower() for keyword in REJECTED_ROAD_KEYWORDS):
                 LOGGER.debug(f"❌ Rejecting road: {obj.name}")
                 bpy.data.objects.remove(obj, do_unlink=True)
                 continue
