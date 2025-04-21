@@ -9,7 +9,7 @@ import subprocess
 import sys
 import requests
 import logging
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Tuple
 
 # Blender imports
 import bpy # type: ignore
@@ -295,10 +295,14 @@ def create_camera_and_render(output_path: str,
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
-REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_secondary', 'roads_tertiary',
+REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_tertiary', 
                           'paths_footway', 'roads_service', 'profile_']
 
-ACCEPTED_ROADS = ['map.osm_roads_primary', 'map.osm_roads_residential']
+TIERS = {
+    1: ['map.osm_roads_primary', 'map.osm_roads_residential'],
+    2: ['map.osm_roads_secondary'],
+    3: ['map.osm_roads_other']
+}
 
 def create_ground_plane(min_lat: float, max_lat: float, 
                         min_lon: float, max_lon: float) -> bpy.types.Object:
@@ -434,39 +438,52 @@ def convert_objects_to_mesh() -> None:
         LOGGER.error(error_msg)
         raise Exception(error_msg)
 
-def process_roads(terrain_bounds, road_material):
-    """Process roads by rejecting and accepting them.
-    
+def process_roads(terrain_bounds: Tuple[float, float, float, float], 
+                  road_material: bpy.types.Material) -> None:
+    """Process roads using tiered priority and material assignment.
+
     Args:
-        terrain_bounds: Tuple of floats (min_x, max_x, min_y, max_y) in meters
-        road_material: bpy.types.Material object for roads
+        terrain_bounds: (min_x, max_x, min_y, max_y) in meters
+        road_material: Material to apply to selected roads
     """
     LOGGER.info("🛣️ Starting road processing")
-    
-    # Select all roads
-    road_objs = [obj for obj in bpy.data.objects
-                 if 'roads' in obj.name.lower() or 'paths' in obj.name.lower()]
-    
-    LOGGER.debug(f"🛣️ Found {len(road_objs)} road objects")
-    # Define which roads to reject and which to accept
-    if road_objs:
-        for obj in road_objs:
-            if any(keyword in obj.name.lower() for keyword in REJECTED_ROAD_KEYWORDS):
-                LOGGER.debug(f"❌ Rejecting road: {obj.name}")
+
+    # Step 1: Delete rejected roads early
+    for obj in list(bpy.data.objects):
+        if any(k in obj.name.lower() for k in REJECTED_ROAD_KEYWORDS):
+            LOGGER.debug(f"❌ Rejecting road: {obj.name}")
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+    # Step 2: Tiered selection
+    selected_roads = []
+    for tier, names in TIERS.items():
+        objs = [obj for name in names if (obj := bpy.data.objects.get(name))]
+        if objs:
+            selected_roads = objs
+            selected_tier = tier
+            LOGGER.info(f"✅ Using Tier {tier} roads")
+            break
+
+    if not selected_roads:
+        LOGGER.warning("⚠️ No valid road objects found in any tier")
+        return
+
+    # Step 3: Remove roads from lower tiers
+    for tier, names in TIERS.items():
+        if tier <= selected_tier:
+            continue
+        for name in names:
+            obj = bpy.data.objects.get(name)
+            if obj:
+                LOGGER.debug(f"🗑️ Removing tier {tier} road: {obj.name}")
                 bpy.data.objects.remove(obj, do_unlink=True)
-                continue
-                
-            if obj.name not in ACCEPTED_ROADS:
-                LOGGER.warning(f"⚠️ Accepting uncategorized road: {obj.name}")
-            
-            LOGGER.info(f"🔄 Processing road: {obj.name}")
-            trim_faces_outside_bounds(obj, *terrain_bounds)
-            bpy.context.view_layer.objects.active = obj
-            road = bpy.context.active_object
-            road.data.materials.clear()
-            road.data.materials.append(road_material)
-    else:
-        LOGGER.warning("⚠️ No road objects found in scene")
+
+    # Step 4: Process selected roads
+    for obj in selected_roads:
+        LOGGER.info(f"🔄 Processing road: {obj.name}")
+        trim_faces_outside_bounds(obj, *terrain_bounds)
+        obj.data.materials.clear()
+        obj.data.materials.append(road_material)
 
 ###############################################################################
 # SIONNA PIPELINE SPECIFIC
