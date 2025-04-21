@@ -973,13 +973,54 @@ def tsp_held_karp_no_intersections(points):
 
     return min(res) if res else (float('inf'), [])
 
-def trim_points(points, max_points=14):
-    """ Deletes the point that is closest to the average of all points. """
+def detect_endpoints(points_2d: np.ndarray, n_endpoints: int = 2) -> tuple[np.ndarray, np.ndarray]:
+     """Detect the endpoints of a road by finding extreme points in X direction.
+     
+     Args:
+         points_2d: Array of 2D points (N x 2)
+         n_endpoints: Number of points to consider as endpoints on each side
+         
+     Returns:
+         tuple: (left_end_indices, right_end_indices) - Arrays of indices for left and right endpoints
+     """
+     # Find the extreme points in Y direction
+     x_sorted_indices = np.argsort(points_2d[:, 1])
+     left_end_indices = x_sorted_indices[:n_endpoints]  # leftmost points
+     right_end_indices = x_sorted_indices[-n_endpoints:]  # rightmost points
+     
+     return left_end_indices.tolist() + right_end_indices.tolist()
+
+def trim_points_protected(points, protected_indices, max_points=10):
+    """ Deletes points while preserving protected indices until max_points is reached. """
+    protected_indices = set(protected_indices)
+    
+    assert max_points >= len(protected_indices), "max_points must be >= number of protected points"
+    assert len(points) >= len(protected_indices), "len(points) must be >= max_points"
+
     while len(points) > max_points:
+        # Calculate pairwise distances
         dists = np.linalg.norm(points[:, np.newaxis] - points, axis=2)
         np.fill_diagonal(dists, np.inf)
+        
+        # Mask out protected indices
+        for idx in protected_indices:
+            dists[idx, :] = np.inf
+            dists[:, idx] = np.inf
+            
+        # Find closest pair of non-protected points
         _, j = np.unravel_index(np.argmin(dists), dists.shape)
+        
+        # Update protected indices after deletion
+        new_protected = set()
+        for idx in protected_indices:
+            if idx < j:
+                new_protected.add(idx)
+            else:
+                new_protected.add(idx - 1)
+        protected_indices = new_protected
+        
         points = np.delete(points, j, axis=0)
+        
     return points
 
 def compress_path(points, path, angle_threshold=1.0):
@@ -1039,8 +1080,12 @@ def _get_2d_face(vertices: np.ndarray, z_tolerance: float = 0.1, max_points: int
     if not np.allclose(vertices[:, 2], vertices[0, 2], atol=z_tolerance):
         raise ValueError("Vertices are not 2D")
     
+    # Detect endpoints  
+    endpoints = detect_endpoints(vertices[:, :2], n_endpoints=2)
+    
     # Filter points and convert to 2D (by discarding z-coordinate)
-    points_filtered = trim_points(vertices, max_points=max_points)
+    points_filtered = trim_points_protected(vertices, protected_indices=endpoints, 
+                                            max_points=max_points)
 
     _, best_path = tsp_held_karp_no_intersections(points_filtered[:, :2])
     # print(f"Best path: {best_path}")
