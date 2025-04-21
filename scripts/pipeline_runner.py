@@ -172,7 +172,9 @@ for index, row in df.iterrows():
 #%%
 
 rt_path = "C:/Users/jmora/Downloads/osm_root/city_19_oklahoma_3p5_174/city_19_oklahoma_3p5_174/insite_3.5GHz_5R_0D_0S"
+rt_path = "C:/Users/jmora/Downloads/osm_root/city_0_newyork_3p5_116/insite_3.5GHz_5R_0D_0S"
 dm.config('wireless_insite_version', "3.3.0")
+dm.config('wireless_insite_version', "4.0.1")
 scen_name = dm.convert(rt_path, overwrite=True)
 
 
@@ -328,46 +330,58 @@ def compress_path(points, path, angle_threshold=1.0):
     
     return compressed
 
-def detect_endpoints(points_2d: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-     """Detect the endpoints of a road by finding pairs of points that are furthest from each other.
-     
-     Args:
-         points_2d: Array of 2D points (N x 2)
-         n_endpoints: Number of points to consider as endpoints on each side
-         
-     Returns:
-         List of indices for the endpoints, alternating between pairs
-         (first point of pair 1, first point of pair 2, second point of pair 1, second point of pair 2)
-     """
-     # Calculate pairwise distances between all points
-     distances = np.linalg.norm(points_2d[:, np.newaxis] - points_2d, axis=2)
-     
-     # Find the first pair of points (maximally distant)
-     i1, j1 = np.unravel_index(np.argmax(distances), distances.shape)
-     
-     # Mask out the first pair to find second pair
-     distances_masked = distances.copy()
-     distances_masked[i1, :] = -np.inf
-     distances_masked[:, i1] = -np.inf
-     distances_masked[j1, :] = -np.inf
-     distances_masked[:, j1] = -np.inf
-     
-     # Find the second pair of points
-     i2, j2 = np.unravel_index(np.argmax(distances_masked), distances_masked.shape)
-     
-     # Print endpoint information
-    #  print("\nEndpoint Analysis:")
-    #  print(f"First pair indices: {i1}, {j1}")
-    #  print("First pair coordinates:")
-    #  print(points_2d[[i1, j1]])
-    #  print(f"\nSecond pair indices: {i2}, {j2}")
-    #  print("Second pair coordinates:")
-    #  print(points_2d[[i2, j2]])
-     
-     # Return indices in alternating order
-     return [i1, i2, j1, j2]
-
-
+def detect_endpoints(points_2d: np.ndarray, min_distance: float = 5.0) -> tuple[np.ndarray, np.ndarray]:
+    """Detect the endpoints of a road by finding pairs of points that are furthest from each other.
+    Points that are closer than min_distance to each other are considered duplicates and only one is kept.
+    
+    Args:
+        points_2d: Array of 2D points (N x 2)
+        min_distance: Minimum distance between points to consider them distinct
+        
+    Returns:
+        List of indices for the endpoints, alternating between pairs
+        (first point of pair 1, first point of pair 2, second point of pair 1, second point of pair 2)
+    """
+    # First, filter out points that are too close together
+    kept_indices = []
+    used_points = set()
+    
+    for i in range(len(points_2d)):
+        if i in used_points:
+            continue
+            
+        # Find all points close to this one
+        distances = np.linalg.norm(points_2d - points_2d[i], axis=1)
+        close_points = np.where(distances < min_distance)[0]
+        
+        # Mark all close points as used and keep only the current one
+        used_points.update(close_points)
+        kept_indices.append(i)
+    
+    # Use only the filtered points for endpoint detection
+    filtered_points = points_2d[kept_indices]
+    
+    # Calculate pairwise distances between filtered points
+    distances = np.linalg.norm(filtered_points[:, np.newaxis] - filtered_points, axis=2)
+    
+    # Find the first pair of points (maximally distant)
+    i1, j1 = np.unravel_index(np.argmax(distances), distances.shape)
+    
+    # Mask out the first pair to find second pair
+    distances_masked = distances.copy()
+    distances_masked[i1, :] = -np.inf
+    distances_masked[:, i1] = -np.inf
+    distances_masked[j1, :] = -np.inf
+    distances_masked[:, j1] = -np.inf
+    
+    # Find the second pair of points
+    i2, j2 = np.unravel_index(np.argmax(distances_masked), distances_masked.shape)
+    
+    # Map back to original indices
+    original_indices = [kept_indices[i] for i in [i1, i2, j1, j2]]
+    
+    # Return indices in alternating order
+    return original_indices
 
 def _signed_distance_to_curve(point, curve_fit, x_range):
     """Calculate signed perpendicular distance from point to curve.
@@ -399,7 +413,6 @@ def _signed_distance_to_curve(point, curve_fit, x_range):
     signed_dist = np.dot(vec_to_point, normal)
     
     return signed_dist, closest_point
-
 
 def trim_points_protected(points, protected_indices, max_points=14, debug=True):
     """Trims points while preserving protected indices and maintaining road shape.
@@ -555,8 +568,7 @@ def trim_points_protected(points, protected_indices, max_points=14, debug=True):
 
 #%%
 
-
-road_vertices = np.load('road_vertices_roads_0.npy')[:, :2]
+road_vertices = np.load('road_vertices_roads_3.npy')[:, :2]
 
 endpoints = detect_endpoints(road_vertices)
 kept_indices = trim_points_protected(road_vertices, endpoints, max_points=10)

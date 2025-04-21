@@ -973,18 +973,39 @@ def tsp_held_karp_no_intersections(points):
 
     return min(res) if res else (float('inf'), [])
 
-def detect_endpoints(points_2d: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def detect_endpoints(points_2d: np.ndarray, min_distance: float = 5.0) -> tuple[np.ndarray, np.ndarray]:
     """Detect the endpoints of a road by finding pairs of points that are furthest from each other.
+    Points that are closer than min_distance to each other are considered duplicates and only one is kept.
     
     Args:
         points_2d: Array of 2D points (N x 2)
+        min_distance: Minimum distance between points to consider them distinct
         
     Returns:
         List of indices for the endpoints, alternating between pairs
         (first point of pair 1, first point of pair 2, second point of pair 1, second point of pair 2)
     """
-    # Calculate pairwise distances between all points
-    distances = np.linalg.norm(points_2d[:, np.newaxis] - points_2d, axis=2)
+    # First, filter out points that are too close together
+    kept_indices = []
+    used_points = set()
+    
+    for i in range(len(points_2d)):
+        if i in used_points:
+            continue
+            
+        # Find all points close to this one
+        distances = np.linalg.norm(points_2d - points_2d[i], axis=1)
+        close_points = np.where(distances < min_distance)[0]
+        
+        # Mark all close points as used and keep only the current one
+        used_points.update(close_points)
+        kept_indices.append(i)
+    
+    # Use only the filtered points for endpoint detection
+    filtered_points = points_2d[kept_indices]
+    
+    # Calculate pairwise distances between filtered points
+    distances = np.linalg.norm(filtered_points[:, np.newaxis] - filtered_points, axis=2)
     
     # Find the first pair of points (maximally distant)
     i1, j1 = np.unravel_index(np.argmax(distances), distances.shape)
@@ -999,8 +1020,11 @@ def detect_endpoints(points_2d: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     # Find the second pair of points
     i2, j2 = np.unravel_index(np.argmax(distances_masked), distances_masked.shape)
     
-    # Return indices
-    return [i1, i2, j1, j2]
+    # Map back to original indices
+    original_indices = [kept_indices[i] for i in [i1, i2, j1, j2]]
+    
+    # Return indices in alternating order
+    return original_indices
 
 def _signed_distance_to_curve(point, curve_fit, x_range):
     """Calculate signed perpendicular distance from point to curve.
