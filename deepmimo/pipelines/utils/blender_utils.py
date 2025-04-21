@@ -295,13 +295,12 @@ def create_camera_and_render(output_path: str,
 # SCENE PROCESSING UTILITIES
 ###############################################################################
 
-REJECTED_ROAD_KEYWORDS = ['roads_unclassified', 'roads_tertiary', 
-                          'paths_footway', 'roads_service', 'profile_']
+REJECTED_ROAD_KEYWORDS = ['profile_', 'paths_steps']
 
 TIERS = {
-    1: ['map.osm_roads_primary', 'map.osm_roads_residential'],
-    2: ['map.osm_roads_secondary'],
-    3: ['map.osm_roads_other']
+    1: ['map.osm_roads_primary', 'map.osm_roads_residential', 'map.osm_roads_tertiary',
+        'map.osm_roads_secondary', 'map.osm_roads_unclassified', 'map.osm_roads_service'],
+    2: ['map.osm_paths_footway',],
 }
 
 def create_ground_plane(min_lat: float, max_lat: float, 
