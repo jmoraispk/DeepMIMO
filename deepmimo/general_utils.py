@@ -414,9 +414,9 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
 def zip(folder_path: str) -> str:
     """Create zip archive of folder contents.
 
-    This function creates a zip archive containing all files in the specified
-    folder. The archive is created in the same directory as the folder with
-    '.zip' appended to the folder name.
+    This function creates a zip archive containing all files and subdirectories in the 
+    specified folder. The archive is created in the same directory as the folder with
+    '.zip' appended to the folder name. The directory structure is preserved in the zip.
 
     Args:
         folder_path (str): Path to folder to be zipped
@@ -424,14 +424,22 @@ def zip(folder_path: str) -> str:
     Returns:
         Path to the created zip file
     """
-    files_in_folder = os.listdir(folder_path)
-    file_full_paths = [os.path.join(folder_path, file) for file in files_in_folder]
-
     zip_path = folder_path + ".zip"
+    
+    # Get all files and folders recursively
+    all_files = []
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            # Get full path of file
+            file_path = os.path.join(root, file)
+            # Get relative path from the base folder for preserving structure
+            rel_path = os.path.relpath(file_path, os.path.dirname(folder_path))
+            all_files.append((file_path, rel_path))
+
     # Create a zip file
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in tqdm(file_full_paths, desc="Compressing", unit="file"):
-            zipf.write(file_path, os.path.basename(file_path))
+        for file_path, rel_path in tqdm(all_files, desc="Compressing", unit="file"):
+            zipf.write(file_path, rel_path)
 
     return zip_path
 
