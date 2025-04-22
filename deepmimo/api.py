@@ -499,7 +499,8 @@ def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[di
         except Exception as e:
             if e.response is not None: 
                 server_message = json.loads(e.response.text)["error"]
-                print(f"✗ Failed to upload {filename}: {server_message} (Server Response Code: {e.response.status_code})")
+                print(f"✗ Failed to upload {filename}: {server_message} "
+                      f"(Server Response Code: {e.response.status_code})")
             else:
                 # Handle cases where the error didn't have a response object
                  print(f"✗ Failed to upload {filename}: {e}")
@@ -568,6 +569,9 @@ def _make_submission_on_server(submission_scenario_name: str, key: str,
         print('Thank you for your submission!')
         print('Head over to deepmimo.net/dashboard?tab=submissions to monitor it.')
         print('The admins have been notified and will get to it ASAP.')
+        print('\n >> Please upload the ray tracing source as well by calling:')
+        print(f"upload_rt_source('{submission_scenario_name}', dm.zip(<rt_folder>), <key>)")
+        print('where <rt_folder> is the path to the ray tracing source folder as in dm.convert(<rt_folder>)')
     
     except Exception as e:
         print(f"Error: Failed to create submission for {submission_scenario_name}")
