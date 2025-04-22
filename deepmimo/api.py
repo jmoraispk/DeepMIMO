@@ -3,6 +3,42 @@ API utility functions for the DeepMIMO dataset generation.
 
 This module provides functions for uploading and downloading DeepMIMO scenarios
 from the DeepMIMO server.
+
+Upload flow:
+1. Call upload() with scenario name, key, and optional parameters (details, extra_metadata, etc.)
+2. If not submission_only:
+   - _upload_to_b2() is called to upload the scenario zip file, handling:
+     * Get presigned URL for upload
+     * Calculate file hash
+     * Upload file to B2
+     * Return authorized filename
+3. _make_submission_on_server() creates the submission with:
+   - Process parameters using _process_params_data() - used scenario filtering in database
+   - Generate key components using _generate_key_components() - used for scenario info on website
+   - Create submission on server with processed data
+   - If include_images is True:
+     * Generate images using make_imgs()
+     * Upload images using upload_images()
+
+Download flow:
+1. Call download() with scenario name and optional output directory
+2. Check if scenario already exists locally
+3. If not:
+   - Get secure download URL using _download_url()
+   - Request download token and redirect URL from server
+   - Download file using redirect URL with progress bar
+   - Unzip downloaded file to scenarios directory
+4. Return path to downloaded file
+
+Search flow:
+1. Call search() with query dictionary containing search parameters
+2. Send request to /api/search/scenarios endpoint
+3. Return list of matching scenario names if successful
+4. Use returned scenario names to download and load scenarios:
+   for scenario_name in search(query):
+       dm.download(scenario_name)
+       dataset = dm.load(scenario_name)
+
 """
 
 import os
@@ -600,7 +636,9 @@ def upload(scenario_name: str, key: str,
 
         skip_zip: Skip zipping the scenario folder if True
         include_images: Generate and upload visualization images if True
-
+        submission_only: Skip zipping and uploading to B2, only make a submission on the server. 
+                         Only useful if a pre-zipped scenario is already uploaded to B2.
+        
     Returns:
         Scenario name if the initial submission creation was successful, None otherwise.
         Note: Image upload success/failure doesn't change this return value.
