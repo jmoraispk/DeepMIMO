@@ -63,7 +63,7 @@ API_BASE_URL = "https://dev.deepmimo.net"
 
 # Headers for HTTP requests
 HEADERS = {
-    'User-Agent': 'DeepMIMO-Python/1.0',
+    'User-Agent': 'DeepMIMO-Python/4.0',
     'Accept': '*/*'
 }
 
