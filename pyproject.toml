@@ -16,7 +16,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["MIMO", "ray tracing", "dataset", "DeepMIMO", "raytracing", "wireless"]
 classifiers = [
-    "Development Status :: 4 - Alpha",
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
