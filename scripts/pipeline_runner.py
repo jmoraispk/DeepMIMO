@@ -30,6 +30,7 @@ import pandas as pd
 import os
 import numpy as np
 from deepmimo.pipelines.utils.pipeline_utils import call_blender, get_origin_coords, load_params_from_row
+from deepmimo.pipelines.blender_osm_export2 import fetch_osm_scene
 
 # import sys
 # sys.path.append("C:/Users/jmora/Documents/GitHub/DeepMIMO")
@@ -137,10 +138,12 @@ for index, row in df.iterrows():
 	# RT Phase 2: Extract OSM data
 	COUNTER += 1
 	osm_folder = os.path.join(OSM_ROOT, row['name']) + f'_{COUNTER}'
-	call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
-				 osm_folder, # Output folder to the Blender script
-				 BLENDER_PATH, 
-				 outputs=['insite']) # List of outputs to generate
+	# call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
+	# 			 osm_folder, # Output folder to the Blender script
+	# 			 BLENDER_PATH, 
+	# 			 outputs=['sionna']) # List of outputs to generate
+	fetch_osm_scene(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
+					osm_folder, output_formats=['insite'])
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
 
 	# RT Phase 3: Generate RX and TX positions
@@ -150,8 +153,8 @@ for index, row in df.iterrows():
 	# Optional: Round positions (visually *way* better)
 	rx_pos = np.round(rx_pos, p['pos_prec'])
 	tx_pos = np.round(tx_pos, p['pos_prec'])
-	continue
-	# break
+	
+	break
 	# RT Phase 4: Run Wireless InSite ray tracing
 	rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 	
