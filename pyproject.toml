@@ -33,11 +33,16 @@ all = [
     "utm",               # To be replaced by built-in (see geo_utils.py)
     "lxml",              # To be replaced by built-in (see insite_raytracer.py)
     "pandas",            # To be replaced by built-in (see pipeline_runner.py)
-    "bpy==3.6.0",        # Requires Python 3.10. Python 3.10 goes up to bpy==4.0.
-                         # Needed to do OSM extraction and 3D processing for ray tracing.
     "sionna-rt==1.0.2",  # Sionna Ray Tracer
     "mitsuba==3.6.2",    # Pinned by sionna-rt. Blender add-on likes 3.5.0. Issues?
     "plyfile",           # To read blender ply exports for insite_raytracer.py
+    "bpy==3.6.0; python_version == '3.10'",
+        # BPY requires Python 3.10. Python 3.10 goes up to bpy==4.0.
+        # Needed to do OSM extraction and 3D processing for ray tracing.
+        # bpy 3.6 is *needed* due to binary issues. 
+        # 4.0 breaks mitsuba addon and ply exports. When fixed, add 2 lines below:
+        # "bpy==4.4.0; python_version == '3.11'",
+        # "numpy<2.0; python_version == '3.11'",  # bpy >4.0, <=4.4 is built with numpy 1.x
     
     # Development
     "ipykernel",
