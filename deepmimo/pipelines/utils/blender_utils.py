@@ -37,12 +37,12 @@ PROJ_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 LOGGER: Optional[Any] = None
 
-def log_local_setup(name: str) -> logging.Logger:
-    """Set up local logging configuration for both console and file output, 
-    putting the log file in the same directory as the script.
+def log_local_setup(log_file_path: str) -> logging.Logger:
+    """Set up local logging configuration for both console and file output.
+    
+    Args:
+        log_file_path (str): Full path to the log file
     """
-    log_dir = os.path.dirname(os.path.abspath(__file__))
-    log_file_path = os.path.join(log_dir, name)
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
     logging.basicConfig(
@@ -53,7 +53,7 @@ def log_local_setup(name: str) -> logging.Logger:
             logging.FileHandler(log_file_path, mode='w')  # File handler
         ]
     )
-    return logging.getLogger(name)
+    return logging.getLogger(os.path.basename(log_file_path))
 
 def set_LOGGER(logger: Any) -> None:
     """Set the logger for the BlenderUtils class."""

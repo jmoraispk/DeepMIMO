@@ -26,7 +26,7 @@ from .utils.blender_utils import (
 )
 
 def fetch_osm_scene(minlat: float, minlon: float, maxlat: float, maxlon: float, 
-                     output_folder: str, output_formats: list[str] = ["insite"]) -> None:
+                    output_folder: str, output_formats: list[str] = ["insite"]) -> None:
     """
     Process an OpenStreetMap scene and export it in the specified formats.
     
@@ -39,18 +39,19 @@ def fetch_osm_scene(minlat: float, minlon: float, maxlat: float, maxlon: float,
         output_formats (list[str], optional): List of output formats. Defaults to ["insite"].
                                               Possible values: "insite", "sionna"
     """
-    # Setup logging to both console and file (great for debugging)
-    logger = log_local_setup('logging_blender_osm.txt')
-    set_LOGGER(logger)  # So the inner functions can log
-    
     # Check if the folder already exists
     if os.path.exists(output_folder):
-        logger.info(f"⏩ Folder '{output_folder}' already exists. Skipping OSM extraction.")
+        print(f"⏩ Folder '{output_folder}' already exists. Skipping OSM extraction.")
         return
     
     # Create output directory if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
+    # Setup logging to both console and file (great for debugging)
+    log_file = os.path.join(output_folder, 'logging_blender_osm.txt')
+    logger = log_local_setup(log_file)
+    set_LOGGER(logger)  # So the inner functions can log
+    
     logger.info(f"📍 Processing Scenario: [{minlat}, {minlon}] to [{maxlat}, {maxlon}]")
     logger.info(f"📂 Saving output to: {output_folder}")
     logger.info(f"📊 Output formats: {output_formats}")
