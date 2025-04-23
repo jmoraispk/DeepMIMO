@@ -28,57 +28,6 @@ def run_command(command: List[str], description: str) -> None:
     print(f"\n✅ {description} completed!\n")
 
 
-def call_blender(min_lat, min_lon, max_lat, max_lon, osm_folder: str,
-                 blender_path: str, outputs: List[str]) -> None:
-    """Process OSM extraction directly without calling a separate script.
-    
-    Args:
-        min_lat (float): Minimum latitude
-        min_lon (float): Minimum longitude
-        max_lat (float): Maximum latitude
-        max_lon (float): Maximum longitude
-        osm_folder (str): Path to the OSM folder
-        blender_path (str): Path to the Blender executable
-        blender_script_path (str): Path to the Blender script
-        outputs (List[str]): List of outputs to generate
-    """
-    
-    # Check if the folder already exists
-    if os.path.exists(osm_folder):
-        print(f"⏩ Folder '{osm_folder}' already exists. Skipping OSM extraction.")
-        return
-    
-    blender_script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                       "../blender_osm_export.py")
-
-    # Validate paths
-    if not os.path.exists(blender_path):
-        raise FileNotFoundError(f"❌ Blender executable not found at {blender_path}")
-        
-    if not os.path.exists(blender_script_path):
-        raise FileNotFoundError(f"❌ Blender script not found at {blender_script_path}")
-    
-    # Build command to run Blender
-    command = [
-        blender_path, 
-        "--background", 
-        "--python", 
-        blender_script_path, 
-        "--", 
-        "--minlat", str(min_lat), 
-        "--minlon", str(min_lon), 
-        "--maxlat", str(max_lat), 
-        "--maxlon", str(max_lon),
-        "--output", osm_folder,   # Output folder to the Blender script
-        "--format", outputs[0] if len(outputs) == 1 else "both"
-    ]
-    
-    # Run the command
-    run_command(command, "OSM Extraction")
-    
-    return
-
-
 def get_origin_coords(osm_folder: str) -> Tuple[float, float]:
     """Read the origin coordinates from the OSM folder.
     

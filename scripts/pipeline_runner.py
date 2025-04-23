@@ -29,7 +29,7 @@ Steps to run a pipeline:
 import pandas as pd
 import os
 import numpy as np
-from deepmimo.pipelines.utils.pipeline_utils import call_blender, get_origin_coords, load_params_from_row
+from deepmimo.pipelines.utils.pipeline_utils import get_origin_coords, load_params_from_row
 from deepmimo.pipelines.blender_osm_export2 import fetch_osm_scene
 
 # import sys
@@ -138,10 +138,6 @@ for index, row in df.iterrows():
 	# RT Phase 2: Extract OSM data
 	COUNTER += 1
 	osm_folder = os.path.join(OSM_ROOT, row['name']) + f'_{COUNTER}'
-	# call_blender(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
-	# 			 osm_folder, # Output folder to the Blender script
-	# 			 BLENDER_PATH, 
-	# 			 outputs=['sionna']) # List of outputs to generate
 	fetch_osm_scene(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 					osm_folder, output_formats=['insite'])
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
