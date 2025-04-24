@@ -78,13 +78,10 @@ sionna019 = [
 
     # Sionna Specific
     "absl-py==2.1.0",
-    "drjit==0.4.6",
     "gpustat==1.1.1",
-    "ipywidgets==8.0.5",
-    "jupyterlab-widgets==3.0.5",
     "keras==2.15.0",
     "matplotlib==3.10.0",
-    "mitsuba==3.5.2",
+    "mitsuba==3.5.0",
     "plotly==6.0.0",
     "pyarrow==19.0.1",
     "pythreejs==2.4.2",
