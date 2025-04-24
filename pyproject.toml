@@ -27,15 +27,21 @@ dependencies = [
     "tqdm>=4.59.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["deepmimo*"]
+
+[project.urls]
+Homepage = "https://deepmimo.net/" 
+
 [project.optional-dependencies]
+# These additional dependencies are meant to run the pipelines. Both the "all" and "sionna019"
+# are capable of running both Sionna and Wireless InSite in parallel. 
+
 all = [
-    # Ray tracing pipelines
+    # Common ray tracing pipeline tools
     "utm",               # To be replaced by built-in (see geo_utils.py)
     "lxml",              # To be replaced by built-in (see insite_raytracer.py)
     "pandas",            # To be replaced by built-in (see pipeline_runner.py)
-    "sionna-rt==1.0.2",  # Sionna Ray Tracer
-    "mitsuba==3.6.2",    # Pinned by sionna-rt. Blender add-on likes 3.5.0. Issues?
-    "plyfile",           # To read blender ply exports for insite_raytracer.py
     "bpy==3.6.0; python_version == '3.10'",
         # BPY requires Python 3.10. Python 3.10 goes up to bpy==4.0.
         # Needed to do OSM extraction and 3D processing for ray tracing.
@@ -44,13 +50,59 @@ all = [
         # "bpy==4.4.0; python_version == '3.11'",
         # "numpy<2.0; python_version == '3.11'",  # bpy >4.0, <=4.4 is built with numpy 1.x
     
+    # InSite Specific
+    "plyfile",           # To read blender ply exports for insite_raytracer.py
+    
+    # Sionna 1.0 specific
+    "sionna-rt==1.0.2",  # Sionna Ray Tracer (pins "mitsuba==3.6.2")
+
     # Development
-    "ipykernel",
+    "jupyter",
 ]
 
-[tool.setuptools.packages.find]
-include = ["deepmimo*"]
+sionna019 = [
+    # Common ray tracing pipeline tools
+    "utm",
+    "lxml",
+    "pandas",
+    "bpy==3.6.0; python_version == '3.10'",
 
+    # InSite Specific
+    "plyfile",
+    
+    # Other Requirements (to ensure suitable binaries)
+    "numpy<2.0",
 
-[project.urls]
-Homepage = "https://deepmimo.net/" 
+    # Development
+    "jupyter",
+
+    # Sionna Specific
+    "absl-py==2.1.0",
+    "drjit==0.4.6",
+    "gpustat==1.1.1",
+    "ipywidgets==8.0.5",
+    "jupyterlab-widgets==3.0.5",
+    "keras==2.15.0",
+    "matplotlib==3.10.0",
+    "mitsuba==3.5.2",
+    "plotly==6.0.0",
+    "pyarrow==19.0.1",
+    "pythreejs==2.4.2",
+    "scipy==1.15.1",
+    "sionna==0.19.1",
+    "tensorflow==2.15.1",
+    
+    # GPU dependencies (Requires CUDA 12.2+ drivers & Host driver ≥ 535.54.03)
+    "nvidia-cublas-cu12==12.2.5.6",
+    "nvidia-cuda-cupti-cu12==12.2.142",
+    "nvidia-cuda-nvcc-cu12==12.2.140",
+    "nvidia-cuda-nvrtc-cu12==12.2.140",
+    "nvidia-cuda-runtime-cu12==12.2.140",
+    "nvidia-cudnn-cu12==8.9.4.25",
+    "nvidia-cufft-cu12==11.0.8.103",
+    "nvidia-curand-cu12==10.3.3.141",
+    "nvidia-cusolver-cu12==11.5.2.141",
+    "nvidia-cusparse-cu12==12.1.2.141",
+    "nvidia-nccl-cu12==2.16.5",
+    "nvidia-nvjitlink-cu12==12.2.140"
+]
