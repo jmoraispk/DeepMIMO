@@ -24,7 +24,7 @@ my_api_key.py
 #   For wireless insite outputs
 testing.py
 executables/*
-pipeline_dev/*
+dev/*
 P2Ms/*
 *.p2m
 conversion_errors.json
