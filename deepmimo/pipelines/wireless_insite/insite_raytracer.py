@@ -35,6 +35,7 @@ from ..utils.geo_utils import convert_GpsBBox2CartesianBBox
 from ..utils.pipeline_utils import run_command
 
 from ...consts import BBOX_PAD
+from ...config import config
 
 TERRAIN_TEMPLATE = "newTerrain.ter"
 
@@ -81,7 +82,6 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
             Required Paths:
                 - wi_exe (str): Path to Wireless InSite executable
                 - wi_lic (str): Path to Wireless InSite license
-                - wi_version (str): Wireless InSite version (e.g. "4.0.1")
                 - building_material (str): Path to building material file
                 - road_material (str): Path to road material file
                 - terrain_material (str): Path to terrain material file
@@ -195,7 +195,7 @@ def raytrace_insite(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
     scenario.save("insite") # insite.setup
 
     # Generate XML file (.xml) - What Wireless InSite executable actually uses
-    wi_major_version = int(rt_params['wi_version'][0])
+    wi_major_version = int(config.get('wireless_insite_version')[0])
     xml_generator = XmlGenerator(insite_path, scenario, txrx_editor, version=wi_major_version)
     xml_generator.update()
     xml_path = os.path.join(insite_path, "insite.study_area.xml")

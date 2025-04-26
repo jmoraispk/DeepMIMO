@@ -1,6 +1,11 @@
 # utils/sionna_utils.py
-import tensorflow as tf
-from sionna.rt import load_scene, PlanarArray, RadioMaterial, BackscatteringPattern, Scene
+from sionna.rt import (
+    load_scene,
+    PlanarArray,
+    RadioMaterial,
+    BackscatteringPattern,
+    Scene
+)
 
 def set_materials(scene: Scene) -> Scene:
     """Set radio material properties for Sionna."""

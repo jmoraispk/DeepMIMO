@@ -9,19 +9,30 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow (excessive) logg
 
 # Third-party imports
 import numpy as np
-import tensorflow as tf  # type: ignore
 from tqdm import tqdm
-
-# Sionna RT imports
-from sionna.rt import Transmitter, Receiver  # type: ignore
 
 # Local imports
 from .sionna_utils import create_base_scene, set_materials
 from ...converter.sionna_rt import sionna_exporter
+from ...config import config
 
-tf.random.set_seed(1)
-gpus = tf.config.list_physical_devices('GPU')
-print("TensorFlow sees GPUs:", gpus)
+# Conditional TensorFlow import based on Sionna version
+if config.get('sionna_version').startswith('0.1'):
+    if not config.get('sionna_version').startswith('0.19'):
+        raise Warning("Pipeline untested for versions <0.19 and >1.0.2")
+    try:
+        import tensorflow as tf  # type: ignore
+        tf.random.set_seed(1)
+        gpus = tf.config.list_physical_devices('GPU')
+        print("TensorFlow sees GPUs:", gpus)
+    except ImportError:
+        print("TensorFlow not found. Please install TensorFlow to use Sionna ray tracing.")
+        tf = None
+
+try:
+    from sionna.rt import Transmitter, Receiver  # type: ignore
+except ImportError:
+    raise ImportError("Sionna not found. Please install Sionna to use ray tracing functionality.")
 
 class _DataLoader:
     """DataLoader class for Sionna RT that returns user indices for raytracing."""
@@ -69,8 +80,11 @@ def raytrace_sionna(osm_folder: str, tx_pos: np.ndarray, rx_pos: np.ndarray, **r
         # Add BSs
         num_bs = len(tx_pos)
         for b in range(num_bs): 
-            tx = Transmitter(position=tx_pos[b], name=f"BS_{b}",
-                             power_dbm=tf.Variable(0, dtype=tf.float32))
+            if rt_params['sionna_version'].startswith('0.19'):
+                pwr_dbm = tf.Variable(0, dtype=tf.float32)
+            else: # version 1.x
+                pwr_dbm = 0
+            tx = Transmitter(position=tx_pos[b], name=f"BS_{b}", power_dbm=pwr_dbm)
             scene.add(tx)
             print(f"Added BS_{b} at position {tx_pos[b]}")
 

@@ -6,8 +6,6 @@ Each scenario's output is stored in a folder named after its bounding box.
 import bpy # type: ignore
 import os
 
-import addon_utils
-
 from .utils.blender_utils import (
 	log_local_setup,
 	install_blender_addon,
