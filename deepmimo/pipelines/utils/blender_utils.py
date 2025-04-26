@@ -22,9 +22,12 @@ ADDONS = {
 
 ADDON_URLS = {
     "blosm": "https://www.dropbox.com/scl/fi/cka3yriyrjppnfy2ztjq9/blosm_2.7.11.zip?rlkey=9ak7vnf4h13beqd4hpwt9e3ws&st=znk7icsq&dl=1",
-    # blosm link is hosted on dropbox because it is not hosted. 
+    # blosm link is self-hosted on dropbox because it is not properly hosted anywhere else.
     # The original link is: https://github.com/vvoovv/blosm (which forwards to gumroad)
-    "mitsuba-blender": "https://github.com/mitsuba-renderer/mitsuba-blender/releases/download/v0.4.0/mitsuba-blender.zip",
+    
+    "mitsuba-blender": "https://www.dropbox.com/scl/fi/lslog12ehjl7n6f8vjaaj/mitsuba-blender.zip?rlkey=vve9h217m42ksros47x40sl45&st=oltvhszv&dl=1",
+    # mitsuba-blender link is self-hosted on dropbox because it is a slightly changed
+    # version that fixes a bug to work solely with bpy in linux.
 }
 
 # Material names for scene objects
@@ -491,6 +494,7 @@ def process_roads(terrain_bounds: Tuple[float, float, float, float],
 def export_mitsuba_scene(scene_folder: str) -> None:
     """Export scene to Mitsuba and save .blend file."""
     LOGGER.info("📤 Exporting Sionna Scene")
+
     try:
         mitsuba_path = os.path.join(scene_folder, 'scene.xml')
         blend_path = os.path.join(scene_folder, 'scene.blend')
@@ -503,7 +507,6 @@ def export_mitsuba_scene(scene_folder: str) -> None:
     except Exception as e:
         error_msg = f"❌ Failed to export scene: {str(e)}"
         LOGGER.error(error_msg)
-        raise Exception(error_msg)
 
 ###############################################################################
 # WIRELESS INSITE PIPELINE SPECIFIC
