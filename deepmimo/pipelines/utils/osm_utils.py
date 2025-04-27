@@ -21,11 +21,12 @@ Constants:
 
 import requests
 import numpy as np
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from shapely.geometry import Point, Polygon
 from shapely.ops import nearest_points
 from math import sin, cos, pi
 from .geo_utils import meter_to_degree
+from dataclasses import dataclass
 
 # Constants
 MIN_DISTANCE_FROM_BUILDING = 2  # meters
@@ -36,8 +37,68 @@ MAX_SPIRAL_RADIUS = 100  # meters maximum search radius
 MIN_BUILDING_AREA = 25  # sq meters (ignore small buildings)
 DEGREE_TO_METER = 111320  # approx. meters per degree at equator
 
-def get_buildings(lat: float, lon: float, radius: float = SEARCH_RADIUS) -> List[Polygon]:
-    """Get all significant buildings in the area as Shapely polygons.
+@dataclass
+class Building:
+    """Class representing a building with its geometry and properties."""
+    geometry: Polygon
+    height: float = 10.0  # Default height in meters
+    properties: Dict = None
+
+    @classmethod
+    def from_osm_element(cls, element: Dict, nodes_cache: Dict[int, Tuple[float, float]]) -> Optional['Building']:
+        """Create a Building instance from an OSM element.
+        
+        Args:
+            element (Dict): OSM element containing building data
+            nodes_cache (Dict[int, Tuple[float, float]]): Cache of node coordinates
+            
+        Returns:
+            Optional[Building]: Building instance or None if invalid
+        """
+        nodes = []
+        for node_id in element.get('nodes', []):
+            if node_id in nodes_cache:
+                nodes.append(nodes_cache[node_id])
+        
+        if len(nodes) < 3:  # Need at least 3 points for a polygon
+            return None
+            
+        try:
+            polygon = Polygon(nodes)
+            if not (polygon.is_valid and polygon.area > MIN_BUILDING_AREA/(DEGREE_TO_METER**2)):
+                return None
+                
+            # Add buffer to account for OSM inaccuracies
+            buffered_polygon = polygon.buffer(0.00002)  # ~2.2m buffer
+            
+            # Extract height information from tags if available
+            properties = element.get('tags', {})
+            height = None
+            
+            # Try different height tags
+            if 'height' in properties:
+                try:
+                    height = float(properties['height'])
+                except (ValueError, TypeError):
+                    pass
+            
+            if height is None and 'building:height' in properties:
+                try:
+                    height = float(properties['building:height'])
+                except (ValueError, TypeError):
+                    pass
+            
+            return cls(
+                geometry=buffered_polygon,
+                height=height if height else cls.height,
+                properties=properties
+            )
+        except:
+            print(f"Invalid polygon: {element}. Skipping...")
+            return None
+
+def get_buildings(lat: float, lon: float, radius: float = SEARCH_RADIUS) -> List[Building]:
+    """Get all significant buildings in the area as Building instances.
     
     Args:
         lat (float): Latitude of the center point
@@ -45,7 +106,7 @@ def get_buildings(lat: float, lon: float, radius: float = SEARCH_RADIUS) -> List
         radius (float): Search radius in meters, defaults to SEARCH_RADIUS
         
     Returns:
-        List[Polygon]: List of building polygons with a 2.2m buffer
+        List[Building]: List of Building instances
     """
     overpass_url = "https://overpass-api.de/api/interpreter"
     query = f"""
@@ -56,7 +117,7 @@ def get_buildings(lat: float, lon: float, radius: float = SEARCH_RADIUS) -> List
     );
     out body;
     >;
-    out skel qt;
+    out body qt;
     """
     
     try:
@@ -67,7 +128,7 @@ def get_buildings(lat: float, lon: float, radius: float = SEARCH_RADIUS) -> List
         print(f"OSM query failed: {e}")
         return []
 
-    buildings: List[Polygon] = []
+    buildings = []
     nodes_cache: Dict[int, Tuple[float, float]] = {}
     
     # Cache all nodes first
@@ -78,34 +139,21 @@ def get_buildings(lat: float, lon: float, radius: float = SEARCH_RADIUS) -> List
     # Process ways (buildings)
     for element in data['elements']:
         if element['type'] == 'way' and 'tags' in element and 'building' in element['tags']:
-            nodes = []
-            for node_id in element.get('nodes', []):
-                if node_id in nodes_cache:
-                    nodes.append(nodes_cache[node_id])
-            
-            if len(nodes) >= 3:  # Need at least 3 points for a polygon
-                try:
-                    polygon = Polygon(nodes)
-                    if polygon.is_valid and polygon.area > MIN_BUILDING_AREA/(DEGREE_TO_METER**2):
-                        # Add buffer to account for OSM inaccuracies
-                        buildings.append(polygon.buffer(0.00002))  # ~2.2m buffer
-                except:
-                    continue
+            building = Building.from_osm_element(element, nodes_cache)
+            if building is not None:
+                buildings.append(building)
     
     return buildings
 
-def is_point_clear_of_buildings(point: Point, buildings: List[Polygon]) -> bool:
+def is_point_clear_of_buildings(point: Point, buildings: List[Building]) -> bool:
     """Check if point maintains minimum distance from all building footprints.
     
     Args:
         point (Point): Point to check
-        buildings (List[Polygon]): List of building polygons
+        buildings (List[Building]): List of Building instances
         
     Returns:
         bool: True if point maintains minimum distance from all buildings
-        
-    Note:
-        The minimum distance is defined by MIN_DISTANCE_FROM_BUILDING constant
     """
     if not buildings:
         return True
@@ -113,11 +161,12 @@ def is_point_clear_of_buildings(point: Point, buildings: List[Polygon]) -> bool:
     buffer_degrees = meter_to_degree(MIN_DISTANCE_FROM_BUILDING, point.y)
     
     for building in buildings:
-        if building.distance(point) < buffer_degrees:
+        if building.geometry.distance(point) < buffer_degrees:
             return False
     return True
 
-def find_nearest_clear_location(original_lat: float, original_lon: float, buildings: List[Polygon]) -> Tuple[float, float]:
+def find_nearest_clear_location(original_lat: float, original_lon: float, 
+                               buildings: List[Building]) -> Tuple[float, float]:
     """Find nearest location that maintains minimum distance from all buildings.
     
     Uses multiple strategies to find a suitable location:
@@ -130,21 +179,21 @@ def find_nearest_clear_location(original_lat: float, original_lon: float, buildi
     Args:
         original_lat (float): Original latitude
         original_lon (float): Original longitude
-        buildings (List[Polygon]): List of building polygons
+        buildings (List[Building]): List of Building instances
         
     Returns:
         Tuple[float, float]: Tuple of (latitude, longitude) for location clear of buildings
     """
     original_point = Point(original_lon, original_lat)
     
-    # Strategy 1: Check if original point is already clear
+    # Strategy 1: Check if original point is clear
     if is_point_clear_of_buildings(original_point, buildings):
         return original_lat, original_lon
     
     # Strategy 2: Move directly away from nearest building edge
     if buildings:
-        nearest_building = min(buildings, key=lambda b: b.distance(original_point))
-        nearest_pt = nearest_points(original_point, nearest_building)[1]
+        nearest_building = min(buildings, key=lambda b: b.geometry.distance(original_point))
+        nearest_pt = nearest_points(original_point, nearest_building.geometry)[1]
         
         # Calculate direction away from building
         dx = original_point.x - nearest_pt.x

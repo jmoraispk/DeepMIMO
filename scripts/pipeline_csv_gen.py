@@ -28,15 +28,12 @@ import os
 from typing import List, Dict, Tuple
 import pandas as pd
 import random
-import numpy as np
 import time
 from dataclasses import dataclass
 from shapely.geometry import Point
 import matplotlib.pyplot as plt
 from deepmimo.pipelines.utils.osm_utils import (
-    get_buildings, is_point_clear_of_buildings, find_nearest_clear_location,
-    SEARCH_RADIUS, VALIDATION_RADIUS
-)
+    get_buildings, is_point_clear_of_buildings, find_nearest_clear_location)
 
 # Constants
 MAX_VALIDATION_ATTEMPTS: int = 3  # max validation retries
@@ -74,40 +71,69 @@ class ScenarioBboxInfo:
             'bs_height': bs_heights_str
         }
 
-def validate_and_adjust_point(lat: float, lon: float) -> Tuple[float, float, bool]:
-    """Validate point and adjust until a suitable location away from buildings is found.
-    
-    Makes multiple attempts to find a location that maintains minimum distance from buildings.
-    Gives up after MAX_VALIDATION_ATTEMPTS.
+def validate_and_adjust_point(lat: float, lon: float, buildings: List, placement: str = 'outside') -> Tuple[float, float, float, bool]:
+    """Validate point and adjust location based on placement strategy.
     
     Args:
         lat (float): Initial latitude to check
         lon (float): Initial longitude to check
+        buildings (List): List of building polygons
+        placement (str): Placement strategy ('outside' or 'on_top'). Defaults to 'outside'.
         
     Returns:
-        Tuple[float, float, bool]: Tuple containing:
+        Tuple[float, float, float, bool]: Tuple containing:
             - latitude of valid location (or last attempt)
             - longitude of valid location (or last attempt)
+            - height of BS placement
             - True if location is valid, False if no valid location found
     """
-    for attempt in range(MAX_VALIDATION_ATTEMPTS):
-        buildings = get_buildings(lat, lon, VALIDATION_RADIUS)
-        point = Point(lon, lat)
-        
-        if is_point_clear_of_buildings(point, buildings):
-            return lat, lon, True
-        
-        # Find new location clear of buildings
-        new_lat, new_lon = find_nearest_clear_location(lat, lon, buildings)
-        
-        # Verify the new location with fresh data
-        verify_buildings = get_buildings(new_lat, new_lon, VALIDATION_RADIUS)
-        if is_point_clear_of_buildings(Point(new_lon, new_lat), verify_buildings):
-            return new_lat, new_lon, True
-        
-        lat, lon = new_lat, new_lon
+    point = Point(lon, lat)
     
-    return lat, lon, False
+    if placement == 'outside':
+        # Try to find location outside buildings
+        for attempt in range(MAX_VALIDATION_ATTEMPTS):
+            if is_point_clear_of_buildings(point, buildings):
+                return lat, lon, DEFAULT_BS_HEIGHT, True
+            
+            # Find new location clear of buildings
+            new_lat, new_lon = find_nearest_clear_location(lat, lon, buildings)
+            
+            if is_point_clear_of_buildings(Point(new_lon, new_lat), buildings):
+                return new_lat, new_lon, DEFAULT_BS_HEIGHT, True
+            
+            lat, lon = new_lat, new_lon
+        
+        return lat, lon, DEFAULT_BS_HEIGHT, False
+        
+    elif placement == 'on_top':
+        # Find building at point
+        for building in buildings:
+            if Point(lon, lat).within(building.geometry):
+                # Add 2 meters to building height for BS placement
+                bs_height = building.height + 2.0
+                return lat, lon, bs_height, True
+                
+        # If no building found at point, try nearest building
+        min_dist = float('inf')
+        best_location = None
+        best_height = DEFAULT_BS_HEIGHT
+        
+        for building in buildings:
+            dist = Point(lon, lat).distance(building.geometry)
+            if dist < min_dist:
+                min_dist = dist
+                # Get centroid of building for BS placement
+                centroid = building.geometry.centroid
+                best_location = (centroid.y, centroid.x)
+                best_height = building.height + 2.0
+        
+        if best_location:
+            return best_location[0], best_location[1], best_height, True
+            
+        return lat, lon, DEFAULT_BS_HEIGHT, False
+    
+    else:
+        raise ValueError(f"Unknown placement strategy: {placement}")
 
 def generate_uniform_positions(city_lat: float, city_lon: float, num_bs: int) -> List[Tuple[float, float]]:
     """Generate uniformly spaced positions in the bounding box.
@@ -169,7 +195,7 @@ def generate_uniform_positions(city_lat: float, city_lon: float, num_bs: int) ->
     
     return positions
 
-def generate_bs_positions(city_lat: float, city_lon: float, num_bs: int, buildings: List, algorithm: str = 'uniform') -> Tuple[List[float], List[float], List[float]]:
+def generate_bs_positions(city_lat: float, city_lon: float, num_bs: int, buildings: List, algorithm: str = 'uniform', placement: str = 'outside') -> Tuple[List[float], List[float], List[float]]:
     """Generate and validate base station positions.
     
     Args:
@@ -178,6 +204,7 @@ def generate_bs_positions(city_lat: float, city_lon: float, num_bs: int, buildin
         num_bs (int): Number of base stations to generate
         buildings (List): List of building polygons in the area
         algorithm (str, optional): BS positioning algorithm ('uniform' or 'random'). Defaults to 'uniform'.
+        placement (str, optional): BS placement strategy ('outside' or 'on_top'). Defaults to 'outside'.
         
     Returns:
         Tuple[List[float], List[float], List[float]]: Lists of BS latitudes, longitudes, and heights
@@ -192,11 +219,11 @@ def generate_bs_positions(city_lat: float, city_lon: float, num_bs: int, buildin
             test_lat = city_lat + offset_lat
             test_lon = city_lon + offset_lon
             
-            bs_lat, bs_lon, is_valid = validate_and_adjust_point(test_lat, test_lon)
+            bs_lat, bs_lon, height, is_valid = validate_and_adjust_point(test_lat, test_lon, buildings, placement)
             if is_valid:
                 bs_lats.append(bs_lat)
                 bs_lons.append(bs_lon)
-                bs_heights.append(DEFAULT_BS_HEIGHT)
+                bs_heights.append(height)
     
     else:  # uniform positioning
         # Generate uniform positions
@@ -204,11 +231,11 @@ def generate_bs_positions(city_lat: float, city_lon: float, num_bs: int, buildin
         
         # Validate and adjust each position
         for test_lat, test_lon in positions:
-            bs_lat, bs_lon, is_valid = validate_and_adjust_point(test_lat, test_lon)
+            bs_lat, bs_lon, height, is_valid = validate_and_adjust_point(test_lat, test_lon, buildings, placement)
             if is_valid:
                 bs_lats.append(bs_lat)
                 bs_lons.append(bs_lon)
-                bs_heights.append(DEFAULT_BS_HEIGHT)
+                bs_heights.append(height)
     
     return bs_lats, bs_lons, bs_heights
 
@@ -249,14 +276,15 @@ def plot_scenario(bbox_info: Dict[str, str], save_dir: str = "./plots"):
     # Save plot
     plt.show()
 
-def generate_bounding_boxes(city_data: pd.DataFrame, num_bs: int = 3, bs_algorithm: str = 'uniform', plot: bool = False) -> List[Dict[str, str]]:
+def generate_bounding_boxes(city_data: pd.DataFrame, num_bs: int = 3, bs_algorithm: str = 'uniform', 
+                            placement: str = 'outside') -> List[Dict[str, str]]:
     """Generate bounding boxes with guaranteed safe BS locations.
     
     Args:
         city_data (pd.DataFrame): DataFrame containing city information
         num_bs (int, optional): Number of base stations per scenario. Defaults to 3.
         bs_algorithm (str, optional): Algorithm for BS positioning ('uniform' or 'random'). Defaults to 'uniform'.
-        plot (bool, optional): Whether to plot the scenarios. Defaults to False.
+        placement (str, optional): BS placement strategy ('outside' or 'on_top'). Defaults to 'outside'.
         
     Returns:
         List[Dict[str, str]]: List of bounding boxes with valid BS locations
@@ -269,14 +297,15 @@ def generate_bounding_boxes(city_data: pd.DataFrame, num_bs: int = 3, bs_algorit
         city_name = city['city'].lower().replace(' ', '')
         
         # First check if there are any significant buildings in the area
-        buildings = get_buildings(city_lat, city_lon, SEARCH_RADIUS)
+        buildings = get_buildings(city_lat, city_lon)
         if not buildings:
             print(f"Could not fetch buildings for {city['city']}, skipping")
             skipped += 1
             continue
         
         # Generate BS positions
-        bs_lats, bs_lons, bs_heights = generate_bs_positions(city_lat, city_lon, num_bs, buildings, bs_algorithm)
+        bs_lats, bs_lons, bs_heights = generate_bs_positions(city_lat, city_lon, num_bs, 
+                                                             buildings, bs_algorithm, placement)
         
         if not bs_lats:  # Skip if no valid BS locations found
             print(f"Warning: No valid BS locations found for {city['city']}, skipping")
@@ -316,7 +345,10 @@ if __name__ == "__main__":
     urban_cities = cities[cities['population'] > 5000000]
 
     # Generate bounding boxes with 3 uniformly spaced base stations per scenario
-    bounding_boxes = generate_bounding_boxes(urban_cities[:1], num_bs=2, bs_algorithm='uniform', plot=plot_enabled)
+    bounding_boxes = generate_bounding_boxes(urban_cities[:1], num_bs=3, 
+                                             bs_algorithm='uniform', 
+                                             placement='outside') 
+                                            #  placement='on_top') 
 
     # Save to CSV
     df = pd.DataFrame(bounding_boxes)
@@ -329,5 +361,3 @@ if __name__ == "__main__":
         print("Generating plots...")
         for bbox in bounding_boxes:
             plot_scenario(bbox)
-
-            # CHCEK THIIISSS
