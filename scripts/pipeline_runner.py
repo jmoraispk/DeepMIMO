@@ -3,45 +3,75 @@ Steps to run a pipeline:
 
 1. pip install deepmimo
 
-2. Setup Blender
-   That's how we currently fetch OSM data and convert it to a format
-	that can be used by a ray tracer.
+2. Install dependencies
+	- install miniforge (https://github.com/conda-forge/miniforge)
+	- (recommended) mamba create -n dm_env python=3.10
+	- (recommended) mamba activate dm_env
+	- (recommended) pip install uv
+	- (for insite and sionna 1.0.x)  uv pip install .[all]
+	- (for insite and sionna 0.19.x) uv pip install .[sionna019]
 
-3. Install dependencies
-   - a ray tracer: 
-	- Wireless InSite (3.3.x or 4.0.x)
-	  + pip install lxml plyfile
-	- Sionna (0.19.1)
-	  + pip install ...
-   - pip install utm
+3. Adjust parameters in this file
 
-4. Change parameters in params.csv and in this file
+4. Create a CSV file with the following format:
 
-5. Run the pipeline
-   - python pipeline_runner.py
+	name,min_lat,min_lon,max_lat,max_lon,bs_lat,bs_lon,bs_height
+	city_0_newyork_3p5,40.68503298,-73.84682129,40.68597435,-73.84336302,"40.68575894,40.68578827,40.685554","-73.8446499,-73.84567948,-73.844944","10,10,10"
+	city_1_losangeles_3p5,34.06430723,-118.2630866,34.06560881,-118.2609365,"34.06501496,34.06473123,34.06504731","-118.261547,-118.2619665,-118.2625399","10,10,10"
 
-   
-448d2ed8855745f9a215b59d32bd90bc60650173b6408609
+	Note: bs_lat/bs_lon/bs_height are comma separated lists of floats, 
+	and the number of elements in the list must match the number of BSs.
+
+	Note: the file pipeline_csv_gen.py can be used to generate a CSV file from a list of cities.
+	Such a list of cities can be found in https://simplemaps.com/data/world-cities
+
+5. Run: python pipeline_runner.py
+
+
+
+
+TODO:
+- Add option to indicate running multiple ray tracers, and ensure they all use the same materials and the same positions
+- WI_EXE, WI_MAT, and these materials inside raytracer ("itu concrete", should match both sionna and wireless insite)
+- Support sionna 1.0 in the exporter and converter
+- Expand sionna 0.19.1 support (materials, roads, labels)
+- Enhance fetch_satellite_view to choose the zoom level based on the bounding box size
+
 """
 
 
 #%% Imports
-import pandas as pd
+
 import os
+import pandas as pd
 import numpy as np
 
 import deepmimo as dm  # type: ignore
 
-# Configure Ray Tracing Versions (before importing the pipeline modules)
-dm.config('wireless_insite_version', "4.0.1")
-# dm.config('sionna_version', '1.0.2')
-dm.config('sionna_version', '0.19.1')
-
 from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 from deepmimo.pipelines.utils.pipeline_utils import get_origin_coords, load_params_from_row
 from deepmimo.pipelines.blender_osm_export import fetch_osm_scene
+from deepmimo.pipelines.utils.geo_utils import get_city_name, fetch_satellite_view
+
+# API Keys
+try:
+	from api_keys import GMAPS_API_KEY
+except ImportError:
+	print("Please create a api_keys.py file, with GMAPS_API_KEY defined")
+	print("Disabling Google Maps services:\n"
+		  "  - city name extraction\n"
+		  "  - satellite view image save")
+	GMAPS_API_KEY = ""
+
+from api_keys import DEEPMIMO_API_KEY
+
+# Configure Ray Tracing Versions (before importing the pipeline modules)
+dm.config('wireless_insite_version', "4.0.1")  # E.g. '3.3.0', '4.0.1'
+dm.config('sionna_version', '0.19.1')  # E.g. '0.19.1', '1.0.2'
+
 # from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
-from deepmimo.pipelines.sionna_rt.sionna_raytracer import raytrace_sionna
+# from deepmimo.pipelines.sionna_rt.sionna_raytracer import raytrace_sionna
+
 
 # Absolute (!!) Paths
 # OSM_ROOT = "/home/jamorais/osm_root" # Windows
@@ -60,13 +90,7 @@ ROAD_MATERIAL_PATH = os.path.join(WI_MAT, "Asphalt_1GHz.mtl")
 TERRAIN_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Wet earth 3.5 GHz.mtl")
 
 COUNTER = 9
-#%% Step 1: (Optional) Generate CSV with GPS coordinates for bbox scenes and BS placement
-
-print('not implemented yet')
-# TODO:
-# - Configure cell size to be ~80m longer in x and y compared to NY. Maybe 200 x 400m. (2x4)
-
-#%% Step 2: Iterate over CSV file to extract the map, create TX/RX positions, and run RT
+#%% Iterate over CSV file to extract the map, create TX/RX positions, and run RT
 
 df = pd.read_csv('./dev/params_20cities_t.csv')
 
@@ -103,7 +127,6 @@ p = {
 	'batch_size': 15,  # Number of users to compute at a time
 					   # Heuristic: 1.5 per GB of GPU VRAM, if using scattering, 
 					   # else 5-10 users per GB
-	'mat': 0,
 
 	# Ray-tracing parameters -> Efficient if they match the dataclass in SetupEditor.py
 	'carrier_freq': 3.5e9,  # Hz
@@ -121,39 +144,38 @@ p = {
 	'conform_to_terrain': False,  # Whether to conform the terrain to the ray tracing grid
 								  # (if True, positions have added the terrain height)
 
-	# Blender specific parameters
-	'auto_install_addons': True, # Whether to automatically install add-ons
 }
 
 for index, row in df.iterrows():
-	print(f"\n{'='*50}\nSTARTING SCENARIO {index+1}/{len(df)}: {row['name']}\n{'='*50}")
+	print(f"\n{'=' * 50}\nSTARTING SCENARIO {index + 1}/{len(df)}: {row['name']}\n{'=' * 50}")
 
 	# RT Phase 1: Load GPS coordinates from CSV
 	load_params_from_row(row, p)
 
-	# RT Phase 2: Extract OSM data
+	# RT Phase 2: Extract OSM data, City Name, and Satellite View
 	COUNTER += 1
 	osm_folder = os.path.join(OSM_ROOT, row['name']) + f'_{COUNTER}'
 	fetch_osm_scene(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
 					osm_folder, output_formats=['sionna'])
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
+
+	p['city'] = get_city_name(p['origin_lat'], p['origin_lon'], GMAPS_API_KEY)
+	sat_view_path = fetch_satellite_view(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
+										 GMAPS_API_KEY, osm_folder)
 	
+	break
 	# RT Phase 3: Generate RX and TX positions
 	rx_pos = gen_rx_grid(p)  # N x 3 (N ~ 100k)
 	tx_pos = gen_tx_pos(p)   # M x 3 (M ~ 3)
 	
-	# Optional: Round positions (visually *way* better)
+	# Optional: Round positions (visually better)
 	rx_pos = np.round(rx_pos, p['pos_prec'])
 	tx_pos = np.round(tx_pos, p['pos_prec'])
 	
-	break
 	# RT Phase 4: Run Wireless InSite ray tracing
-	# rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
-	rt_path = raytrace_sionna(osm_folder, tx_pos, rx_pos, **p)
-	# TODO: Expand sionna 1.0 support in the exporter and converter
-	# TODO: Expand sionna 0.19.1 support (materials, roads, labels)
+	rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
+	# rt_path = raytrace_sionna(osm_folder, tx_pos, rx_pos, **p)
 
-	break
 	# RT Phase 5: Convert to DeepMIMO format
 	scen_name = dm.convert(rt_path, overwrite=True)
 
@@ -162,5 +184,10 @@ for index, row in df.iterrows():
 	dataset.plot_coverage(dataset.los)
 	dataset.plot_coverage(dataset.pwr[:, 0])
 	# break
+
+	# RT Phase 7: Upload (zip rt source)
+	scen_name = dm.zip(rt_path)
+	dm.upload(scen_name, key=DEEPMIMO_API_KEY)
+	dm.upload_img(scen_name, sat_view_path, key=DEEPMIMO_API_KEY)
 
 # %%
