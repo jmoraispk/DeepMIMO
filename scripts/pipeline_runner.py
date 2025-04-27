@@ -11,7 +11,17 @@ Steps to run a pipeline:
 	- (for insite and sionna 1.0.x)  uv pip install .[all]
 	- (for insite and sionna 0.19.x) uv pip install .[sionna019]
 
-3. Adjust parameters in this file
+3. Adjust parameters in this file. Particularly:
+	- OSM_ROOT: path to output OSM and scenario data
+	- WI_ROOT: path to the Wireless InSite installation
+	- API KEYS:
+		- DEEPMIMO_API_KEY: your DeepMIMO API key
+		- GMAPS_API_KEY: your Google Maps API key
+	- Config versions:
+		- dm.config('sionna_version', '0.19.1')  # E.g. '0.19.1', '1.0.2'
+		- dm.config('wireless_insite_version', "4.0.1")  # E.g. '3.3.0', '4.0.1'
+	- Materials
+	- Ray tracing parameters in the p (parameters) dictionary
 
 4. Create a CSV file with the following format:
 
@@ -27,8 +37,7 @@ Steps to run a pipeline:
 
 5. Run: python pipeline_runner.py
 
-
-
+--------------------------------
 
 TODO:
 - Add option to indicate running multiple ray tracers, and ensure they all use the same materials and the same positions
@@ -36,6 +45,8 @@ TODO:
 - Support sionna 1.0 in the exporter and converter
 - Expand sionna 0.19.1 support (materials, roads, labels)
 - Enhance fetch_satellite_view to choose the zoom level based on the bounding box size
+- Remove utm dependency?
+- Remove lxml dependency?
 
 """
 
@@ -54,16 +65,24 @@ from deepmimo.pipelines.blender_osm_export import fetch_osm_scene
 from deepmimo.pipelines.utils.geo_utils import get_city_name, fetch_satellite_view
 
 # API Keys
-try:
-	from api_keys import GMAPS_API_KEY
-except ImportError:
-	print("Please create a api_keys.py file, with GMAPS_API_KEY defined")
-	print("Disabling Google Maps services:\n"
-		  "  - city name extraction\n"
-		  "  - satellite view image save")
-	GMAPS_API_KEY = ""
+GMAPS_API_KEY = ""
+if GMAPS_API_KEY == "":
+	try:
+		from api_keys import GMAPS_API_KEY
+	except ImportError:
+		print("Please create a api_keys.py file, with GMAPS_API_KEY defined")
+		print("Disabling Google Maps services:\n"
+			"  - city name extraction\n"
+			"  - satellite view image save")
 
-from api_keys import DEEPMIMO_API_KEY
+# DeepMIMO API Key
+DEEPMIMO_API_KEY = ""
+if DEEPMIMO_API_KEY == "":
+	try:
+		from api_keys import DEEPMIMO_API_KEY
+	except ImportError:
+		print("Please create a api_keys.py file, with DEEPMIMO_API_KEY defined")
+		print("Disabling DeepMIMO services: scenario upload (zip, images, rt source)")
 
 # Configure Ray Tracing Versions (before importing the pipeline modules)
 dm.config('wireless_insite_version', "4.0.1")  # E.g. '3.3.0', '4.0.1'
