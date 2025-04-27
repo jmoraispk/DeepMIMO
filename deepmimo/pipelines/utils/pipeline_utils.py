@@ -1,4 +1,17 @@
-""""""
+"""
+Utility functions for DeepMIMO pipeline operations.
+
+This module provides common utility functions used across different pipeline stages
+in the DeepMIMO project. It includes functionality for:
+
+- Running shell commands with real-time output streaming (used to call InSite ray tracer)
+- Reading and processing GPS coordinates
+- Loading and parsing scenario parameters from configuration files
+- Converting between different coordinate formats
+
+The utilities here are designed to be reusable across different pipeline stages
+and provide consistent handling of coordinates, parameters, and system operations.
+"""
 
 import os
 import subprocess
