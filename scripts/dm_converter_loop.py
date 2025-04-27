@@ -6,7 +6,7 @@ import os
 import json
 import shutil
 import matplotlib.pyplot as plt
-from my_api_key import API_KEY as MY_API_KEY
+from api_keys import API_KEY as MY_API_KEY
 
 # Main execution
 EXECUTION_MODE = 'collect_errors' # 'collect_errors' | 'retry_errors'

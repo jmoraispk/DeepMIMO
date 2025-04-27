@@ -143,7 +143,6 @@ p = {
 	'ds_final_interaction_only': True,
 	'conform_to_terrain': False,  # Whether to conform the terrain to the ray tracing grid
 								  # (if True, positions have added the terrain height)
-
 }
 
 for index, row in df.iterrows():
@@ -188,6 +187,7 @@ for index, row in df.iterrows():
 	# RT Phase 7: Upload (zip rt source)
 	scen_name = dm.zip(rt_path)
 	dm.upload(scen_name, key=DEEPMIMO_API_KEY)
-	dm.upload_img(scen_name, sat_view_path, key=DEEPMIMO_API_KEY)
+	dm.upload_images(scen_name, img_paths=[sat_view_path],  key=DEEPMIMO_API_KEY)
+	dm.upload_rt_source(scen_name, rt_zip_path=dm.zip(rt_path), key=DEEPMIMO_API_KEY)
 
 # %%

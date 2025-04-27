@@ -410,13 +410,13 @@ def make_imgs(scenario_name: str) -> list[str]:
         
     return img_paths
 
-def upload_images(scenario_name: str, key: str, img_paths: list[str]) -> list[dict]:
+def upload_images(scenario_name: str, img_paths: list[str], key: str) -> list[dict]:
     """Upload images and attach them to an existing scenario.
     
     Args:
         scenario_name: Name of the scenario to attach images to
-        key: API authentication key
         img_paths: List of paths to image files
+        key: API authentication key
     
     Returns:
         List of image objects that were successfully uploaded and attached
@@ -584,7 +584,7 @@ def _make_submission_on_server(submission_scenario_name: str, key: str,
         try:
             img_paths = make_imgs(submission_scenario_name)
             if img_paths:
-                uploaded_images_meta = upload_images(submission_scenario_name, key, img_paths)
+                uploaded_images_meta = upload_images(submission_scenario_name, img_paths, key)
                 print(f"Image upload process completed. {len(uploaded_images_meta)} images attached.")
 
         except Exception as e:
