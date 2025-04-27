@@ -42,6 +42,7 @@ all = [
     "utm",               # To be replaced by built-in (see geo_utils.py)
     "lxml",              # To be replaced by built-in (see insite_raytracer.py)
     "pandas",            # To be replaced by built-in (see pipeline_runner.py)
+    "shapely",           # Used to create building polygons (see pipeline_csv_gen.py)
     "bpy==3.6.0; python_version == '3.10'",
         # BPY requires Python 3.10. Python 3.10 goes up to bpy==4.0.
         # Needed to do OSM extraction and 3D processing for ray tracing.
@@ -65,6 +66,7 @@ sionna019 = [
      "utm",
      "lxml",
      "pandas",
+     "shapely",
      "bpy==3.6.0; python_version == '3.10'",
  
      # InSite Specific
