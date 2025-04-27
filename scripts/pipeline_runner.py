@@ -32,19 +32,21 @@ import numpy as np
 
 import deepmimo as dm  # type: ignore
 
+# Configure Ray Tracing Versions (before importing the pipeline modules)
+dm.config('wireless_insite_version', "4.0.1")
+# dm.config('sionna_version', '1.0.2')
+dm.config('sionna_version', '0.19.1')
+
 from deepmimo.pipelines.TxRxPlacement import gen_rx_grid, gen_tx_pos
 from deepmimo.pipelines.utils.pipeline_utils import get_origin_coords, load_params_from_row
 from deepmimo.pipelines.blender_osm_export import fetch_osm_scene
 # from deepmimo.pipelines.wireless_insite.insite_raytracer import raytrace_insite
 from deepmimo.pipelines.sionna_rt.sionna_raytracer import raytrace_sionna
 
-# Configure Ray Tracing Versions
-dm.config('wireless_insite_version', "4.0.1")
-dm.config('sionna_version', '1.0.2')
-
-# Absolute Paths
-OSM_ROOT = "C:/Users/jmora/Downloads/osm_root" # Windows
+# Absolute (!!) Paths
+# OSM_ROOT = "/home/jamorais/osm_root" # Windows
 # OSM_ROOT = OSM_ROOT.replace('C:', '/mnt/c') # WSL
+OSM_ROOT = os.path.join(os.getcwd(), "osm_root")
 
 # Wireless InSite
 WI_ROOT = "C:/Program Files/Remcom/Wireless InSite 4.0.0"
