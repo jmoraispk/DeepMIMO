@@ -18,7 +18,7 @@ manuals/*
 *.pptx
 *.mp4
 *.npy
-my_api_key.py
+api_keys.py
 
 # Development:
 #   For wireless insite outputs
