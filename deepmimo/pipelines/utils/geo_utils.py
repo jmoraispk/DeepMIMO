@@ -9,7 +9,7 @@ import os
 import requests
 import numpy as np
 import utm
-from typing import Tuple
+from typing import Tuple, Optional
 
 
 def xy_from_latlong(lat: float | np.ndarray, long: float | np.ndarray) -> Tuple[float | np.ndarray, float | np.ndarray]:
@@ -85,8 +85,17 @@ def convert_Gps2RelativeCartesian(lat: float | np.ndarray,
 # Google Maps API Utilities
 #############################################
 
-def get_city_name(lat, lon, api_key):
-    """Fetch the city name from coordinates using Google Maps Geocoding API."""
+def get_city_name(lat: float, lon: float, api_key: str) -> str:
+    """Fetch the city name from coordinates using Google Maps Geocoding API.
+    
+    Args:
+        lat (float): Latitude coordinate in degrees
+        lon (float): Longitude coordinate in degrees 
+        api_key (str): Google Maps API key for authentication
+        
+    Returns:
+        str: City name if found, "unknown" otherwise
+    """
     url = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {
         "latlng": f"{lat},{lon}",
@@ -110,7 +119,21 @@ def get_city_name(lat, lon, api_key):
         print(f"Geocoding request failed: {response.status_code}")
         return "unknown"
 
-def fetch_satellite_view(minlat, minlon, maxlat, maxlon, api_key, save_dir):
+def fetch_satellite_view(minlat: float, minlon: float, maxlat: float, maxlon: float, 
+                         api_key: str, save_dir: str) -> Optional[str]:
+    """Fetch a satellite view image of a bounding box.
+    
+    Args:
+        minlat (float): Minimum latitude in degrees
+        minlon (float): Minimum longitude in degrees
+        maxlat (float): Maximum latitude in degrees
+        maxlon (float): Maximum longitude in degrees
+        api_key (str): Google Maps API key for authentication
+        save_dir (str): Directory to save the satellite view image
+        
+    Returns:
+        str: Path to the saved satellite view image, or None if the request fails
+    """
 
     # Create the directory if it doesn't exist
     os.makedirs(save_dir, exist_ok=True)
