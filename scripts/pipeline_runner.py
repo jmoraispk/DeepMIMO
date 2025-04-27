@@ -150,6 +150,8 @@ for index, row in df.iterrows():
 	# RT Phase 4: Run Wireless InSite ray tracing
 	# rt_path = raytrace_insite(osm_folder, tx_pos, rx_pos, **p)
 	rt_path = raytrace_sionna(osm_folder, tx_pos, rx_pos, **p)
+	# TODO: Expand sionna 1.0 support in the exporter and converter
+	# TODO: Expand sionna 0.19.1 support (materials, roads, labels)
 
 	break
 	# RT Phase 5: Convert to DeepMIMO format
