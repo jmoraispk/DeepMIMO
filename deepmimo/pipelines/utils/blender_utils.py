@@ -191,11 +191,18 @@ def clear_blender() -> None:
     """Remove all datablocks from Blender to start with a clean slate."""
     block_lists: List[Any] = [
         bpy.data.collections, bpy.data.objects, bpy.data.meshes, bpy.data.materials,
-        bpy.data.textures, bpy.data.images, bpy.data.curves, bpy.data.cameras
+        bpy.data.textures, bpy.data.curves, bpy.data.cameras
     ]
+
+    # First: clear all non-critical blocks
     for block_list in block_lists:
         for block in list(block_list):
             block_list.remove(block, do_unlink=True)
+
+    # Special handling for images (some blender likes to manager itself)
+    for img in list(bpy.data.images):
+        if img.name not in {'Render Result', 'Viewer Node'}:
+            bpy.data.images.remove(img, do_unlink=True)
 
 def get_xy_bounds_from_latlon(min_lat: float, min_lon: float, max_lat: float, max_lon: float,
                                pad: float = 0) -> tuple[float, float, float, float]:
