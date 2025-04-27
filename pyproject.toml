@@ -59,3 +59,47 @@ all = [
     # Development
     "jupyter",
 ]
+
+sionna019 = [
+     # Common ray tracing pipeline tools
+     "utm",
+     "lxml",
+     "pandas",
+     "bpy==3.6.0; python_version == '3.10'",
+ 
+     # InSite Specific
+     "plyfile",
+     
+     # Other Requirements (to ensure suitable binaries)
+     "numpy<2.0",
+ 
+     # Development
+     "jupyter",
+ 
+     # Sionna Specific
+     "absl-py==2.1.0",
+     "gpustat==1.1.1",
+     "keras==2.15.0",
+     "matplotlib==3.10.0",
+     "mitsuba==3.5.0",
+     "plotly==6.0.0",
+     "pyarrow==19.0.1",
+     "pythreejs==2.4.2",
+     "scipy==1.15.1",
+     "sionna==0.19.1",
+     "tensorflow==2.15.1",
+     
+     # GPU dependencies (Requires CUDA 12.2+ drivers & Host driver ≥ 535.54.03)
+     "nvidia-cublas-cu12==12.2.5.6",
+     "nvidia-cuda-cupti-cu12==12.2.142",
+     "nvidia-cuda-nvcc-cu12==12.2.140",
+     "nvidia-cuda-nvrtc-cu12==12.2.140",
+     "nvidia-cuda-runtime-cu12==12.2.140",
+     "nvidia-cudnn-cu12==8.9.4.25",
+     "nvidia-cufft-cu12==11.0.8.103",
+     "nvidia-curand-cu12==10.3.3.141",
+     "nvidia-cusolver-cu12==11.5.2.141",
+     "nvidia-cusparse-cu12==12.1.2.141",
+     "nvidia-nccl-cu12==2.16.5",
+     "nvidia-nvjitlink-cu12==12.2.140"
+ ]
