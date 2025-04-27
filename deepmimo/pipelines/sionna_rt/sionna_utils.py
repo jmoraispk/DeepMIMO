@@ -1,4 +1,4 @@
-# utils/sionna_utils.py
+from ...config import config
 from sionna.rt import (
     load_scene,
     PlanarArray,
@@ -10,7 +10,9 @@ from sionna.rt import (
 def set_materials(scene: Scene) -> Scene:
     """Set radio material properties for Sionna."""
     for obj in scene.objects.values():
+        print(f"Setting material for {obj.name}")
         mat_name = scene.objects[obj.name].radio_material.name
+        print(f"Material name: {mat_name}")
         if mat_name == 'itu_concrete':
             scene.objects[obj.name].radio_material.scattering_coefficient = 0.4
             scene.objects[obj.name].radio_material.xpd_coefficient = 0.4
@@ -22,15 +24,16 @@ def set_materials(scene: Scene) -> Scene:
             print(f"Unknown material: {mat_name}")
             exit()
 
-    asphalt_pattern = BackscatteringPattern(alpha_r=4, alpha_i=4, lambda_=0.75)
-    asphalt_material = RadioMaterial(
-        "asphalt", 
-        relative_permittivity=5.72, 
-        conductivity=5e-4,
-        scattering_coefficient=0.4, 
-        xpd_coefficient=0.4,
-        scattering_pattern=asphalt_pattern)
-    scene.add(asphalt_material)
+    # Add asphalt material
+    if config.get('sionna_version').startswith('0.19'):
+        asphalt_material = RadioMaterial(
+            name="asphalt", 
+            relative_permittivity=5.72, 
+            conductivity=5e-4,
+            scattering_coefficient=0.4, 
+            xpd_coefficient=0.4,
+            scattering_pattern=BackscatteringPattern(alpha_r=4, alpha_i=4, lambda_=0.75))
+        scene.add(asphalt_material)
 
     for obj in scene.objects.keys():
         if 'road' in obj or 'path' in obj:

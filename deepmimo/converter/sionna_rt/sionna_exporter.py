@@ -27,13 +27,27 @@ from typing import Tuple, List, Dict, Any
 
 from .. import converter_utils as cu
 
+from ...config import config
+
 # Define types at module level
 try:
-    import sionna
+    import sionna.rt
     Paths = sionna.rt.Paths
     Scene = sionna.rt.Scene
 except ImportError:
     print("Sionna is not installed. To use sionna_exporter, please install it.")
+
+def to_dict(paths: Paths) -> List[dict]:
+    """Exports paths to a filtered dictionary with only selected keys """
+    members_names = dir(paths)
+    members_objects = [getattr(paths, attr) for attr in members_names]
+    data = {attr_name[1:] : attr_obj for (attr_obj, attr_name)
+            in zip(members_objects,members_names)
+            if not callable(attr_obj) and
+                not isinstance(attr_obj, Scene) and
+                not attr_name.startswith("__") and
+                attr_name.startswith("_")}
+    return data
 
 def export_paths(path_list: List[Paths] | Paths) -> List[dict]:
     """Exports paths to a filtered dictionary with only selected keys """
@@ -43,8 +57,8 @@ def export_paths(path_list: List[Paths] | Paths) -> List[dict]:
     path_list = [path_list] if type(path_list) != list else path_list
     
     paths_dict_list = []
-    for obj_idx, path_obj in enumerate(path_list):
-        path_dict = path_obj.to_dict()
+    for path_obj in path_list:
+        path_dict = to_dict(path_obj)
         
         # filter unnecessary keys
         dict_filtered = {key: path_dict[key].numpy() for key in relevant_keys}
@@ -63,6 +77,19 @@ def scene_to_dict(scene: Scene) -> Dict[str, Any]:
                not isinstance(attr_obj, sionna.rt.Scene) and
                not attr_name.startswith("__") and
                attr_name.startswith("_")}
+    return data
+
+def scene_to_dict2(scene: Scene) -> Dict[str, Any]: 
+    """ Export a Sionna Scene to a dictionary, like to Paths.to_dict() """
+    members_names = dir(scene)
+    bug_attrs =  ['paths_solver']
+    members_objects = [getattr(scene, attr) for attr in members_names
+                       if attr not in bug_attrs]
+    data = {attr_name[1:] : attr_obj for (attr_obj, attr_name)
+            in zip(members_objects, members_names)
+            if not callable(attr_obj) and
+               not isinstance(attr_obj, sionna.rt.Scene) and
+               not attr_name.startswith("__")}
     return data
 
 def export_scene_materials(scene: Scene) -> Tuple[List[Dict[str, Any]], List[int]]:
@@ -151,6 +178,58 @@ def export_scene_rt_params(scene: Scene, **compute_paths_kwargs) -> Dict[str, An
 
     return {**rt_params_dict, **default_compute_paths_params}
 
+def export_scene_rt_params2(scene: Scene, **compute_paths_kwargs) -> Dict[str, Any]:
+    """ Extract parameters from Scene (and from compute_paths arguments)"""
+    
+    scene_dict = scene_to_dict2(scene)
+    rt_params_dict = dict(
+        bandwidth=scene_dict['bandwidth'].numpy(),
+        frequency=scene_dict['frequency'].numpy(),
+        
+        rx_array_size=scene_dict['rx_array'].array_size,  # dual-pol if diff than num_ant
+        rx_array_num_ant=scene_dict['rx_array'].num_ant,
+        rx_array_ant_pos=scene_dict['rx_array'].positions.numpy(),  # relative to ref.
+        
+        tx_array_size=scene_dict['tx_array'].array_size, 
+        tx_array_num_ant=scene_dict['tx_array'].num_ant,
+        tx_array_ant_pos=scene_dict['tx_array'].positions.numpy(),
+    
+        synthetic_array=scene_dict['synthetic_array'],
+    
+        # custom
+        raytracer_version=sionna.__version__,
+        doppler_available=0,
+    )
+
+    default_compute_paths_params = dict( # with Sionna default values
+        max_depth=3, 
+        method='fibonacci',
+        num_samples=1000000,
+        los=True,
+        reflection=True,
+        diffraction=False,
+        scattering=False,
+        scat_keep_prob=0.001,
+        edge_diffraction=False,
+        scat_random_phases=True
+    )
+    
+    # Note 1: Sionna considers only last-bounce diffusion (except in compute_coverage(.), 
+    #         but that one doesn't return paths)
+    # Note 2: Sionna considers only one diffraction (first-order diffraction), 
+    #         though it may occur anywhere in the path
+    # Note 3: Sionna does not save compute_path(.) argument values. 
+    #         Many of them cannot be derived from the paths and scenes.
+    #         For this reason, we ask the user to define a dictionary with the 
+    #         parameters we care about and raytrace using that dict.
+    #         Alternatively, the user may fill the dictionary after ray tracing with 
+    #         the parameters that changed from their default values in Sionna.
+
+    # Update default parameters of compute_path(.) with parameters that changed (in kwargs)
+    default_compute_paths_params.update(compute_paths_kwargs)
+
+    return {**rt_params_dict, **default_compute_paths_params}
+
 def export_scene_buildings(scene: Scene) -> Tuple[np.ndarray, Dict]:
     """ Export the vertices and faces of buildings in a Sionna Scene.
     Output:
@@ -189,6 +268,32 @@ def export_to_deepmimo(scene: Scene, path_list: List[Paths] | Paths,
     paths_dict_list = export_paths(path_list)
     materials_dict_list, material_indices = export_scene_materials(scene)
     rt_params = export_scene_rt_params(scene, **my_compute_path_params)
+    vertice_matrix, obj_index_map = export_scene_buildings(scene)
+    
+    os.makedirs(save_folder, exist_ok=True)
+    
+    save_vars_dict = {
+        # filename: variable_to_save
+        'sionna_paths.pkl': paths_dict_list,
+        'sionna_materials.pkl': materials_dict_list,
+        'sionna_material_indices.pkl': material_indices,
+        'sionna_rt_params.pkl': rt_params,
+        'sionna_vertices.pkl': vertice_matrix,
+        'sionna_objects.pkl': obj_index_map,
+    }
+    
+    for filename, variable in save_vars_dict.items():
+        cu.save_pickle(variable, os.path.join(save_folder, filename))
+
+    return
+
+def export_to_deepmimo_v2(scene: Scene, path_list: List[Paths] | Paths, 
+                       my_compute_path_params: Dict, save_folder: str):
+    """ Export a complete Sionna simulation to a format that can be converted by DeepMIMO """
+    
+    paths_dict_list = path_list # export moved to pipeline (needs to be called during RT)
+    materials_dict_list, material_indices = {}, [] #export_scene_materials(scene)
+    rt_params = export_scene_rt_params2(scene, **my_compute_path_params) # some params are broken
     vertice_matrix, obj_index_map = export_scene_buildings(scene)
     
     os.makedirs(save_folder, exist_ok=True)
