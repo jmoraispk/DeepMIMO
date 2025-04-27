@@ -5,6 +5,8 @@ This module provides functions for converting between geographic coordinates (la
 and Cartesian coordinates, as well as bounding box transformations.
 """
 
+import os
+import requests
 import numpy as np
 import utm
 from typing import Tuple
@@ -77,3 +79,69 @@ def convert_Gps2RelativeCartesian(lat: float | np.ndarray,
     x, y = xy_from_latlong(lat, lon)
     
     return x - x_origin, y - y_origin
+
+
+#############################################
+# Google Maps API Utilities
+#############################################
+
+def get_city_name(lat, lon, api_key):
+    """Fetch the city name from coordinates using Google Maps Geocoding API."""
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {
+        "latlng": f"{lat},{lon}",
+        "key": api_key
+    }
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if data["status"] == "OK":
+            # Look for the city in the address components
+            for result in data["results"]:
+                for component in result["address_components"]:
+                    if "locality" in component["types"]:  # 'locality' typically means city
+                        return component["long_name"]
+            return "unknown"  # Fallback if no city is found
+        else:
+            print(f"Geocoding error: {data['status']}")
+            return "unknown"
+    else:
+        print(f"Geocoding request failed: {response.status_code}")
+        return "unknown"
+
+def fetch_satellite_view(minlat, minlon, maxlat, maxlon, api_key, save_dir):
+
+    # Create the directory if it doesn't exist
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Calculate the center of the bounding box
+    center_lat = (minlat + maxlat) / 2
+    center_lon = (minlon + maxlon) / 2
+
+    # Parameters for the Static Maps API
+    params = {
+        "center": f"{center_lat},{center_lon}",
+        "zoom": 18,  # Adjust zoom level (higher = more detailed)
+        "size": "640x640",  # Image size in pixels (max 640x640 for free tier)
+        "maptype": "satellite",  # Options: roadmap, satellite, hybrid, terrain
+        "key": api_key
+    }
+
+    # API endpoint
+    STATIC_MAP_URL = "https://maps.googleapis.com/maps/api/staticmap"
+
+    # Make the request
+    response = requests.get(STATIC_MAP_URL, params=params)
+
+    # Save the image in the specified directory with city name
+    if response.status_code == 200:
+        image_path = os.path.join(save_dir, "satellite_view.png")
+        with open(image_path, "wb") as f:
+            f.write(response.content)
+        print(f"Satellite view saved as '{image_path}'")
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        image_path = None
+    
+    return image_path
