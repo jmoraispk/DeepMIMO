@@ -15,7 +15,12 @@ TODO:
         - Use cell splitting to split bounding box into smaller cells
         - Configure cell size to be ~80m longer in x and y compared to NY (~200x400m)
         - Save individual cells in bbox_cells csv file
-    - Add number of basestations as a parameter
+    - Add number of basestations as a parameter (placing them equaly spaced in the bbox)
+    - Add parameter to set BS positioning when lat&lon intersects with building
+        - Currently, BS is placed on the nearest point outside the building
+        - Alternative: Place BS on top of the building
+    - Add parameter to set BS height
+
 """
 
 #%%
@@ -36,25 +41,36 @@ from deepmimo.pipelines.utils.osm_utils import (
 MAX_VALIDATION_ATTEMPTS: int = 3  # max validation retries
 DELTA_LAT = 0.003  # delta degress in latitude (for bounding box size)
 DELTA_LON = 0.003  # delta degress in longitude (for bounding box size)
+DEFAULT_BS_HEIGHT = 10.0  # default BS height in meters
 
 @dataclass
-class BoundingBox:
-    """Class to store bounding box information."""
+class ScenarioBboxInfo:
+    """Class to store scenario information including bounding box and multiple BS parameters."""
+    name: str
     minlat: float
     minlon: float
     maxlat: float
     maxlon: float
-    bs_lat: float
-    bs_lon: float
+    bs_lats: List[float]  # List of BS latitudes
+    bs_lons: List[float]  # List of BS longitudes
+    bs_heights: List[float]  # List of BS heights
 
     def to_dict(self) -> Dict[str, str]:
-        """Convert bounding box to dictionary format."""
+        """Convert scenario info to dictionary format."""
+        # Convert lists of coordinates to comma-separated strings
+        bs_lats_str = ",".join([f"{lat:.8f}" for lat in self.bs_lats])
+        bs_lons_str = ",".join([f"{lon:.8f}" for lon in self.bs_lons])
+        bs_heights_str = ",".join([f"{h:.1f}" for h in self.bs_heights])
+        
         return {
-            'minlat': f"{self.minlat:.6f}",
-            'minlon': f"{self.minlon:.6f}",
-            'maxlat': f"{self.maxlat:.6f}",
-            'maxlon': f"{self.maxlon:.6f}",
-            'bs': f"{self.bs_lat:.6f}, {self.bs_lon:.6f}"
+            'name': self.name,
+            'min_lat': f"{self.minlat:.8f}",
+            'min_lon': f"{self.minlon:.8f}",
+            'max_lat': f"{self.maxlat:.8f}",
+            'max_lon': f"{self.maxlon:.8f}",
+            'bs_lat': bs_lats_str,
+            'bs_lon': bs_lons_str,
+            'bs_height': bs_heights_str
         }
 
 def validate_and_adjust_point(lat: float, lon: float) -> Tuple[float, float, bool]:
@@ -92,43 +108,67 @@ def validate_and_adjust_point(lat: float, lon: float) -> Tuple[float, float, boo
     
     return lat, lon, False
 
-def generate_bounding_boxes(coords_array: np.ndarray) -> List[Dict[str, str]]:
+def generate_bounding_boxes(city_data: pd.DataFrame) -> List[Dict[str, str]]:
     """Generate bounding boxes with guaranteed safe BS locations.
     
     Args:
-        coords_array (np.ndarray): Array of city coordinates
+        city_data (pd.DataFrame): DataFrame containing city information
         
     Returns:
         List[Dict[str, str]]: List of bounding boxes with valid BS locations
     """
     valid_boxes: List[Dict[str, str]] = []
     skipped = 0
+    NUM_BS = 3  # Number of base stations per scenario
     
-    for box_idx, coords in enumerate(coords_array):
-        city_lat, city_lon = coords
+    for box_idx, (_, city) in enumerate(city_data.iterrows()):
+        city_lat, city_lon = city['lat'], city['lng']
+        city_name = city['city'].lower().replace(' ', '')
         
         # First check if there are any significant buildings in the area
         buildings = get_buildings(city_lat, city_lon, SEARCH_RADIUS)
         if not buildings:
+            print(f"Could not fetch buildings for {city['city']}, skipping")
             skipped += 1
             continue
         
-        # Find and validate safe BS location
-        bs_lat, bs_lon, is_valid = validate_and_adjust_point(city_lat, city_lon)
+        # Find multiple BS locations
+        bs_lats, bs_lons = [], []
+        bs_heights = []
         
-        if not is_valid:
-            print(f"Warning: Could not find safe location for box {box_idx}, skipping")
+        for _ in range(NUM_BS):
+            # Add some random offset to spread out BS locations
+            offset_lat = random.uniform(-DELTA_LAT/4, DELTA_LAT/4)
+            offset_lon = random.uniform(-DELTA_LON/4, DELTA_LON/4)
+            test_lat = city_lat + offset_lat
+            test_lon = city_lon + offset_lon
+            
+            # Find and validate BS location
+            bs_lat, bs_lon, is_valid = validate_and_adjust_point(test_lat, test_lon)
+            
+            if not is_valid:
+                print(f"Warning: Could not find suitable BS location for {city['city']}, BS {len(bs_lats)+1}")
+                continue
+                
+            bs_lats.append(bs_lat)
+            bs_lons.append(bs_lon)
+            bs_heights.append(DEFAULT_BS_HEIGHT)
+        
+        if not bs_lats:  # Skip if no valid BS locations found
+            print(f"Warning: No valid BS locations found for {city['city']}, skipping")
             skipped += 1
             continue
         
         # Define bounding box
-        bbox = BoundingBox(
+        bbox = ScenarioBboxInfo(
+            name=f"city_{box_idx}_{city_name}_3p5",
             minlat=city_lat - DELTA_LAT/2,
             maxlat=city_lat + DELTA_LAT/2,
             minlon=city_lon - DELTA_LON/2,
             maxlon=city_lon + DELTA_LON/2,
-            bs_lat=bs_lat,
-            bs_lon=bs_lon
+            bs_lats=bs_lats,
+            bs_lons=bs_lons,
+            bs_heights=bs_heights
         )
         
         valid_boxes.append(bbox.to_dict())
@@ -147,13 +187,12 @@ if __name__ == "__main__":
     # Load city coordinates
     cities = pd.read_csv("./dev/worldcities.csv") 
     urban_cities = cities[cities['population'] > 5000000]
-    city_coords = urban_cities[['lat', 'lng']].values
 
     # Generate bounding boxes
-    bounding_boxes = generate_bounding_boxes(city_coords[:1])
+    bounding_boxes = generate_bounding_boxes(urban_cities[:1])
 
     # Save to CSV
-    if False:
-        df = pd.DataFrame(bounding_boxes)
-        df.to_csv("./dev/bounding_boxes.csv", index=False)
-        print(f"Saved {len(bounding_boxes)} valid bounding boxes to bounding_boxes.csv")
+    df = pd.DataFrame(bounding_boxes)
+    print("DataFrame columns:", df.columns)  # Debug print
+    df.to_csv("./dev/bounding_boxes.csv", index=False)
+    print(f"Saved {len(bounding_boxes)} valid bounding boxes to bounding_boxes.csv")
