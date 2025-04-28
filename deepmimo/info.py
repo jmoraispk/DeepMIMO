@@ -79,8 +79,8 @@ COMPUTED_MATRICES_HELP = {
         '\t[num_rx]',
     c.INTER_STR_PARAM_NAME:
         'Interaction string for each path.\n'
-        'Interaction codes: 0 -> "", 1 -> "R", 2 -> "D", 3 -> "S", 4 -> "T"\n'
-        'Example interaction integer to string: 121 -> "RDR"\n'
+        '\tInteraction codes: 0 -> "", 1 -> "R", 2 -> "D", 3 -> "S", 4 -> "T"\n'
+        '\tExample interaction integer to string: 121 -> "RDR"\n'
         '\t[num_rx, num_paths]',
 }
 
