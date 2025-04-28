@@ -682,32 +682,48 @@ class Scene:
         
         return scene
     
-    def plot(self, title: bool = True, save: bool = False, filename: str | None = None,
-             mode: Literal['faces', 'tri_faces'] = 'faces', ax: Optional[plt.Axes] = None) -> Tuple[plt.Figure, plt.Axes]:
-        """Create a 3D visualization of the scene.
+    def plot(self, title: bool = True, mode: Literal['faces', 'tri_faces'] = 'faces', 
+             ax: Optional[plt.Axes] = None, proj_2d: bool = False, figsize: tuple = (10, 10), 
+             dpi: int = 100) -> plt.Axes:
+        """Create a visualization of the scene.
         
-        The scene can be visualized in two modes:
-        1. 'faces' (default) - Uses the primary convex hull representation
-           - More efficient for visualization
-           - Cleaner look for simple geometric shapes
-           - Suitable for most visualization needs
-           
-        2. 'tri_faces' - Uses the secondary triangular representation
-           - Shows detailed geometry
-           - Better for debugging geometric issues
-           - More accurate representation of complex shapes
+        The scene can be visualized in either 2D (top-down view) or 3D mode:
+        
+        3D Mode (proj_2d=False):
+            Two representation options:
+            1. 'faces' (default) - Uses the primary convex hull representation
+               - More efficient for visualization
+               - Cleaner look for simple geometric shapes
+               - Suitable for most visualization needs
+               
+            2. 'tri_faces' - Uses the secondary triangular representation
+               - Shows detailed geometry
+               - Better for debugging geometric issues
+               - More accurate representation of complex shapes
+               
+        2D Mode (proj_2d=True):
+            Creates a top-down view showing object footprints:
+            - Projects all objects onto x-y plane
+            - Uses convex hulls for efficient visualization
+            - Better for understanding spatial layout
+            - More efficient for large scenes
         
         Args:
-            show: Whether to display the plot
-            save: Whether to save the plot to a file
+            title: Whether to display the title (default: True)
+            save: Whether to save the plot to a file (default: False)
             filename: Name of the file to save the plot to (if save is True)
-            mode: Visualization mode - either 'faces' or 'tri_faces' (default: 'faces')
+            mode: Visualization mode for 3D - either 'faces' or 'tri_faces' (default: 'faces')
+            ax: Matplotlib axes to plot on (if None, creates new figure)
+            proj_2d: Whether to create a 2D projection (top-down view) (default: False)
+            figsize: Figure dimensions (width, height) in inches (default: (10, 10))
+            dpi: Plot resolution in dots per inch (default: 100)
             
         Returns:
-            Tuple of (Figure, Axes) for the plot
+            matplotlib Axes object
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(15, 15), subplot_kw={'projection': '3d'})
+            _, ax = plt.subplots(figsize=figsize, dpi=dpi,
+                               subplot_kw={'projection': None if proj_2d else '3d'})
         
         # Group objects by label
         label_groups = {}
@@ -733,28 +749,48 @@ class Scene:
                 # Determine color (same for faces and hull)
                 color = obj.color or colors[obj_idx]
                 
-                # Plot object with specified mode
-                obj.plot(ax, mode=mode, alpha=vis_settings['alpha'], color=color)
+                if proj_2d:
+                    # Project vertices to 2D (x-y plane)
+                    vertices_2d = obj.vertices[:, :2]
+                    
+                    # Create convex hull of 2D points
+                    hull = ConvexHull(vertices_2d)
+                    hull_vertices = vertices_2d[hull.vertices]
+                    
+                    # Plot the hull as a filled polygon
+                    ax.fill(hull_vertices[:, 0], hull_vertices[:, 1],
+                            alpha=vis_settings['alpha'], color=color,
+                            label=label if obj_idx == 0 else "")
+                else:
+                    # Plot object with specified 3D mode
+                    obj.plot(ax, mode=mode, alpha=vis_settings['alpha'], color=color)
         
-        self._set_axes_lims_to_scale(ax)
-        
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
+        # Set axis labels
+        ax.set_xlabel('X (m)')
+        ax.set_ylabel('Y (m)')
+        if not proj_2d:
+            ax.set_zlabel('Z (m)')
         
         if title:
             ax.set_title(self._get_title_with_counts())
         
-        # Set the view angle for better perspective
-        ax.view_init(elev=40, azim=-45)
+        if proj_2d:
+            # Set equal aspect ratio for proper scaling in 2D
+            ax.set_aspect('equal')
+            # Add grid for 2D view
+            ax.grid(True, alpha=0.3)
+        else:
+            # Set the view angle for better 3D perspective
+            ax.view_init(elev=40, azim=-45)
+            # Set 3D axes limits to scale
+            self._set_axes_lims_to_scale(ax)
         
-        if save:
-            output_file = filename or '3d_scene.png'
-            plt.savefig(output_file, dpi=300, bbox_inches='tight')
-            print(f"\nPlot saved as '{output_file}'")
+        # Add legend if there are multiple labels
+        if len(label_groups) > 1:
+            ax.legend()
         
         return ax
-    
+
     def _set_axes_lims_to_scale(self, ax, zoom: float = 1.3):
         """Set axis limits based on scene bounding box with equal scaling.
         
