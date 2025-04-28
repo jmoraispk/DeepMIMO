@@ -54,35 +54,39 @@ for scen_name in dm.get_available_scenarios():
         full_dataset = dm.load(scen_name)
         dataset = dm.load(scen_name)[4]
         
+        ax = full_dataset.scene.plot(title=False, proj_2d=True)
+
+        ax.scatter(full_dataset[0].bs_pos[0,0], 
+                   full_dataset[0].bs_pos[0,1], 
+                   s=250, color='red', label='BS 1', marker='*')
+        ax.scatter(full_dataset[1].bs_pos[0,0], 
+                   full_dataset[1].bs_pos[0,1], 
+                   s=250, color='blue', label='BS 2', marker='*')
+        ax.scatter(full_dataset[2].bs_pos[0,0], 
+                   full_dataset[2].bs_pos[0,1], 
+                   s=250, color='green', label='BS 3', marker='*')
+
+        
         grid_size = dataset.grid_size - 1
         import numpy as np
-        cols = np.arange(grid_size[0], step=6)
-        rows = np.arange(grid_size[1], step=6)
+        cols = np.arange(grid_size[0], step=8)
+        rows = np.arange(grid_size[1], step=8)
         idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
         # idxs = dataset.get_uniform_idxs([4,4])
         
-        fig, ax = plt.subplots(figsize=(15, 15), subplot_kw={'projection': '3d'})
-        ax.scatter(xs=dataset.rx_pos[idxs,0], 
-                   ys=dataset.rx_pos[idxs,1], 
-                   zs=dataset.rx_pos[idxs,2]-3, 
-                   s=20, color='red', label='Users', marker='o', alpha=0.2)
-        
-        ax = full_dataset.scene.plot(title=False, ax=ax)
-        ax.view_init(elev=90, azim=-90)
-        ax.scatter(xs=full_dataset[0].bs_pos[0,0], 
-                          ys=full_dataset[0].bs_pos[0,1], 
-                          zs=full_dataset[0].bs_pos[0,2], 
-                          s=250, color='red', label='BS 1', marker='*')
-        ax.scatter(xs=full_dataset[1].bs_pos[0,0], 
-                          ys=full_dataset[1].bs_pos[0,1], 
-                          zs=full_dataset[1].bs_pos[0,2], 
-                          s=250, color='blue', label='BS 2', marker='*')
-        ax.scatter(xs=full_dataset[2].bs_pos[0,0], 
-                          ys=full_dataset[2].bs_pos[0,1], 
-                          zs=full_dataset[2].bs_pos[0,2], 
-                          s=250, color='green', label='BS 3', marker='*')
+        ax.scatter(dataset.rx_pos[idxs,0], 
+                   dataset.rx_pos[idxs,1], 
+                   s=10, color='red', label='Users', marker='o', alpha=0.2, zorder=0)
 
-        ax.legend(ncol=4, loc='center', bbox_to_anchor=(0.5, 0.85), fontsize=20).set_zorder(1e9)
+        l = ax.legend(ncol=3, loc='center', bbox_to_anchor=(0.5, 1.0), fontsize=15)
+        order = [2, 0, 3, 1, 4, 5]
+        l = ax.legend([l.legend_handles[i] for i in order], [l.get_texts()[i].get_text() for i in order],
+                  ncol=3, loc='center', bbox_to_anchor=(0.5, 1.0), fontsize=15)
+        l.set_zorder(1e9)
+        for handle, text in zip(l.legend_handles, l.get_texts()):
+            if text.get_text() == 'Users':  # Match by label
+                handle.set_sizes([100])  # marker area (not radius)
+
         plt.show()
         
         # ax.set_position([-0.1, -0.1, 1.2, 1.2])
