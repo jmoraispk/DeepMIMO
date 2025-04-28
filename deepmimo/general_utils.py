@@ -6,6 +6,10 @@ file naming, string ID generation, and dictionary utilities used across
 the DeepMIMO toolkit.
 """
 
+# ============================================================================
+# Imports and Constants
+# ============================================================================
+
 import numpy as np
 from pprint import pformat
 from typing import Dict, Any, TypeVar, Mapping, Optional
@@ -24,6 +28,10 @@ HEADERS = {
     'User-Agent': 'DeepMIMO-Python/1.0',
     'Accept': '*/*'
 }
+
+# ============================================================================
+# File System and Path Utilities
+# ============================================================================
 
 def check_scen_name(scen_name: str) -> None:
     """Check if a scenario name is valid.
@@ -70,6 +78,25 @@ def get_params_path(scenario_name: str) -> str:
     """
     check_scen_name(scenario_name)
     return os.path.join(get_scenario_folder(scenario_name), f'{c.PARAMS_FILENAME}.json')
+
+def get_available_scenarios() -> list:
+    """Get a list of all available scenarios in the scenarios directory.
+    
+    Returns:
+        list: List of scenario names (folder names in the scenarios directory)
+    """
+    scenarios_dir = get_scenarios_dir()
+    if not os.path.exists(scenarios_dir):
+        return []
+    
+    # Get all subdirectories in the scenarios folder
+    scenarios = [f for f in os.listdir(scenarios_dir) 
+                if os.path.isdir(os.path.join(scenarios_dir, f))]
+    return sorted(scenarios)
+
+# ============================================================================
+# Dictionary and Data Structure Utilities
+# ============================================================================
 
 def save_dict_as_json(output_path: str, data_dict: Dict[str, Any]) -> None:
     """Save dictionary as JSON, handling NumPy arrays and other non-JSON types.
@@ -233,9 +260,18 @@ class DotDict(Mapping[K, V]):
         """Return string representation of dictionary."""
         return pformat(self._data)
 
+# ============================================================================
+# Printing and Logging Utilities
+# ============================================================================
 
 class PrintIfVerbose:
     """A callable class that conditionally prints messages based on verbosity setting.
+
+    The only purpose of this class is to avoid repeating "if verbose:" all the time. 
+    
+    Usage: 
+        vprint = PrintIfVerbose(verbose);
+        vprint(message)
 
     Args:
         verbose (bool): Flag to control whether messages should be printed.
@@ -253,6 +289,9 @@ class PrintIfVerbose:
         if self.verbose:
             print(message)
 
+# ============================================================================
+# String Generation Utilities for TXRX ID and MAT Files
+# ============================================================================
 
 def get_txrx_str_id(tx_set_idx: int, tx_idx: int, rx_set_idx: int) -> str:
     """Generate a standardized string identifier for TX-RX combinations.
@@ -283,133 +322,9 @@ def get_mat_filename(key: str, tx_set_idx: int, tx_idx: int, rx_set_idx: int) ->
     str_id = get_txrx_str_id(tx_set_idx, tx_idx, rx_set_idx)
     return f"{key}_{str_id}.mat"
 
-
-def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
-    """Print a summary of the dataset."""
-    # Initialize empty string to collect output
-    summary_str = ""
-
-    # Read params.mat and provide TXRX summary, total number of tx & rx, scene size,
-    # and other relevant parameters, computed/extracted from the all dicts, not just rt_params
-
-    params_json_path = get_params_path(scen_name)
-
-    params_dict = load_dict_from_json(params_json_path)
-    rt_params = params_dict[c.RT_PARAMS_PARAM_NAME]
-    scene_params = params_dict[c.SCENE_PARAM_NAME]
-    material_params = params_dict[c.MATERIALS_PARAM_NAME]
-    txrx_params = params_dict[c.TXRX_PARAM_NAME]
-
-    summary_str += "\n" + "=" * 50 + "\n"
-    summary_str += f"DeepMIMO {scen_name} Scenario Summary\n"
-    summary_str += "=" * 50 + "\n"
-
-    summary_str += "\n[Ray-Tracing Configuration]\n"
-    summary_str += (
-        f"- Ray-tracer: {rt_params[c.RT_PARAM_RAYTRACER]} "
-        f"v{rt_params[c.RT_PARAM_RAYTRACER_VERSION]}\n"
-    )
-    summary_str += f"- Frequency: {rt_params[c.RT_PARAM_FREQUENCY]/1e9:.1f} GHz\n"
-
-    summary_str += "\n[Ray-tracing parameters]\n"
-
-    # Interaction limits
-    summary_str += "\nMain interaction limits\n"
-    summary_str += f"- Max path depth: {rt_params[c.RT_PARAM_PATH_DEPTH]}\n"
-    summary_str += f"- Max reflections: {rt_params[c.RT_PARAM_MAX_REFLECTIONS]}\n"
-    summary_str += f"- Max diffractions: {rt_params[c.RT_PARAM_MAX_DIFFRACTIONS]}\n"
-    summary_str += f"- Max scatterings: {rt_params[c.RT_PARAM_MAX_SCATTERING]}\n"
-    summary_str += f"- Max transmissions: {rt_params[c.RT_PARAM_MAX_TRANSMISSIONS]}\n"
-
-    # Diffuse scattering settings
-    summary_str += "\nDiffuse Scattering\n"
-    is_diffuse_enabled = rt_params[c.RT_PARAM_MAX_SCATTERING] > 0
-    summary_str += f"- Diffuse scattering: {'Enabled' if is_diffuse_enabled else 'Disabled'}\n"
-    if is_diffuse_enabled:
-        summary_str += f"- Diffuse reflections: {rt_params[c.RT_PARAM_DIFFUSE_REFLECTIONS]}\n"
-        summary_str += f"- Diffuse diffractions: {rt_params[c.RT_PARAM_DIFFUSE_DIFFRACTIONS]}\n"
-        summary_str += f"- Diffuse transmissions: {rt_params[c.RT_PARAM_DIFFUSE_TRANSMISSIONS]}\n"
-        summary_str += f"- Final interaction only: {rt_params[c.RT_PARAM_DIFFUSE_FINAL_ONLY]}\n"
-        summary_str += f"- Random phases: {rt_params[c.RT_PARAM_DIFFUSE_RANDOM_PHASES]}\n"
-
-    # Terrain settings
-    summary_str += "\nTerrain\n"
-    summary_str += f"- Terrain reflection: {rt_params[c.RT_PARAM_TERRAIN_REFLECTION]}\n"
-    summary_str += f"- Terrain diffraction: {rt_params[c.RT_PARAM_TERRAIN_DIFFRACTION]}\n"
-    summary_str += f"- Terrain scattering: {rt_params[c.RT_PARAM_TERRAIN_SCATTERING]}\n"
-
-    # Ray casting settings
-    summary_str += "\nRay Casting Settings\n"
-    summary_str += f"- Number of rays: {rt_params[c.RT_PARAM_NUM_RAYS]:,}\n"
-    summary_str += f"- Casting method: {rt_params[c.RT_PARAM_RAY_CASTING_METHOD]}\n"
-    summary_str += f"- Casting range (az): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_AZ]:.1f}°\n"
-    summary_str += f"- Casting range (el): {rt_params[c.RT_PARAM_RAY_CASTING_RANGE_EL]:.1f}°\n"
-    summary_str += f"- Synthetic array: {rt_params[c.RT_PARAM_SYNTHETIC_ARRAY]}\n"
-
-    # Scene
-    summary_str += "\n[Scene]\n"
-    summary_str += f"- Number of scenes: {scene_params[c.SCENE_PARAM_NUMBER_SCENES]}\n"
-    summary_str += f"- Total objects: {scene_params[c.SCENE_PARAM_N_OBJECTS]:,}\n"
-    summary_str += f"- Vertices: {scene_params[c.SCENE_PARAM_N_VERTICES]:,}\n"
-    summary_str += f"- Faces: {scene_params[c.SCENE_PARAM_N_FACES]:,}\n"
-    summary_str += f"- Triangular faces: {scene_params[c.SCENE_PARAM_N_TRIANGULAR_FACES]:,}\n"
-
-    # Materials
-    summary_str += "\n[Materials]\n"
-    summary_str += f"Total materials: {len(material_params)}\n"
-    for _, mat_props in material_params.items():
-        summary_str += f"\n{mat_props[c.MATERIALS_PARAM_NAME_FIELD]}:\n"
-        summary_str += f"- Permittivity: {mat_props[c.MATERIALS_PARAM_PERMITTIVITY]:.2f}\n"
-        summary_str += f"- Conductivity: {mat_props[c.MATERIALS_PARAM_CONDUCTIVITY]:.2f} S/m\n"
-        summary_str += f"- Scattering model: {mat_props[c.MATERIALS_PARAM_SCATTERING_MODEL]}\n"
-        summary_str += f"- Scattering coefficient: {mat_props[c.MATERIALS_PARAM_SCATTERING_COEF]:.2f}\n"
-        summary_str += f"- Cross-polarization coefficient: {mat_props[c.MATERIALS_PARAM_CROSS_POL_COEF]:.2f}\n"
-
-    # TX/RX
-    summary_str += "\n[TX/RX Configuration]\n"
-
-    # Sum total number of receivers and transmitters
-    n_rx = sum(
-        set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS]
-        for set_info in txrx_params.values()
-        if set_info[c.TXRX_PARAM_IS_RX]
-    )
-    n_tx = sum(
-        set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS]
-        for set_info in txrx_params.values()
-        if set_info[c.TXRX_PARAM_IS_TX]
-    )
-    summary_str += f"Total number of receivers: {n_rx}\n"
-    summary_str += f"Total number of transmitters: {n_tx}\n"
-
-    for set_name, set_info in txrx_params.items():
-        summary_str += f"\n{set_name} ({set_info[c.TXRX_PARAM_NAME_FIELD]}):\n"
-        role = []
-        if set_info[c.TXRX_PARAM_IS_TX]:
-            role.append("TX")
-        if set_info[c.TXRX_PARAM_IS_RX]:
-            role.append("RX")
-        summary_str += f"- Role: {' & '.join(role)}\n"
-        summary_str += f"- Total points: {set_info[c.TXRX_PARAM_NUM_POINTS]:,}\n"
-        summary_str += f"- Active points: {set_info[c.TXRX_PARAM_NUM_ACTIVE_POINTS]:,}\n"
-        summary_str += f"- Antennas per point: {set_info[c.TXRX_PARAM_NUM_ANT]}\n"
-        summary_str += f"- Dual polarization: {set_info[c.TXRX_PARAM_DUAL_POL]}\n"
-
-    # GPS Bounding Box
-    if rt_params.get(c.RT_PARAM_GPS_BBOX, (0,0,0,0)) != (0,0,0,0):
-        summary_str += "\n[GPS Bounding Box]\n"
-        summary_str += f"- Min latitude: {rt_params[c.RT_PARAM_GPS_BBOX][0]:.2f}\n"
-        summary_str += f"- Min longitude: {rt_params[c.RT_PARAM_GPS_BBOX][1]:.2f}\n"
-        summary_str += f"- Max latitude: {rt_params[c.RT_PARAM_GPS_BBOX][2]:.2f}\n"
-        summary_str += f"- Max longitude: {rt_params[c.RT_PARAM_GPS_BBOX][3]:.2f}\n"
-
-    # Print summary
-    if print_summary:
-        print(summary_str)
-        return None
-    
-    return summary_str
-
+# ============================================================================
+# Compression Utilities
+# ============================================================================
 
 def zip(folder_path: str) -> str:
     """Create zip archive of folder contents.
@@ -468,6 +383,9 @@ def unzip(path_to_zip: str) -> str:
 
     return extracted_path
 
+# ============================================================================
+# Other Utilities
+# ============================================================================
 
 def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
     """Compare two dictionaries for equality.
@@ -489,19 +407,4 @@ def compare_two_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> bool:
                 additional_keys = additional_keys | compare_two_dicts(dict1[key], dict2[key])
     return additional_keys
 
-
-def get_available_scenarios() -> list:
-    """Get a list of all available scenarios in the scenarios directory.
-    
-    Returns:
-        list: List of scenario names (folder names in the scenarios directory)
-    """
-    scenarios_dir = get_scenarios_dir()
-    if not os.path.exists(scenarios_dir):
-        return []
-    
-    # Get all subdirectories in the scenarios folder
-    scenarios = [f for f in os.listdir(scenarios_dir) 
-                if os.path.isdir(os.path.join(scenarios_dir, f))]
-    return sorted(scenarios)
 
