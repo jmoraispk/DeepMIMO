@@ -683,7 +683,7 @@ class Scene:
         return scene
     
     def plot(self, title: bool = True, save: bool = False, filename: str | None = None,
-             mode: Literal['faces', 'tri_faces'] = 'faces') -> Tuple[plt.Figure, plt.Axes]:
+             mode: Literal['faces', 'tri_faces'] = 'faces', ax: Optional[plt.Axes] = None) -> Tuple[plt.Figure, plt.Axes]:
         """Create a 3D visualization of the scene.
         
         The scene can be visualized in two modes:
@@ -706,8 +706,8 @@ class Scene:
         Returns:
             Tuple of (Figure, Axes) for the plot
         """
-        fig = plt.figure(figsize=(15, 15))
-        ax = fig.add_subplot(111, projection='3d')
+        if ax is None:
+            _, ax = plt.subplots(figsize=(15, 15), subplot_kw={'projection': '3d'})
         
         # Group objects by label
         label_groups = {}
@@ -717,10 +717,10 @@ class Scene:
             label_groups[obj.label].append(obj)
         
         # Plot each label group
+        default_vis_settings = {'z_order': 3, 'alpha': 0.8, 'color': None}
         for label, objects in label_groups.items():
             # Get visualization settings for this label
-            vis_settings = self.visualization_settings.get(
-                label, {'z_order': 3, 'alpha': 0.8, 'color': None})  # Default settings
+            vis_settings = self.visualization_settings.get(label, default_vis_settings)
             
             # Use rainbow colormap for objects without fixed color
             n_objects = len(objects)
@@ -734,8 +734,7 @@ class Scene:
                 color = obj.color or colors[obj_idx]
                 
                 # Plot object with specified mode
-                obj.plot(ax, mode=mode, alpha=vis_settings['alpha'],
-                        color=color)
+                obj.plot(ax, mode=mode, alpha=vis_settings['alpha'], color=color)
         
         self._set_axes_lims_to_scale(ax)
         
@@ -754,7 +753,7 @@ class Scene:
             plt.savefig(output_file, dpi=300, bbox_inches='tight')
             print(f"\nPlot saved as '{output_file}'")
         
-        return fig, ax
+        return ax
     
     def _set_axes_lims_to_scale(self, ax, zoom: float = 1.3):
         """Set axis limits based on scene bounding box with equal scaling.
