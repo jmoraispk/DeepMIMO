@@ -85,7 +85,7 @@ COMPUTED_MATRICES_HELP = {
 }
 
 # Dictionary of help messages for configuration/other parameters
-CONFIG_HELP = {
+ADDITIONAL_HELP = {
     c.SCENE_PARAM_NAME:
         'Scene parameters',
     c.MATERIALS_PARAM_NAME:
@@ -153,7 +153,7 @@ CHANNEL_HELP_MESSAGES = {
 ALL_PARAMS = {
     **FUNDAMENTAL_MATRICES_HELP,
     **COMPUTED_MATRICES_HELP,
-    **CONFIG_HELP,
+    **ADDITIONAL_HELP,
     **CHANNEL_HELP_MESSAGES
 }
 
@@ -195,7 +195,7 @@ def info(param_name: str | object | None = None) -> None:
     if param_name is None or param_name == 'all':
         _print_section("Fundamental Matrices", FUNDAMENTAL_MATRICES_HELP)
         _print_section("Computed/Derived Matrices", COMPUTED_MATRICES_HELP) 
-        _print_section("Configuration Parameters", CONFIG_HELP)
+        _print_section("Additional Dataset Fields", ADDITIONAL_HELP)
     
     elif param_name in ['ch_params', 'channel_params']:
         _print_section("Channel Generation Parameters", CHANNEL_HELP_MESSAGES)
