@@ -4,7 +4,6 @@ import time
 import deepmimo as dm
 import os
 import json
-import shutil
 import matplotlib.pyplot as plt
 from api_keys import DEEPMIMO_API_KEY
 
@@ -35,9 +34,6 @@ timing_results = {}
 # For zipping
 for scen_name in dm.get_available_scenarios():
 
-    # if 'asu' in scen_name:
-    #     continue
-
     if not scen_name.startswith('city_') or not scen_name.endswith('_s'):
         continue
 
@@ -67,7 +63,7 @@ for scen_name in dm.get_available_scenarios():
                    s=250, color='green', label='BS 3', marker='*')
 
         
-        grid_size = dataset.grid_size - 1
+        grid_size = dataset.grid_size - 3
         import numpy as np
         cols = np.arange(grid_size[0], step=8)
         rows = np.arange(grid_size[1], step=8)
@@ -76,7 +72,7 @@ for scen_name in dm.get_available_scenarios():
         
         ax.scatter(dataset.rx_pos[idxs,0], 
                    dataset.rx_pos[idxs,1], 
-                   s=10, color='red', label='Users', marker='o', alpha=0.2, zorder=0)
+                   s=10, color='red', label='users', marker='o', alpha=0.2, zorder=0)
 
         l = ax.legend(ncol=3, loc='center', bbox_to_anchor=(0.5, 1.0), fontsize=15)
         order = [2, 0, 3, 1, 4, 5]
@@ -84,23 +80,18 @@ for scen_name in dm.get_available_scenarios():
                   ncol=3, loc='center', bbox_to_anchor=(0.5, 1.0), fontsize=15)
         l.set_zorder(1e9)
         for handle, text in zip(l.legend_handles, l.get_texts()):
-            if text.get_text() == 'Users':  # Match by label
+            if text.get_text() == 'users':  # Match by label
                 handle.set_sizes([100])  # marker area (not radius)
 
-        plt.show()
+        # plt.show()
+        # continue
+        img_path = f'{scen_name}_scene.png'
+        plt.savefig(img_path, dpi=150, bbox_inches='tight')#, pad_inches=0)
+        plt.close()
         
-        # ax.set_position([-0.1, -0.1, 1.2, 1.2])
-        # img_path = f'{scen_name}_scene.png'
-        # plt.savefig(img_path, dpi=150, bbox_inches='tight')#, pad_inches=0)
-        # plt.close()
+        dm.upload_images(scen_name, key=DEEPMIMO_API_KEY, img_paths=[img_path])
+        # break
         
-        # call PIL to crop image
-        # from PIL import Image
-        # img = Image.open(img_path)
-        # img = img.crop((150, 150, 1550, 1550))
-        # img.save(img_path)
-        break
-        # dm.upload_images(scen_name, key=DEEPMIMO_API_KEY, img_paths=[img_path])
         # print(f"Upload successful: {scen_name}")
         if os.path.exists(img_path):
             os.remove(img_path)
