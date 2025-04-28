@@ -159,7 +159,7 @@ def _load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = 
         for rx_set_id, rx_idxs in rx_sets.items():
             for tx_idx in tx_idxs:
                 dataset_list.append({})
-                print(f'\nTX set: {tx_set_id} (tx_idx: {tx_idx})\nRX set: {rx_set_id}')
+                print(f'Loading TXRX PAIR: TXset {tx_set_id} (tx_idx {tx_idx}) & RXset {rx_set_id} (rx_idxs {len(rx_idxs)})')
                 dataset_list[bs_idx] = _load_tx_rx_raydata(scene_folder,
                                                           tx_set_id, rx_set_id,
                                                           tx_idx, rx_idxs,
@@ -182,7 +182,7 @@ def _load_raytracing_scene(scene_folder: str, txrx_dict: dict, max_paths: int = 
 
 def _load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: int, 
                         rx_idxs: np.ndarray | List, max_paths: int, 
-                        matrices_to_load: List[str] | str = 'all') -> Dict[str, Any]:
+                        matrices_to_load: List[str] | str = 'all', verbose: bool = False) -> Dict[str, Any]:
     """Load raytracing data for a transmitter-receiver pair.
     
     This function loads raytracing data files containing path information
@@ -233,7 +233,8 @@ def _load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: 
         mat_path = os.path.join(rayfolder, mat_filename)
     
         if os.path.exists(mat_path):
-            print(f'Loading {mat_filename}...', end='')
+            if verbose:
+                print(f'Loading {mat_filename}...', end='')
             tx_dict[key] = scipy.io.loadmat(mat_path)[key]
         else:
             print(f'File {mat_path} could not be found')
@@ -249,7 +250,8 @@ def _load_tx_rx_raydata(rayfolder: str, tx_set_id: int, rx_set_id: int, tx_idx: 
         if key not in [c.RX_POS_PARAM_NAME, c.TX_POS_PARAM_NAME]:
             tx_dict[key] = tx_dict[key][:, :max_paths, ...]
         
-        print(f'Done. Shape: {tx_dict[key].shape}')
+        if verbose:
+            print(f'Done. Shape: {tx_dict[key].shape}')
     return tx_dict 
 
 # Helper functions
