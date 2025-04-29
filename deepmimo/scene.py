@@ -684,7 +684,7 @@ class Scene:
     
     def plot(self, title: bool = True, mode: Literal['faces', 'tri_faces'] = 'faces', 
              ax: Optional[plt.Axes] = None, proj_2d: bool = False, figsize: tuple = (10, 10), 
-             dpi: int = 100) -> plt.Axes:
+             dpi: int = 100, legend: bool = False) -> plt.Axes:
         """Create a visualization of the scene.
         
         The scene can be visualized in either 2D (top-down view) or 3D mode:
@@ -786,7 +786,7 @@ class Scene:
             self._set_axes_lims_to_scale(ax)
         
         # Add legend if there are multiple labels
-        if len(label_groups) > 1:
+        if len(label_groups) > 1 and legend:
             ax.legend()
         
         return ax

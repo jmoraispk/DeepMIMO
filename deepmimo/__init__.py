@@ -43,13 +43,14 @@ from .generator.channel import ChannelGenParameters
 from .converter.converter import convert
 from .info import info
 from .general_utils import (
-    summary,
     get_available_scenarios,
     get_params_path,
     load_dict_from_json,
     zip,
     get_scenario_folder,
 )
+
+from .summary import summary, plot_summary
 
 from .api import (
     upload,

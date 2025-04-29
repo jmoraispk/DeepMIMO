@@ -47,56 +47,10 @@ for scen_name in dm.get_available_scenarios():
         # dm.upload(scen_name, key=DEEPMIMO_API_KEY)
         # print(f"Upload successful: {scen_name}")
         
-        full_dataset = dm.load(scen_name)
-        dataset = dm.load(scen_name)[4]
-        
-        ax = full_dataset.scene.plot(title=False, proj_2d=True)
-
-        ax.scatter(full_dataset[0].bs_pos[0,0], 
-                   full_dataset[0].bs_pos[0,1], 
-                   s=250, color='red', label='BS 1', marker='*')
-        ax.scatter(full_dataset[1].bs_pos[0,0], 
-                   full_dataset[1].bs_pos[0,1], 
-                   s=250, color='blue', label='BS 2', marker='*')
-        ax.scatter(full_dataset[2].bs_pos[0,0], 
-                   full_dataset[2].bs_pos[0,1], 
-                   s=250, color='green', label='BS 3', marker='*')
-
-        
-        grid_size = dataset.grid_size - 3
-        import numpy as np
-        cols = np.arange(grid_size[0], step=8)
-        rows = np.arange(grid_size[1], step=8)
-        idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
-        # idxs = dataset.get_uniform_idxs([4,4])
-        
-        ax.scatter(dataset.rx_pos[idxs,0], 
-                   dataset.rx_pos[idxs,1], 
-                   s=10, color='red', label='users', marker='o', alpha=0.2, zorder=0)
-
-        l = ax.legend(ncol=3, loc='center', bbox_to_anchor=(0.5, 1.0), fontsize=15)
-        order = [2, 0, 3, 1, 4, 5]
-        l = ax.legend([l.legend_handles[i] for i in order], [l.get_texts()[i].get_text() for i in order],
-                  ncol=3, loc='center', bbox_to_anchor=(0.5, 1.0), fontsize=15)
-        l.set_zorder(1e9)
-        for handle, text in zip(l.legend_handles, l.get_texts()):
-            if text.get_text() == 'users':  # Match by label
-                handle.set_sizes([100])  # marker area (not radius)
-
-        # plt.show()
-        # continue
-        img_path = f'{scen_name}_scene.png'
-        plt.savefig(img_path, dpi=150, bbox_inches='tight')#, pad_inches=0)
-        plt.close()
-        
-        dm.upload_images(scen_name, key=DEEPMIMO_API_KEY, img_paths=[img_path])
+        # dm.upload_images(scen_name, key=DEEPMIMO_API_KEY, img_paths=[img_path])
         # break
         
         # print(f"Upload successful: {scen_name}")
-        if os.path.exists(img_path):
-            os.remove(img_path)
-            print(f"Deleted image: {img_path}")
-        
     except Exception as e:
         stop = start
         if EXECUTION_MODE == 'retry_errors':

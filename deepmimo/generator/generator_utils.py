@@ -49,17 +49,23 @@ def _get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.
         ValueError: If dataset does not have a valid grid structure
     """
     # Check if dataset has valid grid structure
+    if steps == [1, 1]:
+        return np.arange(n_ue)
+    
     if np.prod(grid_size) != n_ue:
         print(f"Warning. Grid_size: {grid_size} = {np.prod(grid_size)} users != {n_ue} users in rx_pos")
-        if steps == [1, 1]:
-            idxs = np.arange(n_ue)
-        else:
-            raise ValueError("Dataset does not have a valid grid structure. Cannot perform uniform sampling.")
+        print("Computing pseudo-uniform indices.")
+        
+        _grid_size = grid_size
+        while np.prod(_grid_size) > n_ue:
+            _grid_size -= 1  # Decrease grid size by 1 until product <= n_ue
     else:
         # Get indices of users at uniform intervals
-        cols = np.arange(grid_size[0], step=steps[0])
-        rows = np.arange(grid_size[1], step=steps[1])
-        idxs = np.array([j + i*grid_size[0] for i in rows for j in cols])
+        _grid_size = grid_size
+    
+    cols = np.arange(_grid_size[0], step=steps[0])
+    rows = np.arange(_grid_size[1], step=steps[1])
+    idxs = np.array([j + i*_grid_size[0] for i in rows for j in cols])
     
     return idxs
 

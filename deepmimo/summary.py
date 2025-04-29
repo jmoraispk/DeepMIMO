@@ -10,7 +10,6 @@ The module is also leveraged by users to understand a dataset during development
 Usage:
     summary(scen_name, print_summary=True)
 
-
 Three functions:
 
 1. summary(scen_name, print_summary=True)
@@ -32,12 +31,21 @@ Three functions:
     - Returns a dictionary of statistics about the dataset.
 
 """
+# Standard library imports
+import os
+from typing import Optional
+
+# Third-party imports
+import matplotlib.pyplot as plt
+
+# Local imports
+from .generator.core import load
 from .general_utils import (
     get_params_path,
-    load_dict_from_json
+    load_dict_from_json,
 )
+from .txrx import get_txrx_sets
 from . import consts as c
-from typing import Optional
 
 
 def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
@@ -165,3 +173,101 @@ def summary(scen_name: str, print_summary: bool = True) -> Optional[str]:
         return None
     
     return summary_str
+
+
+def plot_summary(scenario_name: str, save_imgs: bool = False) -> list[str]:
+    """Make images for the scenario.
+    
+    Args:
+        scenario_name: Scenario name
+    
+    Returns:
+        List of paths to generated images
+    """
+    
+    # Create figures directory if it doesn't exist
+    if save_imgs:
+        temp_dir = 'figures'
+        os.makedirs(temp_dir, exist_ok=True)
+    
+    # Load the dataset
+    dataset = load(scenario_name)
+    
+    # Image paths
+    img_paths = []
+    
+    # Image 1: 3D Scene
+    try:
+        scene_img_path = os.path.join(temp_dir, 'scene.png')
+        dataset.scene.plot()
+        if save_imgs:
+            plt.savefig(scene_img_path, dpi=100, bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
+        img_paths.append(scene_img_path)
+
+    except Exception as e:
+        print(f"Error generating image 1: {str(e)}")
+    
+    # Image 2: Scenario summary (2D view)
+    try:
+        img2_path = os.path.join(temp_dir, 'scenario_summary.png')
+        txrx_sets = get_txrx_sets(scenario_name)
+
+        tx_set = [s for s in txrx_sets if s.is_tx][0]
+        n_bs = tx_set.num_points
+        ax = dataset.scene.plot(title=False, proj_2d=True)
+        bs_colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
+        for bs in range(n_bs):  
+            ax.scatter(dataset[bs].bs_pos[0,0], dataset[bs].bs_pos[0,1], 
+                       s=250, color=bs_colors[bs], label=f'BS {bs + 1}', marker='*')
+
+        # Get uniform indices (to undersample receivers for easier visualization)
+        rx_set_id = [s for s in txrx_sets if s.is_rx and not s.is_tx][0].id
+        first_rx_pair_idx = next(i for i, d in enumerate(dataset.txrx) if d['rx_set_id'] == rx_set_id)
+        idxs = dataset[first_rx_pair_idx].get_uniform_idxs([8,8])
+        ax.scatter(dataset[first_rx_pair_idx].rx_pos[idxs,0], 
+                   dataset[first_rx_pair_idx].rx_pos[idxs,1], 
+                   s=10, color='red', label='users', marker='o', alpha=0.2, zorder=0)
+
+        # Reorder legend handles and labels
+        legend_args = {'ncol': 4 if n_bs == 1 else 3, 'loc': 'center',
+                       'bbox_to_anchor': (0.5, 1.0), 'fontsize': 15}
+        if n_bs == 3:
+            order = [2, 0, 3, 1, 4, 5]
+        elif n_bs == 2:
+            order = [2, 0, 3, 1, 4]
+        else:
+            order = [0, 1, 2, 3]
+        l1 = ax.legend(**legend_args)
+        l2 = ax.legend([l1.legend_handles[i] for i in order], 
+                       [l1.get_texts()[i].get_text() for i in order],
+                       **legend_args)
+        l2.set_zorder(1e9)
+        for handle, text in zip(l2.legend_handles, l2.get_texts()):
+            if text.get_text() == 'users':  # Match by label
+                handle.set_sizes([100])  # marker area (not radius)
+
+        if save_imgs:
+            plt.savefig(img2_path, dpi=100, bbox_inches='tight')
+            plt.close()
+            img_paths.append(img2_path)
+        else:
+            plt.show()
+        
+    except Exception as e:
+        print(f"Error generating images 2: {str(e)}")
+    
+    # ISSUE: LoS is BS specific. Are we going to show the LoS for each BS?
+    
+    # Image 3: Line of Sight (LOS)
+    # plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.bs_pos, bs_ori=dataset.bs_ori, 
+    #               cmap='viridis', cbar_labels='LoS status')
+    # los_img_path = os.path.join(temp_dir, 'los.png')
+    # plt.savefig(los_img_path, dpi=100, bbox_inches='tight')
+    # plt.close()
+    # img_paths.append(los_img_path)
+
+
+    return img_paths

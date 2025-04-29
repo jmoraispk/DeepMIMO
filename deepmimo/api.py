@@ -17,7 +17,7 @@ Upload flow:
    - Generate key components using _generate_key_components() - used for scenario info on website
    - Create submission on server with processed data
    - If include_images is True:
-     * Generate images using make_imgs()
+     * Generate images using plot_summary()
      * Upload images using upload_images()
 
 Download flow:
@@ -53,10 +53,11 @@ from .general_utils import (
     get_scenario_folder,
     get_params_path,
     load_dict_from_json,
-    summary,
     zip,
     unzip
 )
+from .summary import summary, plot_summary
+
 import json
 
 API_BASE_URL = "https://dev.deepmimo.net"
@@ -357,59 +358,6 @@ def _format_section(name: str, lines: list) -> dict:
         """
     }
 
-def make_imgs(scenario_name: str) -> list[str]:
-    """Make images for the scenario.
-    
-    Args:
-        scenario_name: Scenario name
-    
-    Returns:
-        List of paths to generated images
-    """
-    import matplotlib.pyplot as plt
-    import deepmimo as dm
-    import os
-    
-    # Create figures directory if it doesn't exist
-    temp_dir = 'figures'
-    os.makedirs(temp_dir, exist_ok=True)
-    
-    # Load the dataset
-    dataset = dm.load(scenario_name)[0]
-    
-    # Image paths
-    img_paths = []
-    
-    try:
-        # Image 1: Line of Sight (LOS)
-        # dm.plot_coverage(dataset.rx_pos, dataset.los, bs_pos=dataset.bs_pos, bs_ori=dataset.bs_ori, 
-        #                  cmap='viridis', cbar_labels='LoS status')
-        # los_img_path = os.path.join(temp_dir, 'los.png')
-        # plt.savefig(los_img_path, dpi=100, bbox_inches='tight')
-        # plt.close()
-        # img_paths.append(los_img_path)
-        
-        # Image 2: Power
-        # plt.figure(figsize=(10, 8))
-        # dataset.plot_coverage(dataset.power[:,0])
-        # power_img_path = os.path.join(temp_dir, 'power.png')
-        # plt.savefig(power_img_path, dpi=100, bbox_inches='tight')
-        # plt.close()
-        # img_paths.append(power_img_path)
-        
-        # # Image 3: Scene
-        # plt.figure(figsize=(10, 8))
-        dataset.scene.plot()
-        scene_img_path = os.path.join(temp_dir, 'scene.png')
-        plt.savefig(scene_img_path, dpi=100, bbox_inches='tight')
-        plt.close()
-        img_paths.append(scene_img_path)
-        
-    except Exception as e:
-        print(f"Error generating images: {str(e)}")
-        
-    return img_paths
-
 def upload_images(scenario_name: str, img_paths: list[str], key: str) -> list[dict]:
     """Upload images and attach them to an existing scenario.
     
@@ -582,34 +530,29 @@ def _make_submission_on_server(submission_scenario_name: str, key: str,
     if include_images:
         print("Generating scenario visualizations...")
         try:
-            img_paths = make_imgs(submission_scenario_name)
+            img_paths = plot_summary(submission_scenario_name, save_imgs=True)
             if img_paths:
                 uploaded_images_meta = upload_images(submission_scenario_name, img_paths, key)
                 print(f"Image upload process completed. {len(uploaded_images_meta)} images attached.")
-
         except Exception as e:
-            print(f"Warning: Failed during image generation or upload phase")
+            print("Warning: Failed during image generation or upload phase")
+            print(f"Error: {str(e)}")
         finally:
             # Clean up locally generated temporary image files
             if img_paths:
                 print("Cleaning up local image files...")
                 cleaned_count = 0
                 for img_path in img_paths:
-                    try:
-                        if os.path.exists(img_path):
-                            os.remove(img_path)
-                            cleaned_count += 1
-                    except Exception as e:
-                        print(f"Warning: Failed to clean up image {img_path}: {str(e)}")
+                    if os.path.exists(img_path):
+                        os.remove(img_path)
+                        cleaned_count += 1
                 print(f"Cleaned up {cleaned_count} local image files.")
-                # Clean up the 'figures' directory if it's empty
-                temp_dir = 'figures'
-                try:
-                    if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                        os.rmdir(temp_dir)
-                        print(f"Removed empty directory: {temp_dir}")
-                except Exception as e:
-                    print(f"Warning: Failed to remove directory {temp_dir}: {str(e)}")
+                
+                # Clean up the figure's directory if it's empty
+                temp_dir = os.path.dirname(img_paths[0])
+                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                    os.rmdir(temp_dir)
+                    print(f"Removed empty directory: {temp_dir}")
 
     return submission_scenario_name
 
