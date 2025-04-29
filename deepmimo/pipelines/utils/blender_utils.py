@@ -34,6 +34,9 @@ ADDON_URLS = {
 FLOOR_MATERIAL = 'itu_wet_ground'
 PROJ_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+# Blender version
+BLENDER_MAJOR_VERSION = bpy.app.version[0]
+
 ###############################################################################
 # LOGGER SETUP
 ###############################################################################
@@ -537,7 +540,10 @@ def export_mesh_obj_to_ply(object_type: str, output_folder: str) -> None:
         emoji = "🏗" if "building" in object_type else "🛣"
         LOGGER.info(f"{emoji} Exporting {len(objects)} {object_type}s to .ply")
         ply_path = os.path.join(output_folder, f"{object_type}s.ply")
-        bpy.ops.export_mesh.ply(filepath=ply_path, use_ascii=True, use_selection=True)
+        if BLENDER_MAJOR_VERSION >= 4:
+            bpy.ops.wm.ply_export(filepath=ply_path, ascii_format=True, export_selected_objects=True)
+        else:
+            bpy.ops.export_mesh.ply(filepath=ply_path, use_ascii=True, use_selection=True)
     else:
         LOGGER.warning(f"⚠ No {object_type}s found for export.")
     
