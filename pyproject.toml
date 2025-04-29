@@ -13,7 +13,7 @@ authors = [
 description = "DeepMIMO dataset generator library"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10"  # to build the docs, python 3.11 is needed (uses 3.11 built-in tomllib)
 keywords = ["MIMO", "ray tracing", "dataset", "DeepMIMO", "raytracing", "wireless"]
 classifiers = [
     "Development Status :: 3 - Alpha",
