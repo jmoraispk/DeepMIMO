@@ -39,7 +39,6 @@ from typing import Optional
 import matplotlib.pyplot as plt
 
 # Local imports
-from .generator.core import load
 from .general_utils import (
     get_params_path,
     load_dict_from_json,
@@ -184,10 +183,12 @@ def plot_summary(scenario_name: str, save_imgs: bool = False) -> list[str]:
     Returns:
         List of paths to generated images
     """
+    # Import load function here to avoid circular import
+    from .generator.core import load
     
     # Create figures directory if it doesn't exist
+    temp_dir = './figures'
     if save_imgs:
-        temp_dir = 'figures'
         os.makedirs(temp_dir, exist_ok=True)
     
     # Load the dataset
@@ -203,9 +204,9 @@ def plot_summary(scenario_name: str, save_imgs: bool = False) -> list[str]:
         if save_imgs:
             plt.savefig(scene_img_path, dpi=100, bbox_inches='tight')
             plt.close()
+            img_paths.append(scene_img_path)
         else:
             plt.show()
-        img_paths.append(scene_img_path)
 
     except Exception as e:
         print(f"Error generating image 1: {str(e)}")
