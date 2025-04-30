@@ -1,3 +1,11 @@
+# Configuration
+
+```{toctree}
+:hidden:
+
+self
+```
+
 # DeepMIMO Configuration System
 
 The DeepMIMO configuration system provides a way to set and retrieve global configuration values that can be accessed from anywhere in the code. This is useful for setting parameters like ray tracer version, GPU usage, and other global settings.

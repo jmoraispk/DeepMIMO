@@ -34,6 +34,21 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.autosummary',
     'nbsphinx',
+    'sphinx.ext.intersphinx',
+    'myst_parser',  # Enable Markdown support
+]
+
+# Configure MyST-Parser
+myst_enable_extensions = [
+    'colon_fence',
+    'deflist',
+    'dollarmath',
+    'fieldlist',
+    'html_admonition',
+    'html_image',
+    'replacements',
+    'smartquotes',
+    'tasklist',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -55,17 +70,15 @@ html_theme = THEME
 html_static_path = ['_static']
 html_css_files = ['css/custom.css']
 
+# Always show the navigation sidebar
+html_show_sidebar = True
+html_sidebars = {
+    '**': ['globaltoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html'],
+}
+
 # Theme-specific configurations
 if THEME == 'furo':
     # Furo theme configuration
-    html_sidebars = {
-        "**": [
-            "sidebar/search.html",
-            "sidebar/navigation.html",
-        ]
-    }
-    
-    # Furo theme options
     html_theme_options = {
         # Sidebar behavior
         "sidebar_hide_name": False,
@@ -126,11 +139,14 @@ elif THEME == 'sphinx_rtd_theme':
         'logo_only': False,
         'style_external_links': True,
         'style_nav_header_background': '#2980B9',
-        'collapse_navigation': True,
+        'collapse_navigation': False,
         'sticky_navigation': True,
         'includehidden': True,
         'prev_next_buttons_location': 'both',
     }
+
+# Master document
+master_doc = 'index'
 
 # Show/hide settings
 html_show_sphinx = False
@@ -146,3 +162,22 @@ html_css_files = [
     'css/custom.css',
 ]
 # autodoc_typehints = 'description'
+
+# -- Options for intersphinx extension ---------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+}
+
+# -- Options for autodoc extension -------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}

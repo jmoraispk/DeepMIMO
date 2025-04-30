@@ -108,7 +108,7 @@ BUILDING_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Concrete 3.5 GHz.mtl")
 ROAD_MATERIAL_PATH = os.path.join(WI_MAT, "Asphalt_1GHz.mtl")
 TERRAIN_MATERIAL_PATH = os.path.join(WI_MAT, "ITU Wet earth 3.5 GHz.mtl")
 
-COUNTER = 9
+COUNTER = 30
 #%% Iterate over CSV file to extract the map, create TX/RX positions, and run RT
 
 df = pd.read_csv('./dev/params_20cities_t.csv')
@@ -174,7 +174,7 @@ for index, row in df.iterrows():
 	COUNTER += 1
 	osm_folder = os.path.join(OSM_ROOT, row['name']) + f'_{COUNTER}'
 	fetch_osm_scene(p['min_lat'], p['min_lon'], p['max_lat'], p['max_lon'],
-					osm_folder, output_formats=['sionna'])
+					osm_folder, output_formats=['insite','sionna'])
 	p['origin_lat'], p['origin_lon'] = get_origin_coords(osm_folder)
 
 	p['city'] = get_city_name(p['origin_lat'], p['origin_lon'], GMAPS_API_KEY)
