@@ -34,7 +34,7 @@ def dbw2watt(val: float | np.ndarray) -> float | np.ndarray:
     """
     return 10**(val/10)
 
-def _get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.ndarray:
+def get_uniform_idxs(n_ue: int, grid_size: np.ndarray, steps: List[int]) -> np.ndarray:
     """Return indices of users at uniform intervals.
     
     Args:

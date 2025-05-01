@@ -55,7 +55,7 @@ from .geometry import (
 # Utilities
 from .generator_utils import (
     dbw2watt,
-    _get_uniform_idxs,
+    get_uniform_idxs,
 )
 
 # Parameters that should remain consistent across datasets in a MacroDataset
@@ -792,7 +792,7 @@ class Dataset(DotDict):
         Raises:
             ValueError: If dataset does not have a valid grid structure
         """
-        return _get_uniform_idxs(self.n_ue, self.grid_size, steps)
+        return get_uniform_idxs(self.n_ue, self.grid_size, steps)
     
 
     ###########################################

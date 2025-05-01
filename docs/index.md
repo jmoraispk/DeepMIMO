@@ -8,7 +8,6 @@ Welcome to DeepMIMO's documentation! DeepMIMO is a powerful Python package for g
 
 installation
 quickstart
-configuration
 overview
 specs
 ```
@@ -28,19 +27,21 @@ objects/materials
 :maxdepth: 2
 :caption: API Reference
 
-api/modules
-api/api
 api/generator
 api/converter
 api/visualization
+api/config
 api/integrations
 api/pipelines
+api/utils
 ```
 
 ```{toctree}
-:maxdepth: 1
-:caption: Resources
+:maxdepth: 2
+:caption: Guidelines & Resources
 
+raytracing_guidelines
+comparing_raytracers
 contributing
 need_help
 ```

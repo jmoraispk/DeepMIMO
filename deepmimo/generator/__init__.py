@@ -10,5 +10,6 @@ __all__ = [
     'plot_power_discarding',
     'get_idxs_with_limits',
     'LinearPath',
-    'steering_vector'
+    'steering_vector',
+    'get_uniform_idxs'
 ] 

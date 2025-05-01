@@ -1,5 +1,5 @@
 # DeepMIMO specs
-This folder contains the files that specify how each DeepMIMO version organizes files.
+This specifies how each DeepMIMO version organizes files.
 
 ## DeepMIMOv4 Spec
 
