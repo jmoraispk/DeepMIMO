@@ -96,7 +96,7 @@ dm.download('asu_campus_3p5')
 
 | Step    | Command                                           | Description                       |
 |---------|---------------------------------------------------|-----------------------------------|
-| Install | `pip install sphinx nbsphinx`<br>`pip install furo sphinx-rtd-theme`    |  Install dependencies <br>Install themes (furo & read-the-docs)  |
+| Install | `pip install .[docs]`                             | Install docs dependencies         |
 | Build   | `cd docs`<br>`sphinx-build -b html . _build/html` | Generate HTML documentation       |
 | Serve   | `cd docs/_build/html`<br>`python -m http.server`  | View docs at http://localhost:8000|
 
