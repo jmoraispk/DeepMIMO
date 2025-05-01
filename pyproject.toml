@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "DeepMIMO"
-version = "4.0.0a4"
+version = "4.0.0a3"
 authors = [
     { name = "João Morais" },
     { name = "Umut Demirhan" },
@@ -131,7 +131,9 @@ all = [
     "sionna-rt==1.0.2",  
 
     # Development
+    "build",
     "jupyter",
+    "twine",
 
     # Documentation
     "docutils>=0.19",
@@ -144,4 +146,5 @@ all = [
     "sphinx-automodapi>=0.15.0",
     "nbsphinx>=0.9.0",
     "ipykernel>=6.0.0"
+    
 ]
