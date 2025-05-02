@@ -1,88 +1,54 @@
 # Installation
 
-```{toctree}
-:hidden:
+DeepMIMO requires Python 3.10 or later (Python 3.11 recommended for development).
 
-self
-```
-
-You can install DeepMIMO using pip:
+## Quick Install
 
 ```bash
 pip install deepmimo
 ```
 
-## Requirements
+## Source Install
 
-DeepMIMO requires Python 3.10 or later. The main dependencies are:
-* matplotlib (>= 3.8.2)
-* numpy (>= 1.19.5)
-* scipy (>= 1.6.2)
-* tqdm (>= 4.59.0)
-* pandas (>= 2.0.0)
-* h5py (>= 3.8.0)
-* pyyaml (>= 6.0.0)
-
-## Optional Dependencies
-
-For specific features, you may need additional packages:
-
-### Ray Tracing Visualization
-* plotly (>= 5.13.0)
-* dash (>= 2.9.0)
-
-### Advanced Data Processing
-* scikit-learn (>= 1.0.0)
-* networkx (>= 3.0.0)
-
-## Development Installation
-
-For development installation, clone the repository and install in editable mode:
-
+From source:
 ```bash
 git clone https://github.com/DeepMIMO/DeepMIMO.git
 cd DeepMIMO
-pip install -e .
+pip install .
 ```
 
-For development, you'll also want to install the test dependencies:
+## Development Install
 
+And install dependencies from the table below based on your needs.
+
+| Method | Command | Python Version | Description |
+|--------|---------|---------------|-------------|
+| Base | `pip install -e .` | ≥3.10 | Basic install with core dependencies |
+| Documentation | `pip install .[doc]` | ≥3.10 | Install with documentation dependencies |
+| Development | `pip install .[dev]` | ≥3.11 | Full development environment |
+| Pipelines (Sionna 1.0.x) | `pip install .[sionna1]` | 3.10 or 3.11 | Ray tracing pipeline with Sionna 1.0 |
+| Pipelines (Sionna 0.19.x) | `pip install .[sionna019]` | 3.10 or 3.11 | Ray tracing pipeline with Sionna 0.19 |
+| All | `pip install .[all]` | 3.10 or 3.11 | Complete installation |
+
+*Note: This is a source installation only installs dependencies. The package itself will be imported directly from the source folder, allowing for immediate testing of code changes.*
+
+💡 **TIP**: The `-e` flag in `pip install -e .` to make it so the changes in the code are automatically reflected on the package, and no need for reinstalling. 
+
+💡 **TIP**: For faster installation, use `uv`:
 ```bash
-pip install -e ".[dev]"
+pip install uv
+uv pip install <...>
 ```
 
-## Documentation Dependencies
+## Previous versions
 
-To build the documentation locally, you'll need:
+As a commitment to support reproducible research, we try to always support all versions. 
 
+Previous versions are (or will be) available via:
 ```bash
-# Install Sphinx and basic extensions
-pip install sphinx nbsphinx
-
-# Install themes
-pip install furo sphinx-rtd-theme
+pip install deepmimo==2.0.0
+pip install deepmimo==3.0.0
 ```
 
-## Troubleshooting
-
-Common installation issues:
-
-1. **Version Conflicts**: If you encounter version conflicts, try creating a new virtual environment:
-   
-   ```bash
-   python -m venv deepmimo-env
-   source deepmimo-env/bin/activate  # On Windows: deepmimo-env\Scripts\activate
-   pip install deepmimo
-   ```
-
-2. **Missing Dependencies**: If you get errors about missing dependencies, install them manually:
-   
-   ```bash
-   pip install matplotlib numpy scipy tqdm pandas h5py pyyaml
-   ```
-
-3. **Build Issues**: If you encounter build issues on Windows, ensure you have the latest pip and setuptools:
-   
-   ```bash
-   python -m pip install --upgrade pip setuptools wheel 
-   ```
+However, if actively working with DeepMIMO, it is advised to migrate the code to v4. 
+The datasets are exactly the same, the results and parameters are the same too. But there are small code changes that are necessary. 
