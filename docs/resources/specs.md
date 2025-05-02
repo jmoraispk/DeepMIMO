@@ -27,11 +27,11 @@ Example with 3 BSs and 1 user grid:
 Access pattern:
 ```python
 dataset = dm.load(<scen_name>)
-d = dataset[scene][tx]
-# Note 1: both d.aoa_az and d['aoa_az'] syntax work
-# Note 2: static scenarios (single scene) do not need scene indexing. 
-#         Similarly for single-tx scenarios.
 ```
+
+To simplify the notation, the table below considers `d = dataset[scene][tx]`
+Note 1: both d.aoa_az and d['aoa_az'] syntax work
+Note 2: static scenarios (single scene) do not need scene indexing. Similarly for single-tx scenarios.
 
 | File Name | Dataset Attribute | Dimensions | Type | Description |
 |-----------|------------------|------------|------|-------------|
@@ -45,8 +45,8 @@ d = dataset[scene][tx]
 | phase_{code}.mat     | d.phase | N × MAX_PATHS | float32 | Phase of each path |
 | power_{code}.mat     | d.power | N × MAX_PATHS | float32 | Power of each path |
 | inter_{code}.mat     | d.inter | N × MAX_PATHS | int32 | Interaction type codes* |
-| inter_loc_{code}.mat | d.inter_loc | N × MAX_PATHS × MAX_INTERACTIONS × 3 | float32 | Interaction point locations |
-| vertices_{code}.mat  | d.vertices | N_vertices × 3 | float32 | XYZ coordinates of vertices |
+| inter_loc_{code}.mat | d.inter_loc | N × MAX_PATHS × MAX_INTER × 3 | float32 | Interaction point locations |
+| vertices_{code}.mat  | d.vertices | N_vert × 3 | float32 | XYZ coordinates of vertices |
 
 *Interaction codes:
 - 0: Line of Sight (LoS)
@@ -55,6 +55,11 @@ d = dataset[scene][tx]
 - 3: Scattering
 - 4: Transmission
 - Example: 21 = Tx - Diffraction - Reflection - Rx
+
+The dimensions are:
+- `N` - number of users
+- `MAX_PATHS` - maximum number of paths DeepMIMO extracts from the ray tracing simulation, varies per scenario
+- `MAX_INTER` - maximum number of interactions along one path. The main limitation on this parameter is ray tracing software, which usually stops at 5 or less. 
 
 ### JSON Files
 
