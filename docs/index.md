@@ -9,7 +9,6 @@ Welcome to DeepMIMO's documentation! DeepMIMO is a powerful Python package for m
 installation
 quickstart
 overview
-specs
 ```
 
 ```{toctree}
@@ -40,9 +39,10 @@ api/utils
 :maxdepth: 2
 :caption: Guidelines & Resources
 
-conventions
-raytracing_guidelines
-comparing_raytracers
-contributing
-need_help
+resources/raytracing_guidelines
+resources/comparing_raytracers
+resources/specs
+resources/conventions
+resources/contributing
+resources/need_help
 ```

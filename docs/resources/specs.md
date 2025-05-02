@@ -1,4 +1,4 @@
-# DeepMIMO specs
+# DeepMIMO Specs
 This specifies how each DeepMIMO version organizes files.
 
 ## DeepMIMOv4 Spec

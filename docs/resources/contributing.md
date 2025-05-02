@@ -1,4 +1,4 @@
-# Contributing Guide
+# Contributing
 
 Thank you for your interest in contributing to DeepMIMO! This guide will help you get started.
 

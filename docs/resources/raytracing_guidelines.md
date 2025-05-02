@@ -1,5 +1,7 @@
 # Ray Tracing Guidelines
 
+*(under construction)*
+---
 General: 
 
 Most raytracing simulations can be static. A car driving in the city or a drone flying in the air can be modeled as a set of BSs on the ground and a set of points along the trajectory of the car/drone, which are raytraced in parallel. Instead of a trajectory, it is more general to consider a grid of points with sufficiently small spacing between points, which will contain a much higher number of possible trajectories.
