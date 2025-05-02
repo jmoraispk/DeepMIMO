@@ -4,6 +4,14 @@ The `Scene` class represents the physical environment configuration in DeepMIMO,
 
 ## Overview
 
+A Scene represents a physical environment with the following structure:
+- A scene contains PhysicalElements
+- Each PhysicalElement has a BoundingBox and several Faces
+- Each Face consists of multiple triangular faces with:
+  - Counter-clockwise vertex ordering
+  - Surface normal pointing outward (following right-hand rule)
+  - Associated material properties
+
 A Scene contains all the geometric and physical properties of the environment:
 - Building geometries
 - Material properties

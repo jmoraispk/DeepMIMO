@@ -3,196 +3,300 @@ This specifies how each DeepMIMO version organizes files.
 
 ## DeepMIMOv4 Spec
 
-1. dataset[scene][tx][...]
-    1. ['rx_loc'] is N x 3
-    2. ['tx_loc'] is 1 x 3
-    3. ['aoa_az'] | ['aod_az'] | ['aoa_el'] | ['aod_el'] | ['toa'] | ['phase'] | ['power'] are N x MAX_PATHS
-    4. ['inter'] is N x MAX_PATHS
-        1 = reflection. 11 = 2 reflections. 2 = diffraction. 3 = scatering. 4 = transmission. 0 = LoS. -1 = no path
-    5. ['inter_loc'] is N x MAX_PATHS x MAX_INTERACTIONS x 3
-    6. ['vertices'] is N_vertices x 3. XYZ coordinates of each vertex.
-    7. ['objects'] Data of objects:
-        - Name
-        - ID (unique)
-        - Label
-        - Indices of the vertices of each face counter-clockwise, with surface normal pointing outward (follows right-hand rule). 
-        - Indices of the materials of each face
+Note: V4 introduces matrix-based storage which significantly improves data loading performance. Instead of loading data user by user, entire matrices can be loaded at once, making operations orders of magnitude faster.
 
-Summary of the dataset by matrix size (all real numbers):
-  1. 8 matrices of N x MAX_PATHS
-      (4 angles → aoa_az/aoa_el/aod_az/aod_el)
-      (4 others → toa/power/phase/inter)
-  2. 1 matrix of N x MAX_PATHS x 3 → interactions locations
-  3. 1 matrix of N x 3 (rx_loc.mat)
-  4. 1 matrix of M x 3 (tx_loc.mat)
-  5. 1 matrix of N_vertices x 3 (vertices.mat)
-  6. 1 matrix of N_faces x 3 (faces.mat)
-  7. 1 matrix of N_faces x 1 (materials.mat)
-  8. 1 metadata struct/dictionary (params.mat)
+The scenario name is determined solely by the folder name containing the dataset (e.g., `O1_28`, `I2_60`, etc.).
 
-Secondary (computed) matrices:
-  1. ['chs'] is (number of RX antennas) x (number of TX antennas) x (number of OFDM subcarriers). This should remain unchanged when introducing polarization by using antenna indices. 
-  2. ['distances'] is N x 1. Distance between each RX and TX.
-  3. ['pathloss'] is N x 1. Pathloss between each RX and TX. May be coherent or not.
-  4. ...
+### Primary Matrices
 
-Design principles:
-- The dataset does not include redundant information.
-E.g. number of interactions per path = log10(dataset[scene][tx]['inter']).floor() + 1
-E.g. number of paths = dataset[scene][tx]['toa']
-- Each dataset keeps constant a number of things: 
-    - all TXs/RXs have the same number and type of antennas
-    - the fundamental information does not change (angles, phases, ...)
-- If there is a single element in a list, there is no point having a list.
-  (we flatten datset[scene][tx] to dataset if it's a single-scene and single-tx dataset)
-- All .mat files are matrices and as low dimension as possible. The only non-matrix
-  is a struct/dictionairy called params.mat.
-- The user experience after generation should be transparent to the ray tracer. 
-- Be very space and compute efficient, as often as possible, and document when
-  possible improvements are known. This frequently involves:
-    - doing lazy evaluation and caching
-    - pre-allocating and not copying data unnecessarily
-    - using efficient data structures that avoid redundancies
-    - ...
-- Places we know that efficiency is lacking:
-    - Running computations on GPU (*optionally* with cuPy, most likely.)
-    - Batching channel computations
-    - Frequencies (only power and phase change with frequency. Possibly certain 
-    material change too)
-    - Dynamic scenarios (depending on how much data changes between scenes, and 
-      mainly regarding storage, not runtime)
+Matrix files follow the pattern: `{matrix_name}_{code}.mat` where code is `t{set_id}_tx{tx_id}_r{rx_set_id}`.
+Example with 3 BSs and 1 user grid:
+- BS-UE matrices (rx_set_id = 000 for user grid):
+  ```
+  delay_t001_tx000_r000.mat  # TX Set 1, BS 0 to RX Set 1 (users)
+  delay_t001_tx001_r000.mat  # TX Set 1, BS 1 to RX Set 1 (users)
+  delay_t001_tx002_r000.mat  # TX Set 1, BS 2 to RX Set 1 (users)
+  ```
+- BS-BS matrices (rx_set_id = 001 for BS set):
+  ```
+  delay_t001_tx000_r001.mat  # TX Set 1, BS 0 to RX Set 1 (BSs)
+  delay_t001_tx001_r001.mat  # TX Set 1, BS 2 to RX Set 1 (BSs)
+  delay_t001_tx002_r001.mat  # TX Set 1, BS 1 to RX Set 1 (BSs)
+  ```
 
-Interpretation of a scene:
-- A scene has PhysicalElements.
-- Each PhysicalElement has a BoundingBox and several Faces, which in turn have several triangular faces. 
-
-## Versioning:
-<global_format_rules>.<converter_version>.<generator_version> 
-
-## Documentation in the codebase:
-
-1. Module-Level Docstrings
+Access pattern:
 ```python
-"""
-Module Name.
-
-Brief description of the module's purpose.
-
-This module provides:
-- Feature/responsibility 1
-- Feature/responsibility 2
-- Feature/responsibility 3
-
-The module serves as [main role/purpose].
-"""
+dataset = dm.load(<scen_name>)
+d = dataset[scene][tx]
+# Note 1: both d.aoa_az and d['aoa_az'] syntax work
+# Note 2: static scenarios (single scene) do not need scene indexing. 
+#         Similarly for single-tx scenarios.
 ```
 
-2. Function Docstrings
-```python
-def function_name(param1: type, param2: type = default) -> return_type:
-    """Brief description of function purpose.
-    
-    Detailed explanation if needed.
+| File Name | Dataset Attribute | Dimensions | Type | Description |
+|-----------|------------------|------------|------|-------------|
+| rx_loc_{code}.mat    | d.rx_loc | N × 3 | float32 | XYZ coordinates of receiver locations |
+| tx_loc_{code}.mat    | d.tx_loc | 1 × 3 | float32 | XYZ coordinates of transmitter location |
+| aoa_az_{code}.mat    | d.aoa_az | N × MAX_PATHS | float32 | Azimuth angle of arrival |
+| aod_az_{code}.mat    | d.aod_az | N × MAX_PATHS | float32 | Azimuth angle of departure |
+| aoa_el_{code}.mat    | d.aoa_el | N × MAX_PATHS | float32 | Elevation angle of arrival |
+| aod_el_{code}.mat    | d.aod_el | N × MAX_PATHS | float32 | Elevation angle of departure |
+| toa_{code}.mat       | d.toa | N × MAX_PATHS | float32 | Time of arrival |
+| phase_{code}.mat     | d.phase | N × MAX_PATHS | float32 | Phase of each path |
+| power_{code}.mat     | d.power | N × MAX_PATHS | float32 | Power of each path |
+| inter_{code}.mat     | d.inter | N × MAX_PATHS | int32 | Interaction type codes* |
+| inter_loc_{code}.mat | d.inter_loc | N × MAX_PATHS × MAX_INTERACTIONS × 3 | float32 | Interaction point locations |
+| vertices_{code}.mat  | d.vertices | N_vertices × 3 | float32 | XYZ coordinates of vertices |
 
-    Args:
-        param1 (type): Description of param1
-        param2 (type, optional): Description of param2. Defaults to default.
+*Interaction codes:
+- 0: Line of Sight (LoS)
+- 1: Single reflection
+- 2: Diffraction
+- 3: Scattering
+- 4: Transmission
+- Example: 21 = Tx - Diffraction - Reflection - Rx
 
-    Returns:
-        return_type: Description of return value
+### JSON Files
 
-    Raises:
-        ErrorType: Description of when this error is raised
-    """
-```
+| File Name | Description |
+|-----------|-------------|
+| objects.json | Contains scene object metadata including: name, label, id, face_vertex_idxs (indices into vertices.mat), face_material_idxs (indices of the materials in each face) |
+| params.json | Ray tracing parameters including: raytracer info, frequency, max_path_depth, interaction settings (reflections, diffractions, scattering, transmissions), ray casting settings, GPS bounding box, materials, and many raw parameters from the ray tracer that should be sufficient to reproduce the simulation. |
 
-3. Class Docstrings
-```python
-class ClassName:
-    """Brief description of class purpose.
-    
-    Detailed explanation of class functionality and usage.
+### Secondary (Computed) Matrices
 
-    Attributes:
-        attr1 (type): Description of attr1
-        attr2 (type): Description of attr2
+| Dataset Attribute | Dimensions | Type | Description |
+|------------------|------------|------|-------------|
+| dataset[scene][tx]['chs'] | N_RX_ant × N_TX_ant × N_subcarriers | complex64 | Channel matrices |
+| dataset[scene][tx]['distances'] | N × 1 | float32 | TX-RX distances |
+| dataset[scene][tx]['pathloss'] | N × 1 | float32 | Path loss values |
 
-    Example:
-        >>> example usage code
-        >>> more example code
-    """
-```
+Computed matrices are continuously added for convenience of operations. Check `dm.info()` for a complete list.
 
-4. Code Organization
-```python
-"""Module docstring."""
+### Design Principles
 
-# Standard library imports
-import os
-import sys
+1. **Data Efficiency**
+   - Eliminate redundant information storage
+   - Use efficient data structures and formats
+   - Implement lazy evaluation and caching where possible
+   - Pre-allocate memory to avoid unnecessary copies
 
-# Third-party imports
-import numpy as np
-import scipy
+2. **Consistency**
+   - Maintain constant antenna configurations across TX/RX
+   - Preserve fundamental information (angles, phases, etc.)
+   - Flatten single-element lists to reduce nesting
 
-# Local imports
-from . import utils
-from .core import Core
+3. **User Experience**
+   - Provide transparent access regardless of ray tracer backend
+   - Ensure consistent API across different dataset versions
+   - Low code access to fundamental matrices
+   - Support efficient batch operations
 
-#------------------------------------------------------------------------------
-# Constants
-#------------------------------------------------------------------------------
+4. **Performance Considerations**
+   - GPU acceleration support (optional, via cuPy - yet to implement)
+   - Efficient batch processing for channel computations
 
-CONSTANT_1 = value1
-CONSTANT_2 = value2
-
-#------------------------------------------------------------------------------
-# Helper Functions
-#------------------------------------------------------------------------------
-
-def helper_function():
-    """Helper function docstring."""
-    pass
-
-#------------------------------------------------------------------------------
-# Main Classes
-#------------------------------------------------------------------------------
-
-class MainClass:
-    """Main class docstring."""
-    pass
-```
+5. **Transparency and Accessibility**
+   - Direct matrix storage with intuitive dimensions for immediate use
+   - Human-readable JSON files for parameters and metadata
+   - No proprietary parsing required unlike previous versions
+   - Open format that simplifies data conversion and interpretation
+   - Standardized matrix organization that's self-documenting
 
 ## DeepMIMOv3 Spec
 
-N+1 files, N = number of RX-TX pairs enabled
+### File Structure
+N+1 files total, where N = number of RX-TX pairs enabled:
+- N data files: One per RX-TX pair
+- 1 params file: `params.mat`
 
-Rx-Tx pair i (BS1_BS.mat or BS3_UE_0-1024.mat)
-    - channels: 1 x N cells
-      Each cell: is a 1 x #P array, #P = num_paths
-        AoA_phi
-        AoA_theta
-        AoD_phi
-        AoD_theta
-        ToA
-        num_paths
-        phase
-        power 
-    - rx_locs: N x 5 = N x [x_real, y_real, z_real, ]
-    - tx_loc: 1x3 = [x_real, y_real, z_real]
+Example file names:
+- `BS1_BS.mat` - For base station to base station paths (BS-BS communication)
+- `BS3_UE_0-1024.mat` - For base station 3 to users 0-1024 (BS-UE communication)
 
-    Note: x|y|z_real can be lat|long|alt in case the scenarios comes from OSM
+### Primary Matrices
 
-params.mat
-    - 'version': 2,
-    - 'carrier_freq': 28e9,
-    - 'transmit_power': 0.0, 
-    - 'user_grids': np.array([[1, 411, 321]], dtype=float), # num samples in z, x, y    || -> NOTE: why not xyz?
-    - 'num_BS': 1,
-    - 'dual_polar_available': 0,
-    - 'doppler_available': 0
+Access patterns:
+```python
+paths_user_u = dataset[scene][tx_id]['user']['paths'][u]  # For BS-UE communication
+paths_bs_b = dataset[scene][tx_id]['bs']['paths'][b]      # For BS-BS communication
+```
+
+<table>
+<tr>
+<th>File Name</th>
+<th>Dataset Attribute</th>
+<th>Dimensions</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+<tr>
+<td rowspan="8">BS{i}_BS.mat<br>or<br>BS{i}_UE_{range}.mat</td>
+<td>paths_user_u['AoA_phi']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Azimuth angle of arrival</td>
+</tr>
+<tr>
+<td>paths_user_u['AoA_theta']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Elevation angle of arrival</td>
+</tr>
+<tr>
+<td>paths_user_u['DoD_phi']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Azimuth angle of departure</td>
+</tr>
+<tr>
+<td>paths_user_u['DoD_theta']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Elevation angle of departure</td>
+</tr>
+<tr>
+<td>paths_user_u['ToA']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Time of arrival</td>
+</tr>
+<tr>
+<td>paths_user_u['phase']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Phase of each path</td>
+</tr>
+<tr>
+<td>paths_user_u['power']</td>
+<td>num_paths × 1</td>
+<td>float32</td>
+<td>Power of each path</td>
+</tr>
+<tr>
+<td>paths_user_u['num_paths']</td>
+<td>1</td>
+<td>int32</td>
+<td>Number of paths</td>
+</tr>
+</table>
+
+*Note: x,y,z coordinates can be lat,long,alt when scenarios come from OSM
 
 ## DeepMIMOv2 Spec
 
-Needs inspection... 
+Code format: {code} = {scenario}.{bs} where scenario is the environment name (e.g., O1) and bs is the base station ID (e.g., 3p4.1)
 
+### Primary Matrices
+
+Access patterns:
+```python
+users_dataset = dataset[scene][tx_id]['user']  # For BS-UE communication
+bs_dataset = dataset[scene][tx_id]['bs']       # For BS-BS communication
+```
+
+Note: Matrix dimensions are specified in {scenario}.params.mat, which contains carrier frequency, number of BSs, transmit power, and user grid information. While there are as many angles as max paths (usually 10) and users in the grid, the matrix is flattened and needs to be parsed per user based on path loss information.
+
+Example file names:
+- `{code}.CIR.mat` - Channel impulse response for user data
+- `{code}.CIR.BSBS.mat` - Channel impulse response for BS-BS data
+- `{code}.DoA.mat` - Direction of arrival for user data
+
+<table>
+<tr>
+<th>File Name</th>
+<th>Dataset Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+<tr>
+<td>{code}.CIR.mat</td>
+<td>users_dataset['channel']</td>
+<td>complex64</td>
+<td>Channel impulse response matrices</td>
+</tr>
+<tr>
+<td>{code}.CIR.BSBS.mat</td>
+<td>bs_dataset['channel']</td>
+<td>complex64</td>
+<td>BS-BS channel impulse response matrices</td>
+</tr>
+<tr>
+<td>{code}.DoA.mat</td>
+<td>users_dataset['paths'][u]['DoA']</td>
+<td>float32</td>
+<td>Angle of arrival information</td>
+</tr>
+<tr>
+<td>{code}.DoA.BSBS.mat</td>
+<td>bs_dataset['DoA']</td>
+<td>float32</td>
+<td>BS-BS angle of arrival information</td>
+</tr>
+<tr>
+<td>{code}.DoD.mat</td>
+<td>users_dataset['paths'][u]['DoD']</td>
+<td>float32</td>
+<td>Angle of departure information</td>
+</tr>
+<tr>
+<td>{code}.DoD.BSBS.mat</td>
+<td>bs_dataset['DoD']</td>
+<td>float32</td>
+<td>BS-BS angle of departure information</td>
+</tr>
+<tr>
+<td>{code}.LoS.mat</td>
+<td>paths_user_u['LoS']</td>
+<td>int32</td>
+<td>Line of sight information</td>
+</tr>
+<tr>
+<td>{code}.LoS.BSBS.mat</td>
+<td>bs_dataset['LoS']</td>
+<td>int32</td>
+<td>BS-BS line of sight information</td>
+</tr>
+<tr>
+<td>{code}.PL.mat</td>
+<td>paths_user_u['PL']</td>
+<td>float32</td>
+<td>Path loss values</td>
+</tr>
+<tr>
+<td>{code}.PL.BSBS.mat</td>
+<td>bs_dataset['PL']</td>
+<td>float32</td>
+<td>BS-BS path loss values</td>
+</tr>
+</table>
+
+### Design Principles
+
+1. **Data Efficiency**
+   - Eliminate redundant information storage
+   - Use efficient data structures and formats
+   - Implement lazy evaluation and caching where possible
+   - Pre-allocate memory to avoid unnecessary copies
+
+2. **Consistency**
+   - Maintain constant antenna configurations across TX/RX
+   - Preserve fundamental information (angles, phases, etc.)
+   - Flatten single-element lists to reduce nesting
+
+3. **User Experience**
+   - Provide transparent access regardless of ray tracer backend
+   - Ensure consistent API across different dataset versions
+   - Low code access to fundamental matrices
+   - Support efficient batch operations
+
+4. **Performance Considerations**
+   - GPU acceleration support (optional, via cuPy - yet to implement)
+   - Efficient batch processing for channel computations
+
+5. **Transparency and Accessibility**
+   - Direct matrix storage with intuitive dimensions for immediate use
+   - Human-readable JSON files for parameters and metadata
+   - No proprietary parsing required unlike previous versions
+   - Open format that simplifies data conversion and interpretation
+   - Standardized matrix organization that's self-documenting
