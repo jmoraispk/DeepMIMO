@@ -1,5 +1,167 @@
 # Utilities
 
+DeepMIMO provides two utility modules:
+1. `general_utils`: Core utilities for file handling, data structures, and configuration
+2. `generator_utils`: Specialized utilities for dataset generation and processing
+
+## General Utilities
+
+### File System and Path Utilities
+
+```python
+import deepmimo as dm
+
+# Get available scenarios
+scenarios = dm.get_available_scenarios()
+
+# Get scenario paths
+folder = dm.get_scenario_folder('scenario_name')
+params = dm.get_params_path('scenario_name')
+
+# File compression
+dm.zip('path/to/folder')
+dm.unzip('path/to/file.zip')
+```
+
+### Dictionary Utilities
+
+```python
+# DotDict - Dictionary with dot notation access
+params = dm.DotDict({
+    'antenna': {
+        'shape': [8, 1],
+        'spacing': 0.5
+    }
+})
+
+# Access with dot notation
+shape = params.antenna.shape
+spacing = params.antenna.spacing
+
+# Convert to/from JSON
+dm.save_dict_as_json('params.json', params)
+params = dm.load_dict_from_json('params.json')
+```
+
+### Printing Utilities
+
+```python
+# Conditional printing
+vprint = dm.PrintIfVerbose(verbose=True)
+vprint("Debug message")  # Only prints if verbose=True
+```
+
+## Generator Utilities
+
+### Unit Conversions
+
+```python
+# Convert dBW to Watts
+power_w = dm.dbw2watt(power_dbw)
+```
+
+### Position Sampling
+
+```python
+# Get uniform sampling indices
+idxs = dm.get_uniform_idxs(
+    n_ue=1000,           # Number of users
+    grid_size=[10, 10],  # Grid dimensions
+    steps=[2, 2]         # Sampling steps
+)
+
+# Get positions within limits
+idxs = dm.get_idxs_with_limits(
+    data_pos,
+    x_min=0, x_max=100,
+    y_min=0, y_max=100,
+    z_min=0, z_max=50
+)
+```
+
+### Path Analysis
+
+```python
+# Create linear path through dataset
+path = dm.LinearPath(
+    rx_pos,              # Receiver positions
+    first_pos=[0, 0, 0], # Start position
+    last_pos=[100, 0, 0],# End position
+    res=1.0,            # Spatial resolution
+    n_steps=100         # Number of steps
+)
+
+# Access path data
+positions = path.pos
+indices = path.idxs
+```
+
+## Module Structure
+
+```
+general_utils.py
+  ├── File System (get_scenario_folder, zip, unzip)
+  ├── Dictionary (DotDict, save/load JSON)
+  └── Printing (PrintIfVerbose)
+
+generator_utils.py
+  ├── Unit Conversion (dbw2watt)
+  ├── Position Sampling (get_uniform_idxs)
+  └── Path Analysis (LinearPath)
+```
+
+## Dependencies
+
+The utilities modules depend on:
+- `numpy` for numerical operations
+- `tqdm` for progress bars
+- `json` for file I/O
+- `zipfile` for compression
+
+## Import Paths
+
+```python
+# General utilities
+from deepmimo.general_utils import (
+    get_available_scenarios,
+    get_scenario_folder,
+    get_params_path,
+    DotDict,
+    zip,
+    unzip
+)
+
+# Generator utilities
+from deepmimo.generator_utils import (
+    dbw2watt,
+    get_uniform_idxs,
+    get_idxs_with_limits,
+    LinearPath
+)
+```
+
+## Best Practices
+
+1. File Management
+   - Use provided path utilities for consistency
+   - Handle file operations with try/except
+   - Clean up temporary files
+
+2. Dictionary Handling
+   - Use DotDict for nested configurations
+   - Validate dictionary structure
+   - Handle missing keys gracefully
+
+3. Memory Management
+   - Process large datasets in chunks
+   - Clear unused data
+   - Monitor memory usage
+
+4. Path Analysis
+   - Validate input coordinates
+   - Handle edge cases
+   - Use appropriate resolution
+
 ```{eval-rst}
 .. autofunction:: deepmimo.generator.generator_utils.dbw2watt
 

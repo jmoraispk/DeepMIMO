@@ -8,31 +8,22 @@ Welcome to DeepMIMO's documentation! DeepMIMO is a powerful Python package for m
 
 installation
 quickstart
-overview
-```
-
-```{toctree}
-:maxdepth: 2
-:caption: Core Objects
-
-objects/index
-objects/dataset
-objects/channel_params
-objects/scene
-objects/materials
 ```
 
 ```{toctree}
 :maxdepth: 2
 :caption: API Reference
 
+api/overview
 api/generator
 api/converter
 api/visualization
-api/config
+api/scene
+api/materials
 api/integrations
 api/pipelines
 api/utils
+api/config
 ```
 
 ```{toctree}

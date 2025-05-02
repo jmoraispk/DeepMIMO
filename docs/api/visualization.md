@@ -1,18 +1,143 @@
 # Visualization
 
-The visualization module provides comprehensive tools for visualizing DeepMIMO datasets.
+The visualization module provides tools for visualizing DeepMIMO datasets, including coverage maps, ray paths, and channel characteristics.
 
 ## Core Functions
 
-```{eval-rst}
-.. autofunction:: deepmimo.generator.visualization.plot_coverage
+### plot_coverage()
+Create coverage map visualization for user positions.
 
-.. autofunction:: deepmimo.generator.visualization.plot_rays
+```python
+import deepmimo as dm
 
-.. autofunction:: deepmimo.generator.visualization.export_xyz_csv
+# Plot coverage with default settings
+dm.plot_coverage(rxs, cov_map)
 
-.. autofunction:: deepmimo.generator.visualization.plot_power_discarding
+# Customize visualization
+fig, ax, cbar = dm.plot_coverage(
+    rxs,                    # User positions (N×3)
+    cov_map,               # Coverage values
+    dpi=100,               # Plot resolution
+    figsize=(6, 4),        # Figure size
+    cbar_title='Power',    # Colorbar title
+    title=True,            # Show title
+    scat_sz=0.5,          # Marker size
+    bs_pos=bs_position,    # Base station position
+    bs_ori=bs_orientation, # Base station orientation
+    legend=True,          # Show legend
+    proj_3D=False,        # 2D/3D projection
+    cmap='viridis'        # Color map
+)
 ```
+
+### plot_rays()
+Plot ray paths between transmitter and receiver with interaction points.
+
+```python
+# Plot ray paths
+fig, ax = dm.plot_rays(
+    rx_loc,          # Receiver location
+    tx_loc,          # Transmitter location
+    inter_pos,       # Interaction positions
+    inter,           # Interaction types
+    figsize=(10, 8), # Figure size
+    dpi=100,         # Plot resolution
+    proj_3D=True,    # 3D projection
+    color_by_type=True  # Color by interaction type
+)
+```
+
+### plot_power_discarding()
+Analyze and visualize power discarding due to path delays.
+
+```python
+# Analyze power discarding
+fig, ax = dm.plot_power_discarding(
+    dataset,
+    trim_delay=None  # Use OFDM symbol duration
+)
+```
+
+## Visualization Settings
+
+### Coverage Map Settings
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `dpi` | int | 100 | Plot resolution |
+| `figsize` | tuple | (6,4) | Figure dimensions |
+| `cbar_title` | str | '' | Colorbar title |
+| `title` | bool/str | False | Plot title |
+| `scat_sz` | float | 0.5 | Marker size |
+| `legend` | bool | False | Show legend |
+| `proj_3D` | bool | False | 3D projection |
+| `equal_aspect` | bool | False | Equal axis scaling |
+| `cmap` | str | 'viridis' | Color map |
+
+### Ray Path Settings
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `figsize` | tuple | (10,8) | Figure dimensions |
+| `dpi` | int | 100 | Plot resolution |
+| `proj_3D` | bool | True | 3D projection |
+| `color_by_type` | bool | False | Color by interaction |
+
+### Interaction Colors
+
+| Type | Color | Description |
+|------|-------|-------------|
+| 0 | green | Line-of-sight |
+| 1 | red | Reflection |
+| 2 | orange | Diffraction |
+| 3 | blue | Scattering |
+| 4 | purple | Transmission |
+| -1 | gray | Unknown |
+
+## Module Structure
+
+```
+visualization.py
+  ├── plot_coverage() (Coverage maps)
+  ├── plot_rays() (Ray paths)
+  ├── plot_power_discarding() (Power analysis)
+  └── _create_colorbar() (Helper function)
+```
+
+## Dependencies
+
+The visualization module depends on:
+- `matplotlib` for plotting
+- `numpy` for numerical operations
+- `tqdm` for progress bars
+
+## Import Paths
+
+```python
+# Main functions
+from deepmimo.generator.visualization import (
+    plot_coverage,
+    plot_rays,
+    plot_power_discarding
+)
+```
+
+## Best Practices
+
+1. Coverage Maps
+   - Use appropriate color maps for data type
+   - Add colorbar and title for clarity
+   - Consider 2D vs 3D based on data
+
+2. Ray Paths
+   - Use 3D for complex environments
+   - Color by interaction type for analysis
+   - Add legend for interaction types
+
+3. Performance
+   - Adjust DPI and figure size for balance
+   - Use appropriate marker sizes
+   - Consider memory for large datasets
 
 ## Examples
 
@@ -114,38 +239,6 @@ dm.export_xyz_csv(
     google_earth=True           # Convert to geo coordinates
 )
 ```
-
-## Best Practices
-
-1. Memory Management:
-   ```python
-   # For large datasets, plot in batches
-   for batch in dataset.iter_batches(100):
-       batch.plot_coverage(power[batch.indices])
-   ```
-
-2. Publication Quality:
-   ```python
-   # High-quality output
-   dataset.plot_coverage(
-       power,
-       dpi=300,
-       figsize=(10, 8),
-       equal_aspect=True,
-       tight=True
-   )
-   ```
-
-3. Interactive Plots:
-   ```python
-   # Enable interactive features
-   dataset.plot_coverage(
-       power,
-       proj_3D=True,
-       legend=True,
-       cbar_labels=custom_labels
-   )
-   ```
 
 ## See Also
 - [Dataset](../objects/dataset.md) - Dataset documentation
