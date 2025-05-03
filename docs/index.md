@@ -1,6 +1,6 @@
 # DeepMIMO
 
-Welcome to DeepMIMO's documentation! DeepMIMO is a powerful Python package for managing ray tracing scenarios and generating realistic MIMO channels and datasets.
+DeepMIMO manages the largest database of ray tracing scenarios. DeepMIMO is offered as an open-source Python package and provides tools to generate realistic MIMO channels and use them with 5G simulation tools.
 
 ```{toctree}
 :maxdepth: 2
@@ -8,6 +8,7 @@ Welcome to DeepMIMO's documentation! DeepMIMO is a powerful Python package for m
 
 installation
 quickstart
+manual.ipynb
 ```
 
 ```{toctree}
@@ -28,7 +29,7 @@ api/config
 
 ```{toctree}
 :maxdepth: 2
-:caption: Guidelines & Resources
+:caption: Resources
 
 resources/raytracing_guidelines
 resources/comparing_raytracers
