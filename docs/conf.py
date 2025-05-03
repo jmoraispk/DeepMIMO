@@ -52,7 +52,6 @@ extensions = [
     'sphinx_autodoc_typehints',            # Move type hints into doc body
     'sphinx_copybutton',                   # Adds copy buttons to code blocks
     'sphinx_design',                       # Layout/design components (cards, tabs)
-    
     'matplotlib.sphinxext.plot_directive', # Matplotlib plot directive
     'sphinxext.opengraph',                 # Social metadata (OpenGraph)
     # 'sphinx_remove_toctrees',              # Hide entries from the ToC
@@ -199,9 +198,6 @@ autosummary_generate = True
 # ----------------------------------------------------------------------------------------
 # Notebook execution
 # ----------------------------------------------------------------------------------------
-nbsphinx_allow_errors = True
-nbsphinx_execute = 'never'
-
 nb_execution_mode = "off" # "auto"
 nb_execution_timeout = 600
 nb_merge_streams = True

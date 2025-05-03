@@ -47,7 +47,6 @@ doc = [
     "sphinx-design>=0.4.1",                      # Grids/cards
     # "sphinx-plotly-directive>=0.1.0",            # Plotly directive
     # "sphinx-contrib-bibtex>=2.6.2",              # Citations
-    "nbsphinx>=0.9.0",                           # Optional: if you're still using it
     "ipykernel>=6.0.0",                          # Needed for notebook execution
     "docutils>=0.19",
     # "beautifulsoup4>=4.12.0",
