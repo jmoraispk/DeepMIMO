@@ -692,14 +692,14 @@ class Scene:
         3D Mode (proj_2d=False):
             Two representation options:
             1. 'faces' (default) - Uses the primary convex hull representation
-               - More efficient for visualization
-               - Cleaner look for simple geometric shapes
-               - Suitable for most visualization needs
+            - More efficient for visualization
+            - Cleaner look for simple geometric shapes
+            - Suitable for most visualization needs
                
             2. 'tri_faces' - Uses the secondary triangular representation
-               - Shows detailed geometry
-               - Better for debugging geometric issues
-               - More accurate representation of complex shapes
+            - Shows detailed geometry
+            - Better for debugging geometric issues
+            - More accurate representation of complex shapes
                
         2D Mode (proj_2d=True):
             Creates a top-down view showing object footprints:
