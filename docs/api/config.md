@@ -16,18 +16,23 @@ The configuration interface is provided through a singleton instance `deepmimo.c
 ```python
 import deepmimo as dm
 
-# Using the function-like interface
+# Set with parameter names
 dm.config('sionna_version', '0.19.1')
 
-# Using the get method
+# Set with keywords
 dm.config(use_gpu=True, gpu_device_id=1)
 
-# Print current values
+# Get current value
+dm.config('ray_tracer_version')
+
+# Print current config
 dm.config()
 
 # Reset to defaults
 dm.config.reset()
+
 ```
+
 
 ## Default Configurations
 
