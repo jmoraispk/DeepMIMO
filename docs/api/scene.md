@@ -11,6 +11,14 @@ scene.py
   └── Scene (Complete environment)
 ```
 
+The `Scene` class acts as a container for multiple `PhysicalElement` objects, 
+each representing a distinct object in the environment. Each `PhysicalElement` is 
+composed of `Face` objects, which define the surfaces of the element and are associated 
+with materials. The `BoundingBox` class provides spatial boundaries for these elements. 
+Together, these components allow for the representation and manipulation of complex environments, 
+with functionalities for plotting and material management integrated into the scene.
+
+
 The scene module depends on:
 - `materials.py` for material properties
 - `general_utils.py` for utility functions
@@ -56,12 +64,6 @@ face = dm.Face(
     vertices=vertices,  # Array of vertex coordinates
     material_idx=1  # Material index
 )
-```
-
-# Access properties
-normal = face.normal
-area = face.area
-centroid = face.centroid
 ```
 
 ```{eval-rst}
