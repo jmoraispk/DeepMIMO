@@ -20,7 +20,6 @@ manual.ipynb
 :maxdepth: 2
 :caption: API Reference
 
-api/overview
 api/generator
 api/converter
 api/visualization
