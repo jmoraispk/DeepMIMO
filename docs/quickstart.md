@@ -31,10 +31,6 @@ dataset.compute_channels()
 print(dataset.channels.shape)
 ```
 
-Output for 'asu_campus_3p5' scenario with default channel parameters:
-
-`(85..., 64, 16, 1) for 1000 users, 8x8 BS array, 4x4 UE array, 1 subcarrier`
-
 ```{tip}
 See the <a href="manual_full.html#channel-generation">Channel Generation Examples</a> for how to configure channel generation.
 
