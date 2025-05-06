@@ -110,5 +110,5 @@ objects_with_material = dataset.scene.get_objects(material=building_materials[0]
 ```
 
 ```{tip}
-See the <a href="manual_full.html#scene-materials">Materials Section</a> of the DeepMIMO Manual for examples. 
+See the <a href="../manual_full.html#scene-materials">Materials Section</a> of the DeepMIMO Manual for examples. 
 ```

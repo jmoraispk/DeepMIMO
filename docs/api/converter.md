@@ -73,7 +73,7 @@ scenario = insite_rt_converter('path/to/insite_project')
 ```
 
 ```{tip}
-Check <a href="manual_full.html#from-wireless-insite">Conversion From Wireless InSite</a> section in DeepMIMO manual for a full end-to-end example of conversion from a Wireless InSite simulation.
+Check <a href="../manual_full.html#from-wireless-insite">Conversion From Wireless InSite</a> section in DeepMIMO manual for a full end-to-end example of conversion from a Wireless InSite simulation.
 ```
 
 ```{eval-rst}
@@ -118,7 +118,7 @@ scenario = sionna_rt_converter('path/to/sionna_data')
 ```
 
 ```{tip}
-Check <a href="manual_full.html#from-sionna-rt">Conversion From Sionna RT</a> section in DeepMIMO manual for a conversion example using Sionna 0.19. Sionna 1.0 support is coming in May 2025.
+Check <a href="../manual_full.html#from-sionna-rt">Conversion From Sionna RT</a> section in DeepMIMO manual for a conversion example using Sionna 0.19. Sionna 1.0 support is coming in May 2025.
 ```
 
 ```{eval-rst}

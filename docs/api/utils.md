@@ -69,7 +69,7 @@ indices = path.idxs
 ```
 
 ```{tip}
-See the <a href="manual_full.html#user-sampling">User Sampling Section</a> of the DeepMIMO Manual for examples.
+See the <a href="../manual_full.html#user-sampling">User Sampling Section</a> of the DeepMIMO Manual for examples.
 ```
 
 ```{eval-rst}
@@ -93,7 +93,7 @@ See the User Sampling Section of the DeepMIMO Manual for examples.
 ## Beamforming
 
 ```{tip}
-See the <a href="manual_full.html#beamforming">Beamforming Section</a> of the DeepMIMO Manual for examples.
+See the <a href="../manual_full.html#beamforming">Beamforming Section</a> of the DeepMIMO Manual for examples.
 ```
 
 ```{eval-rst}
