@@ -2,12 +2,39 @@
 
 The generator module is the core of DeepMIMO. This module takes ray tracing scenarios saved in the DeepMIMO format, and generates channels. 
 
+Below is an ascii diagram of how the simulations from the ray tracers are converted into DeepMIMO scenarios (by the converter module, following the DeepMIMO SPEC), and then loaded and used to generate channels (with the generator module).
+```c++
 
-Each converter saves the dataset in a given format (according to the SPEC). 
-The respective generator takes the saved format, loads the data, analyzes ray tracing data, for example via plots, and generates time-domain and frequency-domain channels using a far-field approximation and standard array responses.
++-----------------+     +-------------------+    +-------------------+
+| WIRELESS INSITE |     |     SIONNA_RT     |    |       AODT        |
++--------+--------+     +---------+---------+    +---------+---------+
+         |                        |                        |
+         +------------------------+------------------------+
+                                  |
+                                  v
+                         +------------------+
+                         |   dm.convert()   |
+                         +--------+---------+
+                                  v
+                         +------------------+
+                         |    DEEPMIMO      |
+                         |    SCENARIOS     |
+                         +--------+---------+
+                                  v
+                      +-------------------------+
+                      |   dataset = dm.load()   |
+                      +-----------+-------------+
+                                  v
+                    +-----------------------------+
+                    | dataset.compute_channels()  |
+                    +-------------+---------------+
+                                  v
+                         +------------------+
+                         |  dataset.plot()  |
+                         +------------------+
+```
 
-
-
+Dependencies of the Generator Module:
 ```
 generator/
   ├── core.py (Main generation functions)
@@ -134,7 +161,6 @@ channels = dataset.compute_channels(params)
    :undoc-members:
    :show-inheritance:
 ```
-
 | Parameter | Default Value | Description |
 |-----------|--------------|-------------|
 | `bs_antenna.shape` | [8, 1] | BS antenna array dimensions |
@@ -170,3 +196,4 @@ dataset = dm.generate(
     ch_gen_params={}  # Parameters for channel generation
 )
 ```
+
