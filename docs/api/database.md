@@ -2,9 +2,6 @@
 
 DeepMIMO API leverages B2 buckets, which are globally available and provide an excellent distribution network for both uploads and downloads worldwide.
 
-Some operations in the DeepMIMO Database API require an API key, which can be obtained from the [Contribute dashboard](https://deepmimo.net/dashboard) on the DeepMIMO website. You will need to create a Google account to access this dashboard. While search and download operations typically do not require an API key, if these endpoints are abused it will be necessary to enforce keys for such functions as well.
-
-
 ## Search
 
 The search functionality allows you to find scenarios in the DeepMIMO database based on various parameters.
@@ -56,6 +53,12 @@ print(f"Downloaded to: {download_path}")
 ## Upload
 
 The upload functionality allows you to contribute scenarios, images, and ray tracing sources to the DeepMIMO database.
+
+### Get API Key
+
+Some operations in the DeepMIMO Database API require an API key, which can be obtained from the [Contribute dashboard](https://deepmimo.net/dashboard) on the DeepMIMO website. You will need to create a Google account to access this dashboard. 
+
+Currently only the upload functions require an API key. 
 
 ### Scenario
 
