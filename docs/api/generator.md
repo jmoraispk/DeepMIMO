@@ -35,6 +35,7 @@ Below is an ascii diagram of how the simulations from the ray tracers are conver
 ```
 
 Dependencies of the Generator Module:
+
 ```
 generator/
   ├── core.py (Main generation functions)
@@ -53,85 +54,33 @@ Additionally, the generator module depends on:
 - `api.py` for scenario management
 
 
-## Dataset
-The `Dataset` class represents a single dataset within DeepMIMO, containing transmitter, receiver, and channel information for a specific scenario configuration.
+## Load Dataset
 
 ```python
 import deepmimo as dm
 
-# Load a dataset
-dataset = dm.load('scenario_name')
-
-# Access transmitter data
-tx_locations = dataset.tx_locations
-n_tx = len(dataset.tx_locations)
-
-# Access receiver data
-rx_locations = dataset.rx_locations
-n_rx = len(dataset.rx_locations)
-
-# Access channel data
-channels = dataset.channels  # If already computed
+# Load a scenario
+dataset = dm.load('asu_campus_3p5')
 ```
 
-### Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `tx_locations` | ndarray | Transmitter locations (N×3) |
-| `rx_locations` | ndarray | Receiver locations (M×3) |
-| `channels` | ndarray | Channel matrices |
-| `parameters` | dict | Dataset-specific parameters |
-| `power` | ndarray | Path powers in dBm |
-| `phase` | ndarray | Path phases in degrees |
-| `delay` | ndarray | Path delays in seconds |
-| `aoa_az/aoa_el` | ndarray | Angles of arrival (azimuth/elevation) |
-| `aod_az/aod_el` | ndarray | Angles of departure (azimuth/elevation) |
-| `inter` | ndarray | Path interaction indicators |
-| `inter_pos` | ndarray | Path interaction positions |
-
-### Channel Generation
-```python
-# Configure channel parameters
-ch_params = dm.ChannelGenParameters()
-ch_params.bs_antenna.shape = np.array([8, 1])
-
-# Compute channels
-channels = dataset.compute_channels(ch_params)
+```{tip}
+For detailed examples of loading, see the <a href="../manual_full.html#detailed-load">Detailed Load</a> Section of the DeepMIMO Mannual.
 ```
 
-### Path Analysis
-```python
-# Access path information
-pathloss = dataset.compute_pathloss()
-los_status = dataset.los  # Line of sight status
-num_paths = dataset.num_paths  # Paths per user
+```{eval-rst}
+.. autofunction:: deepmimo.generator.core.load
 ```
 
-## MacroDataset
-The `MacroDataset` class is a container for managing multiple datasets, providing unified access to their data.
 
-```python
-# Access individual datasets
-dataset = macro_dataset[0]  # First dataset
-datasets = macro_dataset[1:3]  # Slice of datasets
+## Generate Channels
 
-# Iterate over datasets
-for dataset in macro_dataset:
-    print(f"Dataset has {len(dataset)} users")
-
-# Batch operations
-channels = macro_dataset.compute_channels()
-```
-
-## ChannelGenParameters
 The `ChannelGenParameters` class manages parameters for MIMO channel generation.
 
 ```python
 import deepmimo as dm
 
 # Load a scenario
-dataset = dm.load('O1_60')
+dataset = dm.load('asu_campus_3p5')
 
 # Instantiate channel parameters
 params = dm.ChannelGenParameters()
@@ -155,12 +104,10 @@ params.freq_domain = True
 channels = dataset.compute_channels(params)
 ```
 
-```{eval-rst}
-.. autoclass:: deepmimo.generator.channel.ChannelGenParameters
-   :members:
-   :undoc-members:
-   :show-inheritance:
+```{tip}
+For detailed examples of generating channels, see the <a href="../manual_full.html#channel-generation">Channel Generation</a> Section of the DeepMIMO Mannual.
 ```
+
 | Parameter | Default Value | Description |
 |-----------|--------------|-------------|
 | `bs_antenna.shape` | [8, 1] | BS antenna array dimensions |
@@ -172,28 +119,136 @@ channels = dataset.compute_channels(params)
 | `ofdm.subcarriers` | 512 | Number of OFDM subcarriers |
 | `ofdm.bandwidth` | 10e6 | OFDM bandwidth (Hz) |
 
-## Load
-
-Load a DeepMIMO scenario.
-
-```python
-dataset = dm.load(
-    scen_name,  # Scenario name
-    tx_sets={1: [0, 1]},  # Specific TX points
-    rx_sets={2: 'all'},   # All RX in set 2
-    matrices=['power', 'delay']  # Matrices to load
-)
+```{eval-rst}
+.. autoclass:: deepmimo.generator.channel.ChannelGenParameters
+   :members:
+   :undoc-members:
+   :show-inheritance:
 ```
 
-## Generate
+```{eval-rst}
+.. autofunction:: deepmimo.generator.dataset.Dataset.compute_channels
 
-A wrapper to Load and Compute channels. 
-
-```python
-dataset = dm.generate(
-    scen_name,  # Scenario name
-    load_params={},  # Parameters for loading the scenario
-    ch_gen_params={}  # Parameters for channel generation
-)
 ```
 
+## Dataset
+
+The `Dataset` class represents a single dataset within DeepMIMO, containing transmitter, receiver, and channel information for a specific scenario configuration.
+
+```python
+import deepmimo as dm
+
+# Load a dataset
+dataset = dm.load('scenario_name')
+
+# Access transmitter data
+tx_locations = dataset.tx_locations
+n_tx = len(dataset.tx_locations)
+
+# Access receiver data
+rx_locations = dataset.rx_locations
+n_rx = len(dataset.rx_locations)
+
+# Access channel data
+channels = dataset.channels  # If already computed
+```
+
+### Core Properties
+
+| Property       | Description                             | Dimensions    |
+|----------------|-----------------------------------------|---------------|
+| `rx_pos`       | Receiver locations                      | N x 3         |
+| `tx_pos`       | Transmitter locations                   | 1 x 3         |
+| `power`        | Path powers in dBm                      | N x P         |
+| `phase`        | Path phases in degrees                  | N x P         |
+| `delay`        | Path delays in seconds                  | N x P         |
+| `aoa_az/aoa_el`| Angles of arrival (azimuth/elevation)   | N x P         |
+| `aod_az/aod_el`| Angles of departure (azimuth/elevation) | N x P         |
+| `inter`        | Path interaction indicators             | N x P         |
+| `inter_pos`    | Path interaction positions              | N x P x I x 3 |
+
+- N: number of receivers in the receiver set
+- P: maximum number of paths
+- I: maximum number of interactions along any path
+
+The maximum number of paths and interactions are either configured by the load function or hardcoded to a absolute maximum value. 
+
+### Computed Properties
+| `channels` | ndarray | Channel matrices |
+| `parameters` | dict | Dataset-specific parameters |
+| `num_paths` | int | Number of paths generated for each user |
+| `pathloss` | ndarray | Path loss values for each path |
+| `aod_theta_rot` | ndarray | Rotated angles of departure in elevation |
+| `aod_phi_rot` | ndarray | Rotated angles of departure in azimuth |
+| `aoa_theta_rot` | ndarray | Rotated angles of arrival in elevation |
+| `aoa_phi_rot` | ndarray | Rotated angles of arrival in azimuth |
+| `fov` | dict | Field of view parameters |
+| `grid_size` | tuple | Size of the grid for the dataset |
+| `grid_spacing` | float | Spacing of the grid for the dataset |
+
+### Sampling & Trimming
+```python
+# Get uniform indices
+uniform_idxs = dataset.get_uniform_idxs([2,2])
+
+# Trim dataset to have 1 every 2 samples, along x and y
+dataset2 = dataset.subset(uniform_idxs)
+
+# Example of dataset trimming
+active_idxs = dataset2.get_active_idxs()
+
+# Further trim the dataset down to include only users with channels 
+# (typically outside buildings)
+dataset2 = dataset.subset(uniform_idxs)
+```
+
+```{tip}
+For detailed examples of sampling users from a dataset and creating subsets of a dataset, see the <a href="../manual_full.html#user-sampling">User Sampling</a> Section of the DeepMIMO Mannual.
+```
+
+### Plotting
+
+```python
+# Plot coverage
+plot_coverage = dataset.plot_coverage()
+
+# Plot rays
+plot_rays = dataset.plot_rays()
+```
+
+```{tip}
+For more details on the visualization functions, see the <a href="../manual_full.html#visualization">Visualization</a> Section of the DeepMIMO Mannual, and the <a href="visualization.html">Visualization API</a> section of this noteoobk.
+```
+
+### Dataset Class
+```{eval-rst}
+.. autoclass:: deepmimo.generator.dataset.Dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+
+## MacroDataset
+
+The `MacroDataset` class is a container for managing multiple datasets, providing unified access to their data. This is the default output of the dm.load() if there are multiple txrx pairs.
+
+```python
+# Access individual datasets
+dataset = macro_dataset[0]  # First dataset
+datasets = macro_dataset[1:3]  # Slice of datasets
+
+# Iterate over datasets
+for dataset in macro_dataset:
+    print(f"Dataset has {len(dataset)} users")
+
+# Batch operations
+channels = macro_dataset.compute_channels()
+```
+
+```{eval-rst}
+.. autoclass:: deepmimo.generator.dataset.MacroDataset
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
