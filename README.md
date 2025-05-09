@@ -12,7 +12,7 @@ DeepMIMO Toolchain: Bridging RayTracers and 5G Simulators
 deepmimo/
 ├── api.py                  # Main API interface for dataset management
 ├── scene.py                # Scene (3D environment) management
-├── consts.py               # Constants and configurations
+├── consts.py               # Constants and configurations 
 ├── info.py                 # Information on matrices and parameters
 ├── materials.py            # Material properties
 ├── txrx.py                 # Transmitter and receiver
